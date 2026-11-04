@@ -63,8 +63,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-102
 - **Description:** Layouts for (app), (admin), (marketing) route groups.
 - **Acceptance criteria:**
-  - [ ] Works at 375px, 768px, 1440px
-  - [ ] Keyboard accessible
+  - [x] Works at 375px, 768px, 1440px
+  - [x] Keyboard accessible
 
 ## Phase 2 — Auth & Onboarding
 

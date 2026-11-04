@@ -1,0 +1,241 @@
+"use client";
+
+import {
+  BarChart3,
+  Bell,
+  Download,
+  FolderKanban,
+  Globe,
+  HelpCircle,
+  LayoutTemplate,
+  Menu,
+  Search,
+  Settings,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState, type ComponentType, type ReactNode } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { AvatarBadge } from "@/components/ui/avatar-badge";
+import { ProBadge } from "@/components/ui/badge";
+import { BrandLogo } from "@/components/ui/brand-logo";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+
+export interface WorkspaceNavItem {
+  label: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+}
+
+export const APP_NAV_ITEMS: readonly WorkspaceNavItem[] = [
+  { label: "Projects", href: "/dashboard", icon: FolderKanban },
+  { label: "Templates", href: "/templates", icon: LayoutTemplate },
+  { label: "Published", href: "/published", icon: Globe },
+  { label: "Exports", href: "/exports", icon: Download },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Notifications", href: "/notifications", icon: Bell },
+  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Help", href: "/help", icon: HelpCircle },
+] as const;
+
+export interface AppShellProps {
+  children: ReactNode;
+  userInitials?: string;
+  showProBadge?: boolean;
+  projectsUsed?: number;
+  projectsLimit?: number;
+  renewsLabel?: string;
+}
+
+function isNavItemActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function PlanUsageCard({
+  projectsUsed,
+  projectsLimit,
+  renewsLabel,
+}: {
+  projectsUsed: number;
+  projectsLimit: number;
+  renewsLabel: string;
+}) {
+  const ratio = Math.min(100, Math.max(0, Math.round((projectsUsed / projectsLimit) * 100)));
+
+  return (
+    <div
+      data-slot="plan-usage-card"
+      className="border-border bg-surface flex flex-col gap-2.5 rounded-lg border p-4"
+    >
+      <span className="text-muted-foreground type-overline">Pro · Active</span>
+      <p className="text-foreground type-caption">{renewsLabel}</p>
+      <div
+        role="progressbar"
+        aria-label="Project quota usage"
+        aria-valuenow={projectsUsed}
+        aria-valuemin={0}
+        aria-valuemax={projectsLimit}
+        className="bg-border h-1.5 w-full overflow-hidden rounded-full"
+      >
+        <div
+          className="bg-inverse h-full rounded-full transition-all"
+          style={{ width: `${ratio}%` }}
+        />
+      </div>
+      <p className="text-tertiary type-caption">
+        {projectsUsed} of {projectsLimit} projects used
+      </p>
+    </div>
+  );
+}
+
+export function AppShell({
+  children,
+  userInitials = "AA",
+  showProBadge = true,
+  projectsUsed = 6,
+  projectsLimit = 10,
+  renewsLabel = "Renews Nov 30, 2026",
+}: AppShellProps) {
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <div className="bg-surface text-foreground flex min-h-screen flex-col">
+      <a
+        href="#main-content"
+        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:px-4 focus:py-2"
+      >
+        Skip to main content
+      </a>
+
+      <header className="border-border bg-background sticky top-0 z-40 border-b">
+        <div className="flex h-17 items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Open workspace navigation"
+                  className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-md border transition-colors outline-none focus-visible:ring-2 lg:hidden"
+                >
+                  <Menu className="size-4" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-4">
+                <SheetHeader className="px-2 pt-1 pb-2 text-left">
+                  <SheetTitle>Workspace</SheetTitle>
+                  <SheetDescription>Navigate your Casefolio workspace.</SheetDescription>
+                </SheetHeader>
+                <nav
+                  aria-label="Mobile workspace navigation"
+                  className="flex flex-1 flex-col gap-1"
+                >
+                  {APP_NAV_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const active = isNavItemActive(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        onClick={() => setMobileOpen(false)}
+                        className={cn(
+                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-md border px-3 py-2 transition-colors outline-none focus-visible:ring-2",
+                          active
+                            ? "border-border bg-elevated text-foreground type-body-s-strong"
+                            : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s border-transparent",
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "size-4 shrink-0",
+                            active ? "text-primary" : "text-tertiary",
+                          )}
+                        />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </nav>
+                <PlanUsageCard
+                  projectsUsed={projectsUsed}
+                  projectsLimit={projectsLimit}
+                  renewsLabel={renewsLabel}
+                />
+              </SheetContent>
+            </Sheet>
+
+            <BrandLogo href="/dashboard" subtitle="CASE STUDY BUILDER" />
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+            {showProBadge && <ProBadge className="hidden sm:inline-flex" />}
+            <button
+              type="button"
+              aria-label="Search workspace"
+              className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
+            >
+              <Search className="size-4" />
+            </button>
+            <ThemeToggle />
+            <AvatarBadge initials={userInitials} />
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-1">
+        <aside
+          aria-label="Workspace sidebar"
+          className="border-border bg-background hidden w-64 shrink-0 flex-col justify-between border-r p-4 lg:flex"
+        >
+          <nav aria-label="Workspace navigation" className="flex flex-col gap-1">
+            {APP_NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = isNavItemActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "focus-visible:ring-ring/40 flex items-center gap-3 rounded-md border px-3 py-2 transition-colors outline-none focus-visible:ring-2",
+                    active
+                      ? "border-border bg-elevated text-foreground type-body-s-strong"
+                      : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s border-transparent",
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "size-4 shrink-0",
+                      active ? "text-primary" : "text-tertiary",
+                    )}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <PlanUsageCard
+            projectsUsed={projectsUsed}
+            projectsLimit={projectsLimit}
+            renewsLabel={renewsLabel}
+          />
+        </aside>
+
+        <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-10">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

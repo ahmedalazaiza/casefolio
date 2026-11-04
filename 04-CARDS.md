@@ -71,11 +71,12 @@ Summary: Mapped all Figma All in One components (`Button`, `Badge`, `ProBadge`, 
 
 ---
 **[C-103] App shell: sidebar, topbar, responsive mobile nav**  
-Phase: Phase 1 — Design System & Shell · Priority: P0 · Estimate: 4h · Deps: C-102 · Status: Todo  
-- [ ] Works at 375px, 768px, 1440px
-- [ ] Keyboard accessible
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 1 — Design System & Shell · Priority: P0 · Estimate: 4h · Deps: C-102 · Status: Done  
+Summary: Built responsive, keyboard-accessible `MarketingShell`, `AppShell`, and `AdminShell` layouts for `(marketing)`, `(app)`, and `(admin)` route groups per Figma (`2:2003`, `31:6666`, `27:6667`, `29:6956`), verified across `375px`, `768px`, and `1440px`.  
+- [x] Works at 375px, 768px, 1440px
+- [x] Keyboard accessible
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-201] Better Auth: email+password, Google, magic link**  

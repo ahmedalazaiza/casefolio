@@ -49,7 +49,7 @@ export function ProjectCard({
       data-slot="project-card"
       data-state="default"
       className={cn(
-        "border-border bg-card text-card-foreground shadow-card hover:border-border-strong group flex flex-col gap-3 rounded-xl border p-3 transition-colors",
+        "border-border bg-card text-card-foreground shadow-card hover:border-border-strong group flex min-w-0 flex-col gap-3 rounded-xl border p-3 transition-colors",
         className,
       )}
       {...props}
@@ -81,9 +81,9 @@ export function ProjectCard({
         )}
       </div>
 
-      <div className="flex flex-col gap-1 px-1.5 pb-1">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-foreground type-heading-s truncate">{title}</h3>
+      <div className="flex min-w-0 flex-col gap-1 px-1.5 pb-1">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <h3 className="text-foreground type-heading-s min-w-0 truncate">{title}</h3>
           <Badge tone={statusTone}>{statusLabel}</Badge>
         </div>
         <p className="text-tertiary type-body-s truncate">{subtitle}</p>
