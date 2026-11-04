@@ -24,12 +24,13 @@ Summary: Configured Tailwind CSS v4 with `tokens.css` variables, `.dark` class s
 
 ---
 **[C-003] Database: Postgres (Neon) + Drizzle**  
-Phase: Phase 0 — Foundation · Priority: P0 · Estimate: 3h · Deps: C-001 · Status: Todo  
-- [ ] `pnpm db:migrate` applies cleanly
-- [ ] Seed creates admin + 1 template
-- [ ] All ERD tables exist
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 0 — Foundation · Priority: P0 · Estimate: 3h · Deps: C-001 · Status: Done  
+Summary: Implemented Drizzle ORM schema (`packages/db`) for all 14 ERD tables plus approved Better Auth (`sessions`, `accounts`, `verifications`, `invitations`) and `webhook_events` tables, SQL migrations, and idempotent seed creating superadmin + Orbit (`1.0.0`) template.  
+- [x] `pnpm db:migrate` applies cleanly
+- [x] Seed creates admin + 1 template
+- [x] All ERD tables exist
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-004] Env validation + config**  
