@@ -90,11 +90,12 @@ Summary: Configured Better Auth (`drizzleAdapter` with UUID generation on Postgr
 
 ---
 **[C-202] Roles & organizations (user, admin, superadmin; teams)**  
-Phase: Phase 2 — Auth & Onboarding · Priority: P0 · Estimate: 3h · Deps: C-201 · Status: Todo  
-- [ ] /admin blocked for non-admin (403)
-- [ ] Team invites work
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 2 — Auth & Onboarding · Priority: P0 · Estimate: 3h · Deps: C-201 · Status: Done  
+Summary: Added Better Auth `organization` plugin mapped to `organizations`, `memberships` (`org_id`), and `invitations` with `owner`/`editor`/`viewer` access control, server-side role/org guards (`requireAdmin`, `requireSuperAdmin`, `requireOrgMembership`) returning real HTTP `403` via Next.js `forbidden()` + `app/forbidden.tsx` on `/admin`, and built `/account` + `/account/team` workspaces.  
+- [x] /admin blocked for non-admin (403)
+- [x] Team invites work
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-203] Onboarding flow**  

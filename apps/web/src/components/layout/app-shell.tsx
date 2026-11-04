@@ -42,7 +42,7 @@ export const APP_NAV_ITEMS: readonly WorkspaceNavItem[] = [
   { label: "Exports", href: "/exports", icon: Download },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Notifications", href: "/notifications", icon: Bell },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Settings", href: "/account", icon: Settings },
   { label: "Help", href: "/help", icon: HelpCircle },
 ] as const;
 
