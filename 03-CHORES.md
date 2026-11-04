@@ -24,9 +24,9 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 3h · **Depends on:** C-001
 - **Description:** Drizzle config, migrations folder, schema from MASTER-SHEET ERD, seed script.
 - **Acceptance criteria:**
-  - [ ] `pnpm db:migrate` applies cleanly
-  - [ ] Seed creates admin + 1 template
-  - [ ] All ERD tables exist
+  - [x] `pnpm db:migrate` applies cleanly
+  - [x] Seed creates admin + 1 template
+  - [x] All ERD tables exist
 
 ### C-004 — Env validation + config
 - **Priority:** P0 · **Estimate:** 1h · **Depends on:** C-001
