@@ -1,13 +1,19 @@
 import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const currentDir = dirname(fileURLToPath(import.meta.url));
-const rootEnvPath = resolve(currentDir, "../../../.env");
+import { resolve } from "node:path";
 
 export function loadWorkspaceEnv(): void {
-  if (!process.env.DATABASE_URL && existsSync(rootEnvPath)) {
-    process.loadEnvFile(rootEnvPath);
+  if (process.env.DATABASE_URL) {
+    return;
+  }
+
+  for (const candidate of [
+    resolve(process.cwd(), ".env"),
+    resolve(process.cwd(), "../.env"),
+    resolve(process.cwd(), "../../.env"),
+  ]) {
+    if (existsSync(candidate)) {
+      process.loadEnvFile(candidate);
+      return;
+    }
   }
 }
-

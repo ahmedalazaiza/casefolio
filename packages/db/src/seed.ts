@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { eq } from "drizzle-orm";
 import { createDbConnection, type Database } from "./client";
 import {
@@ -12,11 +11,19 @@ import {
   type TemplateTier,
 } from "./schema";
 
-const currentDir = dirname(fileURLToPath(import.meta.url));
-const ORBIT_TEMPLATE_JSON_PATH = resolve(
-  currentDir,
-  "../../../reference/template.example.json",
-);
+function resolveOrbitTemplateJsonPath(): string {
+  for (const candidate of [
+    resolve(process.cwd(), "reference/template.example.json"),
+    resolve(process.cwd(), "../../reference/template.example.json"),
+  ]) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return resolve(process.cwd(), "reference/template.example.json");
+}
+
+const ORBIT_TEMPLATE_JSON_PATH = resolveOrbitTemplateJsonPath();
 
 interface OrbitSeedJson {
   template: {
@@ -166,8 +173,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
 }
 
 const isEntrypoint =
-  process.argv[1] !== undefined &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  process.argv[1] !== undefined && process.argv[1].endsWith("seed.ts");
 
 if (isEntrypoint) {
   seedDatabase()
@@ -179,4 +185,3 @@ if (isEntrypoint) {
       process.exit(1);
     });
 }
-

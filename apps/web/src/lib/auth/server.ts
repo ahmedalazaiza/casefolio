@@ -16,6 +16,15 @@ export const auth = betterAuth({
   appName: "Casefolio",
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
+  trustedOrigins: Array.from(
+    new Set([
+      env.BETTER_AUTH_URL,
+      env.NEXT_PUBLIC_APP_URL,
+      ...(process.env.NODE_ENV !== "production"
+        ? ["http://127.0.0.1:3000", "http://localhost:3000"]
+        : []),
+    ]),
+  ),
   database: drizzleAdapter(db, {
     provider: "pg",
     usePlural: true,

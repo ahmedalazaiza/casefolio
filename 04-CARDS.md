@@ -99,11 +99,12 @@ Summary: Added Better Auth `organization` plugin mapped to `organizations`, `mem
 
 ---
 **[C-203] Onboarding flow**  
-Phase: Phase 2 — Auth & Onboarding · Priority: P1 · Estimate: 3h · Deps: C-201 · Status: Todo  
-- [ ] New user lands on onboarding once
-- [ ] Data saved to profile
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 2 — Auth & Onboarding · Priority: P1 · Estimate: 3h · Deps: C-201 · Status: Done  
+Summary: Built Figma-faithful 3-step `/onboarding` wizard (`2:1214`, `2:1336`, `2:1480`) for role, design focus (`mobile` / `web` / `both`), display name, headline, and avatar upload, with Zod-validated server persistence to `users`, one-time onboarding redirect logic, and first-run `/dashboard` checklist (`2:1558`).  
+- [x] New user lands on onboarding once
+- [x] Data saved to profile
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-301] Template JSON schema (zod) matching figma-to-puck**  
