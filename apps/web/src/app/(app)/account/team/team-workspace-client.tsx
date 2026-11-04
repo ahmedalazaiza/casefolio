@@ -181,7 +181,7 @@ export function TeamWorkspaceClient({
         <Card className="border-primary/30 bg-accent/40 flex flex-col gap-4 p-5">
           <div className="flex items-center gap-2">
             <Badge tone="accent">Pending invite</Badge>
-            <h2 className="text-foreground type-h3">Team invitations waiting for you</h2>
+            <h2 className="text-foreground type-heading-s">Team invitations waiting for you</h2>
           </div>
           <div className="flex flex-col gap-3">
             {incomingInvitations.map((invite) => {
@@ -223,7 +223,7 @@ export function TeamWorkspaceClient({
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Users className="text-primary size-4" />
-                <h2 className="text-foreground type-h3">{currentOrg.name}</h2>
+                <h2 className="text-foreground type-heading-m">{currentOrg.name}</h2>
                 <Badge tone="accent">{currentOrg.myRole}</Badge>
               </div>
               <p className="text-muted-foreground type-caption">
@@ -369,7 +369,7 @@ export function TeamWorkspaceClient({
 
       <Card className="flex flex-col gap-4 p-6">
         <div className="flex flex-col gap-1">
-          <h2 className="text-foreground type-h3">
+          <h2 className="text-foreground type-heading-m">
             {organizations.length === 0 ? "Create your team workspace" : "Create another workspace"}
           </h2>
           <p className="text-muted-foreground type-body-s">

@@ -11,7 +11,7 @@ export default function ForbiddenPage() {
 
       <main className="mx-auto flex max-w-md flex-col items-center gap-4 text-center">
         <p className="text-primary type-display-l font-mono">403</p>
-        <h1 className="text-foreground type-h1">Access restricted</h1>
+        <h1 className="text-foreground type-heading-l">Access restricted</h1>
         <p className="text-muted-foreground type-body-m">
           Your account doesn&apos;t have administrator permissions to view this area. Switch to an
           authorized admin account or return to your workspace.

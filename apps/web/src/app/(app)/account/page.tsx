@@ -55,7 +55,7 @@ export default async function AccountPage() {
             <AvatarBadge initials={initials} src={user.image} alt={user.name} size="lg" />
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-foreground type-h3">{user.name}</h2>
+                <h2 className="text-foreground type-heading-m">{user.name}</h2>
                 <Badge tone="accent">{user.role}</Badge>
                 <Badge tone={user.plan === "free" ? "neutral" : "pro"}>
                   {user.plan.toUpperCase()}
