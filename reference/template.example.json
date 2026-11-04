@@ -1,0 +1,142 @@
+{
+  "template": {
+    "id": "tpl_orbit_mobile_v1",
+    "slug": "orbit",
+    "name": "Orbit",
+    "type": "mobile",
+    "version": "1.0.0",
+    "status": "draft",
+    "category": "Fintech",
+    "tier": "free",
+    "cover": { "src": "https://cdn.casefolio.app/templates/orbit/cover.png", "ratio": "4:3" },
+    "canvas": { "width": 1440, "exportPresets": ["png-long", "pdf", "behance-1400"] },
+    "figmaSource": { "fileKey": "FILE_KEY", "nodeId": "12:345" },
+    "theme": {
+      "colors": {
+        "primary": "#5B4BFF",
+        "secondary": "#18E0C8",
+        "background": "#0E0F1A",
+        "surface": "#1A1C2E",
+        "text": "#FFFFFF",
+        "textMuted": "#A3A6C2",
+        "accent": "#FFB547"
+      },
+      "fonts": {
+        "heading": { "family": "Sora", "weights": [600, 700] },
+        "body": { "family": "Inter", "weights": [400, 500] }
+      },
+      "typography": {
+        "display": { "font": "heading", "size": 72, "weight": 700, "lineHeight": 1.1 },
+        "h2": { "font": "heading", "size": 40, "weight": 600, "lineHeight": 1.2 },
+        "body": { "font": "body", "size": 18, "weight": 400, "lineHeight": 1.6 },
+        "caption": { "font": "body", "size": 14, "weight": 500, "lineHeight": 1.4 }
+      }
+    },
+    "slots": {
+      "hero.mockup": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" },
+      "hero.logo": { "ratio": "1:1", "minWidth": 120 },
+      "overview.banner": { "ratio": "16:9", "minWidth": 1200 },
+      "process.step.image": { "ratio": "4:3", "minWidth": 600 },
+      "gallery.screen": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" }
+    }
+  },
+  "puck": {
+    "root": {
+      "props": {
+        "title": "Orbit — Mobile Banking App",
+        "themeRef": "template.theme"
+      }
+    },
+    "content": [
+      {
+        "type": "Hero",
+        "props": {
+          "id": "Hero-1",
+          "eyebrow": "Case Study · Mobile",
+          "title": "Orbit — Banking that moves with you",
+          "subtitle": "Redesigning a mobile wallet for first-time savers.",
+          "logo": { "slot": "hero.logo", "src": "", "alt": "Orbit logo", "crop": null },
+          "mockup": { "slot": "hero.mockup", "src": "", "alt": "Home screen", "crop": null },
+          "background": "background",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Overview",
+        "props": {
+          "id": "Overview-1",
+          "heading": "Overview",
+          "summary": "Orbit is a savings-first wallet for Gen Z users in emerging markets.",
+          "meta": [
+            { "label": "Role", "value": "Lead Product Designer" },
+            { "label": "Timeline", "value": "12 weeks" },
+            { "label": "Platform", "value": "iOS & Android" },
+            { "label": "Tools", "value": "Figma, Maze" }
+          ],
+          "banner": { "slot": "overview.banner", "src": "", "alt": "Overview banner", "crop": null },
+          "background": "surface"
+        }
+      },
+      {
+        "type": "Problem",
+        "props": {
+          "id": "Problem-1",
+          "heading": "The Problem",
+          "statement": "68% of new users dropped off before making their first deposit.",
+          "painPoints": [
+            { "title": "Confusing onboarding", "body": "Nine steps before seeing the balance." },
+            { "title": "No savings motivation", "body": "Goals were hidden two levels deep." },
+            { "title": "Low trust", "body": "Fees were unclear until checkout." }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Process",
+        "props": {
+          "id": "Process-1",
+          "heading": "Process",
+          "steps": [
+            { "number": "01", "title": "Research", "body": "18 interviews and a competitor audit.", "image": { "slot": "process.step.image", "src": "", "alt": "Research board", "crop": null } },
+            { "number": "02", "title": "Define", "body": "Personas, journey maps and success metrics.", "image": { "slot": "process.step.image", "src": "", "alt": "Journey map", "crop": null } },
+            { "number": "03", "title": "Design", "body": "Wireframes to hi-fi with a new design system.", "image": { "slot": "process.step.image", "src": "", "alt": "Wireframes", "crop": null } },
+            { "number": "04", "title": "Test", "body": "Three rounds of usability testing.", "image": { "slot": "process.step.image", "src": "", "alt": "Usability test", "crop": null } }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "ScreensGallery",
+        "props": {
+          "id": "ScreensGallery-1",
+          "heading": "Final Screens",
+          "columns": 3,
+          "screens": [
+            { "caption": "Onboarding", "image": { "slot": "gallery.screen", "src": "", "alt": "Onboarding", "crop": null } },
+            { "caption": "Home", "image": { "slot": "gallery.screen", "src": "", "alt": "Home", "crop": null } },
+            { "caption": "Savings goals", "image": { "slot": "gallery.screen", "src": "", "alt": "Savings goals", "crop": null } },
+            { "caption": "Transfer", "image": { "slot": "gallery.screen", "src": "", "alt": "Transfer", "crop": null } },
+            { "caption": "Insights", "image": { "slot": "gallery.screen", "src": "", "alt": "Insights", "crop": null } },
+            { "caption": "Profile", "image": { "slot": "gallery.screen", "src": "", "alt": "Profile", "crop": null } }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Results",
+        "props": {
+          "id": "Results-1",
+          "heading": "Results",
+          "metrics": [
+            { "value": "+42%", "label": "First-deposit conversion" },
+            { "value": "3.1×", "label": "Savings goals created" },
+            { "value": "4.8★", "label": "App Store rating" }
+          ],
+          "closing": "Orbit launched in 3 markets and reached 120k users in 6 months.",
+          "background": "primary"
+        }
+      }
+    ],
+    "zones": {}
+  }
+}
