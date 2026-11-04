@@ -1,6 +1,7 @@
 "use client";
 
 import type { PuckContext } from "@puckeditor/core";
+import { useEffect } from "react";
 import {
   CtaSection,
   CustomSection,
@@ -13,6 +14,7 @@ import {
   ScreensGallerySection,
 } from "@/components/sections";
 import { formatSectionTypeLabel } from "@/lib/projects/types";
+import { ensureThemeFontsLoaded } from "@/lib/template/curated-themes";
 import type {
   PuckDocument,
   PuckSectionItem,
@@ -82,9 +84,14 @@ export function EditorCanvasPreview({
     },
   };
 
+  useEffect(() => {
+    ensureThemeFontsLoaded(theme);
+  }, [theme]);
+
   return (
     <div
       data-slot="editor-canvas-frame"
+      data-testid="editor-canvas-preview"
       data-viewport={viewport}
       style={buildTemplateThemeStyle(theme)}
       className={cn(
