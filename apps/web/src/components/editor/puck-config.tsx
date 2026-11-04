@@ -153,16 +153,8 @@ export function createCasefolioPuckConfig(
       Hero: {
         label: "Hero",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           eyebrow: { type: "text", label: "Eyebrow" },
-          title: { type: "text", label: "Title", contentEditable: true },
+          title: { type: "text", label: "Title" },
           subtitle: { type: "textarea", label: "Subtitle" },
           logo: createImageSlotCustomField("hero.logo", "Logo slot"),
           mockup: createImageSlotCustomField("hero.mockup", "Hero mockup slot"),
@@ -174,14 +166,6 @@ export function createCasefolioPuckConfig(
       Overview: {
         label: "Overview",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           heading: { type: "text", label: "Heading" },
           summary: createRichTextCustomField("Summary"),
           meta: {
@@ -201,14 +185,6 @@ export function createCasefolioPuckConfig(
       Problem: {
         label: "Problem",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           heading: { type: "text", label: "Heading" },
           statement: { type: "textarea", label: "Problem statement" },
           painPoints: {
@@ -228,14 +204,6 @@ export function createCasefolioPuckConfig(
       Process: {
         label: "Process",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           heading: { type: "text", label: "Heading" },
           steps: {
             type: "array",
@@ -256,14 +224,6 @@ export function createCasefolioPuckConfig(
       ScreensGallery: {
         label: "Screens Gallery",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           heading: { type: "text", label: "Heading" },
           columns: {
             type: "radio",
@@ -296,14 +256,6 @@ export function createCasefolioPuckConfig(
       Results: {
         label: "Results",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           heading: { type: "text", label: "Heading" },
           metrics: {
             type: "array",
@@ -323,14 +275,6 @@ export function createCasefolioPuckConfig(
       Quote: {
         label: "Quote",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           quote: { type: "textarea", label: "Quote" },
           author: { type: "text", label: "Author" },
           role: { type: "text", label: "Role" },
@@ -342,14 +286,6 @@ export function createCasefolioPuckConfig(
       CTA: {
         label: "Call to Action",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           heading: { type: "text", label: "Heading" },
           subheading: { type: "textarea", label: "Subheading" },
           primaryLabel: { type: "text", label: "Primary button label" },
@@ -364,14 +300,6 @@ export function createCasefolioPuckConfig(
       Custom: {
         label: "Custom Section",
         fields: {
-          hidden: {
-            type: "radio",
-            label: "Visibility",
-            options: [
-              { label: "Visible", value: false },
-              { label: "Hidden", value: true },
-            ],
-          },
           heading: { type: "text", label: "Heading" },
           body: createRichTextCustomField("Body"),
           image: createImageSlotCustomField("custom.image", "Image"),

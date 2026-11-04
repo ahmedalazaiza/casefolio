@@ -1,4 +1,4 @@
-import { and, count, eq, type PlanTier } from "@casefolio/db";
+import { and, count, eq, type PlanTier, type UserRole } from "@casefolio/db";
 import { db, dbSchema } from "@/lib/db";
 import {
   buildInitialProjectPuckData,
@@ -6,8 +6,13 @@ import {
   FREE_PROJECT_LIMIT,
   type CreateProjectInput,
   type CreateProjectResult,
+  type ProjectEditorPayload,
 } from "@/lib/projects/types";
-import { validateTemplateDocument } from "@/lib/template/schema";
+import {
+  puckDocumentSchema,
+  templateThemeSchema,
+  validateTemplateDocument,
+} from "@/lib/template/schema";
 
 export interface CreateProjectServiceArgs {
   userId: string;
@@ -131,5 +136,103 @@ export async function createProjectFromTemplate({
     ok: true,
     projectId: created.id,
     templateVersionId: tplRow.version.id,
+  };
+}
+
+export type ProjectEditorAccessResult =
+  | { status: "not_found" }
+  | { status: "forbidden" }
+  | { status: "ok"; payload: ProjectEditorPayload };
+
+export async function getProjectEditorAccess(
+  projectId: string,
+  user: { id: string; role: UserRole },
+): Promise<ProjectEditorAccessResult> {
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(projectId)) {
+    return { status: "not_found" };
+  }
+
+  const [row] = await db
+    .select({
+      project: dbSchema.projects,
+      version: dbSchema.templateVersions,
+      template: dbSchema.templates,
+    })
+    .from(dbSchema.projects)
+    .innerJoin(
+      dbSchema.templateVersions,
+      eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
+    )
+    .innerJoin(dbSchema.templates, eq(dbSchema.templateVersions.templateId, dbSchema.templates.id))
+    .where(eq(dbSchema.projects.id, projectId))
+    .limit(1);
+
+  if (!row) {
+    return { status: "not_found" };
+  }
+
+  const isPlatformAdmin = user.role === "admin" || user.role === "superadmin";
+  let canEdit = row.project.ownerId === user.id || isPlatformAdmin;
+
+  if (!canEdit && row.project.orgId) {
+    const [membership] = await db
+      .select({ role: dbSchema.memberships.role })
+      .from(dbSchema.memberships)
+      .where(
+        and(
+          eq(dbSchema.memberships.orgId, row.project.orgId),
+          eq(dbSchema.memberships.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (membership && (membership.role === "owner" || membership.role === "editor")) {
+      canEdit = true;
+    }
+  }
+
+  if (!canEdit) {
+    return { status: "forbidden" };
+  }
+
+  const tplDocCheck = validateTemplateDocument(row.version.data);
+  if (!tplDocCheck.ok) {
+    return { status: "not_found" };
+  }
+
+  const tplDoc = tplDocCheck.data;
+  const puckCheck = puckDocumentSchema.safeParse(row.project.puckData);
+  const themeCheck = templateThemeSchema.safeParse(row.project.theme);
+
+  const resolvedPuck = puckCheck.success ? puckCheck.data : structuredClone(tplDoc.puck);
+  const resolvedTheme = themeCheck.success
+    ? themeCheck.data
+    : structuredClone(tplDoc.template.theme);
+
+  return {
+    status: "ok",
+    payload: {
+      project: {
+        id: row.project.id,
+        name: row.project.name,
+        type: row.project.type,
+        puckData: resolvedPuck,
+        theme: resolvedTheme,
+        visibility: row.project.visibility,
+        slug: row.project.slug,
+        updatedAtIso: row.project.updatedAt.toISOString(),
+      },
+      template: {
+        id: row.template.id,
+        name: row.template.name,
+        slug: row.template.slug,
+        version: row.version.version,
+        slots: tplDoc.template.slots,
+        defaultTheme: tplDoc.template.theme,
+        defaultPuck: tplDoc.puck,
+      },
+    },
   };
 }

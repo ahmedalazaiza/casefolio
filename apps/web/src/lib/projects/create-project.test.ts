@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { eq } from "@casefolio/db";
 import { describe, expect, it } from "vitest";
 import { db, dbSchema } from "@/lib/db";
-import { createProjectFromTemplate } from "@/lib/projects/service";
+import { createProjectFromTemplate, getProjectEditorAccess } from "@/lib/projects/service";
 import {
   createNewTemplateVersion,
   publishTemplateVersion,
@@ -202,6 +202,25 @@ describe("createProjectFromTemplate (C-401)", () => {
         },
       });
       expect(proSuccess.ok).toBe(true);
+
+      // 6. Editor authorization check: owner gets ok, stranger gets forbidden, unknown ID gets not_found
+      const ownerAccess = await getProjectEditorAccess(created1.projectId, {
+        id: createdUserId,
+        role: "user",
+      });
+      expect(ownerAccess.status).toBe("ok");
+
+      const strangerAccess = await getProjectEditorAccess(created1.projectId, {
+        id: "00000000-0000-4000-8000-000000000001",
+        role: "user",
+      });
+      expect(strangerAccess.status).toBe("forbidden");
+
+      const missingAccess = await getProjectEditorAccess(
+        "00000000-0000-4000-8000-000000000099",
+        { id: createdUserId, role: "user" },
+      );
+      expect(missingAccess.status).toBe("not_found");
     } finally {
       if (createdUserId) {
         await db.delete(dbSchema.projects).where(eq(dbSchema.projects.ownerId, createdUserId));

@@ -162,12 +162,13 @@ Summary: Built 3-step `/new` (`type` → `template` → `details`) create-projec
 
 ---
 **[C-402] Constrained Puck editor**  
-Phase: Phase 4 — Create Wizard & Editor · Priority: P0 · Estimate: 8h · Deps: C-302,C-401 · Status: Todo  
-- [ ] Cannot drag new components
-- [ ] Section show/hide works
-- [ ] No free-canvas features
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 4 — Create Wizard & Editor · Priority: P0 · Estimate: 8h · Deps: C-302,C-401 · Status: Done  
+Summary: Built `/editor/[projectId]` 3-panel constrained Puck editor per Figma (`2:4346`, `2:4784`, `2:6367`) with `CONSTRAINED_PUCK_PERMISSIONS` (`insert: false, delete: false, duplicate: false, drag: false, edit: true`), zero free-canvas drawers/dropzones, `<Puck.Fields wrapFields />` inspector, optional section visibility switches (Hero locked), Desktop/Mobile preview toggle, Screenshots slot checklist, and owner/org editor authorization.  
+- [x] Cannot drag new components
+- [x] Section show/hide works
+- [x] No free-canvas features
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-403] TipTap rich text field**  
