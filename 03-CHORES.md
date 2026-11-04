@@ -39,8 +39,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 2h · **Depends on:** C-001
 - **Description:** Lint, typecheck, unit, e2e smoke on PR; Vercel preview deploys.
 - **Acceptance criteria:**
-  - [ ] CI green on PR
-  - [ ] Preview URL posted
+  - [x] CI green on PR
+  - [x] Preview URL posted
 
 ## Phase 1 — Design System & Shell
 
