@@ -80,12 +80,13 @@ Summary: Built responsive, keyboard-accessible `MarketingShell`, `AppShell`, and
 
 ---
 **[C-201] Better Auth: email+password, Google, magic link**  
-Phase: Phase 2 — Auth & Onboarding · Priority: P0 · Estimate: 4h · Deps: C-003 · Status: Todo  
-- [ ] Sign up/in/out works
-- [ ] Protected routes redirect
-- [ ] Sessions persist
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 2 — Auth & Onboarding · Priority: P0 · Estimate: 4h · Deps: C-003 · Status: Done  
+Summary: Configured Better Auth (`drizzleAdapter` with UUID generation on Postgres) supporting email+password, Google OAuth, magic links, 6-digit OTP email verification, password reset via Resend + React Email, protected `(app)` redirects, and Figma-faithful `/sign-up`, `/sign-in`, `/verify`, and `/reset` screens.  
+- [x] Sign up/in/out works
+- [x] Protected routes redirect
+- [x] Sessions persist
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-202] Roles & organizations (user, admin, superadmin; teams)**  

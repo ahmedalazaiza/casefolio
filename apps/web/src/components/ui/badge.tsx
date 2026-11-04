@@ -60,3 +60,4 @@ function ProBadge({ className, ...props }: Omit<BadgeProps, "tone" | "children">
 }
 
 export { Badge, badgeVariants, ProBadge, type BadgeProps };
+

@@ -93,3 +93,4 @@ describe("Figma design tokens 1:1 sync (C-101)", () => {
     expect(layoutTsx).toContain("next/font/google");
   });
 });
+

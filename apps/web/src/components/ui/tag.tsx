@@ -24,3 +24,4 @@ function Tag({ className, selected, ...props }: TagProps) {
 }
 
 export { Tag, tagVariants, type TagProps };
+

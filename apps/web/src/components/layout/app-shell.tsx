@@ -16,7 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AvatarBadge } from "@/components/ui/avatar-badge";
+import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { ProBadge } from "@/components/ui/badge";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import {
@@ -49,6 +49,9 @@ export const APP_NAV_ITEMS: readonly WorkspaceNavItem[] = [
 export interface AppShellProps {
   children: ReactNode;
   userInitials?: string;
+  userName?: string;
+  userEmail?: string;
+  userImage?: string | null;
   showProBadge?: boolean;
   projectsUsed?: number;
   projectsLimit?: number;
@@ -100,6 +103,9 @@ function PlanUsageCard({
 export function AppShell({
   children,
   userInitials = "AA",
+  userName,
+  userEmail,
+  userImage,
   showProBadge = true,
   projectsUsed = 6,
   projectsLimit = 10,
@@ -187,7 +193,12 @@ export function AppShell({
               <Search className="size-4" />
             </button>
             <ThemeToggle />
-            <AvatarBadge initials={userInitials} />
+            <UserAccountMenu
+              initials={userInitials}
+              name={userName}
+              email={userEmail}
+              image={userImage}
+            />
           </div>
         </div>
       </header>

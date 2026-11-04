@@ -72,9 +72,9 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-003
 - **Description:** Sessions in DB, email verification via Resend.
 - **Acceptance criteria:**
-  - [ ] Sign up/in/out works
-  - [ ] Protected routes redirect
-  - [ ] Sessions persist
+  - [x] Sign up/in/out works
+  - [x] Protected routes redirect
+  - [x] Sessions persist
 
 ### C-202 — Roles & organizations (user, admin, superadmin; teams)
 - **Priority:** P0 · **Estimate:** 3h · **Depends on:** C-201
