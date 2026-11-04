@@ -46,6 +46,17 @@ export async function getServerSession(): Promise<AuthenticatedContext | null> {
   };
 }
 
+export function computeUserInitials(name: string, email: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+  }
+  if (parts.length === 1 && (parts[0]?.length ?? 0) >= 2) {
+    return (parts[0] ?? "").slice(0, 2).toUpperCase();
+  }
+  return email.slice(0, 2).toUpperCase() || "CF";
+}
+
 export async function requireSession(callbackPath = "/dashboard"): Promise<AuthenticatedContext> {
   const ctx = await getServerSession();
   if (!ctx) {

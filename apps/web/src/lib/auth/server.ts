@@ -1,13 +1,15 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { emailOTP, magicLink } from "better-auth/plugins";
+import { emailOTP, magicLink, organization } from "better-auth/plugins";
 import { env } from "@/env";
 import {
   sendMagicLinkEmail,
   sendPasswordResetEmail,
+  sendTeamInvitationEmail,
   sendVerificationOtpEmail,
 } from "@/lib/auth/email";
+import { organizationAccessControl, organizationRoles } from "@/lib/auth/permissions";
 import { db, dbSchema } from "@/lib/db";
 
 export const auth = betterAuth({
@@ -97,6 +99,27 @@ export const auth = betterAuth({
       sendVerificationOnSignUp: true,
       async sendVerificationOTP({ email, otp, type }) {
         await sendVerificationOtpEmail({ email, otp, type });
+      },
+    }),
+    organization({
+      ac: organizationAccessControl,
+      roles: organizationRoles,
+      creatorRole: "owner",
+      schema: {
+        member: {
+          fields: {
+            organizationId: "orgId",
+          },
+        },
+      },
+      async sendInvitationEmail(data) {
+        await sendTeamInvitationEmail({
+          email: data.email,
+          organizationName: data.organization.name,
+          inviterName: data.inviter.user.name,
+          acceptUrl: `${env.NEXT_PUBLIC_APP_URL}/account/team?invitationId=${encodeURIComponent(data.id)}`,
+          role: data.role,
+        });
       },
     }),
     nextCookies(),

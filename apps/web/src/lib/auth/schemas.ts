@@ -38,3 +38,23 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
     message: "Passwords do not match.",
   });
+
+export const createOrganizationSchema = z.object({
+  name: z.string().trim().min(2, "Workspace name must be at least 2 characters.").max(60),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Slug may only contain lowercase letters, numbers, and hyphens.",
+    )
+    .min(2, "Slug must be at least 2 characters.")
+    .max(48),
+});
+
+export const inviteTeamMemberSchema = z.object({
+  organizationId: z.string().uuid("Select a valid team workspace."),
+  email: z.string().trim().email("Enter a valid teammate email address."),
+  role: z.enum(["editor", "viewer"]),
+});

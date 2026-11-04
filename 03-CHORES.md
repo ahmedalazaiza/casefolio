@@ -80,8 +80,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 3h · **Depends on:** C-201
 - **Description:** Better Auth organization plugin; role guard helpers.
 - **Acceptance criteria:**
-  - [ ] /admin blocked for non-admin (403)
-  - [ ] Team invites work
+  - [x] /admin blocked for non-admin (403)
+  - [x] Team invites work
 
 ### C-203 — Onboarding flow
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-201
