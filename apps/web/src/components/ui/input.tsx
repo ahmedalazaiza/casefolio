@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import { useId, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 function Input({ className, type = "text", ...props }: ComponentProps<"input">) {
@@ -7,9 +7,9 @@ function Input({ className, type = "text", ...props }: ComponentProps<"input">) 
       type={type}
       data-slot="input"
       className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-colors outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-2",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        "border-input bg-elevated text-foreground placeholder:text-tertiary selection:bg-primary selection:text-primary-foreground flex h-11 w-full min-w-0 rounded-md border px-3.5 py-2.5 type-body-m transition-colors outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-surface disabled:text-tertiary disabled:opacity-70",
+        "focus-visible:border-ring focus-visible:ring-ring/20 focus-visible:ring-2",
+        "aria-invalid:border-destructive aria-invalid:ring-destructive/15",
         className,
       )}
       {...props}
@@ -17,5 +17,55 @@ function Input({ className, type = "text", ...props }: ComponentProps<"input">) 
   );
 }
 
-export { Input };
+interface InputFieldProps extends ComponentProps<"input"> {
+  label: string;
+  helperText?: string;
+  error?: string;
+}
 
+function InputField({
+  label,
+  helperText,
+  error,
+  id,
+  disabled,
+  className,
+  ...props
+}: InputFieldProps) {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  const messageId = `${inputId}-message`;
+  const hasMessage = Boolean(error || helperText);
+
+  return (
+    <div className="flex w-full flex-col gap-1.5">
+      <label
+        htmlFor={inputId}
+        className={cn(
+          "type-caption",
+          disabled ? "text-tertiary" : "text-foreground",
+        )}
+      >
+        {label}
+      </label>
+      <Input
+        id={inputId}
+        disabled={disabled}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={hasMessage ? messageId : undefined}
+        className={className}
+        {...props}
+      />
+      {hasMessage && (
+        <p
+          id={messageId}
+          className={cn("type-caption", error ? "text-destructive" : "text-tertiary")}
+        >
+          {error ?? helperText}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export { Input, InputField, type InputFieldProps };

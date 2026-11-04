@@ -162,16 +162,20 @@ describe("shadcn/ui primitives & theme class strategy (C-002)", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("contains zero raw hex colors in apps/web/src/components", () => {
+  it("contains zero raw hex colors, px font sizes, or hardcoded font names in apps/web/src/components", () => {
     const componentsDir = join(process.cwd(), "apps/web/src/components");
     const files = collectComponentFiles(componentsDir).filter(
       (file) => !file.endsWith(".test.tsx") && !file.endsWith(".test.ts"),
     );
     const hexPattern = /#[0-9a-fA-F]{3,8}\b/;
+    const pxFontPattern = /text-\[\d+px\]|font-size:\s*\d+px/;
+    const fontNamePattern = /Geist|JetBrains/i;
 
     for (const file of files) {
       const content = readFileSync(file, "utf-8");
       expect(content, `Unexpected raw hex color in ${file}`).not.toMatch(hexPattern);
+      expect(content, `Unexpected px font size in ${file}`).not.toMatch(pxFontPattern);
+      expect(content, `Unexpected hardcoded font name in ${file}`).not.toMatch(fontNamePattern);
     }
   });
 });
