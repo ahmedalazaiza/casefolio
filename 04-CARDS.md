@@ -135,11 +135,12 @@ Summary: Built 4-step `/admin/templates/new` upload wizard (Upload JSON → Vali
 
 ---
 **[C-304] Template versions & publish/archive**  
-Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 4h · Deps: C-303 · Status: Todo  
-- [ ] Publishing new version does not alter existing projects
-- [ ] Archived hidden from library
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 4h · Deps: C-303 · Status: Done  
+Summary: Implemented semantic versioning (`createNewTemplateVersion`), publish/archive/unarchive lifecycle actions with `audit_logs`, `/admin/templates` table with Type & Status filters (`31:6881`), and `/admin/templates/[id]` detail screen (`32:7909`) with live Puck preview, version history, and immutable project version pinning.  
+- [x] Publishing new version does not alter existing projects
+- [x] Archived hidden from library
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-305] Template library (user side) with filters**  

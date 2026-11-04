@@ -117,8 +117,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-303
 - **Description:** Semver versions, publish/archive, changelog; projects pin a version.
 - **Acceptance criteria:**
-  - [ ] Publishing new version does not alter existing projects
-  - [ ] Archived hidden from library
+  - [x] Publishing new version does not alter existing projects
+  - [x] Archived hidden from library
 
 ### C-305 — Template library (user side) with filters
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-304
