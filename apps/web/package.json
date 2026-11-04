@@ -12,6 +12,7 @@
   "dependencies": {
     "@casefolio/db": "workspace:*",
     "@casefolio/template-schema": "workspace:*",
+    "@puckeditor/core": "^0.24.0",
     "@t3-oss/env-nextjs": "^0.13.11",
     "better-auth": "^1.7.15",
     "class-variance-authority": "^0.7.1",

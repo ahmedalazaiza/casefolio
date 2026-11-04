@@ -117,11 +117,12 @@ Summary: Built canonical Zod template schema in `@casefolio/template-schema` (re
 
 ---
 **[C-302] Puck component config for section types**  
-Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 6h · Deps: C-301,C-102 · Status: Todo  
-- [ ] Orbit example renders via <Render>
-- [ ] Mobile/Web variants render
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 6h · Deps: C-301,C-102 · Status: Done  
+Summary: Built all 9 Puck section components (`Hero`, `Overview`, `Problem`, `Process`, `ScreensGallery`, `Results`, `Quote`, `CTA`, `Custom`) using strictly CSS variables/design tokens, locked-aspect-ratio `ImageSlotFrame` with Mobile (`iphone`/`android`) and Web (`browser`) device chrome variants, and `TemplatePuckRenderer` + `casefolioPuckConfig` wrapping `@puckeditor/core` `<Render>`.  
+- [x] Orbit example renders via <Render>
+- [x] Mobile/Web variants render
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-303] Admin template upload wizard**  

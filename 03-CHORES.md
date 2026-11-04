@@ -103,8 +103,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 6h · **Depends on:** C-301,C-102
 - **Description:** Hero, Overview, Problem, Process, ScreensGallery, Results, Quote, CTA, Custom using tokens only.
 - **Acceptance criteria:**
-  - [ ] Orbit example renders via <Render>
-  - [ ] Mobile/Web variants render
+  - [x] Orbit example renders via <Render>
+  - [x] Mobile/Web variants render
 
 ### C-303 — Admin template upload wizard
 - **Priority:** P0 · **Estimate:** 6h · **Depends on:** C-301,C-202
