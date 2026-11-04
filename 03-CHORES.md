@@ -17,8 +17,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 2h · **Depends on:** C-001
 - **Description:** Install Tailwind, shadcn CLI, base components (button, input, dialog, dropdown, tabs, toast, sheet).
 - **Acceptance criteria:**
-  - [ ] shadcn components render
-  - [ ] Dark/light class strategy works
+  - [x] shadcn components render
+  - [x] Dark/light class strategy works
 
 ### C-003 — Database: Postgres (Neon) + Drizzle
 - **Priority:** P0 · **Estimate:** 3h · **Depends on:** C-001

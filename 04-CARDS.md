@@ -15,11 +15,12 @@ Summary: Scaffolded pnpm monorepo (`apps/web`, `apps/worker`, `packages/db`, `pa
 
 ---
 **[C-002] Tailwind v4 + shadcn/ui setup**  
-Phase: Phase 0 — Foundation · Priority: P0 · Estimate: 2h · Deps: C-001 · Status: Todo  
-- [ ] shadcn components render
-- [ ] Dark/light class strategy works
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 0 — Foundation · Priority: P0 · Estimate: 2h · Deps: C-001 · Status: Done  
+Summary: Configured Tailwind CSS v4 with `tokens.css` variables, `.dark` class strategy (`next-themes`), self-hosted Geist & JetBrains Mono fonts, and token-styled base shadcn/ui primitives (`button`, `input`, `dialog`, `dropdown-menu`, `tabs`, `toast`, `sheet`).  
+- [x] shadcn components render
+- [x] Dark/light class strategy works
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-003] Database: Postgres (Neon) + Drizzle**  
