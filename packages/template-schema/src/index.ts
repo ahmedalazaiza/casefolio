@@ -11,3 +11,4 @@ export const SUPPORTED_SECTION_TYPES = [
 ] as const;
 
 export type SupportedSectionType = (typeof SUPPORTED_SECTION_TYPES)[number];
+

@@ -175,3 +175,4 @@ describe("shadcn/ui primitives & theme class strategy (C-002)", () => {
     }
   });
 });
+

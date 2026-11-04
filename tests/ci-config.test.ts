@@ -33,3 +33,4 @@ describe("CI workflow & Vercel preview configuration (C-005)", () => {
     expect(parsed.outputDirectory).toBe("apps/web/.next");
   });
 });
+

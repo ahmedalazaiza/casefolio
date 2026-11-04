@@ -48,9 +48,9 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-002
 - **Description:** Read Figma file 4otk3FXD0q1TJ7aPGEIeGO variables/styles; generate `tokens.css` + Tailwind theme (indigo #4F46E5, Geist, JetBrains Mono).
 - **Acceptance criteria:**
-  - [ ] Tokens match Figma values 1:1
-  - [ ] No hard-coded hex in components
-  - [ ] Fonts self-hosted via next/font
+  - [x] Tokens match Figma values 1:1
+  - [x] No hard-coded hex in components
+  - [x] Fonts self-hosted via next/font
 
 ### C-102 — Map Figma components to shadcn variants
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-101

@@ -1,60 +1,150 @@
-/* Design tokens — synced with Figma (4otk3FXD0q1TJ7aPGEIeGO) in C-101 */
+/* Generated 1:1 from Figma file 4otk3FXD0q1TJ7aPGEIeGO (All in One: Colors — Light 2:491, Colors — Dark 2:583, Type scale 2:675, Spacing 2:710, Radius 2:751) */
 :root {
-  --radius: 0.625rem;
+  /* Figma color tokens — Light mode */
+  --bg-canvas: #ffffff;
+  --bg-surface: #fafafa;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #f4f4f5;
+  --bg-inverse: #0a0a0a;
 
-  /* Brand & semantic tokens (light) */
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --surface: #f8fafc;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #4f46e5;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #eef2ff;
-  --accent-foreground: #3730a3;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #4f46e5;
+  --text-primary: #0a0a0a;
+  --text-secondary: #52525b;
+  --text-tertiary: #a1a1aa;
+  --text-inverse: #ffffff;
 
-  /* Status tokens */
-  --success: #16a34a;
-  --success-foreground: #ffffff;
-  --warning: #d97706;
-  --warning-foreground: #ffffff;
+  --border-default: #ededef;
+  --border-strong: #d4d4d8;
+
+  --accent-primary: #4f46e5;
+  --accent-on-primary: #ffffff;
+  --accent-soft: #eef2ff;
+  --accent-secondary: #18181b;
+  --accent-secondary-soft: #f4f4f5;
+
+  --status-success: #16a34a;
+  --status-success-soft: #f0fdf4;
+  --status-warning: #d97706;
+  --status-warning-soft: #fffbeb;
+  --status-danger: #dc2626;
+  --status-danger-soft: #fef2f2;
+
+  /* Figma radius tokens */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+  --radius-full: 999px;
+  --radius: var(--radius-md);
+
+  /* Figma spacing tokens */
+  --space-0: 0rem;
+  --space-2: 0.125rem;
+  --space-4: 0.25rem;
+  --space-8: 0.5rem;
+  --space-12: 0.75rem;
+  --space-16: 1rem;
+  --space-20: 1.5rem;
+  --space-24: 2rem;
+  --space-32: 2.5rem;
+  --space-40: 3.5rem;
+  --space-48: 4rem;
+  --space-64: 5rem;
+  --space-80: 5rem;
+  --space-120: 7.5rem;
+
+  /* Figma type scale tokens */
+  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-ui: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-code: var(--font-geist-mono), ui-monospace, monospace;
+
+  --size-display-xl: 4.5rem;
+  --size-display-l: 3.25rem;
+  --size-display-m: 2.25rem;
+  --size-heading-l: 2rem;
+  --size-heading-m: 1.5rem;
+  --size-heading-s: 1.125rem;
+  --size-body-l: 1.0625rem;
+  --size-body-m: 0.9375rem;
+  --size-body-s: 0.8125rem;
+  --size-caption: 0.75rem;
+  --size-overline: 0.6875rem;
+
+  /* Figma elevation effects */
+  --elevation-card: 0 1px 2px 0 #0d0a080f, 0 12px 32px -8px #0d0a0814;
+  --elevation-overlay: 0 24px 64px -12px #0d0a082e;
+
+  /* Default case-study template preview tokens */
+  --tmpl-bg: #121110;
+  --tmpl-surface: #1e1c19;
+  --tmpl-text: #f5f0e6;
+  --tmpl-muted: #a39e93;
+  --tmpl-line: #2e2b27;
+  --tmpl-primary: #e6c36a;
+  --tmpl-secondary: #ff4f1f;
+
+  /* shadcn/ui semantic bindings (derived strictly from Figma variables) */
+  --background: var(--bg-canvas);
+  --foreground: var(--text-primary);
+  --surface: var(--bg-surface);
+  --elevated: var(--bg-elevated);
+  --sunken: var(--bg-sunken);
+  --inverse: var(--bg-inverse);
+  --inverse-foreground: var(--text-inverse);
+  --card: var(--bg-elevated);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-elevated);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-primary);
+  --primary-foreground: var(--accent-on-primary);
+  --secondary: var(--accent-secondary-soft);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-sunken);
+  --muted-foreground: var(--text-secondary);
+  --tertiary-foreground: var(--text-tertiary);
+  --accent: var(--accent-soft);
+  --accent-foreground: var(--accent-primary);
+  --destructive: var(--status-danger);
+  --destructive-foreground: var(--text-inverse);
+  --destructive-soft: var(--status-danger-soft);
+  --success: var(--status-success);
+  --success-foreground: var(--text-inverse);
+  --success-soft: var(--status-success-soft);
+  --warning: var(--status-warning);
+  --warning-foreground: var(--text-inverse);
+  --warning-soft: var(--status-warning-soft);
+  --border: var(--border-default);
+  --border-strong-token: var(--border-strong);
+  --input: var(--border-default);
+  --ring: var(--accent-primary);
 }
 
 .dark {
-  --background: #090d16;
-  --foreground: #f8fafc;
-  --surface: #111827;
-  --card: #111827;
-  --card-foreground: #f8fafc;
-  --popover: #111827;
-  --popover-foreground: #f8fafc;
-  --primary: #6366f1;
-  --primary-foreground: #ffffff;
-  --secondary: #1e293b;
-  --secondary-foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e1b4b;
-  --accent-foreground: #c7d2fe;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #1e293b;
-  --input: #1e293b;
-  --ring: #818cf8;
+  /* Figma color tokens — Dark mode (node 2:583) */
+  --bg-canvas: #0a0a0a;
+  --bg-surface: #111113;
+  --bg-elevated: #18181b;
+  --bg-sunken: #09090b;
+  --bg-inverse: #fafafa;
 
-  --success: #22c55e;
-  --success-foreground: #052e16;
-  --warning: #f59e0b;
-  --warning-foreground: #451a03;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --text-inverse: #0a0a0a;
+
+  --border-default: #27272a;
+  --border-strong: #3f3f46;
+
+  --accent-primary: #818cf8;
+  --accent-on-primary: #0a0a0a;
+  --accent-soft: #1e1b4b;
+  --accent-secondary: #e4e4e7;
+  --accent-secondary-soft: #27272a;
+
+  --status-success: #4ade80;
+  --status-success-soft: #052e16;
+  --status-warning: #fbbf24;
+  --status-warning-soft: #2d1f05;
+  --status-danger: #f87171;
+  --status-danger-soft: #2a0a0a;
 }

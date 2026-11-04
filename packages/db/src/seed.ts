@@ -179,3 +179,4 @@ if (isEntrypoint) {
       process.exit(1);
     });
 }
+

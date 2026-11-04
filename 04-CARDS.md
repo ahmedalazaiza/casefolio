@@ -52,12 +52,13 @@ Summary: Added `.github/workflows/ci.yml` (Postgres 16 service, lint, typecheck,
 
 ---
 **[C-101] Import design tokens from Figma via MCP**  
-Phase: Phase 1 — Design System & Shell · Priority: P0 · Estimate: 4h · Deps: C-002 · Status: Todo  
-- [ ] Tokens match Figma values 1:1
-- [ ] No hard-coded hex in components
-- [ ] Fonts self-hosted via next/font
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 1 — Design System & Shell · Priority: P0 · Estimate: 4h · Deps: C-002 · Status: Done  
+Summary: Extracted all Light (`0:1`) and Dark (`2:583`) color, radius, spacing, elevation, and typography variables via Figma MCP (`get_variable_defs` on `4otk3FXD0q1TJ7aPGEIeGO`) into `tokens.css` + Tailwind v4 `@theme inline` (`globals.css`), with self-hosted Geist & JetBrains Mono fonts.  
+- [x] Tokens match Figma values 1:1
+- [x] No hard-coded hex in components
+- [x] Fonts self-hosted via next/font
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-102] Map Figma components to shadcn variants**  

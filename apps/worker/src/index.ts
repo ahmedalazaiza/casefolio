@@ -6,3 +6,4 @@ export function getWorkerHealth() {
     status: "ready" as const,
   };
 }
+
