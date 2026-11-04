@@ -87,8 +87,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-201
 - **Description:** Name, role, design focus (Mobile/Web/Both), avatar.
 - **Acceptance criteria:**
-  - [ ] New user lands on onboarding once
-  - [ ] Data saved to profile
+  - [x] New user lands on onboarding once
+  - [x] Data saved to profile
 
 ## Phase 3 — Templates & Admin Import
 

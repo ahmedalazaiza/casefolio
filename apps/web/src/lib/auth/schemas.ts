@@ -58,3 +58,34 @@ export const inviteTeamMemberSchema = z.object({
   email: z.string().trim().email("Enter a valid teammate email address."),
   role: z.enum(["editor", "viewer"]),
 });
+
+export const DESIGNER_ROLE_IDS = [
+  "ui-ux",
+  "web",
+  "exhibition",
+  "brand",
+  "student",
+  "other",
+] as const;
+
+export type DesignerRoleId = (typeof DESIGNER_ROLE_IDS)[number];
+
+export const completeOnboardingSchema = z.object({
+  name: z.string().trim().min(2, "Display name must be at least 2 characters.").max(80),
+  jobTitle: z.string().trim().min(2, "Enter a short headline or role.").max(100),
+  designFocus: z.enum(["mobile", "web", "both"]),
+  image: z
+    .string()
+    .trim()
+    .max(500_000, "Avatar image is too large.")
+    .refine(
+      (val) =>
+        val === "" ||
+        val.startsWith("https://") ||
+        val.startsWith("http://") ||
+        val.startsWith("data:image/"),
+      "Avatar must be a valid image URL or uploaded photo.",
+    )
+    .optional()
+    .nullable(),
+});

@@ -1,10 +1,22 @@
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { createDbConnection, type Database } from "./client";
 
-const currentDir = dirname(fileURLToPath(import.meta.url));
-export const MIGRATIONS_FOLDER = resolve(currentDir, "../migrations");
+function resolveMigrationsFolder(): string {
+  for (const candidate of [
+    resolve(process.cwd(), "migrations"),
+    resolve(process.cwd(), "packages/db/migrations"),
+    resolve(process.cwd(), "../../packages/db/migrations"),
+  ]) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return resolve(process.cwd(), "packages/db/migrations");
+}
+
+export const MIGRATIONS_FOLDER = resolveMigrationsFolder();
 
 export async function runMigrations(dbInstance?: Database): Promise<void> {
   if (dbInstance) {
@@ -21,8 +33,7 @@ export async function runMigrations(dbInstance?: Database): Promise<void> {
 }
 
 const isEntrypoint =
-  process.argv[1] !== undefined &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  process.argv[1] !== undefined && process.argv[1].endsWith("migrate.ts");
 
 if (isEntrypoint) {
   runMigrations()
@@ -34,4 +45,3 @@ if (isEntrypoint) {
       process.exit(1);
     });
 }
-
