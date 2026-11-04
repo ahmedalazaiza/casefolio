@@ -110,8 +110,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 6h · **Depends on:** C-301,C-202
 - **Description:** Steps: upload JSON → validate → preview → metadata (category, tier, cover) → save as draft version.
 - **Acceptance criteria:**
-  - [ ] Invalid JSON shows field-level errors
-  - [ ] Draft saved with version 1.0.0
+  - [x] Invalid JSON shows field-level errors
+  - [x] Draft saved with version 1.0.0
 
 ### C-304 — Template versions & publish/archive
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-303

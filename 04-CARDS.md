@@ -126,11 +126,12 @@ Summary: Built all 9 Puck section components (`Hero`, `Overview`, `Problem`, `Pr
 
 ---
 **[C-303] Admin template upload wizard**  
-Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 6h · Deps: C-301,C-202 · Status: Todo  
-- [ ] Invalid JSON shows field-level errors
-- [ ] Draft saved with version 1.0.0
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 6h · Deps: C-301,C-202 · Status: Done  
+Summary: Built 4-step `/admin/templates/new` upload wizard (Upload JSON → Validate → Preview → Metadata & Save) with field-level Zod schema error reporting, live `<TemplatePuckRenderer>` preview, admin-guarded Server Action saving draft version `1.0.0`, category auto-resolution, and `audit_logs` tracking.  
+- [x] Invalid JSON shows field-level errors
+- [x] Draft saved with version 1.0.0
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-304] Template versions & publish/archive**  
