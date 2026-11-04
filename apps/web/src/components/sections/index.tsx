@@ -128,6 +128,7 @@ export function HeroSection({
                   image={logo}
                   slotDefinition={logoSlot}
                   fallbackRatio="1:1"
+                  compact
                   className="rounded-lg"
                 />
               </div>
@@ -573,6 +574,7 @@ export function QuoteSection({
                   image={avatar}
                   slotDefinition={avatarSlot}
                   fallbackRatio="1:1"
+                  compact
                   className="rounded-full"
                 />
               </div>

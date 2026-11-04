@@ -124,8 +124,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-304
 - **Description:** Filter by type, category, tier; Pro badge; preview modal.
 - **Acceptance criteria:**
-  - [ ] Filters combine
-  - [ ] Pro templates show badge and lock for Free
+  - [x] Filters combine
+  - [x] Pro templates show badge and lock for Free
 
 ## Phase 4 — Create Wizard & Editor
 
