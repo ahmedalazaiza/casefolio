@@ -170,7 +170,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-402
 - **Description:** Mobile: preview + bottom-sheet fields; desktop: 3-panel.
 - **Acceptance criteria:**
-  - [ ] Usable at 375px
+  - [x] Usable at 375px
 
 ## Phase 5 — Images & Media
 

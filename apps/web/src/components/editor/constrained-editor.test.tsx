@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ConstrainedEditor } from "./constrained-editor";
 import {
@@ -113,5 +113,75 @@ describe("ConstrainedEditor (C-402)", () => {
         screen.getByRole("heading", { name: "Mosaed — Smart debt management" }),
       ).toBeInTheDocument();
     });
+  });
+
+  it("provides mobile bottom-sheet drawers for Fields, Sections, Style, and Screens at 375px (C-406)", async () => {
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 375,
+    });
+
+    try {
+      const payload = buildEditorPayload();
+      render(<ConstrainedEditor initialPayload={payload} />);
+
+      expect(screen.getByTestId("editor-mobile-bar")).toBeInTheDocument();
+
+      // Tapping a section on the live preview at 375px opens the bottom-sheet Fields drawer
+      fireEvent.click(screen.getByRole("button", { name: "Edit Hero section" }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("editor-mobile-sheet")).toBeInTheDocument();
+        expect(screen.getByTestId("mobile-fields-drawer")).toBeInTheDocument();
+      });
+
+      const mobileHeroTitleInput = await screen.findByDisplayValue(
+        "Orbit — Banking that moves with you",
+      );
+      fireEvent.change(mobileHeroTitleInput, {
+        target: { value: "Orbit Mobile — Edited on 375px" },
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", {
+            name: "Orbit Mobile — Edited on 375px",
+            hidden: true,
+          }),
+        ).toBeInTheDocument();
+      });
+
+      // Switch inside the mobile bottom sheet to Sections and toggle Problem visibility
+      const mobileSheet = screen.getByTestId("editor-mobile-sheet");
+      fireEvent.click(within(mobileSheet).getByRole("tab", { name: "Sections" }));
+      expect(within(mobileSheet).getByTestId("mobile-sections-drawer")).toBeInTheDocument();
+
+      const mobileProblemSwitch = within(mobileSheet).getByTestId("mobile-toggle-section-Problem");
+      expect(mobileProblemSwitch).toHaveAttribute("aria-checked", "true");
+      fireEvent.click(mobileProblemSwitch);
+      expect(mobileProblemSwitch).toHaveAttribute("aria-checked", "false");
+
+      // Switch inside the mobile bottom sheet to Style and verify ThemePanel renders
+      fireEvent.click(within(mobileSheet).getByRole("tab", { name: "Style" }));
+      expect(within(mobileSheet).getByTestId("mobile-style-drawer")).toBeInTheDocument();
+      expect(within(mobileSheet).getByTestId("editor-style-panel")).toBeInTheDocument();
+
+      // Close the bottom sheet back to the mobile preview canvas
+      fireEvent.click(within(mobileSheet).getByRole("button", { name: "Close" }));
+      await waitFor(() => {
+        expect(screen.queryByTestId("editor-mobile-sheet")).toBeNull();
+      });
+      expect(
+        screen.getByRole("heading", { name: "Orbit Mobile — Edited on 375px" }),
+      ).toBeInTheDocument();
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        writable: true,
+        value: originalInnerWidth,
+      });
+    }
   });
 });
