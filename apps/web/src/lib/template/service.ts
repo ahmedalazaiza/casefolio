@@ -1,11 +1,11 @@
 import {
+  and,
   asc,
   count,
   desc,
   eq,
   inArray,
   type ProjectType,
-  type TemplateStatus,
   type TemplateTier,
 } from "@casefolio/db";
 import { db, dbSchema } from "@/lib/db";
@@ -15,9 +15,24 @@ import {
   type SaveTemplateDraftResult,
   type WizardMetadataInput,
 } from "@/lib/template/parse";
-import { validateTemplateDocument, type TemplateDocument } from "@/lib/template/schema";
+import { semverSchema, validateTemplateDocument, type TemplateDocument } from "@/lib/template/schema";
+import { compareSemver } from "@/lib/template/semver";
+import type {
+  AdminTemplateDetail,
+  AdminTemplateSummary,
+  CreateTemplateVersionResult,
+  PublishedTemplateItem,
+  TemplateLifecycleActionResult,
+} from "@/lib/template/types";
 
 export { wizardMetadataInputSchema, type SaveTemplateDraftResult, type WizardMetadataInput };
+export type {
+  AdminTemplateDetail,
+  AdminTemplateSummary,
+  CreateTemplateVersionResult,
+  PublishedTemplateItem,
+  TemplateLifecycleActionResult,
+};
 
 export interface SaveTemplateDraftInput {
   actorId: string | null;
@@ -285,23 +300,6 @@ export async function saveTemplateDraftFromWizard({
   };
 }
 
-export interface AdminTemplateSummary {
-  id: string;
-  slug: string;
-  name: string;
-  type: ProjectType;
-  tier: TemplateTier;
-  status: TemplateStatus;
-  coverUrl: string | null;
-  categoryName: string | null;
-  categorySlug: string | null;
-  currentVersion: string | null;
-  sectionCount: number;
-  slotCount: number;
-  projectCount: number;
-  updatedAt: Date;
-}
-
 export async function listAdminTemplates(): Promise<AdminTemplateSummary[]> {
   const rows = await db
     .select({
@@ -375,7 +373,434 @@ export async function listAdminTemplates(): Promise<AdminTemplateSummary[]> {
       sectionCount,
       slotCount,
       projectCount,
-      updatedAt: template.updatedAt,
+      updatedAtIso: template.updatedAt.toISOString(),
     };
   });
+}
+
+export async function getAdminTemplateDetail(
+  templateId: string,
+): Promise<AdminTemplateDetail | null> {
+  const [row] = await db
+    .select({
+      template: dbSchema.templates,
+      category: dbSchema.categories,
+    })
+    .from(dbSchema.templates)
+    .leftJoin(dbSchema.categories, eq(dbSchema.templates.categoryId, dbSchema.categories.id))
+    .where(eq(dbSchema.templates.id, templateId))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  const versionRows = await db
+    .select()
+    .from(dbSchema.templateVersions)
+    .where(eq(dbSchema.templateVersions.templateId, templateId));
+
+  const projectCountByVersion = new Map<string, number>();
+  if (versionRows.length > 0) {
+    const versionIds = versionRows.map((v) => v.id);
+    const pinnedProjects = await db
+      .select({ templateVersionId: dbSchema.projects.templateVersionId })
+      .from(dbSchema.projects)
+      .where(inArray(dbSchema.projects.templateVersionId, versionIds));
+
+    for (const p of pinnedProjects) {
+      projectCountByVersion.set(
+        p.templateVersionId,
+        (projectCountByVersion.get(p.templateVersionId) ?? 0) + 1,
+      );
+    }
+  }
+
+  const sortedVersions = [...versionRows]
+    .sort((a, b) => compareSemver(b.version, a.version))
+    .map((ver) => {
+      const parsed = validateTemplateDocument(ver.data);
+      return {
+        id: ver.id,
+        version: ver.version,
+        changelog: ver.changelog,
+        publishedAtIso: ver.publishedAt ? ver.publishedAt.toISOString() : null,
+        createdAtIso: ver.createdAt.toISOString(),
+        pinnedProjectCount: projectCountByVersion.get(ver.id) ?? 0,
+        document: parsed.ok ? parsed.data : null,
+        rawJson: JSON.stringify(ver.data, null, 2),
+      };
+    });
+
+  const currentVer = row.template.currentVersionId
+    ? sortedVersions.find((v) => v.id === row.template.currentVersionId)
+    : sortedVersions[0];
+
+  const totalProjectCount = sortedVersions.reduce((acc, v) => acc + v.pinnedProjectCount, 0);
+
+  return {
+    id: row.template.id,
+    slug: row.template.slug,
+    name: row.template.name,
+    type: row.template.type,
+    tier: row.template.tier,
+    status: row.template.status,
+    coverUrl: row.template.coverUrl,
+    categoryName: row.category?.name ?? null,
+    categorySlug: row.category?.slug ?? null,
+    currentVersionId: row.template.currentVersionId,
+    currentVersion: currentVer?.version ?? null,
+    totalProjectCount,
+    versions: sortedVersions,
+  };
+}
+
+export interface CreateTemplateVersionInput {
+  actorId: string | null;
+  templateId: string;
+  version: string;
+  changelog: string;
+  rawJson: string;
+  publishImmediately?: boolean;
+}
+
+export async function createNewTemplateVersion({
+  actorId,
+  templateId,
+  version,
+  changelog,
+  rawJson,
+  publishImmediately = false,
+}: CreateTemplateVersionInput): Promise<CreateTemplateVersionResult> {
+  const semverCheck = semverSchema.safeParse(version);
+  if (!semverCheck.success) {
+    return {
+      ok: false,
+      error: "Invalid semantic version.",
+      issues: [
+        {
+          path: "version",
+          message: semverCheck.error.issues[0]?.message ?? "Invalid semver format.",
+        },
+      ],
+    };
+  }
+
+  const [tpl] = await db
+    .select({
+      template: dbSchema.templates,
+      category: dbSchema.categories,
+    })
+    .from(dbSchema.templates)
+    .leftJoin(dbSchema.categories, eq(dbSchema.templates.categoryId, dbSchema.categories.id))
+    .where(eq(dbSchema.templates.id, templateId))
+    .limit(1);
+
+  if (!tpl) {
+    return {
+      ok: false,
+      error: "Template not found.",
+      issues: [{ path: "templateId", message: "Target template does not exist." }],
+    };
+  }
+
+  const existingVersions = await db
+    .select({ version: dbSchema.templateVersions.version })
+    .from(dbSchema.templateVersions)
+    .where(eq(dbSchema.templateVersions.templateId, templateId));
+
+  const cleanVersion = semverCheck.data;
+  for (const existing of existingVersions) {
+    if (compareSemver(cleanVersion, existing.version) <= 0) {
+      return {
+        ok: false,
+        error: "New version must be strictly greater than existing versions.",
+        issues: [
+          {
+            path: "version",
+            message: `Version '${cleanVersion}' must be higher than existing version '${existing.version}'.`,
+          },
+        ],
+      };
+    }
+  }
+
+  const parsedJson = parseAndValidateTemplateJson(rawJson);
+  if (!parsedJson.ok) {
+    return {
+      ok: false,
+      error: "Template JSON failed validation.",
+      issues: parsedJson.issues,
+    };
+  }
+
+  const nextStatus = publishImmediately ? "published" : tpl.template.status;
+  const versionDocument: TemplateDocument = {
+    ...parsedJson.data,
+    template: {
+      ...parsedJson.data.template,
+      name: tpl.template.name,
+      slug: tpl.template.slug,
+      type: tpl.template.type,
+      version: cleanVersion,
+      status: publishImmediately ? "published" : "draft",
+      category: tpl.category?.name ?? parsedJson.data.template.category,
+      tier: tpl.template.tier,
+      cover: {
+        src: tpl.template.coverUrl ?? parsedJson.data.template.cover.src,
+        ratio: parsedJson.data.template.cover.ratio,
+      },
+    },
+  };
+
+  const revalidated = validateTemplateDocument(versionDocument);
+  if (!revalidated.ok) {
+    return {
+      ok: false,
+      error: "Version document failed schema validation.",
+      issues: revalidated.issues,
+    };
+  }
+
+  const now = new Date();
+  const [insertedVersion] = await db
+    .insert(dbSchema.templateVersions)
+    .values({
+      templateId,
+      version: cleanVersion,
+      data: revalidated.data as unknown as Record<string, unknown>,
+      changelog: changelog.trim() || `Release v${cleanVersion}`,
+      publishedAt: publishImmediately ? now : null,
+    })
+    .returning();
+
+  if (!insertedVersion) {
+    return {
+      ok: false,
+      error: "Failed to save new template version.",
+      issues: [{ path: "root", message: "Database did not return version record." }],
+    };
+  }
+
+  if (publishImmediately) {
+    await db
+      .update(dbSchema.templates)
+      .set({
+        currentVersionId: insertedVersion.id,
+        status: "published",
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.templates.id, templateId));
+  } else {
+    await db
+      .update(dbSchema.templates)
+      .set({ updatedAt: now })
+      .where(eq(dbSchema.templates.id, templateId));
+  }
+
+  await recordAdminAuditLog(actorId, "template.version_created", {
+    templateId,
+    versionId: insertedVersion.id,
+    version: cleanVersion,
+    publishImmediately,
+    changelog: insertedVersion.changelog,
+  });
+
+  return {
+    ok: true,
+    versionId: insertedVersion.id,
+    version: cleanVersion,
+    status: nextStatus,
+  };
+}
+
+export async function publishTemplateVersion({
+  actorId,
+  templateId,
+  versionId,
+}: {
+  actorId: string | null;
+  templateId: string;
+  versionId: string;
+}): Promise<TemplateLifecycleActionResult> {
+  const [versionRow] = await db
+    .select()
+    .from(dbSchema.templateVersions)
+    .where(
+      and(
+        eq(dbSchema.templateVersions.id, versionId),
+        eq(dbSchema.templateVersions.templateId, templateId),
+      ),
+    )
+    .limit(1);
+
+  if (!versionRow) {
+    return { ok: false, error: "Template version not found for this template." };
+  }
+
+  const now = new Date();
+  await db
+    .update(dbSchema.templateVersions)
+    .set({
+      publishedAt: versionRow.publishedAt ?? now,
+    })
+    .where(eq(dbSchema.templateVersions.id, versionId));
+
+  await db
+    .update(dbSchema.templates)
+    .set({
+      currentVersionId: versionId,
+      status: "published",
+      updatedAt: now,
+    })
+    .where(eq(dbSchema.templates.id, templateId));
+
+  await recordAdminAuditLog(actorId, "template.published", {
+    templateId,
+    versionId,
+    version: versionRow.version,
+  });
+
+  return {
+    ok: true,
+    status: "published",
+    currentVersionId: versionId,
+  };
+}
+
+export async function archiveTemplate({
+  actorId,
+  templateId,
+}: {
+  actorId: string | null;
+  templateId: string;
+}): Promise<TemplateLifecycleActionResult> {
+  const [tpl] = await db
+    .select()
+    .from(dbSchema.templates)
+    .where(eq(dbSchema.templates.id, templateId))
+    .limit(1);
+
+  if (!tpl) {
+    return { ok: false, error: "Template not found." };
+  }
+
+  await db
+    .update(dbSchema.templates)
+    .set({
+      status: "archived",
+      updatedAt: new Date(),
+    })
+    .where(eq(dbSchema.templates.id, templateId));
+
+  await recordAdminAuditLog(actorId, "template.archived", {
+    templateId,
+    slug: tpl.slug,
+  });
+
+  return {
+    ok: true,
+    status: "archived",
+    currentVersionId: tpl.currentVersionId,
+  };
+}
+
+export async function unarchiveTemplateToDraft({
+  actorId,
+  templateId,
+}: {
+  actorId: string | null;
+  templateId: string;
+}): Promise<TemplateLifecycleActionResult> {
+  const [tpl] = await db
+    .select()
+    .from(dbSchema.templates)
+    .where(eq(dbSchema.templates.id, templateId))
+    .limit(1);
+
+  if (!tpl) {
+    return { ok: false, error: "Template not found." };
+  }
+
+  await db
+    .update(dbSchema.templates)
+    .set({
+      status: "draft",
+      updatedAt: new Date(),
+    })
+    .where(eq(dbSchema.templates.id, templateId));
+
+  await recordAdminAuditLog(actorId, "template.unarchived", {
+    templateId,
+    slug: tpl.slug,
+  });
+
+  return {
+    ok: true,
+    status: "draft",
+    currentVersionId: tpl.currentVersionId,
+  };
+}
+
+export interface LibraryFilterInput {
+  type?: ProjectType;
+  categorySlug?: string;
+  tier?: TemplateTier;
+}
+
+export async function listPublishedLibraryTemplates(
+  filters: LibraryFilterInput = {},
+): Promise<PublishedTemplateItem[]> {
+  const conditions = [eq(dbSchema.templates.status, "published")];
+  if (filters.type) {
+    conditions.push(eq(dbSchema.templates.type, filters.type));
+  }
+  if (filters.tier) {
+    conditions.push(eq(dbSchema.templates.tier, filters.tier));
+  }
+
+  const rows = await db
+    .select({
+      template: dbSchema.templates,
+      category: dbSchema.categories,
+      version: dbSchema.templateVersions,
+    })
+    .from(dbSchema.templates)
+    .innerJoin(
+      dbSchema.templateVersions,
+      eq(dbSchema.templates.currentVersionId, dbSchema.templateVersions.id),
+    )
+    .leftJoin(dbSchema.categories, eq(dbSchema.templates.categoryId, dbSchema.categories.id))
+    .where(and(...conditions))
+    .orderBy(desc(dbSchema.templates.updatedAt));
+
+  const items: PublishedTemplateItem[] = [];
+  for (const row of rows) {
+    if (filters.categorySlug && row.category?.slug !== filters.categorySlug) {
+      continue;
+    }
+
+    const parsed = validateTemplateDocument(row.version.data);
+    if (!parsed.ok) {
+      continue;
+    }
+
+    items.push({
+      id: row.template.id,
+      versionId: row.version.id,
+      slug: row.template.slug,
+      name: row.template.name,
+      type: row.template.type,
+      tier: row.template.tier,
+      coverUrl: row.template.coverUrl,
+      categoryName: row.category?.name ?? null,
+      categorySlug: row.category?.slug ?? null,
+      version: row.version.version,
+      sectionCount: parsed.data.puck.content.length,
+      slotCount: Object.keys(parsed.data.template.slots).length,
+      document: parsed.data,
+    });
+  }
+
+  return items;
 }
