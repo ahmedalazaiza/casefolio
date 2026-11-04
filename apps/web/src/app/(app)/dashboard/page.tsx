@@ -26,7 +26,7 @@ const FIRST_RUN_CHECKLIST = [
     title: "Create a project",
     subtitle: "Name it and add details",
     done: false,
-    href: "/templates",
+    href: "/new",
   },
   {
     id: "template",
@@ -82,7 +82,7 @@ export default async function DashboardPage({
           </div>
 
           <Button asChild size="lg" className="w-fit">
-            <Link href="/templates">
+            <Link href="/new">
               <Plus className="size-4" />
               New project
             </Link>
@@ -196,7 +196,7 @@ export default async function DashboardPage({
         </div>
 
         <Button asChild size="lg" className="w-fit">
-          <Link href="/templates">
+          <Link href="/new">
             <Plus className="size-4" />
             New project
           </Link>
@@ -205,13 +205,18 @@ export default async function DashboardPage({
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {userProjects.map((project) => (
-          <ProjectCard
+          <Link
             key={project.id}
-            title={project.name}
-            subtitle={`${project.type === "web" ? "Website" : "Mobile app"} · ${project.visibility}`}
-            statusLabel={project.publishedAt ? "Published" : "Draft"}
-            statusTone={project.publishedAt ? "published" : "draft"}
-          />
+            href={`/editor/${project.id}`}
+            className="focus-visible:ring-ring/40 block min-w-0 rounded-xl outline-none focus-visible:ring-2"
+          >
+            <ProjectCard
+              title={project.name}
+              subtitle={`${project.type === "web" ? "Website" : project.type === "both" ? "Mobile & Web" : "Mobile app"} · ${project.visibility}`}
+              statusLabel={project.publishedAt ? "Published" : "Draft"}
+              statusTone={project.publishedAt ? "published" : "draft"}
+            />
+          </Link>
         ))}
       </div>
     </div>

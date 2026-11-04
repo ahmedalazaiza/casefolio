@@ -153,11 +153,12 @@ Summary: Built `/templates` library (adapting between `AppShell` when authentica
 
 ---
 **[C-401] Create-project wizard**  
-Phase: Phase 4 — Create Wizard & Editor · Priority: P0 · Estimate: 4h · Deps: C-305 · Status: Todo  
-- [ ] Project created with pinned template version
-- [ ] Back/next keeps state
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 4 — Create Wizard & Editor · Priority: P0 · Estimate: 4h · Deps: C-305 · Status: Done  
+Summary: Built 3-step `/new` (`type` → `template` → `details`) create-project wizard per Figma (`2:3962`, `2:4161`) with state persistence across Back/Next, live mini-cover preview, server-side Free quota & Pro template gating, and project creation pinning `template_versions.id` while copying template Puck data & theme.  
+- [x] Project created with pinned template version
+- [x] Back/next keeps state
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-402] Constrained Puck editor**  
