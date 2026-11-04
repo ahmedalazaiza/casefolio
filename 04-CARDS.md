@@ -181,11 +181,12 @@ Summary: Implemented custom Puck `RichTextField` powered by TipTap 3 (`Document`
 
 ---
 **[C-404] Theme panel: palette & fonts**  
-Phase: Phase 4 — Create Wizard & Editor · Priority: P0 · Estimate: 4h · Deps: C-402 · Status: Todo  
-- [ ] Changes apply instantly
-- [ ] Contrast warning < 4.5:1
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 4 — Create Wizard & Editor · Priority: P0 · Estimate: 4h · Deps: C-402 · Status: Done  
+Summary: Built `ThemePanel` per Figma (`2:4346`) with curated color palette presets, individual token color pickers + hex inputs, curated open-licensed font catalog + Heading/Body pair selector with Google Fonts stylesheet loader, instant CSS variable preview updates, `Reset to template defaults`, and live WCAG 2.1 contrast warnings whenever text contrast drops below `4.5:1`.  
+- [x] Changes apply instantly
+- [x] Contrast warning < 4.5:1
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-405] State, undo/redo, autosave**  

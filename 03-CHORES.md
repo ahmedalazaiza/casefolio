@@ -155,8 +155,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-402
 - **Description:** Edit token colors (with presets), choose font pairs from curated list; live preview via CSS variables.
 - **Acceptance criteria:**
-  - [ ] Changes apply instantly
-  - [ ] Contrast warning < 4.5:1
+  - [x] Changes apply instantly
+  - [x] Contrast warning < 4.5:1
 
 ### C-405 — State, undo/redo, autosave
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-402

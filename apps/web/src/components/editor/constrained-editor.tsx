@@ -12,14 +12,13 @@ import {
   Globe,
   Monitor,
   Redo2,
-  RotateCcw,
   SlidersHorizontal,
   Smartphone,
   Undo2,
 } from "lucide-react";
 import Link from "next/link";
 import {
-   useCallback,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -32,6 +31,7 @@ import {
   type EditorViewportMode,
 } from "@/components/editor/editor-canvas-preview";
 import { createCasefolioPuckConfig, TemplatePuckRenderer } from "@/components/editor/puck-config";
+import { ThemePanel } from "@/components/editor/theme-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -506,61 +506,13 @@ export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
                 </div>
               )}
 
-              {/* TAB: STYLE (Theme tokens overview; upgraded to full ThemePanel in C-404) */}
+              {/* TAB: STYLE (Theme palette tokens, presets, WCAG contrast, & curated font pairs) */}
               {leftTab === "style" && (
-                <div data-testid="editor-style-panel" className="flex flex-col gap-6">
-                  <div className="flex flex-col gap-3">
-                    <span className="text-tertiary type-overline">Colors · Template tokens</span>
-                    <div className="flex flex-col gap-2">
-                      {Object.entries(theme.colors).map(([tokenName, colorValue]) => (
-                        <div
-                          key={tokenName}
-                          className="border-border bg-card flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span
-                              style={{ backgroundColor: colorValue }}
-                              className="border-border inline-block size-6 rounded-md border"
-                            />
-                            <span className="text-foreground type-body-s-strong capitalize">
-                              {tokenName}
-                            </span>
-                          </div>
-                          <span className="text-tertiary font-mono text-xs uppercase">
-                            {colorValue}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border-border flex flex-col gap-2 border-t pt-4">
-                    <span className="text-tertiary type-overline">Fonts</span>
-                    <div className="border-border bg-card flex flex-col gap-1 rounded-lg border p-3">
-                      <span className="text-tertiary type-caption">Heading</span>
-                      <span className="text-foreground type-body-s-strong">
-                        {theme.fonts.heading.family}
-                      </span>
-                    </div>
-                    <div className="border-border bg-card flex flex-col gap-1 rounded-lg border p-3">
-                      <span className="text-tertiary type-caption">Body</span>
-                      <span className="text-foreground type-body-s-strong">
-                        {theme.fonts.body.family}
-                      </span>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-fit"
-                    onClick={handleResetThemeToDefaults}
-                  >
-                    <RotateCcw className="size-3.5" />
-                    Reset to template defaults
-                  </Button>
-                </div>
+                <ThemePanel
+                  theme={theme}
+                  onChangeTheme={setTheme}
+                  onResetToDefaults={handleResetThemeToDefaults}
+                />
               )}
             </div>
           </aside>
