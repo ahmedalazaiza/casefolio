@@ -144,11 +144,12 @@ Summary: Implemented semantic versioning (`createNewTemplateVersion`), publish/a
 
 ---
 **[C-305] Template library (user side) with filters**  
-Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 4h · Deps: C-304 · Status: Todo  
-- [ ] Filters combine
-- [ ] Pro templates show badge and lock for Free
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 4h · Deps: C-304 · Status: Done  
+Summary: Built `/templates` library (adapting between `AppShell` when authenticated and `MarketingShell` when logged out) with combinable Type, Category, Tier, and Search filters, `<ProBadge />` + lock badge/CTA on `pro` templates for `free` users, and live `<TemplatePuckRenderer>` preview modal.  
+- [x] Filters combine
+- [x] Pro templates show badge and lock for Free
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-401] Create-project wizard**  

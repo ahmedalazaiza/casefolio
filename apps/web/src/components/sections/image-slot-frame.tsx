@@ -38,6 +38,7 @@ export interface ImageSlotFrameProps {
   fallbackRatio?: string;
   projectType?: TemplateProjectType;
   preferDeviceChrome?: boolean;
+  compact?: boolean;
   className?: string;
 }
 
@@ -47,6 +48,7 @@ export function ImageSlotFrame({
   fallbackRatio = "16:9",
   projectType,
   preferDeviceChrome = false,
+  compact = false,
   className,
 }: ImageSlotFrameProps) {
   const ratioText = slotDefinition?.ratio ?? fallbackRatio;
@@ -65,6 +67,14 @@ export function ImageSlotFrame({
     >
       {hasSrc ? (
         <img src={image!.src} alt={altText} className="size-full object-cover" />
+      ) : compact ? (
+        <span
+          title={altText}
+          aria-label={altText}
+          className="text-muted-foreground inline-flex items-center justify-center"
+        >
+          <ImageIcon className="size-4" />
+        </span>
       ) : (
         <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
           <span className="bg-elevated/90 text-muted-foreground inline-flex size-10 items-center justify-center rounded-full">

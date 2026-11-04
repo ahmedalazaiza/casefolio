@@ -12,10 +12,10 @@ export function buildTemplateThemeStyle(theme?: TemplateTheme): CSSProperties {
   }
 
   if (theme.fonts.heading?.family) {
-    vars["--tpl-font-heading"] = theme.fonts.heading.family;
+    vars["--tpl-font-heading"] = `${theme.fonts.heading.family}, var(--font-display)`;
   }
   if (theme.fonts.body?.family) {
-    vars["--tpl-font-body"] = theme.fonts.body.family;
+    vars["--tpl-font-body"] = `${theme.fonts.body.family}, var(--font-sans)`;
   }
 
   return vars as CSSProperties;
