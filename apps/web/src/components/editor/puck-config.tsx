@@ -1,4 +1,5 @@
 import { Render, type Config, type CustomField, type Data } from "@puckeditor/core";
+import { RichTextField } from "@/components/editor/rich-text-field";
 import {
   CtaSection,
   CustomSection,
@@ -118,21 +119,9 @@ function createRichTextCustomField(label: string): CustomField<RichTextValue> {
   return {
     type: "custom",
     label,
-    render: ({ value, onChange, readOnly }) => {
-      const textVal = typeof value === "string" ? value : "";
-      return (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-foreground type-caption">{label}</span>
-          <textarea
-            rows={4}
-            value={textVal}
-            disabled={readOnly}
-            onChange={(event) => onChange(event.target.value)}
-            className="border-input bg-background text-foreground type-body-s focus-visible:ring-ring/40 w-full rounded-md border px-3 py-2 outline-none focus-visible:ring-2"
-          />
-        </div>
-      );
-    },
+    render: ({ value, onChange, readOnly }) => (
+      <RichTextField label={label} value={value} onChange={onChange} readOnly={readOnly} />
+    ),
   };
 }
 

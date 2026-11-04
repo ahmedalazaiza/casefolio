@@ -148,8 +148,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-402
 - **Description:** Custom Puck field; limited marks (bold, italic, link, lists).
 - **Acceptance criteria:**
-  - [ ] Output stored as JSON
-  - [ ] Paste sanitized
+  - [x] Output stored as JSON
+  - [x] Paste sanitized
 
 ### C-404 — Theme panel: palette & fonts
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-402

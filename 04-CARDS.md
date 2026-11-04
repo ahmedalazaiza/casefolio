@@ -172,11 +172,12 @@ Summary: Built `/editor/[projectId]` 3-panel constrained Puck editor per Figma (
 
 ---
 **[C-403] TipTap rich text field**  
-Phase: Phase 4 — Create Wizard & Editor · Priority: P1 · Estimate: 4h · Deps: C-402 · Status: Todo  
-- [ ] Output stored as JSON
-- [ ] Paste sanitized
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 4 — Create Wizard & Editor · Priority: P1 · Estimate: 4h · Deps: C-402 · Status: Done  
+Summary: Implemented custom Puck `RichTextField` powered by TipTap 3 (`Document`, `Paragraph`, `Text`, `HardBreak`, `Bold`, `Italic`, `BulletList`, `OrderedList`, `ListItem`, safe `Link`) outputting structured JSON (`{ type: "doc", content: [...] }`), DOM-sanitizing pasted HTML via `sanitizeRichTextHtml`, and rendering safely via `RichTextView` without `dangerouslySetInnerHTML`.  
+- [x] Output stored as JSON
+- [x] Paste sanitized
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-404] Theme panel: palette & fonts**  

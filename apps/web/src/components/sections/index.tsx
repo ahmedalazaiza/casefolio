@@ -1,13 +1,13 @@
 import type { PuckContext } from "@puckeditor/core";
 import type { CSSProperties } from "react";
 import { ImageSlotFrame } from "@/components/sections/image-slot-frame";
+import { RichTextView } from "@/components/sections/rich-text-view";
 import type {
   ImageSlotValue,
   RichTextValue,
   TemplateProjectType,
   TemplateSlotDefinition,
 } from "@/lib/template/schema";
-import { extractRichTextParagraphs } from "@/lib/template/theme-vars";
 import { cn } from "@/lib/utils";
 
 export interface CasefolioRenderMetadata {
@@ -198,7 +198,6 @@ export function OverviewSection({
 
   const { projectType, slots } = readRenderMetadata(puck);
   const bannerSlot = getSlotDefinition(slots, banner, "overview.banner");
-  const paragraphs = extractRichTextParagraphs(summary);
 
   return (
     <section
@@ -213,13 +212,12 @@ export function OverviewSection({
             <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
               {heading}
             </h2>
-            <div className="flex flex-col gap-3">
-              {paragraphs.map((paragraph, idx) => (
-                <p key={`${id}-p-${idx}`} style={MUTED_TEXT_STYLE} className="type-body-l">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
+            <RichTextView
+              value={summary}
+              idPrefix={id}
+              style={MUTED_TEXT_STYLE}
+              className="type-body-l"
+            />
           </div>
 
           {meta.length > 0 && (
@@ -691,7 +689,6 @@ export function CustomSection({
 
   const { projectType, slots } = readRenderMetadata(puck);
   const customSlot = getSlotDefinition(slots, image, "custom.image");
-  const paragraphs = extractRichTextParagraphs(body);
 
   return (
     <section
@@ -705,13 +702,12 @@ export function CustomSection({
           <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
             {heading}
           </h2>
-          <div className="flex flex-col gap-3">
-            {paragraphs.map((paragraph, idx) => (
-              <p key={`${id}-custom-p-${idx}`} style={MUTED_TEXT_STYLE} className="type-body-l">
-                {paragraph}
-              </p>
-            ))}
-          </div>
+          <RichTextView
+            value={body}
+            idPrefix={`${id}-custom`}
+            style={MUTED_TEXT_STYLE}
+            className="type-body-l"
+          />
         </div>
 
         {image && (
