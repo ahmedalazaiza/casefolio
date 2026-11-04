@@ -1,11 +1,13 @@
 import { z } from "zod";
-import type {
-  ImageSlotValue,
-  PuckDocument,
-  PuckSectionItem,
-  TemplateProjectType,
-  TemplateSlotDefinition,
-  TemplateTheme,
+import {
+  puckDocumentSchema,
+  templateThemeSchema,
+  type ImageSlotValue,
+  type PuckDocument,
+  type PuckSectionItem,
+  type TemplateProjectType,
+  type TemplateSlotDefinition,
+  type TemplateTheme,
 } from "@/lib/template/schema";
 
 export const FREE_PROJECT_LIMIT = 2;
@@ -88,6 +90,35 @@ export type CreateProjectResult =
       code: CreateProjectErrorCode;
       error: string;
       fieldErrors?: Record<string, string>;
+    };
+
+export const saveProjectEditorInputSchema = z.object({
+  projectId: z.string().uuid("Invalid project ID."),
+  expectedUpdatedAtIso: z.string().datetime({ offset: true }),
+  puckData: puckDocumentSchema,
+  theme: templateThemeSchema,
+});
+
+export type SaveProjectEditorInput = z.infer<typeof saveProjectEditorInputSchema>;
+
+export type SaveProjectEditorErrorCode =
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "CONFLICT"
+  | "SAVE_FAILED";
+
+export type SaveProjectEditorResult =
+  | {
+      ok: true;
+      updatedAtIso: string;
+    }
+  | {
+      ok: false;
+      code: SaveProjectEditorErrorCode;
+      error: string;
+      serverUpdatedAtIso?: string;
     };
 
 export function slugifyProjectName(name: string): string {

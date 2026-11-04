@@ -4,9 +4,12 @@ import {
   buildInitialProjectPuckData,
   createProjectInputSchema,
   FREE_PROJECT_LIMIT,
+  saveProjectEditorInputSchema,
   type CreateProjectInput,
   type CreateProjectResult,
   type ProjectEditorPayload,
+  type SaveProjectEditorInput,
+  type SaveProjectEditorResult,
 } from "@/lib/projects/types";
 import {
   puckDocumentSchema,
@@ -234,5 +237,122 @@ export async function getProjectEditorAccess(
         defaultPuck: tplDoc.puck,
       },
     },
+  };
+}
+
+async function canUserEditProjectRow(
+  project: { ownerId: string; orgId: string | null },
+  user: { id: string; role: UserRole },
+): Promise<boolean> {
+  if (project.ownerId === user.id || user.role === "admin" || user.role === "superadmin") {
+    return true;
+  }
+
+  if (project.orgId) {
+    const [membership] = await db
+      .select({ role: dbSchema.memberships.role })
+      .from(dbSchema.memberships)
+      .where(
+        and(
+          eq(dbSchema.memberships.orgId, project.orgId),
+          eq(dbSchema.memberships.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (membership && (membership.role === "owner" || membership.role === "editor")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export async function saveProjectEditorState(
+  input: SaveProjectEditorInput,
+  user: { id: string; role: UserRole },
+): Promise<SaveProjectEditorResult> {
+  const parsed = saveProjectEditorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      error: parsed.error.issues[0]?.message ?? "Invalid project data.",
+    };
+  }
+
+  const valid = parsed.data;
+  const expectedMs = new Date(valid.expectedUpdatedAtIso).getTime();
+
+  const [existing] = await db
+    .select()
+    .from(dbSchema.projects)
+    .where(eq(dbSchema.projects.id, valid.projectId))
+    .limit(1);
+
+  if (!existing) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+      error: "Project not found.",
+    };
+  }
+
+  const allowed = await canUserEditProjectRow(existing, user);
+  if (!allowed) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      error: "You do not have permission to edit this project.",
+    };
+  }
+
+  if (existing.updatedAt.getTime() !== expectedMs) {
+    return {
+      ok: false,
+      code: "CONFLICT",
+      error: "This project was updated in another tab or session.",
+      serverUpdatedAtIso: existing.updatedAt.toISOString(),
+    };
+  }
+
+  const nextMs = Math.max(Date.now(), existing.updatedAt.getTime() + 1);
+  const nextUpdatedAt = new Date(nextMs);
+  const nextTitle = valid.puckData.root.props.title.trim() || existing.name;
+
+  const [updated] = await db
+    .update(dbSchema.projects)
+    .set({
+      name: nextTitle,
+      puckData: valid.puckData as unknown as Record<string, unknown>,
+      theme: valid.theme as unknown as Record<string, unknown>,
+      updatedAt: nextUpdatedAt,
+    })
+    .where(
+      and(
+        eq(dbSchema.projects.id, valid.projectId),
+        eq(dbSchema.projects.updatedAt, existing.updatedAt),
+      ),
+    )
+    .returning({ updatedAt: dbSchema.projects.updatedAt });
+
+  if (!updated) {
+    const [latest] = await db
+      .select({ updatedAt: dbSchema.projects.updatedAt })
+      .from(dbSchema.projects)
+      .where(eq(dbSchema.projects.id, valid.projectId))
+      .limit(1);
+
+    return {
+      ok: false,
+      code: "CONFLICT",
+      error: "This project was updated in another tab or session.",
+      serverUpdatedAtIso: latest?.updatedAt.toISOString(),
+    };
+  }
+
+  return {
+    ok: true,
+    updatedAtIso: updated.updatedAt.toISOString(),
   };
 }

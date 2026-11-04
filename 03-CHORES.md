@@ -162,9 +162,9 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-402
 - **Description:** Zustand + zundo history; debounced autosave to DB; conflict check by updatedAt.
 - **Acceptance criteria:**
-  - [ ] Ctrl+Z/Ctrl+Shift+Z work
-  - [ ] Autosave indicator
-  - [ ] No data loss on reload
+  - [x] Ctrl+Z/Ctrl+Shift+Z work
+  - [x] Autosave indicator
+  - [x] No data loss on reload
 
 ### C-406 — Editor responsive behavior
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-402

@@ -190,12 +190,13 @@ Summary: Built `ThemePanel` per Figma (`2:4346`) with curated color palette pres
 
 ---
 **[C-405] State, undo/redo, autosave**  
-Phase: Phase 4 — Create Wizard & Editor · Priority: P0 · Estimate: 4h · Deps: C-402 · Status: Todo  
-- [ ] Ctrl+Z/Ctrl+Shift+Z work
-- [ ] Autosave indicator
-- [ ] No data loss on reload
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 4 — Create Wizard & Editor · Priority: P0 · Estimate: 4h · Deps: C-402 · Status: Done  
+Summary: Implemented Zustand + Immer + `zundo` temporal editor store (`createEditorStore`), topbar Undo/Redo buttons + `Ctrl+Z`/`Cmd+Z` and `Ctrl+Shift+Z`/`Cmd+Shift+Z` shortcuts, debounced autosave to PostgreSQL (`saveProjectEditorState`) with optimistic `updatedAt` concurrency conflict detection, topbar autosave indicator, and Figma `2:6162` error/conflict recovery toast.  
+- [x] Ctrl+Z/Ctrl+Shift+Z work
+- [x] Autosave indicator
+- [x] No data loss on reload
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-406] Editor responsive behavior**  

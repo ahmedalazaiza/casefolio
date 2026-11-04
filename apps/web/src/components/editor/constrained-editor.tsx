@@ -1,8 +1,16 @@
 "use client";
 
 import "@puckeditor/core/no-external.css";
-import { createUsePuck, Puck, type Config, type Data } from "@puckeditor/core";
 import {
+  createUsePuck,
+  Puck,
+  type AppState,
+  type Config,
+  type Data,
+  type PuckAction,
+} from "@puckeditor/core";
+import {
+  AlertCircle,
   AlertTriangle,
   ArrowLeft,
   Check,
@@ -10,6 +18,7 @@ import {
   Eye,
   EyeOff,
   Globe,
+  Loader2,
   Monitor,
   Redo2,
   SlidersHorizontal,
@@ -26,6 +35,7 @@ import {
   type CSSProperties,
   type RefObject,
 } from "react";
+import { useStore } from "zustand";
 import {
   EditorCanvasPreview,
   type EditorViewportMode,
@@ -51,9 +61,20 @@ import {
   isSectionRequired,
   toggleSectionVisibility,
   type ProjectEditorPayload,
+  type SaveProjectEditorInput,
+  type SaveProjectEditorResult,
 } from "@/lib/projects/types";
-import { puckDocumentSchema, type PuckDocument, type TemplateTheme } from "@/lib/template/schema";
+import {
+  puckDocumentSchema,
+  templateThemeSchema,
+  type PuckDocument,
+} from "@/lib/template/schema";
 import { cn } from "@/lib/utils";
+import {
+  createEditorStore,
+  serializeEditorSnapshot,
+  serializePuckDocument,
+} from "@/stores/editor-store";
 
 type LeftPanelTab = "style" | "content" | "sections";
 type RightPanelTab = "fields" | "slots";
@@ -73,7 +94,10 @@ function PuckStateBridge({
 }: PuckStateBridgeProps) {
   const dispatch = useEditorPuck((s) => s.dispatch);
   const currentSelector = useEditorPuck((s) => s.appState.ui.itemSelector);
-  const serializedExternal = useMemo(() => JSON.stringify(externalPuckData), [externalPuckData]);
+  const serializedExternal = useMemo(
+    () => serializePuckDocument(externalPuckData),
+    [externalPuckData],
+  );
 
   useEffect(() => {
     if (serializedExternal !== lastPuckEmittedJsonRef.current) {
@@ -118,6 +142,8 @@ function PuckStateBridge({
 
 export interface ConstrainedEditorProps {
   initialPayload: ProjectEditorPayload;
+  onSaveProject?: (input: SaveProjectEditorInput) => Promise<SaveProjectEditorResult>;
+  autosaveDebounceMs?: number;
 }
 
 const PUCK_FONT_VARS = {
@@ -125,9 +151,29 @@ const PUCK_FONT_VARS = {
   "--puck-font-family-monospaced": "var(--font-mono)",
 } as CSSProperties;
 
-export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
-  const [puckData, setPuckData] = useState<PuckDocument>(initialPayload.project.puckData);
-  const [theme, setTheme] = useState<TemplateTheme>(initialPayload.project.theme);
+export function ConstrainedEditor({
+  initialPayload,
+  onSaveProject,
+  autosaveDebounceMs = 600,
+}: ConstrainedEditorProps) {
+  const [editorStore] = useState(() =>
+    createEditorStore({
+      puckData: initialPayload.project.puckData,
+      theme: initialPayload.project.theme,
+      updatedAtIso: initialPayload.project.updatedAtIso,
+    }),
+  );
+
+  const puckData = useStore(editorStore, (s) => s.puckData);
+  const theme = useStore(editorStore, (s) => s.theme);
+  const saveStatus = useStore(editorStore, (s) => s.saveStatus);
+  const saveError = useStore(editorStore, (s) => s.saveError);
+  const setPuckData = useStore(editorStore, (s) => s.setPuckData);
+  const setTheme = useStore(editorStore, (s) => s.setTheme);
+
+  const canUndo = useStore(editorStore.temporal, (s) => s.pastStates.length > 0);
+  const canRedo = useStore(editorStore.temporal, (s) => s.futureStates.length > 0);
+
   const [viewport, setViewport] = useState<EditorViewportMode>("desktop");
   const [leftTab, setLeftTab] = useState<LeftPanelTab>("sections");
   const [rightTab, setRightTab] = useState<RightPanelTab>("fields");
@@ -135,22 +181,196 @@ export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
 
   const lastPuckEmittedJsonRef = useRef<string>(
-    JSON.stringify(initialPayload.project.puckData),
+    serializePuckDocument(initialPayload.project.puckData),
   );
+  const lastSavedSnapshotRef = useRef<string>(
+    serializeEditorSnapshot({
+      puckData: initialPayload.project.puckData,
+      theme: initialPayload.project.theme,
+    }),
+  );
+  const inFlightSaveRef = useRef(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const colorKeys = useMemo(() => Object.keys(theme.colors), [theme.colors]);
   const puckConfig = useMemo(() => createCasefolioPuckConfig(colorKeys), [colorKeys]);
 
-  const handlePuckDataChange = useCallback((nextRawData: Data) => {
-    const parsed = puckDocumentSchema.safeParse(nextRawData);
-    const nextDoc = parsed.success ? parsed.data : (nextRawData as unknown as PuckDocument);
-    const nextJson = JSON.stringify(nextDoc);
-    if (nextJson === lastPuckEmittedJsonRef.current) {
+  const performAutosave = useCallback(async () => {
+    if (!onSaveProject || inFlightSaveRef.current) {
       return;
     }
-    lastPuckEmittedJsonRef.current = nextJson;
-    setPuckData(nextDoc);
-  }, []);
+
+    const currentState = editorStore.getState();
+    const snapshotToSave = serializeEditorSnapshot({
+      puckData: currentState.puckData,
+      theme: currentState.theme,
+    });
+
+    if (snapshotToSave === lastSavedSnapshotRef.current) {
+      if (currentState.saveStatus === "unsaved") {
+        currentState.markSaved(currentState.expectedUpdatedAtIso);
+      }
+      return;
+    }
+
+    const puckValidation = puckDocumentSchema.safeParse(currentState.puckData);
+    const themeValidation = templateThemeSchema.safeParse(currentState.theme);
+    if (!puckValidation.success || !themeValidation.success) {
+      return;
+    }
+
+    inFlightSaveRef.current = true;
+    currentState.markSaving();
+
+    try {
+      const result = await onSaveProject({
+        projectId: initialPayload.project.id,
+        expectedUpdatedAtIso: currentState.expectedUpdatedAtIso,
+        puckData: puckValidation.data,
+        theme: themeValidation.data,
+      });
+
+      if (result.ok) {
+        lastSavedSnapshotRef.current = snapshotToSave;
+        editorStore.getState().markSaved(result.updatedAtIso);
+
+        // If user edited again while save was in-flight, mark unsaved so next debounce fires
+        const latestSnapshot = serializeEditorSnapshot({
+          puckData: editorStore.getState().puckData,
+          theme: editorStore.getState().theme,
+        });
+        if (latestSnapshot !== snapshotToSave) {
+          editorStore.getState().markUnsaved();
+        }
+      } else if (result.code === "CONFLICT") {
+        editorStore.getState().markConflict(result.error, result.serverUpdatedAtIso);
+      } else {
+        editorStore.getState().markError(result.error || "Couldn't save your last change.");
+      }
+    } catch {
+      editorStore.getState().markError("Couldn't save your last change.");
+    } finally {
+      inFlightSaveRef.current = false;
+    }
+  }, [editorStore, initialPayload.project.id, onSaveProject]);
+
+  const currentSnapshotJson = useMemo(
+    () => serializeEditorSnapshot({ puckData, theme }),
+    [puckData, theme],
+  );
+
+  // Sync undo/redo snapshot changes with debounced autosave
+  useEffect(() => {
+    if (!onSaveProject) {
+      return;
+    }
+
+    if (saveStatus === "conflict") {
+      return;
+    }
+
+    if (currentSnapshotJson === lastSavedSnapshotRef.current) {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      if (saveStatus === "unsaved") {
+        editorStore.getState().markSaved(editorStore.getState().expectedUpdatedAtIso);
+      }
+      return;
+    }
+
+    if (saveStatus === "saved") {
+      editorStore.getState().markUnsaved();
+    }
+
+    if (saveStatus === "error") {
+      return;
+    }
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
+      void performAutosave();
+    }, autosaveDebounceMs);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
+  }, [autosaveDebounceMs, currentSnapshotJson, editorStore, onSaveProject, performAutosave, saveStatus]);
+
+  // Warn before closing tab with unsaved changes
+  useEffect(() => {
+    if (!onSaveProject) return;
+    if (saveStatus !== "unsaved" && saveStatus !== "saving") return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [onSaveProject, saveStatus]);
+
+  const handleUndo = useCallback(() => {
+    if (editorStore.temporal.getState().pastStates.length === 0) return;
+    editorStore.temporal.getState().undo();
+  }, [editorStore]);
+
+  const handleRedo = useCallback(() => {
+    if (editorStore.temporal.getState().futureStates.length === 0) return;
+    editorStore.temporal.getState().redo();
+  }, [editorStore]);
+
+  // Global keyboard shortcuts: Ctrl+Z / Cmd+Z (Undo) & Ctrl+Shift+Z / Cmd+Shift+Z / Ctrl+Y (Redo)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMod = event.metaKey || event.ctrlKey;
+      if (!isMod || event.altKey) return;
+
+      const key = event.key.toLowerCase();
+      if (key === "z") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if (event.ctrlKey && !event.metaKey && key === "y") {
+        event.preventDefault();
+        event.stopPropagation();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
+  }, [handleRedo, handleUndo]);
+
+  const handlePuckAction = useCallback(
+    (action: PuckAction, newAppState: AppState) => {
+      if (action.type !== "replace" && action.type !== "replaceRoot") {
+        return;
+      }
+      const parsed = puckDocumentSchema.safeParse(newAppState.data);
+      const nextDoc = parsed.success
+        ? parsed.data
+        : (newAppState.data as unknown as PuckDocument);
+      const nextJson = serializePuckDocument(nextDoc);
+      if (nextJson === lastPuckEmittedJsonRef.current) {
+        return;
+      }
+      lastPuckEmittedJsonRef.current = nextJson;
+      setPuckData(nextDoc);
+    },
+    [setPuckData],
+  );
 
   const handleSelectSection = useCallback((index: number) => {
     setSelectedSectionIndex(index);
@@ -169,25 +389,28 @@ export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
         return next;
       });
     },
-    [selectedSectionIndex],
+    [selectedSectionIndex, setPuckData],
   );
 
   const handleResetThemeToDefaults = useCallback(() => {
     setTheme(structuredClone(initialPayload.template.defaultTheme));
-  }, [initialPayload.template.defaultTheme]);
+  }, [initialPayload.template.defaultTheme, setTheme]);
 
-  const handleCaseStudyTitleChange = useCallback((nextTitle: string) => {
-    setPuckData((prev) => ({
-      ...prev,
-      root: {
-        ...prev.root,
-        props: {
-          ...prev.root.props,
-          title: nextTitle,
+  const handleCaseStudyTitleChange = useCallback(
+    (nextTitle: string) => {
+      setPuckData((prev) => ({
+        ...prev,
+        root: {
+          ...prev.root,
+          props: {
+            ...prev.root.props,
+            title: nextTitle,
+          },
         },
-      },
-    }));
-  }, []);
+      }));
+    },
+    [setPuckData],
+  );
 
   const slotItems = useMemo(
     () => collectProjectSlotStatus(puckData, initialPayload.template.slots),
@@ -216,7 +439,7 @@ export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
       <Puck
         config={puckConfig as unknown as Config}
         data={puckData as unknown as Data}
-        onChange={handlePuckDataChange}
+        onAction={handlePuckAction}
         permissions={CONSTRAINED_PUCK_PERMISSIONS}
         height="100%"
         dnd={{
@@ -259,10 +482,39 @@ export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
               </span>
               <span
                 data-testid="editor-save-indicator"
+                data-save-status={saveStatus}
                 className="text-tertiary type-caption inline-flex items-center gap-1.5"
               >
-                <Cloud className="text-success size-3.5 shrink-0" />
-                <span>Saved · just now</span>
+                {saveStatus === "saving" && (
+                  <>
+                    <Loader2 className="text-primary size-3.5 shrink-0 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                )}
+                {saveStatus === "unsaved" && (
+                  <>
+                    <Cloud className="text-muted-foreground size-3.5 shrink-0" />
+                    <span>Unsaved changes</span>
+                  </>
+                )}
+                {saveStatus === "saved" && (
+                  <>
+                    <Cloud className="text-success size-3.5 shrink-0" />
+                    <span>Saved · just now</span>
+                  </>
+                )}
+                {saveStatus === "conflict" && (
+                  <>
+                    <AlertTriangle className="text-warning size-3.5 shrink-0" />
+                    <span className="text-warning">Save conflict</span>
+                  </>
+                )}
+                {saveStatus === "error" && (
+                  <>
+                    <AlertCircle className="text-destructive size-3.5 shrink-0" />
+                    <span className="text-destructive">Save failed</span>
+                  </>
+                )}
               </span>
             </div>
           </div>
@@ -308,7 +560,8 @@ export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
             <button
               type="button"
               aria-label="Undo"
-              disabled
+              disabled={!canUndo}
+              onClick={handleUndo}
               className="border-border bg-elevated text-foreground hover:bg-surface inline-flex size-9 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-45"
             >
               <Undo2 className="size-4" />
@@ -316,7 +569,8 @@ export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
             <button
               type="button"
               aria-label="Redo"
-              disabled
+              disabled={!canRedo}
+              onClick={handleRedo}
               className="border-border bg-elevated text-foreground hover:bg-surface inline-flex size-9 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-45"
             >
               <Redo2 className="size-4" />
@@ -678,6 +932,45 @@ export function ConstrainedEditor({ initialPayload }: ConstrainedEditorProps) {
         </div>
         </div>
       </Puck>
+
+      {/* Save Error / Conflict Banner (matches Figma 2:6162) */}
+      {(saveStatus === "error" || saveStatus === "conflict") && (
+        <div
+          role="alert"
+          data-testid="editor-save-toast"
+          className="bg-inverse text-inverse-foreground shadow-card fixed bottom-6 left-1/2 z-50 flex w-[min(92vw,26rem)] -translate-x-1/2 items-center justify-between gap-3 rounded-2xl px-4 py-3"
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="bg-destructive text-primary-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full">
+              <AlertCircle className="size-3.5" />
+            </span>
+            <span className="type-body-s truncate">
+              {saveError ||
+                (saveStatus === "conflict"
+                  ? "This project was updated in another session."
+                  : "Couldn't save your last change.")}
+            </span>
+          </div>
+
+          {saveStatus === "conflict" ? (
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="text-primary type-body-s-strong shrink-0 cursor-pointer underline-offset-4 hover:underline"
+            >
+              Reload
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void performAutosave()}
+              className="text-primary type-body-s-strong shrink-0 cursor-pointer underline-offset-4 hover:underline"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Full Clean Preview Modal */}
       <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
