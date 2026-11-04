@@ -75,3 +75,4 @@ describe("/dev/ui design system showcase (C-102)", () => {
     ).not.toBeNull();
   });
 });
+

@@ -16,7 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AvatarBadge } from "@/components/ui/avatar-badge";
+import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { Badge } from "@/components/ui/badge";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import {
@@ -57,9 +57,15 @@ function isAdminItemActive(pathname: string, item: AdminNavItem): boolean {
 export function AdminShell({
   children,
   userInitials = "AA",
+  userName,
+  userEmail,
+  userImage,
 }: {
   children: ReactNode;
   userInitials?: string;
+  userName?: string;
+  userEmail?: string;
+  userImage?: string | null;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -139,7 +145,12 @@ export function AdminShell({
               <Search className="size-4" />
             </button>
             <ThemeToggle />
-            <AvatarBadge initials={userInitials} />
+            <UserAccountMenu
+              initials={userInitials}
+              name={userName}
+              email={userEmail}
+              image={userImage}
+            />
           </div>
         </div>
       </header>

@@ -34,3 +34,4 @@ export function BrandLogo({ href = "/", subtitle, className }: BrandLogoProps) {
     </Link>
   );
 }
+

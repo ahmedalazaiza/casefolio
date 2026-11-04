@@ -10,6 +10,10 @@ let mockedPathname = "/";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => mockedPathname,
+  useRouter: () => ({
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
 
 function mockMatchMedia() {
@@ -127,3 +131,4 @@ describe("Route group shells: MarketingShell, AppShell, AdminShell (C-103)", () 
     await user.keyboard("{Escape}");
   });
 });
+
