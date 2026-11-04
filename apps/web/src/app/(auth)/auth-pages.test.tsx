@@ -50,3 +50,4 @@ describe("Auth UI forms (C-201)", () => {
     expect(screen.getByRole("heading", { name: "Reset your password" })).toBeInTheDocument();
   });
 });
+

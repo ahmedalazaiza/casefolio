@@ -56,3 +56,4 @@ export function AuthSplitShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
+

@@ -235,3 +235,4 @@ export function ResetPasswordForm({ token }: { token?: string }) {
     </div>
   );
 }
+

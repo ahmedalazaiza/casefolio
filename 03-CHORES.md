@@ -96,8 +96,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 3h · **Depends on:** C-003
 - **Description:** `src/lib/template/schema.ts` validating template.example.json shape (template + puck + warnings).
 - **Acceptance criteria:**
-  - [ ] template.example.json validates
-  - [ ] Invalid ratios/tokens rejected with clear errors
+  - [x] template.example.json validates
+  - [x] Invalid ratios/tokens rejected with clear errors
 
 ### C-302 — Puck component config for section types
 - **Priority:** P0 · **Estimate:** 6h · **Depends on:** C-301,C-102
