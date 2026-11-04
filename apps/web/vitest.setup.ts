@@ -1,6 +1,18 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+
+const rootEnv = resolve(process.cwd(), ".env");
+const exampleEnv = resolve(process.cwd(), ".env.example");
+if (!process.env.DATABASE_URL) {
+  if (existsSync(rootEnv)) {
+    process.loadEnvFile(rootEnv);
+  } else if (existsSync(exampleEnv)) {
+    process.loadEnvFile(exampleEnv);
+  }
+}
 
 afterEach(() => {
   cleanup();

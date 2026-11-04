@@ -34,11 +34,12 @@ Summary: Implemented Drizzle ORM schema (`packages/db`) for all 14 ERD tables pl
 
 ---
 **[C-004] Env validation + config**  
-Phase: Phase 0 — Foundation · Priority: P0 · Estimate: 1h · Deps: C-001 · Status: Todo  
-- [ ] App fails fast on missing env
-- [ ] .env.example complete
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 0 — Foundation · Priority: P0 · Estimate: 1h · Deps: C-001 · Status: Done  
+Summary: Added `apps/web/src/env.ts` with `@t3-oss/env-nextjs` + Zod fail-fast validation for all 26 MASTER-SHEET environment variables, wired startup check in `next.config.ts`, and created complete `.env.example`.  
+- [x] App fails fast on missing env
+- [x] .env.example complete
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-005] CI pipeline (GitHub Actions) + Vercel preview**  

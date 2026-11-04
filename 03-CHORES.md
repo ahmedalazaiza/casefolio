@@ -32,8 +32,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 1h · **Depends on:** C-001
 - **Description:** `src/env.ts` with zod (t3-env) for every var in MASTER-SHEET.
 - **Acceptance criteria:**
-  - [ ] App fails fast on missing env
-  - [ ] .env.example complete
+  - [x] App fails fast on missing env
+  - [x] .env.example complete
 
 ### C-005 — CI pipeline (GitHub Actions) + Vercel preview
 - **Priority:** P1 · **Estimate:** 2h · **Depends on:** C-001
