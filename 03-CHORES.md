@@ -56,8 +56,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-101
 - **Description:** Buttons, inputs, badges (incl. Pro badge), cards, tags per Figma All in One page.
 - **Acceptance criteria:**
-  - [ ] Visual check vs Figma screenshots
-  - [ ] Storybook-like /dev/ui page lists all
+  - [x] Visual check vs Figma screenshots
+  - [x] Storybook-like /dev/ui page lists all
 
 ### C-103 — App shell: sidebar, topbar, responsive mobile nav
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-102

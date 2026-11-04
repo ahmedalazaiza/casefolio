@@ -8,7 +8,7 @@ function Tabs({ className, ...props }: ComponentProps<typeof TabsPrimitive.Root>
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn("flex flex-col gap-3", className)}
       {...props}
     />
   );
@@ -19,7 +19,7 @@ function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.L
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-1",
+        "bg-sunken text-muted-foreground inline-flex h-10 w-fit items-center justify-center rounded-full p-1",
         className,
       )}
       {...props}
@@ -32,7 +32,7 @@ function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitiv
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "data-[state=active]:bg-background data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-3 py-1 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-2 outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-xs",
+        "data-[state=active]:bg-elevated data-[state=active]:text-foreground focus-visible:ring-ring/40 inline-flex h-full items-center justify-center gap-1.5 rounded-full px-3.5 py-1.5 type-body-s-strong whitespace-nowrap transition-all focus-visible:ring-2 outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-xs",
         className,
       )}
       {...props}
@@ -51,4 +51,3 @@ function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitiv
 }
 
 export { Tabs, TabsContent, TabsList, TabsTrigger };
-

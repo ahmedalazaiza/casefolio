@@ -62,11 +62,12 @@ Summary: Extracted all Light (`0:1`) and Dark (`2:583`) color, radius, spacing, 
 
 ---
 **[C-102] Map Figma components to shadcn variants**  
-Phase: Phase 1 — Design System & Shell · Priority: P1 · Estimate: 4h · Deps: C-101 · Status: Todo  
-- [ ] Visual check vs Figma screenshots
-- [ ] Storybook-like /dev/ui page lists all
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 1 — Design System & Shell · Priority: P1 · Estimate: 4h · Deps: C-101 · Status: Done  
+Summary: Mapped all Figma All in One components (`Button`, `Badge`, `ProBadge`, `Tag`, `InputField`, `StepIndicator`, `Tabs`, `Card`, `AvatarBadge`, `ProjectCard`, `TemplateTypeCard`, `PlanCard`) to token-styled shadcn/ui variants and built the `/dev/ui` design-system showcase page.  
+- [x] Visual check vs Figma screenshots
+- [x] Storybook-like /dev/ui page lists all
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-103] App shell: sidebar, topbar, responsive mobile nav**  
