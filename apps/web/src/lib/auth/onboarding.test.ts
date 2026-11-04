@@ -102,3 +102,4 @@ describe("Onboarding validation & profile persistence (C-203)", () => {
     }
   });
 });
+

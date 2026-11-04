@@ -28,3 +28,4 @@ export const organizationRoles = {
 } as const;
 
 export type OrganizationRoleName = keyof typeof organizationRoles;
+

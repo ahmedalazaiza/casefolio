@@ -108,11 +108,12 @@ Summary: Built Figma-faithful 3-step `/onboarding` wizard (`2:1214`, `2:1336`, `
 
 ---
 **[C-301] Template JSON schema (zod) matching figma-to-puck**  
-Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 3h · Deps: C-003 · Status: Todo  
-- [ ] template.example.json validates
-- [ ] Invalid ratios/tokens rejected with clear errors
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 3 — Templates & Admin Import · Priority: P0 · Estimate: 3h · Deps: C-003 · Status: Done  
+Summary: Built canonical Zod template schema in `@casefolio/template-schema` (re-exported from `apps/web/src/lib/template/schema.ts`) covering all 9 section types, aspect ratios, semver, theme tokens, slots, warnings, and cross-field refinements rejecting raw hex/RGB colors, unknown tokens/slots, and duplicate IDs.  
+- [x] template.example.json validates
+- [x] Invalid ratios/tokens rejected with clear errors
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-302] Puck component config for section types**  

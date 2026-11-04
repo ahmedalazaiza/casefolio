@@ -15,3 +15,4 @@ describe("Forbidden 403 boundary page (C-202)", () => {
     expect(screen.getByRole("link", { name: "Help center" })).toHaveAttribute("href", "/help");
   });
 });
+

@@ -84,3 +84,4 @@ export async function skipOnboardingAction(): Promise<OnboardingActionResult> {
   revalidatePath("/onboarding");
   return result;
 }
+

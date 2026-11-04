@@ -13,3 +13,4 @@ export default async function VerifyEmailPage({
   const { email, name } = await searchParams;
   return <VerifyEmailForm initialEmail={email} initialName={name} />;
 }
+

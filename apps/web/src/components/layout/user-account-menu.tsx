@@ -72,3 +72,4 @@ export function UserAccountMenu({ initials, name, email, image }: UserAccountMen
     </DropdownMenu>
   );
 }
+

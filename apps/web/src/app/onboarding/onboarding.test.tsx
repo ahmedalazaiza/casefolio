@@ -64,3 +64,4 @@ describe("Onboarding 3-step wizard UI (C-203)", () => {
     expect(pushMock).toHaveBeenCalledWith("/dashboard?welcome=1");
   });
 });
+
