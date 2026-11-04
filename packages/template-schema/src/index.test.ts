@@ -9,3 +9,4 @@ describe("@casefolio/template-schema", () => {
     expect(SUPPORTED_SECTION_TYPES).toContain("CTA");
   });
 });
+

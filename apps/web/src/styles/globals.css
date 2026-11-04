@@ -5,17 +5,25 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-code);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
 
+  --color-canvas: var(--bg-canvas);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-sunken: var(--sunken);
+  --color-inverse: var(--inverse);
+  --color-inverse-foreground: var(--inverse-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -26,17 +34,25 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-tertiary: var(--tertiary-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-destructive-soft: var(--destructive-soft);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong-token);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --shadow-card: var(--elevation-card);
+  --shadow-overlay: var(--elevation-overlay);
 }
 
 @layer base {
@@ -46,5 +62,108 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-size: var(--size-body-m);
+    line-height: 1.5;
+  }
+}
+
+@layer utilities {
+  .type-display-xl {
+    font-family: var(--font-display);
+    font-size: var(--size-display-xl);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .type-display-l {
+    font-family: var(--font-display);
+    font-size: var(--size-display-l);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .type-display-m {
+    font-family: var(--font-display);
+    font-size: var(--size-display-m);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .type-heading-l {
+    font-family: var(--font-ui);
+    font-size: var(--size-heading-l);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  .type-heading-m {
+    font-family: var(--font-ui);
+    font-size: var(--size-heading-m);
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+  }
+
+  .type-heading-s {
+    font-family: var(--font-ui);
+    font-size: var(--size-heading-s);
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+  }
+
+  .type-body-l {
+    font-family: var(--font-ui);
+    font-size: var(--size-body-l);
+    font-weight: 400;
+    line-height: 1.55;
+  }
+
+  .type-body-m {
+    font-family: var(--font-ui);
+    font-size: var(--size-body-m);
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .type-body-m-strong {
+    font-family: var(--font-ui);
+    font-size: var(--size-body-m);
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  .type-body-s {
+    font-family: var(--font-ui);
+    font-size: var(--size-body-s);
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .type-body-s-strong {
+    font-family: var(--font-ui);
+    font-size: var(--size-body-s);
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  .type-caption {
+    font-family: var(--font-ui);
+    font-size: var(--size-caption);
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .type-overline {
+    font-family: var(--font-ui);
+    font-size: var(--size-overline);
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 }

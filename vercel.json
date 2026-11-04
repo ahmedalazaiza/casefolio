@@ -5,3 +5,4 @@
   "buildCommand": "pnpm --filter @casefolio/web build",
   "outputDirectory": "apps/web/.next"
 }
+

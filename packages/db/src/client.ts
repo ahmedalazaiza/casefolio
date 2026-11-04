@@ -35,3 +35,4 @@ export async function closeSharedDb(): Promise<void> {
     sharedConnection = null;
   }
 }
+

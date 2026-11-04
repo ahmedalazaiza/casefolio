@@ -51,3 +51,4 @@ function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitiv
 }
 
 export { Tabs, TabsContent, TabsList, TabsTrigger };
+

@@ -18,3 +18,4 @@ function Input({ className, type = "text", ...props }: ComponentProps<"input">) 
 }
 
 export { Input };
+
