@@ -5,12 +5,13 @@ Columns: **Todo → In Progress → Review → Done**. All cards start in Todo. 
 
 ---
 **[C-001] Scaffold Next.js 15+ app (TS strict, App Router, pnpm)**  
-Phase: Phase 0 — Foundation · Priority: P0 · Estimate: 2h · Deps: — · Status: Todo  
-- [ ] `pnpm dev` runs
-- [ ] `pnpm lint && pnpm typecheck && pnpm test` pass
-- [ ] TS strict on
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 0 — Foundation · Priority: P0 · Estimate: 2h · Deps: — · Status: Done  
+Summary: Scaffolded pnpm monorepo (`apps/web`, `apps/worker`, `packages/db`, `packages/template-schema`) with Next.js App Router, strict TypeScript, ESLint, Prettier, Vitest, and Playwright smoke test.  
+- [x] `pnpm dev` runs
+- [x] `pnpm lint && pnpm typecheck && pnpm test` pass
+- [x] TS strict on
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-002] Tailwind v4 + shadcn/ui setup**  

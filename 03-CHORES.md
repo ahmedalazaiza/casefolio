@@ -9,9 +9,9 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 2h · **Depends on:** —
 - **Description:** Create repo, ESLint, Prettier, Vitest, Playwright test runner.
 - **Acceptance criteria:**
-  - [ ] `pnpm dev` runs
-  - [ ] `pnpm lint && pnpm typecheck && pnpm test` pass
-  - [ ] TS strict on
+  - [x] `pnpm dev` runs
+  - [x] `pnpm lint && pnpm typecheck && pnpm test` pass
+  - [x] TS strict on
 
 ### C-002 — Tailwind v4 + shadcn/ui setup
 - **Priority:** P0 · **Estimate:** 2h · **Depends on:** C-001
