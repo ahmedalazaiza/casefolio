@@ -4,7 +4,11 @@ import { resolve } from "node:path";
 import { eq } from "@casefolio/db";
 import { describe, expect, it } from "vitest";
 import { db, dbSchema } from "@/lib/db";
-import { createProjectFromTemplate, getProjectEditorAccess } from "@/lib/projects/service";
+import {
+  createProjectFromTemplate,
+  getProjectEditorAccess,
+  saveProjectEditorState,
+} from "@/lib/projects/service";
 import {
   createNewTemplateVersion,
   publishTemplateVersion,
@@ -221,6 +225,55 @@ describe("createProjectFromTemplate (C-401)", () => {
         { id: createdUserId, role: "user" },
       );
       expect(missingAccess.status).toBe("not_found");
+
+      // 7. Optimistic concurrency autosave (C-405): saves edits cleanly and rejects stale updatedAt
+      if (ownerAccess.status === "ok") {
+        const initialUpdatedAtIso = ownerAccess.payload.project.updatedAtIso;
+        const editedPuck = structuredClone(ownerAccess.payload.project.puckData);
+        editedPuck.root.props.title = "Mosaed — Autosaved v2";
+        const editedTheme = structuredClone(ownerAccess.payload.project.theme);
+        editedTheme.colors.primary = "#E6C36A";
+
+        const saved1 = await saveProjectEditorState(
+          {
+            projectId: created1.projectId,
+            expectedUpdatedAtIso: initialUpdatedAtIso,
+            puckData: editedPuck,
+            theme: editedTheme,
+          },
+          { id: createdUserId, role: "user" },
+        );
+        expect(saved1.ok).toBe(true);
+        if (!saved1.ok) return;
+        expect(saved1.updatedAtIso).not.toBe(initialUpdatedAtIso);
+
+        // Stale save using old expectedUpdatedAtIso returns CONFLICT without overwriting
+        const staleConflict = await saveProjectEditorState(
+          {
+            projectId: created1.projectId,
+            expectedUpdatedAtIso: initialUpdatedAtIso,
+            puckData: ownerAccess.payload.project.puckData,
+            theme: ownerAccess.payload.project.theme,
+          },
+          { id: createdUserId, role: "user" },
+        );
+        expect(staleConflict).toMatchObject({
+          ok: false,
+          code: "CONFLICT",
+          serverUpdatedAtIso: saved1.updatedAtIso,
+        });
+
+        // Reload check confirms saved v2 data persisted intact
+        const reloaded = await getProjectEditorAccess(created1.projectId, {
+          id: createdUserId,
+          role: "user",
+        });
+        expect(reloaded.status).toBe("ok");
+        if (reloaded.status === "ok") {
+          expect(reloaded.payload.project.puckData.root.props.title).toBe("Mosaed — Autosaved v2");
+          expect(reloaded.payload.project.theme.colors.primary).toBe("#E6C36A");
+        }
+      }
     } finally {
       if (createdUserId) {
         await db.delete(dbSchema.projects).where(eq(dbSchema.projects.ownerId, createdUserId));

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { forbidden, notFound, redirect } from "next/navigation";
 import { ConstrainedEditor } from "@/components/editor/constrained-editor";
 import { requireSession } from "@/lib/auth/session";
+import { saveProjectEditorAction } from "@/lib/projects/actions";
 import { getProjectEditorAccess } from "@/lib/projects/service";
 
 export const metadata: Metadata = {
@@ -32,5 +33,5 @@ export default async function ProjectEditorPage({
     forbidden();
   }
 
-  return <ConstrainedEditor initialPayload={access.payload} />;
+  return <ConstrainedEditor initialPayload={access.payload} onSaveProject={saveProjectEditorAction} />;
 }
