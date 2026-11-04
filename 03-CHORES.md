@@ -133,8 +133,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-305
 - **Description:** Type (Mobile/Web/Both) → template → name → create project copying template puck data.
 - **Acceptance criteria:**
-  - [ ] Project created with pinned template version
-  - [ ] Back/next keeps state
+  - [x] Project created with pinned template version
+  - [x] Back/next keeps state
 
 ### C-402 — Constrained Puck editor
 - **Priority:** P0 · **Estimate:** 8h · **Depends on:** C-302,C-401

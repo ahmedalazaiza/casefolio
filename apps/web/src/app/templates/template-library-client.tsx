@@ -285,7 +285,7 @@ export function TemplateLibraryClient({
           {filteredTemplates.map((item) => {
             const isLocked = item.tier === "pro" && !canUseProTemplates;
             const useHref = isAuthenticated
-              ? `/projects/new?template=${encodeURIComponent(item.slug)}`
+              ? `/new?template=${encodeURIComponent(item.slug)}`
               : `/sign-up?template=${encodeURIComponent(item.slug)}`;
 
             return (
@@ -432,7 +432,7 @@ export function TemplateLibraryClient({
                     <Link
                       href={
                         isAuthenticated
-                          ? `/projects/new?template=${encodeURIComponent(previewItem.slug)}`
+                          ? `/new?template=${encodeURIComponent(previewItem.slug)}`
                           : `/sign-up?template=${encodeURIComponent(previewItem.slug)}`
                       }
                     >
