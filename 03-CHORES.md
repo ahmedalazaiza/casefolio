@@ -140,9 +140,9 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 8h · **Depends on:** C-302,C-401
 - **Description:** Fields-only editing; no add/remove/reorder unless template allows; sections panel toggles visibility only.
 - **Acceptance criteria:**
-  - [ ] Cannot drag new components
-  - [ ] Section show/hide works
-  - [ ] No free-canvas features
+  - [x] Cannot drag new components
+  - [x] Section show/hide works
+  - [x] No free-canvas features
 
 ### C-403 — TipTap rich text field
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-402

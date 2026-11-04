@@ -1,7 +1,57 @@
 import { z } from "zod";
-import type { PuckDocument, PuckSectionItem, TemplateProjectType } from "@/lib/template/schema";
+import type {
+  ImageSlotValue,
+  PuckDocument,
+  PuckSectionItem,
+  TemplateProjectType,
+  TemplateSlotDefinition,
+  TemplateTheme,
+} from "@/lib/template/schema";
 
 export const FREE_PROJECT_LIMIT = 2;
+
+export const CONSTRAINED_PUCK_PERMISSIONS = {
+  insert: false,
+  delete: false,
+  duplicate: false,
+  drag: false,
+  edit: true,
+} as const;
+
+export interface ProjectEditorPayload {
+  project: {
+    id: string;
+    name: string;
+    type: TemplateProjectType;
+    puckData: PuckDocument;
+    theme: TemplateTheme;
+    visibility: "private" | "unlisted" | "public";
+    slug: string | null;
+    updatedAtIso: string;
+  };
+  template: {
+    id: string;
+    name: string;
+    slug: string;
+    version: string;
+    slots: Record<string, TemplateSlotDefinition>;
+    defaultTheme: TemplateTheme;
+    defaultPuck: PuckDocument;
+  };
+}
+
+export interface ProjectSlotChecklistItem {
+  id: string;
+  slotKey: string;
+  label: string;
+  sectionIndex: number;
+  sectionLabel: string;
+  ratio: string;
+  device: string;
+  required: boolean;
+  filled: boolean;
+  src: string;
+}
 
 export const createProjectInputSchema = z.object({
   type: z.enum(["mobile", "web", "both"]),
@@ -138,4 +188,181 @@ export function buildInitialProjectPuckData(
   });
 
   return cloned;
+}
+
+const SECTION_LABELS: Record<PuckSectionItem["type"], string> = {
+  Hero: "Hero",
+  Overview: "Overview",
+  Problem: "Problem",
+  Process: "Process",
+  ScreensGallery: "Key screens",
+  Results: "Results",
+  Quote: "Quote",
+  CTA: "Call to action",
+  Custom: "Custom section",
+};
+
+export function formatSectionTypeLabel(type: PuckSectionItem["type"]): string {
+  return SECTION_LABELS[type] ?? type;
+}
+
+export function isSectionRequired(type: PuckSectionItem["type"]): boolean {
+  return type === "Hero";
+}
+
+export function toggleSectionVisibility(
+  puckData: PuckDocument,
+  sectionIndex: number,
+): PuckDocument {
+  const target = puckData.content[sectionIndex];
+  if (!target || isSectionRequired(target.type)) {
+    return puckData;
+  }
+
+  const nextHidden = !target.props.hidden;
+  return {
+    ...puckData,
+    content: puckData.content.map((item, idx) =>
+      idx === sectionIndex
+        ? ({
+            ...item,
+            props: {
+              ...item.props,
+              hidden: nextHidden,
+            },
+          } as PuckSectionItem)
+        : item,
+    ),
+  };
+}
+
+export function collectProjectSlotStatus(
+  puckData: PuckDocument,
+  slots: Record<string, TemplateSlotDefinition>,
+): ProjectSlotChecklistItem[] {
+  const items: ProjectSlotChecklistItem[] = [];
+
+  const pushSlot = (
+    id: string,
+    fallbackKey: string,
+    label: string,
+    sectionIndex: number,
+    sectionType: PuckSectionItem["type"],
+    image: ImageSlotValue | undefined,
+  ) => {
+    const slotKey = image?.slot || fallbackKey;
+    const def = slots[slotKey];
+    const ratio = def?.ratio ?? "16:10";
+    const device = def?.device && def.device !== "none" ? def.device : "Frame";
+    const required = slotKey === "hero.mockup";
+    const src = image?.src?.trim() ?? "";
+
+    items.push({
+      id,
+      slotKey,
+      label,
+      sectionIndex,
+      sectionLabel: formatSectionTypeLabel(sectionType),
+      ratio,
+      device,
+      required,
+      filled: src.length > 0,
+      src,
+    });
+  };
+
+  puckData.content.forEach((section, sectionIndex) => {
+    if (section.props.hidden) return;
+
+    switch (section.type) {
+      case "Hero":
+        if (section.props.mockup || slots["hero.mockup"]) {
+          pushSlot(
+            `${section.props.id}-mockup`,
+            "hero.mockup",
+            "Hero mockup",
+            sectionIndex,
+            section.type,
+            section.props.mockup,
+          );
+        }
+        if (section.props.logo) {
+          pushSlot(
+            `${section.props.id}-logo`,
+            "hero.logo",
+            "Brand logo",
+            sectionIndex,
+            section.type,
+            section.props.logo,
+          );
+        }
+        break;
+      case "Overview":
+        if (section.props.banner || slots["overview.banner"]) {
+          pushSlot(
+            `${section.props.id}-banner`,
+            "overview.banner",
+            "Overview banner",
+            sectionIndex,
+            section.type,
+            section.props.banner,
+          );
+        }
+        break;
+      case "Process":
+        section.props.steps.forEach((step, idx) => {
+          if (step.image) {
+            pushSlot(
+              `${section.props.id}-step-${idx}`,
+              "process.step.image",
+              step.title || `Step ${idx + 1}`,
+              sectionIndex,
+              section.type,
+              step.image,
+            );
+          }
+        });
+        break;
+      case "ScreensGallery":
+        section.props.screens.forEach((screen, idx) => {
+          pushSlot(
+            `${section.props.id}-screen-${idx}`,
+            "gallery.screen",
+            screen.caption || `Screen ${idx + 1}`,
+            sectionIndex,
+            section.type,
+            screen.image,
+          );
+        });
+        break;
+      case "Quote":
+        if (section.props.avatar) {
+          pushSlot(
+            `${section.props.id}-avatar`,
+            "quote.avatar",
+            "Author avatar",
+            sectionIndex,
+            section.type,
+            section.props.avatar,
+          );
+        }
+        break;
+      case "Custom":
+        if (section.props.image) {
+          pushSlot(
+            `${section.props.id}-image`,
+            "custom.image",
+            section.props.heading || "Custom image",
+            sectionIndex,
+            section.type,
+            section.props.image,
+          );
+        }
+        break;
+      default:
+        break;
+    }
+  });
+
+  return items;
 }
