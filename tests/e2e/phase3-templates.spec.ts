@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
-import { createDbConnection, eq, users } from "../../packages/db/src/index";
+import { createDbConnection, eq, templates, users } from "../../packages/db/src/index";
 
 const envPath = resolve(process.cwd(), ".env");
 if (existsSync(envPath)) {
@@ -17,6 +17,8 @@ test("Phase 3 E2E: admin uploads reference/template.example.json via wizard, pub
   const stamp = Date.now();
   const adminEmail = `e2e-admin-p3-${stamp}@casefolio.test`;
   const password = "CasefolioAdminPassword2026!";
+  const uniqueSlug = `orbit-e2e-${stamp}`;
+  const uniqueName = `Orbit ${stamp}`;
   const orbitJsonPath = resolve(process.cwd(), "reference/template.example.json");
 
   try {
@@ -64,11 +66,13 @@ test("Phase 3 E2E: admin uploads reference/template.example.json via wizard, pub
 
     // Step 4: Metadata & Save as draft (v1.0.0)
     await expect(page.getByLabel("Template name *")).toHaveValue("Orbit");
+    await page.getByLabel("Template name *").fill(uniqueName);
+    await page.getByLabel("Slug *").fill(uniqueSlug);
     await page.getByRole("button", { name: /Save as draft \(v1\.0\.0\)/i }).click();
 
     // 3. Lands on /admin/templates/[id] as Draft -> Publish v1.0.0
     await expect(page).toHaveURL(/\/admin\/templates\/[0-9a-f-]+/);
-    await expect(page.getByRole("heading", { name: "Orbit", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: uniqueName, exact: true })).toBeVisible();
     await page.getByRole("button", { name: /Publish v1\.0\.0/i }).first().click();
     await expect(
       page.getByText("Template version published to the user library."),
@@ -79,7 +83,7 @@ test("Phase 3 E2E: admin uploads reference/template.example.json via wizard, pub
     await page.goto("/templates");
     await expect(page.getByRole("heading", { name: "Template library" })).toBeVisible();
 
-    const orbitCard = page.locator('[data-template-slug="orbit"]');
+    const orbitCard = page.locator(`[data-template-slug="${uniqueSlug}"]`);
     await expect(orbitCard).toBeVisible();
 
     await orbitCard.getByRole("button", { name: /Preview/i }).click();
@@ -91,6 +95,11 @@ test("Phase 3 E2E: admin uploads reference/template.example.json via wizard, pub
     await expect(dialog.getByText("Lead Product Designer")).toBeVisible();
     await expect(dialog.getByText("+42%")).toBeVisible();
   } finally {
+    await db
+      .update(templates)
+      .set({ currentVersionId: null })
+      .where(eq(templates.slug, uniqueSlug));
+    await db.delete(templates).where(eq(templates.slug, uniqueSlug));
     await db.delete(users).where(eq(users.email, adminEmail));
     await pool.end();
   }

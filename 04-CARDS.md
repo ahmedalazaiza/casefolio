@@ -200,10 +200,11 @@ Summary: Implemented Zustand + Immer + `zundo` temporal editor store (`createEdi
 
 ---
 **[C-406] Editor responsive behavior**  
-Phase: Phase 4 — Create Wizard & Editor · Priority: P1 · Estimate: 3h · Deps: C-402 · Status: Todo  
-- [ ] Usable at 375px
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 4 — Create Wizard & Editor · Priority: P1 · Estimate: 3h · Deps: C-402 · Status: Done  
+Summary: Implemented responsive editor layout (`375px` mobile preview + compact zero-overflow topbar + thumb-friendly bottom action bar + accessible bottom-sheet `Sheet` drawer for `Fields`, `Sections`, `Style`, and `Screens`; desktop 3-panel layout) and verified end-to-end with Playwright (`phase4-editor.spec.ts`) at `1440x900` and `375x812`.  
+- [x] Usable at 375px
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-501] R2 uploads via presigned URLs**  
