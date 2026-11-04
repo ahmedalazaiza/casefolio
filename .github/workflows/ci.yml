@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/casefolio
+  BETTER_AUTH_SECRET: ci-only-better-auth-secret-minimum-32-chars
+  BETTER_AUTH_URL: http://127.0.0.1:3000
+  GOOGLE_CLIENT_ID: ci-google-client-id
+  GOOGLE_CLIENT_SECRET: ci-google-client-secret
+  RESEND_API_KEY: re_ci_placeholder
+  R2_ACCOUNT_ID: ci-r2-account
+  R2_ACCESS_KEY_ID: ci-r2-key
+  R2_SECRET_ACCESS_KEY: ci-r2-secret
+  R2_BUCKET: casefolio-ci
+  CF_IMAGES_ACCOUNT_HASH: ci-cf-images-hash
+  CF_IMAGES_API_TOKEN: ci-cf-images-token
+  NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: test_ci_paddle_token
+  PADDLE_API_KEY: pdl_sdbx_apikey_ci
+  PADDLE_WEBHOOK_SECRET: pdl_ntfset_ci
+  PADDLE_ENV: sandbox
+  PADDLE_PRICE_PRO_MONTHLY: pri_ci_pro_monthly
+  PADDLE_PRICE_PRO_YEARLY: pri_ci_pro_yearly
+  PADDLE_PRICE_TEAM_MONTHLY: pri_ci_team_monthly
+  PADDLE_PRICE_TEAM_YEARLY: pri_ci_team_yearly
+  EXPORT_WORKER_URL: http://127.0.0.1:4000
+  EXPORT_SIGNING_SECRET: ci-only-export-signing-secret-32-chars
+  NEXT_PUBLIC_POSTHOG_KEY: phc_ci_placeholder
+  NEXT_PUBLIC_POSTHOG_HOST: https://us.i.posthog.com
+  SENTRY_DSN: https://public@example.ingest.sentry.io/1
+  NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+
+jobs:
+  quality:
+    name: Lint, Typecheck, Unit & E2E
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: casefolio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Migrate & seed PostgreSQL
+        run: pnpm db:migrate && pnpm db:seed
+
+      - name: Unit & integration tests
+        run: pnpm test
+
+      - name: Build packages & web app
+        run: pnpm build
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E smoke tests
+        run: pnpm test:e2e
+
+  vercel-preview:
+    name: Vercel Preview Deployment
+    needs: quality
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy preview via Vercel CLI (when secrets configured)
+        id: deploy
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: |
+          npx --yes vercel@latest pull --yes --environment=preview --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest build --token="$VERCEL_TOKEN"
+          PREVIEW_URL=$(npx --yes vercel@latest deploy --prebuilt --token="$VERCEL_TOKEN")
+          echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Post Preview URL on Pull Request
+        if: steps.deploy.outputs.url != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.url }}';
+            const marker = '<!-- casefolio-vercel-preview -->';
+            const body = `${marker}\n### Casefolio Preview Ready\nPreview URL: ${url}`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((c) => c.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
