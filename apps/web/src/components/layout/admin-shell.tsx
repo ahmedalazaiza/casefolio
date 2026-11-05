@@ -137,13 +137,13 @@ export function AdminShell({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <button
-              type="button"
-              aria-label="Search admin"
+            <Link
+              href="/admin/templates"
+              aria-label="Search admin templates"
               className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
             >
               <Search className="size-4" />
-            </button>
+            </Link>
             <ThemeToggle />
             <UserAccountMenu
               initials={userInitials}
@@ -155,7 +155,7 @@ export function AdminShell({
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex min-w-0 flex-1">
         <aside
           aria-label="Admin sidebar"
           className="border-border bg-background hidden w-64 shrink-0 flex-col gap-3 border-r p-4 lg:flex"

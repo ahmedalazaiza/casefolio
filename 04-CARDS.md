@@ -324,10 +324,12 @@ Summary: Implemented `notifications` persistence + React Email / Resend delivery
 
 ---
 **[C-901] Admin overview dashboard**  
-Phase: Phase 9 — Admin Panel (full) · Priority: P1 · Estimate: 4h · Deps: C-202,C-802 · Status: Todo  
-- [ ] Numbers match DB queries
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 9 — Admin Panel (full) · Priority: P1 · Estimate: 4h · Deps: C-202,C-802 · Status: Done  
+Branch: `feat/C-901-admin-overview`  
+Summary: Implemented `getAdminOverviewMetrics` and `getAdminPlatformAnalytics` (`src/lib/admin/overview.ts`, `src/lib/admin/overview-types.ts`) computing live SQL-backed KPIs (`Total users`, `MRR` + active subscriptions, `Published case studies`, `Completed exports`, `Templates live`), 12-bucket `Signups & publishes` bar chart, `Needs attention` queue alerts, `Top templates by usage`, and `/admin/analytics` (`32:9985`) with CSV export; verified against direct DB queries in `overview.test.ts` and `admin-overview.test.tsx`.  
+- [x] Numbers match DB queries
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-902] Admin templates list, filters & detail**  
