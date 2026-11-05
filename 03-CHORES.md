@@ -269,7 +269,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-202,C-802
 - **Description:** KPIs: users, MRR, publishes, exports, top templates.
 - **Acceptance criteria:**
-  - [ ] Numbers match DB queries
+  - [x] Numbers match DB queries
 
 ### C-902 — Admin templates list, filters & detail
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-304
