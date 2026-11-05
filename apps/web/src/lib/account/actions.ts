@@ -13,11 +13,7 @@ const updateProfileSchema = z.object({
     .trim()
     .min(2, "Full name must be at least 2 characters.")
     .max(80, "Full name must be 80 characters or fewer."),
-  jobTitle: z
-    .string()
-    .trim()
-    .max(100, "Role or title must be 100 characters or fewer.")
-    .optional(),
+  jobTitle: z.string().trim().max(100, "Role or title must be 100 characters or fewer.").optional(),
   designFocus: z.enum(["mobile", "web", "both"]).nullable().optional(),
   imageUrl: z
     .string()
@@ -73,6 +69,14 @@ export async function updateAccountProfileAction(
   return { ok: true };
 }
 
+const revokeSessionSchema = z.object({
+  sessionId: z.string().uuid("Invalid session identifier."),
+});
+
+const deleteAccountSchema = z.object({
+  confirmEmail: z.string().trim().email("Please enter a valid email address."),
+});
+
 export async function revokeUserSessionAction(
   sessionId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -81,14 +85,25 @@ export async function revokeUserSessionAction(
     return { ok: false, error: "Authentication required." };
   }
 
-  if (sessionId === ctx.session.id) {
+  const parsed = revokeSessionSchema.safeParse({ sessionId });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid session identifier.",
+    };
+  }
+
+  if (parsed.data.sessionId === ctx.session.id) {
     return { ok: false, error: "Use Sign out from the menu to end your current session." };
   }
 
   await db
     .delete(dbSchema.sessions)
     .where(
-      and(eq(dbSchema.sessions.id, sessionId), eq(dbSchema.sessions.userId, ctx.user.id)),
+      and(
+        eq(dbSchema.sessions.id, parsed.data.sessionId),
+        eq(dbSchema.sessions.userId, ctx.user.id),
+      ),
     );
 
   revalidatePath("/account/security");
@@ -106,10 +121,7 @@ export async function revokeOtherUserSessionsAction(): Promise<
   await db
     .delete(dbSchema.sessions)
     .where(
-      and(
-        eq(dbSchema.sessions.userId, ctx.user.id),
-        ne(dbSchema.sessions.id, ctx.session.id),
-      ),
+      and(eq(dbSchema.sessions.userId, ctx.user.id), ne(dbSchema.sessions.id, ctx.session.id)),
     );
 
   revalidatePath("/account/security");
@@ -124,7 +136,15 @@ export async function deleteUserAccountAction(
     return { ok: false, error: "Authentication required." };
   }
 
-  if (confirmEmail.trim().toLowerCase() !== ctx.user.email.toLowerCase()) {
+  const parsed = deleteAccountSchema.safeParse({ confirmEmail });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Please enter your account email.",
+    };
+  }
+
+  if (parsed.data.confirmEmail.toLowerCase() !== ctx.user.email.toLowerCase()) {
     return {
       ok: false,
       error: "Email confirmation does not match your account email.",

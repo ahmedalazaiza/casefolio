@@ -1,12 +1,4 @@
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gte,
-  type PlanTier,
-  type UserRole,
-} from "@casefolio/db";
+import { and, count, desc, eq, gte, type PlanTier, type UserRole } from "@casefolio/db";
 import {
   enqueueExportJobToPgBoss,
   startPgBossExportConsumer,
@@ -32,6 +24,7 @@ import { notifyExportFinished } from "@/lib/notifications/service";
 import { slugifyProjectName } from "@/lib/projects/types";
 import { readStoredObjectBytes } from "@/lib/storage/r2";
 import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+import { sanitizeErrorForLogging } from "@/lib/security/redact";
 
 export interface ExportActor {
   id: string;
@@ -39,8 +32,7 @@ export interface ExportActor {
   plan?: PlanTier;
 }
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const globalForExportQueue = globalThis as unknown as {
   casefolioBossPublisherPromise?: Promise<PgBoss> | null;
@@ -138,9 +130,7 @@ export async function shutdownExportQueueForTests(): Promise<void> {
   }
 }
 
-function serializeExportRow(
-  row: typeof dbSchema.exportsTable.$inferSelect,
-): ExportHistoryItem {
+function serializeExportRow(row: typeof dbSchema.exportsTable.$inferSelect): ExportHistoryItem {
   return {
     id: row.id,
     projectId: row.projectId,
@@ -149,8 +139,7 @@ function serializeExportRow(
     r2Key: row.r2Key ?? null,
     error: row.error ?? null,
     createdAtIso: row.createdAt.toISOString(),
-    downloadUrl:
-      row.status === "completed" && row.r2Key ? `/api/exports/${row.id}/download` : null,
+    downloadUrl: row.status === "completed" && row.r2Key ? `/api/exports/${row.id}/download` : null,
   };
 }
 
@@ -159,11 +148,7 @@ async function canActorAccessProjectExports(
   actor: ExportActor,
   requireEdit = false,
 ): Promise<boolean> {
-  if (
-    project.ownerId === actor.id ||
-    actor.role === "admin" ||
-    actor.role === "superadmin"
-  ) {
+  if (project.ownerId === actor.id || actor.role === "admin" || actor.role === "superadmin") {
     return true;
   }
 
@@ -193,10 +178,7 @@ function exportFormatToEntitlementFeature(format: ExportFormatOption): Entitleme
   return "export_png";
 }
 
-export function isExportFormatAllowedOnPlan(
-  plan: PlanTier,
-  format: ExportFormatOption,
-): boolean {
+export function isExportFormatAllowedOnPlan(plan: PlanTier, format: ExportFormatOption): boolean {
   return can(plan, exportFormatToEntitlementFeature(format));
 }
 
@@ -331,7 +313,8 @@ export async function enqueueProjectExportForUser(
     const boss = await getPgBossPublisher();
     await enqueueExportJobToPgBoss(boss, jobPayload);
     await ensureExportQueueConsumerActive(appUrl).catch((err) => {
-      console.error("[exports] embedded worker wakeup warning:", err);
+      const safeErr = sanitizeErrorForLogging(err);
+      console.error("[exports] embedded worker wakeup warning:", safeErr.message);
     });
   }
 
@@ -429,9 +412,7 @@ export async function getExportJobForUser(
   exportId: string,
   actor: ExportActor,
 ): Promise<
-  | { status: "not_found" }
-  | { status: "forbidden" }
-  | { status: "ok"; exportJob: ExportHistoryItem }
+  { status: "not_found" } | { status: "forbidden" } | { status: "ok"; exportJob: ExportHistoryItem }
 > {
   if (!UUID_REGEX.test(exportId)) {
     return { status: "not_found" };
@@ -459,10 +440,7 @@ export async function getExportJobForUser(
     return { status: "forbidden" };
   }
 
-  if (
-    row.exportJob.status === "completed" ||
-    row.exportJob.status === "failed"
-  ) {
+  if (row.exportJob.status === "completed" || row.exportJob.status === "failed") {
     await notifyExportFinished({
       exportId: row.exportJob.id,
       projectId: row.exportJob.projectId,
@@ -534,11 +512,7 @@ export async function authorizeAndReadExportFile(
   const safeProjectSlug = slugifyProjectName(row.project.name);
   const format = row.exportJob.format;
   const contentType =
-    format === "pdf"
-      ? "application/pdf"
-      : format === "behance"
-        ? "application/zip"
-        : "image/png";
+    format === "pdf" ? "application/pdf" : format === "behance" ? "application/zip" : "image/png";
   const ext = format === "pdf" ? "pdf" : format === "behance" ? "zip" : "png";
   const suffix =
     format === "behance" ? "behance-slices" : format === "pdf" ? "case-study" : "png-long";
@@ -550,4 +524,3 @@ export async function authorizeAndReadExportFile(
     fileName: `${safeProjectSlug}-${suffix}.${ext}`,
   };
 }
-

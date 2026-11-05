@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   markOnboardingSkippedForUser,
   saveOnboardingProfileForUser,
-} from "@/lib/auth/onboarding-actions";
+} from "@/lib/auth/onboarding-service";
 import { completeOnboardingSchema } from "@/lib/auth/schemas";
 import { auth } from "@/lib/auth/server";
 import { db, dbSchema } from "@/lib/db";
@@ -102,4 +102,3 @@ describe("Onboarding validation & profile persistence (C-203)", () => {
     }
   });
 });
-

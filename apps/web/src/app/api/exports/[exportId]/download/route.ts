@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/session";
 import { authorizeAndReadExportFile } from "@/lib/exports/service";
+import { sanitizeHeaderFilename } from "@/lib/security/redact";
 
 interface ExportDownloadRouteContext {
   params: Promise<{ exportId: string }>;
@@ -34,7 +35,11 @@ export async function GET(
 
   if (result.status === "forbidden") {
     return NextResponse.json(
-      { ok: false, code: "FORBIDDEN", error: "You do not have permission to download this export." },
+      {
+        ok: false,
+        code: "FORBIDDEN",
+        error: "You do not have permission to download this export.",
+      },
       { status: 403 },
     );
   }
@@ -50,15 +55,15 @@ export async function GET(
     );
   }
 
+  const safeFilename = sanitizeHeaderFilename(result.fileName, "casefolio-export");
   return new Response(Buffer.from(result.bytes), {
     status: 200,
     headers: {
       "Content-Type": result.contentType,
       "Content-Length": String(result.bytes.byteLength),
-      "Content-Disposition": `attachment; filename="${result.fileName}"`,
+      "Content-Disposition": `attachment; filename="${safeFilename}"`,
       "Cache-Control": "private, no-store, max-age=0",
       "X-Content-Type-Options": "nosniff",
     },
   });
 }
-

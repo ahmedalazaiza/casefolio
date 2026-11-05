@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getServerSession } from "@/lib/auth/session";
 import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import {
@@ -82,6 +83,11 @@ export async function saveProjectEditorAction(
   return result;
 }
 
+const checkSlugActionSchema = z.object({
+  slug: z.string().max(120),
+  projectId: z.string().uuid("Invalid project ID."),
+});
+
 export async function checkProjectSlugAction(
   slug: string,
   projectId: string,
@@ -99,7 +105,16 @@ export async function checkProjectSlugAction(
     };
   }
 
-  return checkProjectSlugAvailability(slug, projectId);
+  const parsed = checkSlugActionSchema.safeParse({ slug, projectId });
+  if (!parsed.success) {
+    return {
+      available: false,
+      normalizedSlug: slug.trim().toLowerCase(),
+      reason: parsed.error.issues[0]?.message ?? "Invalid slug check input.",
+    };
+  }
+
+  return checkProjectSlugAvailability(parsed.data.slug, parsed.data.projectId);
 }
 
 export async function publishProjectAction(
