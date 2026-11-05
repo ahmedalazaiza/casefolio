@@ -71,6 +71,9 @@ importers:
       '@casefolio/worker':
         specifier: workspace:*
         version: link:../worker
+      '@paddle/paddle-js':
+        specifier: ^1.6.5
+        version: 1.6.5
       '@puckeditor/core':
         specifier: ^0.24.0
         version: 0.24.0(@floating-ui/dom@1.8.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(immer@11.2.9)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
@@ -1504,6 +1507,9 @@ packages:
   '@opentelemetry/api@1.10.0':
     resolution: {integrity: sha512-lMkyes8iHrG+mk6WH7X70MdCLI2RS0FwNBY1PyQ8UemaijE2m5mv5A0Niy3HtbYTFrgkUEQjFMXmSAk2hQDuPQ==}
     engines: {node: '>=8.0.0'}
+
+  '@paddle/paddle-js@1.6.5':
+    resolution: {integrity: sha512-uFRvptUzYRqRlqTU5XmfcZWC9BGVYpZNdANd3giJjZbJlHesnE4gn8PyjtYpesU1ar2ZGPuJxHvrrSIV9jjdVw==}
 
   '@playwright/test@1.64.1':
     resolution: {integrity: sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==}
@@ -6163,6 +6169,8 @@ snapshots:
       fastq: 1.20.3
 
   '@opentelemetry/api@1.10.0': {}
+
+  '@paddle/paddle-js@1.6.5': {}
 
   '@playwright/test@1.64.1':
     dependencies:
