@@ -5,6 +5,8 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, magicLink, organization } from "better-auth/plugins";
 import { env } from "@/env";
+import { getPlatformSettings } from "@/lib/admin/settings";
+import { checkPlatformAuthGate } from "@/lib/admin/settings-types";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import {
   sendMagicLinkEmail,
@@ -43,6 +45,14 @@ export const auth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/sign-up/email") {
+        const platform = await getPlatformSettings();
+        const gate = checkPlatformAuthGate({ path: ctx.path, platform });
+        if (!gate.allowed) {
+          throw new APIError("FORBIDDEN", { message: gate.message });
+        }
+      }
+
       const signInPaths = new Set([
         "/sign-in/email",
         "/sign-in/magic-link",
@@ -51,11 +61,15 @@ export const auth = betterAuth({
       ]);
 
       if (signInPaths.has(ctx.path)) {
+        const platform = await getPlatformSettings();
         const body = (ctx.body ?? {}) as { email?: unknown };
         const rawEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : null;
         if (rawEmail) {
           const [targetUser] = await db
-            .select({ suspended: dbSchema.users.suspended })
+            .select({
+              suspended: dbSchema.users.suspended,
+              role: dbSchema.users.role,
+            })
             .from(dbSchema.users)
             .where(eq(dbSchema.users.email, rawEmail))
             .limit(1);
@@ -64,6 +78,15 @@ export const auth = betterAuth({
             throw new APIError("FORBIDDEN", {
               message: "Your account has been suspended. Please contact support.",
             });
+          }
+
+          const gate = checkPlatformAuthGate({
+            path: ctx.path,
+            platform,
+            targetUserRole: targetUser?.role ?? null,
+          });
+          if (!gate.allowed) {
+            throw new APIError("FORBIDDEN", { message: gate.message });
           }
         }
       }

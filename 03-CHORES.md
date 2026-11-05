@@ -300,7 +300,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-202
 - **Description:** Role management, feature flags, audit log for admin actions.
 - **Acceptance criteria:**
-  - [ ] Every admin mutation logged
+  - [x] Every admin mutation logged
 
 ## Phase 10 — Landing, Help & Polish
 

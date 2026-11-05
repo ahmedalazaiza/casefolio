@@ -370,10 +370,12 @@ Summary: Added public case-study reporting (`ReportCaseStudyButton` on `/p/[slug
 
 ---
 **[C-906] Admin settings, roles & audit log**  
-Phase: Phase 9 — Admin Panel (full) · Priority: P1 · Estimate: 3h · Deps: C-202 · Status: Todo  
-- [ ] Every admin mutation logged
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 9 — Admin Panel (full) · Priority: P1 · Estimate: 3h · Deps: C-202 · Status: Done  
+Branch: `feat/C-906-admin-settings-audit`  
+Summary: Implemented `/admin/settings` (`32:10233`) with admin team role management (`admin` / `superadmin` + `+ Add admin` by email with self-demotion, superadmin-only, and last-admin safety guards), permissions matrix, platform feature flags (`newSignupsOpen`, `requireEmailVerification`, `maintenanceMode` persisted via `audit_logs` and enforced in `auth/server.ts`), searchable/filterable `Audit log` explorer with CSV export, Vitest unit/DB/UI tests (`settings.test.ts`, `admin-settings.test.tsx`), and full Phase 9 Playwright E2E verification (`phase9-admin-panel.spec.ts`).  
+- [x] Every admin mutation logged
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-1001] Marketing landing page from Figma 27:6665**  
