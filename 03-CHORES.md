@@ -238,7 +238,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-701
 - **Description:** Profile, security, plan, invoices, cancel via Paddle customer portal.
 - **Acceptance criteria:**
-  - [ ] Plan changes reflected after webhook
+  - [x] Plan changes reflected after webhook
 
 ## Phase 8 — Analytics & Notifications
 
