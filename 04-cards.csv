@@ -41,7 +41,7 @@ C-905,Moderation,Phase 9 — Admin Panel (full),P2,4h,C-601,Done,phase-9;P2,"Rep
 C-906,"Admin settings, roles & audit log",Phase 9 — Admin Panel (full),P1,3h,C-202,Done,phase-9;P1,"Role management, feature flags, audit log for admin actions.",Every admin mutation logged
 C-1001,Marketing landing page from Figma 27:6665,"Phase 10 — Landing, Help & Polish",P0,6h,C-102,Done,phase-10;P0,"Hero, features, templates showcase, pricing, FAQ, footer; SEO metadata.",Pixel-close to Figma | Lighthouse ≥ 90
 C-1002,Pricing page & plan comparison,"Phase 10 — Landing, Help & Polish",P1,2h,"C-1001,C-701",Done,phase-10;P1,Linked to Paddle prices.,Prices loaded from config
-C-1003,Help center & docs,"Phase 10 — Landing, Help & Polish",P2,3h,C-103,Todo,phase-10;P2,"MDX articles, search, contact form.","Articles render, search works"
+C-1003,Help center & docs,"Phase 10 — Landing, Help & Polish",P2,3h,C-103,Done,phase-10;P2,"MDX articles, search, contact form.","Articles render, search works"
 C-1004,"Dashboard (projects grid, recent, quick create)","Phase 10 — Landing, Help & Polish",P0,4h,C-401,Todo,phase-10;P0,"Projects list, duplicate, delete, status badges.",Empty state matches Figma
 C-1101,Security review,Phase 11 — Hardening & Launch,P0,4h,C-702,Todo,phase-11;P0,"Authz on every route, rate limits, CSP, upload validation, webhook verification.",Checklist in RULES §Security all ticked
 C-1102,E2E tests of core journeys,Phase 11 — Hardening & Launch,P0,6h,"C-602,C-702",Todo,phase-11;P0,Signup → create → edit → publish → export → upgrade; admin import.,Playwright suite green in CI

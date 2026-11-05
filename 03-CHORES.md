@@ -321,7 +321,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P2 · **Estimate:** 3h · **Depends on:** C-103
 - **Description:** MDX articles, search, contact form.
 - **Acceptance criteria:**
-  - [ ] Articles render, search works
+  - [x] Articles render, search works
 
 ### C-1004 — Dashboard (projects grid, recent, quick create)
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-401
