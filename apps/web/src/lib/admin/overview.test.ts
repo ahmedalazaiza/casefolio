@@ -37,6 +37,22 @@ describe("admin overview & analytics metrics (C-901)", () => {
       await db.delete(dbSchema.users).where(inArray(dbSchema.users.id, cleanupUserIds));
     }
     if (cleanupTemplateIds.length > 0) {
+      const versionRows = await db
+        .select({ id: dbSchema.templateVersions.id })
+        .from(dbSchema.templateVersions)
+        .where(inArray(dbSchema.templateVersions.templateId, cleanupTemplateIds));
+      if (versionRows.length > 0) {
+        await db.delete(dbSchema.projects).where(
+          inArray(
+            dbSchema.projects.templateVersionId,
+            versionRows.map((row) => row.id),
+          ),
+        );
+      }
+      await db
+        .update(dbSchema.templates)
+        .set({ currentVersionId: null })
+        .where(inArray(dbSchema.templates.id, cleanupTemplateIds));
       await db.delete(dbSchema.templates).where(inArray(dbSchema.templates.id, cleanupTemplateIds));
     }
   });
@@ -233,10 +249,7 @@ describe("admin overview & analytics metrics (C-901)", () => {
         .select({ total: count() })
         .from(dbSchema.projects)
         .where(
-          and(
-            eq(dbSchema.projects.visibility, "public"),
-            isNotNull(dbSchema.projects.publishedAt),
-          ),
+          and(eq(dbSchema.projects.visibility, "public"), isNotNull(dbSchema.projects.publishedAt)),
         );
       const [expCount] = await db
         .select({ total: count() })

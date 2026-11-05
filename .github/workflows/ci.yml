@@ -91,7 +91,7 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run E2E smoke tests
+      - name: Run Playwright E2E core journeys & suite
         run: pnpm test:e2e
 
   vercel-preview:
@@ -148,4 +148,3 @@ jobs:
                 body,
               });
             }
-
