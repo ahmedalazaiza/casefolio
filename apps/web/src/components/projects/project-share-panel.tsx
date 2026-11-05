@@ -3,6 +3,7 @@
 import {
   AlertCircle,
   ArrowLeft,
+  BarChart3,
   Check,
   Copy,
   Download,
@@ -271,6 +272,13 @@ export function ProjectSharePanel({
           >
             <Download className="size-3.5" />
             <span>Exports (PNG / PDF / Behance)</span>
+          </Link>
+          <Link
+            href={`/projects/${initialSettings.projectId}/analytics`}
+            className="text-muted-foreground hover:text-foreground hover:bg-sunken type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5 transition-colors"
+          >
+            <BarChart3 className="size-3.5" />
+            <span>Analytics</span>
           </Link>
         </nav>
       </div>

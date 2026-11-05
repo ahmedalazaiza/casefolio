@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { CasefolioWatermark } from "@/components/sections/casefolio-watermark";
+import { recordPublishedProjectView } from "@/lib/analytics/page-views";
 import { can } from "@/lib/entitlements";
 import {
   buildPublicCaseStudyUrl,
@@ -86,6 +88,12 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
   if (!published) {
     notFound();
   }
+
+  const requestHeaders = await headers();
+  await recordPublishedProjectView({
+    projectId: published.project.id,
+    headers: requestHeaders,
+  }).catch(() => undefined);
 
   return (
     <main
