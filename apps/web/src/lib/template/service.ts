@@ -21,7 +21,9 @@ import { compareSemver } from "@/lib/template/semver";
 import type {
   AdminTemplateDetail,
   AdminTemplateSummary,
+  AdminTemplateUsageProject,
   CreateTemplateVersionResult,
+  DeleteTemplateActionResult,
   PublishedTemplateItem,
   TemplateLifecycleActionResult,
 } from "@/lib/template/types";
@@ -30,7 +32,9 @@ export { wizardMetadataInputSchema, type SaveTemplateDraftResult, type WizardMet
 export type {
   AdminTemplateDetail,
   AdminTemplateSummary,
+  AdminTemplateUsageProject,
   CreateTemplateVersionResult,
+  DeleteTemplateActionResult,
   PublishedTemplateItem,
   TemplateLifecycleActionResult,
 };
@@ -402,18 +406,37 @@ export async function getAdminTemplateDetail(
     .where(eq(dbSchema.templateVersions.templateId, templateId));
 
   const projectCountByVersion = new Map<string, number>();
+  const usedInProjects: AdminTemplateUsageProject[] = [];
   if (versionRows.length > 0) {
     const versionIds = versionRows.map((v) => v.id);
+    const verStringById = new Map(versionRows.map((v) => [v.id, v.version]));
+
     const pinnedProjects = await db
-      .select({ templateVersionId: dbSchema.projects.templateVersionId })
+      .select({
+        project: dbSchema.projects,
+        ownerName: dbSchema.users.name,
+      })
       .from(dbSchema.projects)
-      .where(inArray(dbSchema.projects.templateVersionId, versionIds));
+      .leftJoin(dbSchema.users, eq(dbSchema.projects.ownerId, dbSchema.users.id))
+      .where(inArray(dbSchema.projects.templateVersionId, versionIds))
+      .orderBy(desc(dbSchema.projects.updatedAt));
 
     for (const p of pinnedProjects) {
       projectCountByVersion.set(
-        p.templateVersionId,
-        (projectCountByVersion.get(p.templateVersionId) ?? 0) + 1,
+        p.project.templateVersionId,
+        (projectCountByVersion.get(p.project.templateVersionId) ?? 0) + 1,
       );
+      if (usedInProjects.length < 25) {
+        usedInProjects.push({
+          id: p.project.id,
+          name: p.project.name,
+          slug: p.project.slug,
+          visibility: p.project.visibility,
+          ownerName: p.ownerName ?? "Unknown author",
+          version: verStringById.get(p.project.templateVersionId) ?? "1.0.0",
+          updatedAtIso: p.project.updatedAt.toISOString(),
+        });
+      }
     }
   }
 
@@ -453,6 +476,7 @@ export async function getAdminTemplateDetail(
     currentVersion: currentVer?.version ?? null,
     totalProjectCount,
     versions: sortedVersions,
+    usedInProjects,
   };
 }
 
@@ -761,6 +785,86 @@ export async function unarchiveTemplateToDraft({
     status: "draft",
     currentVersionId: tpl.currentVersionId,
   };
+}
+
+export async function deleteAdminTemplate({
+  actorId,
+  templateId,
+  confirmName,
+}: {
+  actorId: string | null;
+  templateId: string;
+  confirmName: string;
+}): Promise<DeleteTemplateActionResult> {
+  const [tpl] = await db
+    .select()
+    .from(dbSchema.templates)
+    .where(eq(dbSchema.templates.id, templateId))
+    .limit(1);
+
+  if (!tpl) {
+    return { ok: false, error: "Template not found." };
+  }
+
+  if (confirmName.trim() !== tpl.name.trim()) {
+    return {
+      ok: false,
+      error: `Type "${tpl.name}" exactly to confirm deletion.`,
+    };
+  }
+
+  const versionRows = await db
+    .select({ id: dbSchema.templateVersions.id })
+    .from(dbSchema.templateVersions)
+    .where(eq(dbSchema.templateVersions.templateId, templateId));
+
+  let pinnedProjectCount = 0;
+  if (versionRows.length > 0) {
+    const [usage] = await db
+      .select({ total: count() })
+      .from(dbSchema.projects)
+      .where(
+        inArray(
+          dbSchema.projects.templateVersionId,
+          versionRows.map((v) => v.id),
+        ),
+      );
+    pinnedProjectCount = usage?.total ?? 0;
+  }
+
+  if (pinnedProjectCount > 0) {
+    await db
+      .update(dbSchema.templates)
+      .set({
+        status: "archived",
+        updatedAt: new Date(),
+      })
+      .where(eq(dbSchema.templates.id, templateId));
+
+    await recordAdminAuditLog(actorId, "template.retired", {
+      templateId,
+      slug: tpl.slug,
+      name: tpl.name,
+      pinnedProjectCount,
+    });
+
+    return { ok: true, mode: "retired_archived" };
+  }
+
+  await db
+    .update(dbSchema.templates)
+    .set({ currentVersionId: null })
+    .where(eq(dbSchema.templates.id, templateId));
+
+  await db.delete(dbSchema.templates).where(eq(dbSchema.templates.id, templateId));
+
+  await recordAdminAuditLog(actorId, "template.deleted", {
+    templateId,
+    slug: tpl.slug,
+    name: tpl.name,
+  });
+
+  return { ok: true, mode: "deleted" };
 }
 
 export interface LibraryFilterInput {

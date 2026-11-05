@@ -34,7 +34,7 @@ C-801,PostHog product analytics,Phase 8 — Analytics & Notifications,P1,3h,C-20
 C-802,Case-study view analytics,Phase 8 — Analytics & Notifications,P1,4h,C-601,Done,phase-8;P1,Count views/unique visitors/referrers per published project; dashboard chart.,Bots filtered | Owner sees chart
 C-803,Notifications (in-app + email),Phase 8 — Analytics & Notifications,P2,4h,C-201,Done,phase-8;P2,"Export ready, payment issues, team invites, template updates.",Bell shows unread count | Email via Resend
 C-901,Admin overview dashboard,Phase 9 — Admin Panel (full),P1,4h,"C-202,C-802",Done,phase-9;P1,"KPIs: users, MRR, publishes, exports, top templates.",Numbers match DB queries
-C-902,"Admin templates list, filters & detail",Phase 9 — Admin Panel (full),P0,4h,C-304,Todo,phase-9;P0,"Search, filter by status/type/category/tier, detail with versions & usage.",Matches Figma Admin Panel 31:6665
+C-902,"Admin templates list, filters & detail",Phase 9 — Admin Panel (full),P0,4h,C-304,Done,phase-9;P0,"Search, filter by status/type/category/tier, detail with versions & usage.",Matches Figma Admin Panel 31:6665
 C-903,Admin categories management,Phase 9 — Admin Panel (full),P2,2h,C-902,Todo,phase-9;P2,CRUD + ordering.,Category used in library filters
 C-904,Admin users & subscriptions,Phase 9 — Admin Panel (full),P1,4h,C-701,Todo,phase-9;P1,"List, search, view, suspend; subscription status (read from Paddle).",Suspend blocks login
 C-905,Moderation,Phase 9 — Admin Panel (full),P2,4h,C-601,Todo,phase-9;P2,"Report public case studies, review queue, takedown.",Takedown makes page 404 | Audit log entry

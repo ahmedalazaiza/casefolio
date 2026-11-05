@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth/guards";
 import {
   archiveTemplateAction,
   createTemplateVersionAction,
+  deleteTemplateAction,
   publishTemplateVersionAction,
   unarchiveTemplateAction,
 } from "@/lib/template/admin-actions";
@@ -34,6 +35,7 @@ export default async function AdminTemplateDetailPage({
       archiveAction={archiveTemplateAction}
       unarchiveAction={unarchiveTemplateAction}
       createVersionAction={createTemplateVersionAction}
+      deleteAction={deleteTemplateAction}
     />
   );
 }

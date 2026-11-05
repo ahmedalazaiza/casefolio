@@ -333,10 +333,12 @@ Summary: Implemented `getAdminOverviewMetrics` and `getAdminPlatformAnalytics` (
 
 ---
 **[C-902] Admin templates list, filters & detail**  
-Phase: Phase 9 — Admin Panel (full) · Priority: P0 · Estimate: 4h · Deps: C-304 · Status: Todo  
-- [ ] Matches Figma Admin Panel 31:6665
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 9 — Admin Panel (full) · Priority: P0 · Estimate: 4h · Deps: C-304 · Status: Done  
+Branch: `feat/C-902-admin-templates`  
+Summary: Upgraded `/admin/templates` (`admin-templates-list.tsx`) to match Figma `31:6881`, `31:7117` empty state, and `32:8045` delete confirmation modal with search + `Status`, `Type`, `Tier`, and `Category` filters, row actions menu, and `Showing X of Y templates` footer; upgraded `/admin/templates/[id]` (`template-detail-client.tsx`) to match Figma `32:7909` with `Preview`, `Sections`, `Image slots`, `Style`, and `Usage` tabs, `Version history` (`Live` badge), `usedInProjects` query, and `deleteAdminTemplate` with audit logging (`admin-templates.test.ts`, `admin-templates.test.tsx`).  
+- [x] Matches Figma Admin Panel 31:6665
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-903] Admin categories management**  

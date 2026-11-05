@@ -7,11 +7,13 @@ import { semverSchema } from "@/lib/template/schema";
 import {
   archiveTemplate,
   createNewTemplateVersion,
+  deleteAdminTemplate,
   publishTemplateVersion,
   saveTemplateDraftFromWizard,
   unarchiveTemplateToDraft,
   wizardMetadataInputSchema,
   type CreateTemplateVersionResult,
+  type DeleteTemplateActionResult,
   type SaveTemplateDraftResult,
   type TemplateLifecycleActionResult,
 } from "@/lib/template/service";
@@ -36,6 +38,11 @@ const publishVersionActionPayloadSchema = z.object({
 
 const templateIdPayloadSchema = z.object({
   templateId: z.string().uuid("Invalid template ID."),
+});
+
+const deleteTemplatePayloadSchema = z.object({
+  templateId: z.string().uuid("Invalid template ID."),
+  confirmName: z.string().trim().min(1, "Confirmation name is required."),
 });
 
 function revalidateTemplatePaths(templateId: string) {
@@ -168,6 +175,33 @@ export async function unarchiveTemplateAction(
 
   if (result.ok) {
     revalidateTemplatePaths(parsed.data.templateId);
+  }
+
+  return result;
+}
+
+export async function deleteTemplateAction(
+  payload: z.input<typeof deleteTemplatePayloadSchema>,
+): Promise<DeleteTemplateActionResult> {
+  const { user } = await requireAdmin("/admin/templates");
+
+  const parsed = deleteTemplatePayloadSchema.safeParse(payload);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid delete payload.",
+    };
+  }
+
+  const result = await deleteAdminTemplate({
+    actorId: user.id,
+    templateId: parsed.data.templateId,
+    confirmName: parsed.data.confirmName,
+  });
+
+  if (result.ok) {
+    revalidatePath("/admin/templates");
+    revalidatePath("/templates");
   }
 
   return result;
