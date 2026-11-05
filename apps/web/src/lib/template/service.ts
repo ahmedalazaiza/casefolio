@@ -9,6 +9,7 @@ import {
   type TemplateTier,
 } from "@casefolio/db";
 import { db, dbSchema } from "@/lib/db";
+import { notifyTemplateVersionPublished } from "@/lib/notifications/service";
 import {
   parseAndValidateTemplateJson,
   wizardMetadataInputSchema,
@@ -591,6 +592,12 @@ export async function createNewTemplateVersion({
         updatedAt: now,
       })
       .where(eq(dbSchema.templates.id, templateId));
+
+    await notifyTemplateVersionPublished({
+      templateId,
+      templateName: tpl.template.name,
+      version: cleanVersion,
+    }).catch(() => undefined);
   } else {
     await db
       .update(dbSchema.templates)
@@ -654,6 +661,20 @@ export async function publishTemplateVersion({
       updatedAt: now,
     })
     .where(eq(dbSchema.templates.id, templateId));
+
+  const [tplRow] = await db
+    .select({ name: dbSchema.templates.name })
+    .from(dbSchema.templates)
+    .where(eq(dbSchema.templates.id, templateId))
+    .limit(1);
+
+  if (tplRow) {
+    await notifyTemplateVersionPublished({
+      templateId,
+      templateName: tplRow.name,
+      version: versionRow.version,
+    }).catch(() => undefined);
+  }
 
   await recordAdminAuditLog(actorId, "template.published", {
     templateId,

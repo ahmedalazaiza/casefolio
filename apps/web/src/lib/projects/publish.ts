@@ -2,6 +2,7 @@ import { and, eq, ne, type PlanTier, type UserRole } from "@casefolio/db";
 import { z } from "zod";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { db, dbSchema } from "@/lib/db";
+import { notifyProjectPublished } from "@/lib/notifications/service";
 import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { slugifyProjectName } from "@/lib/projects/types";
 import {
@@ -521,15 +522,26 @@ export async function publishProjectForUser(
       };
     }
 
+    const isFirstPublish = existing.publishedAt === null;
+
     await trackServerProductEvent({
       event: "published",
       distinctId: user.id,
       properties: {
         projectId: updated.id,
         visibility: valid.visibility,
-        isFirstPublish: existing.publishedAt === null,
+        isFirstPublish,
       },
     });
+
+    if (isFirstPublish) {
+      await notifyProjectPublished({
+        userId: updated.ownerId,
+        projectId: updated.id,
+        projectName: updated.name,
+        slug: updated.slug,
+      }).catch(() => undefined);
+    }
 
     return {
       ok: true,

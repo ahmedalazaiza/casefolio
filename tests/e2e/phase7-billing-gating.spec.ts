@@ -26,6 +26,7 @@ async function maybeSaveScreenshot(
       path: string;
       fullPage?: boolean;
       animations?: "disabled" | "allow";
+      caret?: "hide" | "initial";
     }) => Promise<Buffer>;
   },
   filename: string,
@@ -36,6 +37,7 @@ async function maybeSaveScreenshot(
       path: resolve(ARTIFACT_DIR, filename),
       fullPage,
       animations: "disabled",
+      caret: "initial",
     });
   }
 }

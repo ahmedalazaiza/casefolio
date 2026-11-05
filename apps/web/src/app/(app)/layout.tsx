@@ -6,6 +6,7 @@ import { computeUserInitials, requireSession } from "@/lib/auth/session";
 import { getUserBillingOverview } from "@/lib/billing/service";
 import { db, dbSchema } from "@/lib/db";
 import { can } from "@/lib/entitlements";
+import { listNotificationsForUser } from "@/lib/notifications/service";
 import { FREE_PROJECT_LIMIT } from "@/lib/projects/types";
 
 function formatShortDate(iso: string | null): string | null {
@@ -26,12 +27,13 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     redirect("/onboarding");
   }
 
-  const [billing, projectCountRows] = await Promise.all([
+  const [billing, projectCountRows, notificationsSummary] = await Promise.all([
     getUserBillingOverview(user.id),
     db
       .select({ total: count() })
       .from(dbSchema.projects)
       .where(eq(dbSchema.projects.ownerId, user.id)),
+    listNotificationsForUser(user.id, { limit: 6 }),
   ]);
 
   const projectsUsed = Number(projectCountRows[0]?.total ?? 0);
@@ -73,6 +75,8 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       projectsLimit={isPaid ? null : FREE_PROJECT_LIMIT}
       renewsLabel={renewsLabel}
       failedPaymentPauseDateLabel={failedPaymentPauseDateLabel}
+      initialUnreadNotifications={notificationsSummary.unreadCount}
+      initialNotifications={notificationsSummary.notifications}
     >
       {children}
     </AppShell>

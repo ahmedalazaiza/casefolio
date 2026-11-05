@@ -8,6 +8,10 @@ import {
   sanitizeAnalyticsProps,
   sanitizeDistinctId,
 } from "@/lib/analytics/posthog";
+import {
+  clearNotificationEmailAuditsForDev,
+  getNotificationEmailAuditsForDev,
+} from "@/lib/notifications/service";
 
 const mirrorClientEventSchema = z.object({
   event: productAnalyticsEventNameSchema,
@@ -22,6 +26,7 @@ export async function GET() {
 
   return NextResponse.json({
     events: getCapturedAnalyticsEventsForDev(),
+    emailAudits: getNotificationEmailAuditsForDev(),
   });
 }
 
@@ -61,5 +66,6 @@ export async function DELETE() {
   }
 
   clearCapturedAnalyticsEventsForDev();
+  clearNotificationEmailAuditsForDev();
   return NextResponse.json({ ok: true });
 }

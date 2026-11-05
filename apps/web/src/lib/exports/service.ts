@@ -28,6 +28,7 @@ import {
   type ProjectExportsOverviewPayload,
 } from "@/lib/exports/types";
 import { resolvePublicAppBaseUrl } from "@/lib/projects/publish";
+import { notifyExportFinished } from "@/lib/notifications/service";
 import { slugifyProjectName } from "@/lib/projects/types";
 import { readStoredObjectBytes } from "@/lib/storage/r2";
 import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
@@ -43,7 +44,7 @@ const UUID_REGEX =
 
 const globalForExportQueue = globalThis as unknown as {
   casefolioBossPublisherPromise?: Promise<PgBoss> | null;
-  casefolioEmbeddedExportConsumerPromise?: Promise<ExportWorkerConsumerHandle> | null;
+  casefolioEmbeddedExportConsumerV2Promise?: Promise<ExportWorkerConsumerHandle> | null;
 };
 
 async function getPgBossPublisher(): Promise<PgBoss> {
@@ -99,29 +100,30 @@ async function ensureExportQueueConsumerActive(appUrl: string): Promise<void> {
     return;
   }
 
-  if (!globalForExportQueue.casefolioEmbeddedExportConsumerPromise) {
-    globalForExportQueue.casefolioEmbeddedExportConsumerPromise = startPgBossExportConsumer({
+  if (!globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise) {
+    globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise = startPgBossExportConsumer({
       databaseUrl: env.DATABASE_URL,
       appUrl,
       db,
       signingSecret: env.EXPORT_SIGNING_SECRET,
+      onExportFinished: notifyExportFinished,
       pollingIntervalSeconds: 0.5,
     }).catch((err) => {
-      globalForExportQueue.casefolioEmbeddedExportConsumerPromise = null;
+      globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise = null;
       throw err;
     });
   }
 
-  const consumer = await globalForExportQueue.casefolioEmbeddedExportConsumerPromise;
+  const consumer = await globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise;
   consumer.boss.notifyWorker(consumer.workerId);
 }
 
 export async function shutdownExportQueueForTests(): Promise<void> {
-  if (globalForExportQueue.casefolioEmbeddedExportConsumerPromise) {
-    const handle = await globalForExportQueue.casefolioEmbeddedExportConsumerPromise.catch(
+  if (globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise) {
+    const handle = await globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise.catch(
       () => null,
     );
-    globalForExportQueue.casefolioEmbeddedExportConsumerPromise = null;
+    globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise = null;
     if (handle) {
       await handle.stop();
     }
@@ -455,6 +457,19 @@ export async function getExportJobForUser(
   const allowed = await canActorAccessProjectExports(row.project, actor, false);
   if (!allowed) {
     return { status: "forbidden" };
+  }
+
+  if (
+    row.exportJob.status === "completed" ||
+    row.exportJob.status === "failed"
+  ) {
+    await notifyExportFinished({
+      exportId: row.exportJob.id,
+      projectId: row.exportJob.projectId,
+      format: row.exportJob.format,
+      status: row.exportJob.status,
+      error: row.exportJob.error ?? undefined,
+    }).catch(() => undefined);
   }
 
   return {

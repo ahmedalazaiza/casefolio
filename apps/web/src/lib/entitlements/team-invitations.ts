@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/server";
 import { db, dbSchema } from "@/lib/db";
 import { evaluateEntitlement } from "@/lib/entitlements";
 import { resolveEffectivePlanForOrganization } from "@/lib/entitlements/server";
+import { notifyTeamInviteIfExistingUser } from "@/lib/notifications/service";
 
 export type InviteTeamMemberResult =
   | {
@@ -126,6 +127,14 @@ export async function createGatedTeamInvitation({
       },
       headers: requestHeaders,
     });
+
+    await notifyTeamInviteIfExistingUser({
+      invitedEmail: invitation.email,
+      organizationName: orgRow.organization.name,
+      role: valid.role,
+      invitationId: invitation.id,
+      sendEmail: false,
+    }).catch(() => undefined);
 
     return {
       ok: true,

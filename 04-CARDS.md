@@ -314,11 +314,13 @@ Summary: Implemented privacy-safe daily-salted SHA-256 `visitorHash` view tracki
 
 ---
 **[C-803] Notifications (in-app + email)**  
-Phase: Phase 8 — Analytics & Notifications · Priority: P2 · Estimate: 4h · Deps: C-201 · Status: Todo  
-- [ ] Bell shows unread count
-- [ ] Email via Resend
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 8 — Analytics & Notifications · Priority: P2 · Estimate: 4h · Deps: C-201 · Status: Done  
+Branch: `feat/C-803-notifications`  
+Summary: Implemented `notifications` persistence + React Email / Resend delivery (`createUserNotification`, `notifyExportFinished`, `notifyPaymentIssue`, `notifyTeamInviteIfExistingUser`, `notifyTemplateVersionPublished`, `notifyProjectPublished` in `src/lib/notifications/service.ts`), `/api/notifications` (`GET`/`PATCH`), topbar `NotificationsBell` with unread badge + live dropdown (`2:9425`/`2:9594`), `/notifications` center with `All`/`Unread`/`Exports`/`Billing`/`Team` filters & empty state (`2:9648`/`2:9799`), Vitest unit/DB/UI tests (`notifications.test.ts`, `notifications-ui.test.tsx`), and full Phase 8 Playwright E2E verification (`phase8-analytics-notifications.spec.ts`).  
+- [x] Bell shows unread count
+- [x] Email via Resend
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-901] Admin overview dashboard**  
