@@ -1,9 +1,5 @@
 import { ImageIcon } from "lucide-react";
-import {
-  computeCssCropFramingStyle,
-  isUrlServerPreCropped,
-  parseNaturalDimensionsFromSrc,
-} from "@/lib/storage/image-dimensions";
+import { CdnResponsiveImage } from "@/components/sections/cdn-responsive-image";
 import {
   parseAspectRatio,
   type ImageSlotValue,
@@ -61,11 +57,6 @@ export function ImageSlotFrame({
   const chrome = resolveDeviceChrome(slotDefinition, projectType, preferDeviceChrome);
   const hasSrc = Boolean(image?.src && image.src.trim().length > 0);
   const altText = image?.alt || image?.slot || "Case study visual";
-  const naturalDims = hasSrc ? parseNaturalDimensionsFromSrc(image!.src) : null;
-  const cropFramingStyle =
-    hasSrc && image?.crop && naturalDims && !isUrlServerPreCropped(image.src)
-      ? computeCssCropFramingStyle(naturalDims.width, naturalDims.height, image.crop)
-      : null;
 
   const viewportContent = (
     <div
@@ -77,11 +68,14 @@ export function ImageSlotFrame({
       className="bg-sunken/70 relative flex w-full items-center justify-center overflow-hidden"
     >
       {hasSrc ? (
-        <img
+        <CdnResponsiveImage
           src={image!.src}
           alt={altText}
-          style={cropFramingStyle ?? undefined}
-          className={cn(!cropFramingStyle && "size-full object-cover")}
+          assetId={image?.assetId}
+          crop={image?.crop}
+          deviceChrome={chrome}
+          fallbackAspectWidth={parsedRatio.width}
+          fallbackAspectHeight={parsedRatio.height}
         />
       ) : compact ? (
         <span

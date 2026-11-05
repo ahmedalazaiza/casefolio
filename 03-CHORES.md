@@ -192,7 +192,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-502
 - **Description:** Variant URLs with crop params; next/image loader.
 - **Acceptance criteria:**
-  - [ ] Images served via CDN with correct size
+  - [x] Images served via CDN with correct size
 
 ## Phase 6 — Publish, Share & Export
 

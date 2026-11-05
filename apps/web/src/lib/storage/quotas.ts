@@ -140,3 +140,4 @@ export type CompleteUploadInput = z.infer<typeof completeUploadInputSchema>;
 export const updateAssetCropInputSchema = z.object({
   crop: cropRectSchema.nullable(),
 });
+
