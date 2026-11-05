@@ -1,13 +1,12 @@
-import { desc, eq } from "@casefolio/db";
 import { ArrowRight, Check, Plus, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DashboardProjectsClient } from "@/components/projects/dashboard-projects-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ProjectCard } from "@/components/ui/domain-cards";
 import { requireSession } from "@/lib/auth/session";
-import { db, dbSchema } from "@/lib/db";
+import { listDashboardProjectsForUser } from "@/lib/projects/dashboard";
 
 export const metadata: Metadata = {
   title: "Projects — Casefolio",
@@ -56,18 +55,18 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ welcome?: string }>;
 }) {
-  const { user } = await requireSession("/dashboard");
+  const { user, session } = await requireSession("/dashboard");
   const { welcome } = await searchParams;
 
-  const userProjects = await db
-    .select()
-    .from(dbSchema.projects)
-    .where(eq(dbSchema.projects.ownerId, user.id))
-    .orderBy(desc(dbSchema.projects.updatedAt));
+  const userProjects = await listDashboardProjectsForUser(
+    user.id,
+    session.activeOrganizationId ?? null,
+  );
 
   const firstName = user.name.trim().split(/\s+/)[0] || "Designer";
 
-  if (userProjects.length === 0) {
+  // First-run onboarding checklist immediately after completing /onboarding (Figma 2:1716)
+  if (welcome === "1" && userProjects.length === 0) {
     return (
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -131,13 +130,13 @@ export default async function DashboardPage({
                       <span
                         className={
                           item.done
-                            ? "text-tertiary type-body-s-strong"
+                            ? "text-muted-foreground type-body-s-strong"
                             : "text-foreground type-body-s-strong"
                         }
                       >
                         {item.title}
                       </span>
-                      <span className="text-tertiary type-caption">{item.subtitle}</span>
+                      <span className="text-muted-foreground type-caption">{item.subtitle}</span>
                     </div>
                   </div>
 
@@ -169,56 +168,18 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        {welcome === "1" && (
-          <div
-            role="status"
-            className="bg-inverse text-inverse-foreground shadow-modal inline-flex w-fit items-center gap-3 self-end rounded-xl px-4 py-3"
-          >
-            <span className="bg-success text-success-foreground inline-flex size-5 items-center justify-center rounded-full">
-              <Check className="size-3" />
-            </span>
-            <span className="type-body-s">Welcome to Casefolio! Your workspace is ready.</span>
-          </div>
-        )}
+        <div
+          role="status"
+          className="bg-inverse text-inverse-foreground shadow-overlay inline-flex w-fit items-center gap-3 self-end rounded-xl px-4 py-3"
+        >
+          <span className="bg-success text-success-foreground inline-flex size-5 items-center justify-center rounded-full">
+            <Check className="size-3" />
+          </span>
+          <span className="type-body-s">Welcome to Casefolio! Your workspace is ready.</span>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-primary type-overline">Case Study Builder</span>
-          <h1 className="type-display-m sm:type-display-l text-foreground">Your case studies</h1>
-          <p className="text-muted-foreground type-body-m">
-            Turn finished projects into polished, publishable stories.
-          </p>
-        </div>
-
-        <Button asChild size="lg" className="w-fit">
-          <Link href="/new">
-            <Plus className="size-4" />
-            New project
-          </Link>
-        </Button>
-      </div>
-
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {userProjects.map((project) => (
-          <Link
-            key={project.id}
-            href={`/editor/${project.id}`}
-            className="focus-visible:ring-ring/40 block min-w-0 rounded-xl outline-none focus-visible:ring-2"
-          >
-            <ProjectCard
-              title={project.name}
-              subtitle={`${project.type === "web" ? "Website" : project.type === "both" ? "Mobile & Web" : "Mobile app"} · ${project.visibility}`}
-              statusLabel={project.publishedAt ? "Published" : "Draft"}
-              statusTone={project.publishedAt ? "published" : "draft"}
-            />
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
+  return <DashboardProjectsClient initialProjects={userProjects} />;
 }

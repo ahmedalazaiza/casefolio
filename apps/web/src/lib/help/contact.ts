@@ -37,3 +37,4 @@ export function generateSupportTicketCode(): string {
   const codeNum = randomInt(10000, 99999);
   return `CF-${codeNum}`;
 }
+

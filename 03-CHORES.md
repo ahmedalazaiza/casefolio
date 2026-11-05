@@ -327,7 +327,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-401
 - **Description:** Projects list, duplicate, delete, status badges.
 - **Acceptance criteria:**
-  - [ ] Empty state matches Figma
+  - [x] Empty state matches Figma
 
 ## Phase 11 — Hardening & Launch
 
