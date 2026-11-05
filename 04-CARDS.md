@@ -234,11 +234,13 @@ Summary: Implemented Cloudflare Images variant URL generator (`buildCloudflareIm
 
 ---
 **[C-601] Publish & public share page**  
-Phase: Phase 6 — Publish, Share & Export · Priority: P0 · Estimate: 4h · Deps: C-402 · Status: Todo  
-- [ ] Public page loads < 2s
-- [ ] Unpublish returns 404
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 6 — Publish, Share & Export · Priority: P0 · Estimate: 4h · Deps: C-402 · Status: Done  
+Branch: `feat/C-601-publish-share-page`  
+Summary: Implemented custom slug validation & uniqueness, `public`/`unlisted` (`noindex`) publish & unpublish service + `/projects/[id]/share` management UI (`ProjectSharePanel`), `/p/[slug]` SSR via `TemplatePuckRenderer` (`<Render>`) with Google Fonts parity and Free plan watermark, and 1200×630 Satori OpenGraph image generation (`/p/[slug]/opengraph-image`).  
+- [x] Public page loads < 2s
+- [x] Unpublish returns 404
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-602] Playwright export worker (Fly/Railway)**  

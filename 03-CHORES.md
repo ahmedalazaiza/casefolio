@@ -200,8 +200,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-402
 - **Description:** Slug, public/unlisted, /p/[slug] SSR via Puck <Render>, OG image via Satori.
 - **Acceptance criteria:**
-  - [ ] Public page loads < 2s
-  - [ ] Unpublish returns 404
+  - [x] Public page loads < 2s
+  - [x] Unpublish returns 404
 
 ### C-602 — Playwright export worker (Fly/Railway)
 - **Priority:** P0 · **Estimate:** 8h · **Depends on:** C-601
