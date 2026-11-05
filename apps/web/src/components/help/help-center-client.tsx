@@ -4,20 +4,14 @@ import { ArrowRight, Search, Send, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  searchHelpArticles,
-  type HelpArticleSummary,
-} from "@/lib/help/search";
+import { searchHelpArticles, type HelpArticleSummary } from "@/lib/help/search";
 
 export interface HelpCenterClientProps {
   articles: readonly HelpArticleSummary[];
   initialQuery?: string;
 }
 
-export function HelpCenterClient({
-  articles,
-  initialQuery = "",
-}: HelpCenterClientProps) {
+export function HelpCenterClient({ articles, initialQuery = "" }: HelpCenterClientProps) {
   const [query, setQuery] = useState(initialQuery);
   const filtered = searchHelpArticles(articles, query);
   const hasQuery = query.trim().length > 0;
@@ -27,7 +21,7 @@ export function HelpCenterClient({
       {/* Dark inverse hero matching Figma 2:9977 */}
       <section className="bg-inverse text-inverse-foreground flex flex-col gap-5 rounded-xl p-7 sm:p-10 lg:p-12">
         <div className="flex flex-col gap-2">
-          <p className="text-primary type-overline">Help center</p>
+          <p className="text-inverse-foreground/80 type-overline">Help center</p>
           <h1 className="type-display-m sm:type-display-l">How can we help?</h1>
         </div>
 
@@ -59,8 +53,7 @@ export function HelpCenterClient({
 
       {hasQuery && (
         <p className="text-muted-foreground type-body-s">
-          {filtered.length}{" "}
-          {filtered.length === 1 ? "article matches" : "articles match"} “
+          {filtered.length} {filtered.length === 1 ? "article matches" : "articles match"} “
           {query.trim()}”
         </p>
       )}
@@ -68,20 +61,13 @@ export function HelpCenterClient({
       {/* Articles + Still stuck? grid matching Figma 2:9985 + 2:9998 */}
       {filtered.length === 0 ? (
         <div className="border-border bg-card flex flex-col items-center justify-center gap-3 rounded-xl border p-10 text-center">
-          <p className="text-foreground type-heading-s">
-            No articles match “{query.trim()}”
-          </p>
+          <p className="text-foreground type-heading-s">No articles match “{query.trim()}”</p>
           <p className="text-muted-foreground type-body-s max-w-md">
-            Try a broader keyword like “PDF”, “slug”, “tokens” or “Paddle”, or
-            send a message directly to our support team.
+            Try a broader keyword like “PDF”, “slug”, “tokens” or “Paddle”, or send a message
+            directly to our support team.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setQuery("")}
-            >
+            <Button type="button" variant="secondary" size="sm" onClick={() => setQuery("")}>
               Clear search
             </Button>
             <Button size="sm" asChild>
@@ -98,12 +84,8 @@ export function HelpCenterClient({
               className="border-border bg-card hover:border-border-strong focus-visible:ring-ring/40 group flex flex-col justify-between gap-5 rounded-xl border p-6 transition-colors outline-none focus-visible:ring-2"
             >
               <div className="flex flex-col gap-2">
-                <h2 className="text-foreground type-heading-s">
-                  {article.title}
-                </h2>
-                <p className="text-muted-foreground type-body-s">
-                  {article.summary}
-                </p>
+                <h2 className="text-foreground type-heading-s">{article.title}</h2>
+                <p className="text-muted-foreground type-body-s">{article.summary}</p>
               </div>
 
               <span className="text-accent-foreground type-body-s-strong inline-flex items-center gap-1.5">
@@ -147,4 +129,3 @@ export function HelpCenterClient({
     </div>
   );
 }
-

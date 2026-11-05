@@ -137,10 +137,15 @@ export function HeroSection({
               <span
                 style={{
                   backgroundColor: tokenColorVar("surface", "--surface"),
-                  color: tokenColorVar(accent, "--primary"),
+                  color: tokenColorVar("text", "--foreground"),
                 }}
-                className="border-border/30 type-overline inline-flex items-center rounded-full border px-3.5 py-1"
+                className="border-border/30 type-overline inline-flex items-center gap-2 rounded-full border px-3.5 py-1"
               >
+                <span
+                  aria-hidden="true"
+                  style={{ backgroundColor: tokenColorVar(accent, "--primary") }}
+                  className="size-1.5 shrink-0 rounded-full"
+                />
                 {eyebrow}
               </span>
             )}
@@ -295,7 +300,7 @@ export function ProblemSection({
               className="border-border/25 flex flex-col gap-2.5 rounded-xl border p-6"
             >
               <span
-                style={{ color: tokenColorVar("primary", "--primary") }}
+                style={{ color: tokenColorVar("textMuted", "--muted-foreground") }}
                 className="type-overline font-mono"
               >
                 0{idx + 1}
@@ -363,7 +368,7 @@ export function ProcessSection({
               >
                 <div className="flex flex-col gap-2">
                   <span
-                    style={{ color: tokenColorVar("primary", "--primary") }}
+                    style={{ color: tokenColorVar("textMuted", "--muted-foreground") }}
                     className="type-overline font-mono"
                   >
                     {step.number}

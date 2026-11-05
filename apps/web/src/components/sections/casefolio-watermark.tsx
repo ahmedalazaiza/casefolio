@@ -39,7 +39,7 @@ export function CasefolioWatermark({
       )}
     >
       {interactive ? (
-        <Link href="/" aria-label="Create your own portfolio case study on Casefolio">
+        <Link href="/" aria-label="Made with Casefolio — create your own portfolio case study">
           {badgeBody}
         </Link>
       ) : (
@@ -48,4 +48,3 @@ export function CasefolioWatermark({
     </footer>
   );
 }
-

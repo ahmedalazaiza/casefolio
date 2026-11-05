@@ -434,10 +434,12 @@ Summary: Added end-to-end Playwright suite `tests/e2e/phase11-core-journeys.spec
 
 ---
 **[C-1103] Performance, a11y & responsive QA**  
-Phase: Phase 11 — Hardening & Launch · Priority: P1 · Estimate: 4h · Deps: C-1001,C-406 · Status: Todo  
-- [ ] No critical axe issues
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 11 — Hardening & Launch · Priority: P1 · Estimate: 4h · Deps: C-1001,C-406 · Status: Done  
+Branch: `feat/C-1103-perf-a11y-qa`  
+Summary: Added `@axe-core/playwright` and `tests/e2e/phase11-a11y-responsive-qa.spec.ts` auditing WCAG 2.1 A/AA across 15 public, auth, editor, published case-study, billing, and admin routes (light & dark themes) with zero `critical` and zero `serious` violations; remediated WCAG AA contrast and ARIA label-in-name semantics across `tokens.css`, `badge.tsx`, `user-account-menu.tsx`, `notifications-bell.tsx`, `editor-canvas-preview.tsx`, `image-slot-frame.tsx`, `casefolio-watermark.tsx`, `sections/index.tsx`, `project-exports-panel.tsx`, `project-share-panel.tsx`, `help-center-client.tsx`, `landing-hero-visual.tsx`, and auth forms; verified Lighthouse ≥ 90 and captured `375px`, `768px`, and `1440px` responsive screenshots with zero horizontal overflow.  
+- [x] No critical axe issues
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-1104] Production deploy & monitoring**  

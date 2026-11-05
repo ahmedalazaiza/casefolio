@@ -38,3 +38,4 @@ This document records the security audit and controls enforced across `@casefoli
   - `.env*` (except `.env.example` placeholder template) is excluded via `.gitignore`; startup validates env schema via `@t3-oss/env-nextjs` (`apps/web/src/env.ts`).
   - `redactSensitiveText` & `sanitizeErrorForLogging` (`apps/web/src/lib/security/redact.ts`) scrub Bearer tokens, signed query tokens (`?token=`, `?exportToken=`), API keys, and email addresses before logging or telemetry capture.
   - Analytics payloads pass through `sanitizeAnalyticsProps` (`apps/web/src/lib/analytics/posthog.ts`) stripping PII keys (`email`, `password`, `token`, `secret`, `ip`, etc.).
+

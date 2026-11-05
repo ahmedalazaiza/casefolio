@@ -57,9 +57,7 @@ export function ProjectSharePanel({
 }: ProjectSharePanelProps) {
   const [isPublished, setIsPublished] = useState(initialSettings.isPublished);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(initialSettings.slug);
-  const [slugDraft, setSlugDraft] = useState(
-    initialSettings.slug ?? initialSettings.suggestedSlug,
-  );
+  const [slugDraft, setSlugDraft] = useState(initialSettings.slug ?? initialSettings.suggestedSlug);
   const [visibility, setVisibility] = useState<"public" | "unlisted">(
     initialSettings.visibility === "unlisted" ? "unlisted" : "public",
   );
@@ -148,9 +146,7 @@ export function ProjectSharePanel({
       setSlugDraft(result.slug);
       setVisibility(result.visibility);
       setPublishedAtIso(result.publishedAtIso);
-      toast.success(
-        isPublished ? "Share settings updated" : "Case study published!",
-      );
+      toast.success(isPublished ? "Share settings updated" : "Case study published!");
     } catch {
       setErrorMessage("Unable to publish right now. Please try again.");
     } finally {
@@ -372,7 +368,11 @@ export function ProjectSharePanel({
               </p>
             </div>
 
-            <div role="radiogroup" aria-label="Case study visibility" className="grid gap-3 sm:grid-cols-2">
+            <div
+              role="radiogroup"
+              aria-label="Case study visibility"
+              className="grid gap-3 sm:grid-cols-2"
+            >
               <button
                 type="button"
                 role="radio"
@@ -494,13 +494,20 @@ export function ProjectSharePanel({
                   <span
                     style={{
                       backgroundColor: "var(--tpl-color-surface, var(--surface))",
-                      color: "var(--tpl-color-primary, var(--primary))",
+                      color: "var(--tpl-color-text, var(--foreground))",
                     }}
                     className="type-caption inline-flex rounded-full px-3 py-1 font-semibold"
                   >
                     {initialSettings.preview.eyebrow}
                   </span>
-                  <span className="text-tertiary type-caption">Casefolio</span>
+                  <span
+                    style={{
+                      color: "var(--tpl-color-textMuted, var(--muted-foreground))",
+                    }}
+                    className="type-caption"
+                  >
+                    Casefolio
+                  </span>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -530,19 +537,15 @@ export function ProjectSharePanel({
                 <Sparkles className="text-primary size-4" />
                 <span>Public Page Branding</span>
               </span>
-              {!canRemoveWatermark ? (
-                <Badge tone="neutral">Free Plan</Badge>
-              ) : (
-                <ProBadge />
-              )}
+              {!canRemoveWatermark ? <Badge tone="neutral">Free Plan</Badge> : <ProBadge />}
             </div>
 
             {!canRemoveWatermark ? (
               <>
                 <p className="text-muted-foreground type-body-s">
                   Free plan public pages and PNG exports include a subtle &ldquo;Made with
-                  Casefolio&rdquo; badge. Upgrade to Pro to remove all watermarks and unlock PDF &amp;
-                  Behance exports.
+                  Casefolio&rdquo; badge. Upgrade to Pro to remove all watermarks and unlock PDF
+                  &amp; Behance exports.
                 </p>
                 <div>
                   <Button

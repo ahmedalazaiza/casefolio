@@ -101,7 +101,7 @@
   --secondary-foreground: var(--text-primary);
   --muted: var(--bg-sunken);
   --muted-foreground: var(--text-secondary);
-  --tertiary-foreground: var(--text-tertiary);
+  --tertiary-foreground: var(--text-secondary);
   --accent: var(--accent-soft);
   --accent-foreground: var(--accent-primary);
   --destructive: var(--status-danger);

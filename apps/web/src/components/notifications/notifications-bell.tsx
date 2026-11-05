@@ -106,9 +106,7 @@ export function NotificationsBell({
   const handleSelectItem = async (item: NotificationItem) => {
     if (!item.isRead) {
       setUnreadCount((prev) => Math.max(0, prev - 1));
-      setItems((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n)),
-      );
+      setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n)));
       try {
         await fetch("/api/notifications", {
           method: "PATCH",
@@ -126,20 +124,17 @@ export function NotificationsBell({
     }
   };
 
-  const ariaLabel =
-    unreadCount > 0
-      ? `Notifications (${unreadCount} unread)`
-      : "Notifications";
-
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={ariaLabel}
           data-testid="notifications-bell-button"
           className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 relative inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
         >
+          <span className="sr-only">
+            {unreadCount > 0 ? "Notifications, unread: " : "Notifications"}
+          </span>
           <Bell className="size-4" />
           {unreadCount > 0 && (
             <span
@@ -185,12 +180,7 @@ export function NotificationsBell({
         ) : (
           <div className="divide-border/60 flex max-h-96 flex-col divide-y overflow-y-auto">
             {items.slice(0, 5).map((item) => (
-              <NotificationRow
-                key={item.id}
-                item={item}
-                compact
-                onSelect={handleSelectItem}
-              />
+              <NotificationRow key={item.id} item={item} compact onSelect={handleSelectItem} />
             ))}
           </div>
         )}

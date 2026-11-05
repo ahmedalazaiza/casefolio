@@ -80,9 +80,7 @@ export function SignUpForm() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
         <h1 className="type-heading-l text-foreground">Create your account</h1>
-        <p className="text-muted-foreground type-body-m">
-          Start building case studies in minutes.
-        </p>
+        <p className="text-muted-foreground type-body-m">Start building case studies in minutes.</p>
       </div>
 
       <Button
@@ -167,11 +165,11 @@ export function SignUpForm() {
             />
             <span className="text-foreground type-caption">
               I agree to the{" "}
-              <Link href="/terms" className="text-primary hover:underline">
+              <Link href="/terms" className="text-primary underline underline-offset-4">
                 Terms
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" className="text-primary hover:underline">
+              <Link href="/privacy" className="text-primary underline underline-offset-4">
                 Privacy Policy
               </Link>
             </span>
@@ -188,11 +186,10 @@ export function SignUpForm() {
 
       <p className="text-muted-foreground type-caption">
         Already have an account?{" "}
-        <Link href="/sign-in" className="text-primary font-medium hover:underline">
+        <Link href="/sign-in" className="text-primary font-medium underline underline-offset-4">
           Log in
         </Link>
       </p>
     </div>
   );
 }
-

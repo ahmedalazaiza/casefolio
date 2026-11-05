@@ -71,8 +71,7 @@ export function EditorCanvasPreview({
   selectedSectionIndex,
   onSelectSection,
 }: EditorCanvasPreviewProps) {
-  const effectiveProjectType: TemplateProjectType =
-    viewport === "mobile" ? "mobile" : projectType;
+  const effectiveProjectType: TemplateProjectType = viewport === "mobile" ? "mobile" : projectType;
 
   const puckCtx: PuckContext = {
     isEditing: true,
@@ -112,10 +111,6 @@ export function EditorCanvasPreview({
         return (
           <div
             key={section.props.id}
-            role="button"
-            tabIndex={0}
-            aria-label={`Edit ${label} section`}
-            aria-pressed={isSelected}
             data-editor-section-index={index}
             data-editor-section-type={section.type}
             data-selected={isSelected ? "true" : "false"}
@@ -123,30 +118,30 @@ export function EditorCanvasPreview({
               event.stopPropagation();
               onSelectSection(index);
             }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onSelectSection(index);
-              }
-            }}
             className={cn(
-              "group/sec relative cursor-pointer transition-shadow outline-none",
+              "group/sec relative cursor-pointer transition-shadow",
               isSelected
                 ? "ring-primary z-10 ring-2 ring-inset"
                 : "hover:ring-primary/50 hover:ring-1 hover:ring-inset",
             )}
           >
-            <span
-              aria-hidden="true"
+            <button
+              type="button"
+              aria-label={`Edit ${label} section`}
+              aria-pressed={isSelected}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelectSection(index);
+              }}
               className={cn(
-                "type-caption pointer-events-none absolute top-3 left-3 z-20 rounded-full px-2.5 py-0.5 transition-opacity",
+                "type-caption focus-visible:ring-ring/40 absolute top-3 left-3 z-20 rounded-full px-2.5 py-0.5 transition-colors outline-none focus-visible:ring-2",
                 isSelected
-                  ? "bg-primary text-primary-foreground opacity-100"
-                  : "bg-inverse/80 text-inverse-foreground opacity-0 group-hover/sec:opacity-100",
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-inverse text-inverse-foreground",
               )}
             >
               {label}
-            </span>
+            </button>
             {renderSectionBlock(section, puckCtx)}
           </div>
         );
