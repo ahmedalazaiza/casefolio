@@ -223,9 +223,9 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 6h · **Depends on:** C-202
 - **Description:** Plans Free/Pro/Team (monthly/yearly), Paddle.js checkout, webhooks → subscriptions table.
 - **Acceptance criteria:**
-  - [ ] Sandbox checkout works
-  - [ ] Webhook signature verified
-  - [ ] Idempotent handling
+  - [x] Sandbox checkout works
+  - [x] Webhook signature verified
+  - [x] Idempotent handling
 
 ### C-702 — Entitlements & gating
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-701,C-305

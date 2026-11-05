@@ -264,12 +264,14 @@ Summary: Implemented `ExportCaseStudyDialog` + `ProjectExportsPanel` (`/projects
 
 ---
 **[C-701] Paddle Billing integration**  
-Phase: Phase 7 — Billing & Gating · Priority: P0 · Estimate: 6h · Deps: C-202 · Status: Todo  
-- [ ] Sandbox checkout works
-- [ ] Webhook signature verified
-- [ ] Idempotent handling
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 7 — Billing & Gating · Priority: P0 · Estimate: 6h · Deps: C-202 · Status: Done  
+Branch: `feat/C-701-paddle-billing`  
+Summary: Implemented Free/Pro/Team monthly & yearly catalog + server Paddle price ID mapping (`plans.ts`, `server-config.ts`), `@paddle/paddle-js` overlay + sandbox checkout flow (`PaddleCheckoutModal`, `/api/paddle/checkout`, `/api/paddle/sandbox-complete`), constant-time HMAC-SHA256 `Paddle-Signature` verification (`signature.ts`), transactional `webhook_events` idempotency + `subscriptions`/`users.plan` state machine (`/api/paddle/webhook`, `webhooks.ts`), customer portal/cancellation APIs (`/api/paddle/portal`), and receipt downloads (`/api/paddle/invoices/[eventId]`).  
+- [x] Sandbox checkout works
+- [x] Webhook signature verified
+- [x] Idempotent handling
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-702] Entitlements & gating**  
