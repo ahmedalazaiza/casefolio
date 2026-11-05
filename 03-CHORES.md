@@ -178,8 +178,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-003
 - **Description:** Upload API, size/type limits, per-plan quotas, assets table.
 - **Acceptance criteria:**
-  - [ ] Uploads > limit rejected
-  - [ ] Files private until published
+  - [x] Uploads > limit rejected
+  - [x] Files private until published
 
 ### C-502 — Image slot field with react-easy-crop
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-501,C-402

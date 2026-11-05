@@ -208,11 +208,12 @@ Summary: Implemented responsive editor layout (`375px` mobile preview + compact 
 
 ---
 **[C-501] R2 uploads via presigned URLs**  
-Phase: Phase 5 — Images & Media · Priority: P0 · Estimate: 4h · Deps: C-003 · Status: Todo  
-- [ ] Uploads > limit rejected
-- [ ] Files private until published
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 5 — Images & Media · Priority: P0 · Estimate: 4h · Deps: C-003 · Status: Done  
+Summary: Implemented R2 S3v4 presigned PUT uploads (`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`) with HMAC-signed local dev fallback, server-side MIME + binary magic-byte checks, lossless JPEG/PNG/WebP EXIF/GPS stripping, authoritative per-plan file size & storage quotas (`free`/`pro`/`team`), `assets` table persistence, rate limiting, and private-until-published asset access control (`/api/assets/[assetId]`).  
+- [x] Uploads > limit rejected
+- [x] Files private until published
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-502] Image slot field with react-easy-crop**  
