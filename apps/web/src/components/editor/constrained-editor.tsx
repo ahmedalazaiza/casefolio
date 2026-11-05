@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Check,
   Cloud,
+  Download,
   Eye,
   EyeOff,
   Globe,
@@ -613,6 +614,21 @@ export function ConstrainedEditor({
               >
                 <Eye className="size-4" />
                 <span className="hidden sm:inline">Preview</span>
+              </Button>
+
+              <Button
+                asChild
+                variant="secondary"
+                size="sm"
+                className="size-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+              >
+                <Link
+                  href={`/projects/${initialPayload.project.id}/exports`}
+                  aria-label="Export case study"
+                >
+                  <Download className="size-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </Link>
               </Button>
 
               <Button asChild size="sm" className="px-2.5 sm:px-3.5">

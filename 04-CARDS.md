@@ -255,10 +255,12 @@ Summary: Built `@casefolio/worker` (`pg-boss` v12 queue consumer, headless Playw
 
 ---
 **[C-603] Export UI & history**  
-Phase: Phase 6 — Publish, Share & Export · Priority: P1 · Estimate: 3h · Deps: C-602 · Status: Todo  
-- [ ] User can re-download past exports
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 6 — Publish, Share & Export · Priority: P1 · Estimate: 3h · Deps: C-602 · Status: Done  
+Branch: `feat/C-603-export-ui-history`  
+Summary: Implemented `ExportCaseStudyDialog` + `ProjectExportsPanel` (`/projects/[id]/exports`), Editor topbar `Export` action, workspace `/exports` & `/published` index pages, live polling progress (`queued` → `processing` → `completed`), Pro lock/upgrade prompts, past export re-download history, and full Playwright E2E verification (`phase6-publish-export.spec.ts`).  
+- [x] User can re-download past exports
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-701] Paddle Billing integration**  
