@@ -3,6 +3,8 @@ import { TemplateLibraryClient } from "./template-library-client";
 import { AppShell } from "@/components/layout/app-shell";
 import { MarketingShell } from "@/components/layout/marketing-shell";
 import { computeUserInitials, getServerSession } from "@/lib/auth/session";
+import { can } from "@/lib/entitlements";
+import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { listPublishedLibraryTemplates, listTemplateCategories } from "@/lib/template/service";
 
 export const metadata: Metadata = {
@@ -24,6 +26,7 @@ export default async function TemplatesLibraryPage() {
   }));
 
   if (session) {
+    const effectivePlan = await resolveEffectivePlanForUser(session.user.id);
     const initials = computeUserInitials(session.user.name, session.user.email);
     return (
       <AppShell
@@ -31,12 +34,12 @@ export default async function TemplatesLibraryPage() {
         userName={session.user.name}
         userEmail={session.user.email}
         userImage={session.user.image}
-        showProBadge={session.user.plan !== "free"}
+        showProBadge={can(effectivePlan, "pro_templates")}
       >
         <TemplateLibraryClient
           templates={publishedTemplates}
           categories={categoryOptions}
-          userPlan={session.user.plan}
+          userPlan={effectivePlan}
           isAuthenticated
         />
       </AppShell>

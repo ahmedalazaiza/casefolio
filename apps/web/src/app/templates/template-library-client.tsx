@@ -3,6 +3,7 @@
 import { Eye, Lock, RotateCcw, Search, Smartphone, Globe, Layers } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { can } from "@/lib/entitlements";
 import type { TemplateProjectType, TemplateTier } from "@/lib/template/schema";
 import type { PublishedTemplateItem } from "@/lib/template/types";
 import { cn } from "@/lib/utils";
@@ -103,8 +105,9 @@ export function TemplateLibraryClient({
   const [tierFilter, setTierFilter] = useState<"all" | TemplateTier>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [previewItem, setPreviewItem] = useState<PublishedTemplateItem | null>(null);
+  const [upgradeTemplateName, setUpgradeTemplateName] = useState<string | null>(null);
 
-  const canUseProTemplates = userPlan === "pro" || userPlan === "team";
+  const canUseProTemplates = can(userPlan, "pro_templates");
 
   const filteredTemplates = useMemo(
     () =>
@@ -367,7 +370,15 @@ export function TemplateLibraryClient({
 
                   {isLocked ? (
                     <Button asChild variant="outline" size="sm" className="flex-1">
-                      <Link href="/account">
+                      <Link
+                        href={isAuthenticated ? "/account/billing" : "/sign-up"}
+                        onClick={(event) => {
+                          if (isAuthenticated) {
+                            event.preventDefault();
+                            setUpgradeTemplateName(item.name);
+                          }
+                        }}
+                      >
                         <Lock className="size-3.5" />
                         Upgrade for Pro
                       </Link>
@@ -422,7 +433,17 @@ export function TemplateLibraryClient({
                 </Button>
                 {previewItem.tier === "pro" && !canUseProTemplates ? (
                   <Button asChild>
-                    <Link href="/account">
+                    <Link
+                      href={isAuthenticated ? "/account/billing" : "/sign-up"}
+                      onClick={(event) => {
+                        if (isAuthenticated) {
+                          event.preventDefault();
+                          const tplName = previewItem.name;
+                          setPreviewItem(null);
+                          setUpgradeTemplateName(tplName);
+                        }
+                      }}
+                    >
                       <Lock className="size-4" />
                       Upgrade to Pro to unlock
                     </Link>
@@ -445,6 +466,19 @@ export function TemplateLibraryClient({
           )}
         </DialogContent>
       </Dialog>
+
+      <UpgradePromptDialog
+        open={upgradeTemplateName !== null}
+        onOpenChange={(open) => {
+          if (!open) setUpgradeTemplateName(null);
+        }}
+        featureTitle={
+          upgradeTemplateName
+            ? `Unlock the ${upgradeTemplateName} Pro template`
+            : "Unlock Pro templates"
+        }
+        featureDescription="Upgrade to Casefolio Pro to build with every curated Pro layout, create unlimited projects, and export watermark-free PDFs."
+      />
     </div>
   );
 }

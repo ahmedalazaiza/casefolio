@@ -1,14 +1,16 @@
 "use client";
 
-import { Check, MailPlus, Plus, Users, X } from "lucide-react";
+import { Check, Lock, MailPlus, Plus, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Badge } from "@/components/ui/badge";
+import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
+import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InputField } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 import { createOrganizationSchema, inviteTeamMemberSchema } from "@/lib/auth/schemas";
+import { can, evaluateEntitlement } from "@/lib/entitlements";
 
 export interface TeamOrganizationSummary {
   id: string;
@@ -39,6 +41,7 @@ export interface IncomingTeamInvitation {
 }
 
 export interface TeamWorkspaceClientProps {
+  userPlan?: "free" | "pro" | "team";
   activeOrganizationId: string | null;
   organizations: TeamOrganizationSummary[];
   incomingInvitations: IncomingTeamInvitation[];
@@ -55,6 +58,7 @@ function slugifyName(value: string): string {
 }
 
 export function TeamWorkspaceClient({
+  userPlan = "free",
   activeOrganizationId,
   organizations,
   incomingInvitations,
@@ -76,11 +80,21 @@ export function TeamWorkspaceClient({
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const [busyInvitationId, setBusyInvitationId] = useState<string | null>(null);
+  const [teamUpgradeOpen, setTeamUpgradeOpen] = useState(false);
 
   const currentOrg =
     organizations.find((org) => org.id === selectedOrgId) ?? organizations[0] ?? null;
   const canInvite =
     currentOrg !== null && (currentOrg.myRole === "owner" || currentOrg.myRole === "editor");
+  const seatsUsed = currentOrg ? currentOrg.members.length + currentOrg.invitations.length : 1;
+  const seatDecision = evaluateEntitlement(userPlan, "team_seats", {
+    seatsUsed,
+    seatsLimit: currentOrg?.seats ?? 3,
+  });
+  const canUseTeamSeats = can(userPlan, "team_seats", {
+    seatsUsed,
+    seatsLimit: currentOrg?.seats ?? 3,
+  });
 
   async function handleCreateOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -135,17 +149,43 @@ export function TeamWorkspaceClient({
       return;
     }
 
-    setInviting(true);
-    const { error } = await authClient.organization.inviteMember({
-      organizationId: parsed.data.organizationId,
-      email: parsed.data.email,
-      role: parsed.data.role,
-    });
-    setInviting(false);
-
-    if (error) {
-      setInviteError(error.message ?? "Could not send invitation.");
+    if (!canUseTeamSeats) {
+      setInviteError(seatDecision.message);
+      setTeamUpgradeOpen(true);
       return;
+    }
+
+    setInviting(true);
+    try {
+      const response = await fetch("/api/team/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationId: parsed.data.organizationId,
+          email: parsed.data.email,
+          role: parsed.data.role,
+        }),
+      });
+      const json = (await response.json()) as
+        | { ok: true }
+        | { ok: false; code?: string; error?: string };
+
+      if (!response.ok || !json.ok) {
+        const message = ("error" in json && json.error) || "Could not send invitation.";
+        setInviteError(message);
+        if (
+          "code" in json &&
+          (json.code === "TEAM_PLAN_REQUIRED" || json.code === "TEAM_SEAT_LIMIT_REACHED")
+        ) {
+          setTeamUpgradeOpen(true);
+        }
+        return;
+      }
+    } catch {
+      setInviteError("Network error while sending invitation.");
+      return;
+    } finally {
+      setInviting(false);
     }
 
     setInviteEmail("");
@@ -275,6 +315,34 @@ export function TeamWorkspaceClient({
               ))}
             </div>
           </div>
+
+          {canInvite && !canUseTeamSeats && (
+            <div
+              data-testid="team-seats-upgrade-banner"
+              className="border-border bg-surface flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center"
+            >
+              <div className="flex items-start gap-3">
+                <Lock className="text-primary mt-0.5 size-4 shrink-0" />
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-foreground type-body-s-strong">
+                      Collaborative seats require Casefolio Team
+                    </span>
+                    <ProBadge />
+                  </div>
+                  <p className="text-muted-foreground type-caption">{seatDecision.message}</p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                data-testid="upgrade-to-team-button"
+                onClick={() => setTeamUpgradeOpen(true)}
+              >
+                Upgrade to Team
+              </Button>
+            </div>
+          )}
 
           {canInvite && (
             <form
@@ -417,6 +485,15 @@ export function TeamWorkspaceClient({
           </div>
         </form>
       </Card>
+
+      <UpgradePromptDialog
+        open={teamUpgradeOpen}
+        onOpenChange={setTeamUpgradeOpen}
+        requiredPlan="team"
+        orgId={currentOrg?.id ?? null}
+        featureTitle="Unlock collaborative Team seats"
+        featureDescription="Upgrade to Casefolio Team ($29/mo or $24/mo billed yearly) to invite 3+ editors and reviewers into shared studio workspaces."
+      />
     </div>
   );
 }

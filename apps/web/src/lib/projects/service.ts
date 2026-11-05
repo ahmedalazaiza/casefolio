@@ -1,9 +1,9 @@
 import { and, count, eq, type PlanTier, type UserRole } from "@casefolio/db";
 import { db, dbSchema } from "@/lib/db";
+import { can, evaluateEntitlement } from "@/lib/entitlements";
 import {
   buildInitialProjectPuckData,
   createProjectInputSchema,
-  FREE_PROJECT_LIMIT,
   saveProjectEditorInputSchema,
   type CreateProjectInput,
   type CreateProjectResult,
@@ -49,17 +49,29 @@ export async function createProjectFromTemplate({
 
   const valid = parsed.data;
 
+  if (!can(userPlan, "create_project", { projectsCount: 0 })) {
+    const decision = evaluateEntitlement(userPlan, "create_project", { projectsCount: 0 });
+    return {
+      ok: false,
+      code: "PLAN_LIMIT_REACHED",
+      error: decision.message,
+    };
+  }
+
   if (userPlan === "free") {
     const [existingCount] = await db
       .select({ total: count() })
       .from(dbSchema.projects)
       .where(eq(dbSchema.projects.ownerId, userId));
 
-    if ((existingCount?.total ?? 0) >= FREE_PROJECT_LIMIT) {
+    const projectEntitlement = evaluateEntitlement(userPlan, "create_project", {
+      projectsCount: existingCount?.total ?? 0,
+    });
+    if (!projectEntitlement.allowed) {
       return {
         ok: false,
         code: "PLAN_LIMIT_REACHED",
-        error: `Free plan includes up to ${FREE_PROJECT_LIMIT} projects. Upgrade to Pro for unlimited case studies.`,
+        error: projectEntitlement.message,
       };
     }
   }
@@ -90,11 +102,12 @@ export async function createProjectFromTemplate({
     };
   }
 
-  if (tplRow.template.tier === "pro" && userPlan === "free") {
+  if (tplRow.template.tier === "pro" && !can(userPlan, "pro_templates")) {
+    const proDecision = evaluateEntitlement(userPlan, "pro_templates");
     return {
       ok: false,
       code: "PRO_TEMPLATE_LOCKED",
-      error: "Pro templates require an active Pro or Team plan.",
+      error: proDecision.message,
     };
   }
 

@@ -16,6 +16,8 @@ import {
 import { PgBoss } from "pg-boss";
 import { env } from "@/env";
 import { db, dbSchema } from "@/lib/db";
+import { can, evaluateEntitlement, type EntitlementFeature } from "@/lib/entitlements";
+import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import {
   createExportInputSchema,
   FREE_MONTHLY_EXPORT_LIMIT,
@@ -182,18 +184,21 @@ async function canActorAccessProjectExports(
   return false;
 }
 
+function exportFormatToEntitlementFeature(format: ExportFormatOption): EntitlementFeature {
+  if (format === "pdf") return "export_pdf";
+  if (format === "behance") return "export_behance";
+  return "export_png";
+}
+
 export function isExportFormatAllowedOnPlan(
   plan: PlanTier,
   format: ExportFormatOption,
 ): boolean {
-  if (plan === "pro" || plan === "team") {
-    return true;
-  }
-  return format === "png_long";
+  return can(plan, exportFormatToEntitlementFeature(format));
 }
 
 export function doesPlanIncludeExportWatermark(plan: PlanTier): boolean {
-  return plan === "free";
+  return !can(plan, "remove_watermark");
 }
 
 async function countOwnerMonthlyExports(ownerId: string, now = new Date()): Promise<number> {
@@ -268,7 +273,7 @@ export async function enqueueProjectExportForUser(
     };
   }
 
-  const ownerPlan = projectRow.ownerPlan;
+  const ownerPlan = await resolveEffectivePlanForUser(projectRow.project.ownerId);
   if (!isExportFormatAllowedOnPlan(ownerPlan, valid.format)) {
     const formatLabel = valid.format === "pdf" ? "PDF Case Study" : "Behance 1400px Slices";
     return {
@@ -279,11 +284,16 @@ export async function enqueueProjectExportForUser(
   }
 
   const usedThisMonth = await countOwnerMonthlyExports(projectRow.project.ownerId);
-  if (ownerPlan === "free" && usedThisMonth >= FREE_MONTHLY_EXPORT_LIMIT) {
+  const quotaEntitlement = evaluateEntitlement(
+    ownerPlan,
+    exportFormatToEntitlementFeature(valid.format),
+    { monthlyExportsCount: usedThisMonth },
+  );
+  if (!quotaEntitlement.allowed) {
     return {
       ok: false,
       code: "EXPORT_LIMIT_REACHED",
-      error: `Free plan includes up to ${FREE_MONTHLY_EXPORT_LIMIT} exports per month. Upgrade to Pro for unlimited PNG, PDF, and Behance exports.`,
+      error: quotaEntitlement.message,
     };
   }
 
@@ -368,7 +378,7 @@ export async function getProjectExportsOverviewForUser(
     return { status: "forbidden" };
   }
 
-  const [historyRows, usedThisMonth] = await Promise.all([
+  const [historyRows, usedThisMonth, resolvedOwnerPlan] = await Promise.all([
     db
       .select()
       .from(dbSchema.exportsTable)
@@ -376,6 +386,7 @@ export async function getProjectExportsOverviewForUser(
       .orderBy(desc(dbSchema.exportsTable.createdAt))
       .limit(50),
     countOwnerMonthlyExports(row.project.ownerId),
+    resolveEffectivePlanForUser(row.project.ownerId),
   ]);
 
   const isPublished =
@@ -391,10 +402,10 @@ export async function getProjectExportsOverviewForUser(
       templateName: row.templateName,
       slug: row.project.slug,
       isPublished,
-      ownerPlan: row.ownerPlan,
-      hasWatermark: doesPlanIncludeExportWatermark(row.ownerPlan),
+      ownerPlan: resolvedOwnerPlan,
+      hasWatermark: doesPlanIncludeExportWatermark(resolvedOwnerPlan),
       monthlyExportsUsed: usedThisMonth,
-      monthlyExportsLimit: row.ownerPlan === "free" ? FREE_MONTHLY_EXPORT_LIMIT : null,
+      monthlyExportsLimit: resolvedOwnerPlan === "free" ? FREE_MONTHLY_EXPORT_LIMIT : null,
       exports: historyRows.map(serializeExportRow),
     },
   };
@@ -512,3 +523,4 @@ export async function authorizeAndReadExportFile(
     fileName: `${safeProjectSlug}-${suffix}.${ext}`,
   };
 }
+

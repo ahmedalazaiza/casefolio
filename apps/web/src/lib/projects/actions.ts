@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "@/lib/auth/session";
+import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import {
   checkProjectSlugAvailability,
   publishProjectForUser,
@@ -30,9 +31,11 @@ export async function createProjectAction(
     };
   }
 
+  const effectivePlan = await resolveEffectivePlanForUser(ctx.user.id);
+
   const result = await createProjectFromTemplate({
     userId: ctx.user.id,
-    userPlan: ctx.user.plan,
+    userPlan: effectivePlan,
     orgId: ctx.session.activeOrganizationId ?? null,
     input,
   });

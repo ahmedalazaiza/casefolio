@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { CasefolioWatermark } from "@/components/sections/casefolio-watermark";
+import { can } from "@/lib/entitlements";
 import {
   buildPublicCaseStudyUrl,
   getPublishedProjectBySlug,
@@ -100,7 +101,8 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
         projectType={published.project.type}
         className="rounded-none"
       />
-      <CasefolioWatermark visible={published.owner.plan === "free"} />
+      <CasefolioWatermark visible={!can(published.owner.plan, "remove_watermark")} />
     </main>
   );
 }
+

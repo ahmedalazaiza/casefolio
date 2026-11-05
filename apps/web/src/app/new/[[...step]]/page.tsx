@@ -7,6 +7,7 @@ import {
 } from "@/app/new/create-project-wizard";
 import { requireSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
+import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { createProjectAction } from "@/lib/projects/actions";
 import { listPublishedLibraryTemplates } from "@/lib/template/service";
 
@@ -45,12 +46,13 @@ export default async function NewProjectWizardPage({
     redirect("/onboarding");
   }
 
-  const [templates, projectTotalRows] = await Promise.all([
+  const [templates, projectTotalRows, effectivePlan] = await Promise.all([
     listPublishedLibraryTemplates(),
     db
       .select({ total: count() })
       .from(dbSchema.projects)
       .where(eq(dbSchema.projects.ownerId, user.id)),
+    resolveEffectivePlanForUser(user.id),
   ]);
 
   const existingProjectCount = projectTotalRows[0]?.total ?? 0;
@@ -58,7 +60,7 @@ export default async function NewProjectWizardPage({
   return (
     <CreateProjectWizard
       templates={templates}
-      userPlan={user.plan}
+      userPlan={effectivePlan}
       existingProjectCount={existingProjectCount}
       initialStep={initialStep}
       initialTemplateSlug={template}

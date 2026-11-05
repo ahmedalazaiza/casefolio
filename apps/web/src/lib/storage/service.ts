@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, count, eq, sql, type PlanTier, type UserRole } from "@casefolio/db";
 import { db, dbSchema } from "@/lib/db";
+import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { buildAssetCdnBaseUrl } from "@/lib/storage/cloudflare-images";
 import {
   completeUploadInputSchema,
@@ -190,13 +191,7 @@ async function canActorViewUnpublishedProject(
 }
 
 async function getOwnerAuthoritativePlan(ownerId: string): Promise<PlanTier> {
-  const [owner] = await db
-    .select({ plan: dbSchema.users.plan })
-    .from(dbSchema.users)
-    .where(eq(dbSchema.users.id, ownerId))
-    .limit(1);
-
-  return owner?.plan ?? "free";
+  return resolveEffectivePlanForUser(ownerId);
 }
 
 async function getOwnerStorageUsageBytes(ownerId: string): Promise<number> {

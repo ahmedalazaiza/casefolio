@@ -5,6 +5,8 @@ import { forbidden, notFound } from "next/navigation";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { CasefolioWatermark } from "@/components/sections/casefolio-watermark";
 import { db, dbSchema } from "@/lib/db";
+import { can } from "@/lib/entitlements";
+import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import {
   puckDocumentSchema,
   templateThemeSchema,
@@ -79,12 +81,14 @@ export default async function ExportRenderPage({
     ? themeCheck.data
     : structuredClone(tplDoc.template.theme);
 
+  const effectiveOwnerPlan = await resolveEffectivePlanForUser(row.project.ownerId);
+
   return (
     <main
       data-testid="export-render-ready"
       data-export-id={row.exportJob.id}
       data-export-format={row.exportJob.format}
-      data-owner-plan={row.ownerPlan}
+      data-owner-plan={effectiveOwnerPlan}
       className="bg-background text-foreground min-h-screen w-full"
     >
       <TemplatePuckRenderer
@@ -94,7 +98,11 @@ export default async function ExportRenderPage({
         projectType={row.project.type}
         className="rounded-none"
       />
-      <CasefolioWatermark visible={row.ownerPlan === "free"} interactive={false} />
+      <CasefolioWatermark
+        visible={!can(effectiveOwnerPlan, "remove_watermark")}
+        interactive={false}
+      />
     </main>
   );
 }
+

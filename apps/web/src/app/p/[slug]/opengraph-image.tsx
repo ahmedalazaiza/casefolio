@@ -188,3 +188,4 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps): P
     },
   );
 }
+

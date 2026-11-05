@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import {
 import { TemplateTypeCard } from "@/components/ui/domain-cards";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { can } from "@/lib/entitlements";
 import {
   FREE_PROJECT_LIMIT,
   isTemplateCompatibleWithProjectType,
@@ -77,9 +79,15 @@ export function CreateProjectWizard({
 }: CreateProjectWizardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [upgradePrompt, setUpgradePrompt] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
 
-  const canUseProTemplates = userPlan === "pro" || userPlan === "team";
-  const isFreeQuotaReached = userPlan === "free" && existingProjectCount >= FREE_PROJECT_LIMIT;
+  const canUseProTemplates = can(userPlan, "pro_templates");
+  const isFreeQuotaReached = !can(userPlan, "create_project", {
+    projectsCount: existingProjectCount,
+  });
 
   const preselectedFromSlug = useMemo(() => {
     if (!initialTemplateSlug) return null;
@@ -331,8 +339,18 @@ export function CreateProjectWizard({
                 </p>
               </div>
             </div>
-            <Button asChild size="sm" className="w-fit shrink-0">
-              <Link href="/account">Upgrade to Pro</Link>
+            <Button
+              type="button"
+              size="sm"
+              className="w-fit shrink-0"
+              onClick={() =>
+                setUpgradePrompt({
+                  title: "Unlock unlimited case studies",
+                  description: `Free plan includes up to ${FREE_PROJECT_LIMIT} projects. Upgrade to Casefolio Pro for unlimited projects, Pro templates, and watermark-free PDF exports.`,
+                })
+              }
+            >
+              Upgrade to Pro
             </Button>
           </div>
         )}
@@ -598,11 +616,21 @@ export function CreateProjectWizard({
                           </Button>
 
                           {isLocked ? (
-                            <Button asChild variant="outline" size="sm" className="flex-1">
-                              <Link href="/account">
-                                <Lock className="size-3.5" />
-                                Upgrade
-                              </Link>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() =>
+                                setUpgradePrompt({
+                                  title: `Unlock the ${item.name} Pro template`,
+                                  description:
+                                    "Pro templates require Casefolio Pro or Team. Upgrade now to unlock every layout immediately.",
+                                })
+                              }
+                            >
+                              <Lock className="size-3.5" />
+                              Upgrade
                             </Button>
                           ) : (
                             <Button
@@ -893,7 +921,7 @@ export function CreateProjectWizard({
                 <Button type="button" variant="secondary" onClick={() => setPreviewItem(null)}>
                   Close
                 </Button>
-                {(previewItem.tier === "free" || canUseProTemplates) && (
+                {previewItem.tier === "free" || canUseProTemplates ? (
                   <Button
                     type="button"
                     onClick={() => {
@@ -904,12 +932,37 @@ export function CreateProjectWizard({
                   >
                     Select {previewItem.name}
                   </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const tplName = previewItem.name;
+                      setPreviewItem(null);
+                      setUpgradePrompt({
+                        title: `Unlock the ${tplName} Pro template`,
+                        description:
+                          "Pro templates require Casefolio Pro or Team. Upgrade now to unlock every layout immediately.",
+                      });
+                    }}
+                  >
+                    <Lock className="size-4" />
+                    Upgrade to Pro
+                  </Button>
                 )}
               </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      <UpgradePromptDialog
+        open={upgradePrompt !== null}
+        onOpenChange={(open) => {
+          if (!open) setUpgradePrompt(null);
+        }}
+        featureTitle={upgradePrompt?.title}
+        featureDescription={upgradePrompt?.description}
+      />
     </div>
   );
 }
