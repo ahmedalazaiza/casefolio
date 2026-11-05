@@ -398,10 +398,12 @@ Summary: Implemented `/pricing` (`apps/web/src/app/(marketing)/pricing/page.tsx`
 
 ---
 **[C-1003] Help center & docs**  
-Phase: Phase 10 — Landing, Help & Polish · Priority: P2 · Estimate: 3h · Deps: C-103 · Status: Todo  
-- [ ] Articles render, search works
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 10 — Landing, Help & Polish · Priority: P2 · Estimate: 3h · Deps: C-103 · Status: Done  
+Branch: `feat/C-1003-help-center`  
+Summary: Implemented the Help Center (`/help`), MDX article pages (`/help/[slug]` backed by 5 `.mdx` guides in `apps/web/src/content/help/*.mdx` with zero external MDX dependencies), instant client/server search (`searchHelpArticles`), and rate-limited Contact Support form (`/help/contact` + `POST /api/help/contact` with Resend confirmation and `#CF-XXXXX` ticket generation) matching Figma `2:9899`, `2:10019`, and `2:10147`, plus `/terms` and `/privacy` legal pages and Vitest suites (`help.test.ts`, `help-center.test.tsx`).  
+- [x] Articles render, search works
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-1004] Dashboard (projects grid, recent, quick create)**  
