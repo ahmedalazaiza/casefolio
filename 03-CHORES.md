@@ -207,9 +207,9 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 8h · **Depends on:** C-601
 - **Description:** Queue (pg-boss), render /export/[id] page, PNG long, PDF, Behance 1400px slices; upload to R2.
 - **Acceptance criteria:**
-  - [ ] Exports match editor fonts
-  - [ ] Job status visible
-  - [ ] Free: watermark + limits
+  - [x] Exports match editor fonts
+  - [x] Job status visible
+  - [x] Free: watermark + limits
 
 ### C-603 — Export UI & history
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-602

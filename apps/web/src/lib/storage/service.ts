@@ -522,6 +522,7 @@ export type ReadAssetAccessResult =
 export async function authorizeAndReadAsset(
   assetId: string,
   requester: StorageActor | null,
+  options?: { authorizedExportProjectId?: string | null },
 ): Promise<ReadAssetAccessResult> {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -554,9 +555,14 @@ export async function authorizeAndReadAsset(
     row.project.publishedAt !== null;
 
   if (!isPublished) {
-    const canViewPrivate = await canActorViewUnpublishedProject(row.project, requester);
-    if (!canViewPrivate) {
-      return { status: "forbidden" };
+    const allowedViaExportToken =
+      Boolean(options?.authorizedExportProjectId) &&
+      options?.authorizedExportProjectId === row.project.id;
+    if (!allowedViaExportToken) {
+      const canViewPrivate = await canActorViewUnpublishedProject(row.project, requester);
+      if (!canViewPrivate) {
+        return { status: "forbidden" };
+      }
     }
   }
 

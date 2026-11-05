@@ -15,7 +15,8 @@ createValidatedEnv(process.env, { isServer: true });
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@casefolio/db", "@casefolio/template-schema"],
+  transpilePackages: ["@casefolio/db", "@casefolio/template-schema", "@casefolio/worker"],
+  serverExternalPackages: ["pg-boss", "playwright", "playwright-core"],
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
     qualities: [75, 85, 90],
