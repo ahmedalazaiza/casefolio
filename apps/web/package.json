@@ -10,6 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
+    "@aws-sdk/s3-request-presigner": "^3.1161.0",
     "@casefolio/db": "workspace:*",
     "@casefolio/template-schema": "workspace:*",
     "@puckeditor/core": "^0.24.0",
