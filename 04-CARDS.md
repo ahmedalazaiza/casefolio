@@ -342,10 +342,12 @@ Summary: Upgraded `/admin/templates` (`admin-templates-list.tsx`) to match Figma
 
 ---
 **[C-903] Admin categories management**  
-Phase: Phase 9 — Admin Panel (full) · Priority: P2 · Estimate: 2h · Deps: C-902 · Status: Todo  
-- [ ] Category used in library filters
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 9 — Admin Panel (full) · Priority: P2 · Estimate: 2h · Deps: C-902 · Status: Done  
+Branch: `feat/C-903-admin-categories`  
+Summary: Implemented admin categories CRUD & sort ordering (`src/lib/admin/categories.ts`, `src/lib/admin/categories-types.ts`, `/api/admin/categories`) with active-template delete protection, `audit_logs` recording (`admin.category.created`, `admin.category.updated`, `admin.category.reordered`, `admin.category.deleted`), `/admin/categories` UI (`32:8745`), and `/templates` library filter bar ordering verification (`categories.test.ts`, `admin-categories.test.tsx`).  
+- [x] Category used in library filters
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-904] Admin users & subscriptions**  
