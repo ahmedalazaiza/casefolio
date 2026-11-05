@@ -389,10 +389,12 @@ Summary: Implemented the 13-section marketing landing page (`apps/web/src/app/(m
 
 ---
 **[C-1002] Pricing page & plan comparison**  
-Phase: Phase 10 — Landing, Help & Polish · Priority: P1 · Estimate: 2h · Deps: C-1001,C-701 · Status: Todo  
-- [ ] Prices loaded from config
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 10 — Landing, Help & Polish · Priority: P1 · Estimate: 2h · Deps: C-1001,C-701 · Status: Done  
+Branch: `feat/C-1002-pricing-page`  
+Summary: Implemented `/pricing` (`apps/web/src/app/(marketing)/pricing/page.tsx` & `pricing-page-client.tsx`) matching Figma `2:8841`, loading plan prices, yearly discounts, quotas, and Paddle price IDs (`resolveServerPaddlePriceId`) from server config, featuring a full Free vs Pro vs Team capability matrix, direct `PaddleCheckoutModal` launch for signed-in users, and Vitest coverage (`pricing.test.tsx`).  
+- [x] Prices loaded from config
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-1003] Help center & docs**  
