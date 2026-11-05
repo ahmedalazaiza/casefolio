@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/session";
 import { getUserBillingOverview } from "@/lib/billing/service";
+import { sanitizeHeaderFilename } from "@/lib/security/redact";
 
 export const runtime = "nodejs";
 
@@ -12,10 +13,7 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ eventId: string }> },
-) {
+export async function GET(_request: Request, context: { params: Promise<{ eventId: string }> }) {
   const sessionData = await getServerSession();
   if (!sessionData) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
@@ -58,11 +56,15 @@ export async function GET(
   </body>
 </html>`;
 
+  const safeFilename = sanitizeHeaderFilename(`${invoice.invoiceNumber}.html`, "invoice.html");
   return new NextResponse(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${invoice.invoiceNumber}.html"`,
+      "Content-Disposition": `attachment; filename="${safeFilename}"`,
+      "Cache-Control": "private, no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
     },
   });
 }

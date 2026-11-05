@@ -335,7 +335,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-702
 - **Description:** Authz on every route, rate limits, CSP, upload validation, webhook verification.
 - **Acceptance criteria:**
-  - [ ] Checklist in RULES §Security all ticked
+  - [x] Checklist in RULES §Security all ticked
 
 ### C-1102 — E2E tests of core journeys
 - **Priority:** P0 · **Estimate:** 6h · **Depends on:** C-602,C-702

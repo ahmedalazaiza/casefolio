@@ -416,10 +416,12 @@ Summary: Built the Dashboard (`/dashboard`) matching Figma `2:2172` (empty state
 
 ---
 **[C-1101] Security review**  
-Phase: Phase 11 — Hardening & Launch · Priority: P0 · Estimate: 4h · Deps: C-702 · Status: Todo  
-- [ ] Checklist in RULES §Security all ticked
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 11 — Hardening & Launch · Priority: P0 · Estimate: 4h · Deps: C-702 · Status: Done  
+Branch: `feat/C-1101-security-review`  
+Summary: Audited and hardened all API routes, Server Actions, and HTTP headers per `02-RULES.md §5`: configured global `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Strict-Transport-Security` (prod), and `poweredByHeader: false` in `apps/web/next.config.ts` (`headers.ts`); added auth mutation rate limiting (`auth-rate-limit.ts`) on `/api/auth/*`; isolated internal onboarding helpers into non-`"use server"` `onboarding-service.ts`; added strict Zod & header filename sanitization (`redact.ts`); documented `SECURITY.md` with all `02-RULES.md §5` items ticked; and added automated audit suite `security-review.test.ts`.  
+- [x] Checklist in RULES §Security all ticked
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-1102] E2E tests of core journeys**  

@@ -43,7 +43,7 @@ C-1001,Marketing landing page from Figma 27:6665,"Phase 10 — Landing, Help & P
 C-1002,Pricing page & plan comparison,"Phase 10 — Landing, Help & Polish",P1,2h,"C-1001,C-701",Done,phase-10;P1,Linked to Paddle prices.,Prices loaded from config
 C-1003,Help center & docs,"Phase 10 — Landing, Help & Polish",P2,3h,C-103,Done,phase-10;P2,"MDX articles, search, contact form.","Articles render, search works"
 C-1004,"Dashboard (projects grid, recent, quick create)","Phase 10 — Landing, Help & Polish",P0,4h,C-401,Done,phase-10;P0,"Projects list, duplicate, delete, status badges.",Empty state matches Figma
-C-1101,Security review,Phase 11 — Hardening & Launch,P0,4h,C-702,Todo,phase-11;P0,"Authz on every route, rate limits, CSP, upload validation, webhook verification.",Checklist in RULES §Security all ticked
+C-1101,Security review,Phase 11 — Hardening & Launch,P0,4h,C-702,Done,phase-11;P0,"Authz on every route, rate limits, CSP, upload validation, webhook verification.",Checklist in RULES §Security all ticked
 C-1102,E2E tests of core journeys,Phase 11 — Hardening & Launch,P0,6h,"C-602,C-702",Todo,phase-11;P0,Signup → create → edit → publish → export → upgrade; admin import.,Playwright suite green in CI
 C-1103,"Performance, a11y & responsive QA",Phase 11 — Hardening & Launch,P1,4h,"C-1001,C-406",Todo,phase-11;P1,"Axe checks, Lighthouse, 375/768/1440 screenshots.",No critical axe issues
 C-1104,Production deploy & monitoring,Phase 11 — Hardening & Launch,P0,3h,"C-1101,C-1102",Todo,phase-11;P0,"Vercel prod, Fly/Railway worker, Neon prod branch, Sentry, backups.",Health checks green | Rollback documented

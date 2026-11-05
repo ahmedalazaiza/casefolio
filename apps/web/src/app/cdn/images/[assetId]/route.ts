@@ -52,7 +52,8 @@ export async function GET(request: Request, context: CdnRouteContext): Promise<R
     );
   }
 
-  const requestedWidth = reqUrl.searchParams.get("w") || String(access.asset.width);
+  const rawW = reqUrl.searchParams.get("w");
+  const requestedWidth = rawW && /^\d{1,5}$/.test(rawW) ? rawW : String(access.asset.width);
   const cx = reqUrl.searchParams.get("cx");
   const cy = reqUrl.searchParams.get("cy");
   const cw = reqUrl.searchParams.get("cw");
@@ -68,7 +69,17 @@ export async function GET(request: Request, context: CdnRouteContext): Promise<R
     Vary: "Accept",
   });
 
-  if (cx && cy && cw && ch) {
+  const numRegex = /^\d{1,5}(?:\.\d{1,4})?$/;
+  if (
+    cx &&
+    cy &&
+    cw &&
+    ch &&
+    numRegex.test(cx) &&
+    numRegex.test(cy) &&
+    numRegex.test(cw) &&
+    numRegex.test(ch)
+  ) {
     headers.set("X-Casefolio-Crop", `${cx},${cy},${cw},${ch}`);
   }
 
@@ -77,4 +88,3 @@ export async function GET(request: Request, context: CdnRouteContext): Promise<R
     headers,
   });
 }
-
