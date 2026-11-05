@@ -341,7 +341,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 6h · **Depends on:** C-602,C-702
 - **Description:** Signup → create → edit → publish → export → upgrade; admin import.
 - **Acceptance criteria:**
-  - [ ] Playwright suite green in CI
+  - [x] Playwright suite green in CI
 
 ### C-1103 — Performance, a11y & responsive QA
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-1001,C-406

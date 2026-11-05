@@ -425,10 +425,12 @@ Summary: Audited and hardened all API routes, Server Actions, and HTTP headers p
 
 ---
 **[C-1102] E2E tests of core journeys**  
-Phase: Phase 11 — Hardening & Launch · Priority: P0 · Estimate: 6h · Deps: C-602,C-702 · Status: Todo  
-- [ ] Playwright suite green in CI
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 11 — Hardening & Launch · Priority: P0 · Estimate: 6h · Deps: C-602,C-702 · Status: Done  
+Branch: `feat/C-1102-core-e2e-journeys`  
+Summary: Added end-to-end Playwright suite `tests/e2e/phase11-core-journeys.spec.ts` covering (1) full designer lifecycle (`Signup -> 6-digit OTP verification -> 3-step onboarding -> /new Orbit project creation -> Constrained Editor style & 9:19.5 screenshot upload/crop -> /p/<slug> SSR publish with Free watermark -> PNG export & PDF Free gate -> Paddle Sandbox Pro upgrade -> watermark removal & A4 PDF export`) and (2) Admin template import (`Upload reference/template.example.json -> Validate -> Live Puck preview -> Save v1.0.0 draft -> Publish -> audit_logs check -> anonymous /templates library & preview dialog`); updated `playwright.config.ts` (`pnpm --filter @casefolio/web start` in CI), `.github/workflows/ci.yml`, `smoke.spec.ts`, and `headers.ts` CSP font directives so all 16 E2E tests pass in `pnpm test:e2e`.  
+- [x] Playwright suite green in CI
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-1103] Performance, a11y & responsive QA**  

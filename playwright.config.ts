@@ -21,10 +21,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm --filter @casefolio/web dev",
+    command: process.env.CI
+      ? "pnpm --filter @casefolio/web start"
+      : "pnpm --filter @casefolio/web dev",
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
 });
-

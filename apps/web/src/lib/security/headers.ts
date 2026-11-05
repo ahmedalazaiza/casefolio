@@ -51,9 +51,9 @@ export function buildContentSecurityPolicy(options: SecurityHeadersOptions): str
   const directives = [
     "default-src 'self'",
     `script-src ${scriptSrc.join(" ")}`,
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://rsms.me",
     "img-src 'self' data: blob: https:",
-    "font-src 'self' data:",
+    "font-src 'self' data: https://fonts.gstatic.com https://rsms.me",
     `connect-src ${connectSrc.join(" ")}`,
     "frame-src 'self' https://*.paddle.com https://buy.paddle.com https://sandbox-buy.paddle.com",
     "frame-ancestors 'none'",
