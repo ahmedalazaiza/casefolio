@@ -315,7 +315,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 2h · **Depends on:** C-1001,C-701
 - **Description:** Linked to Paddle prices.
 - **Acceptance criteria:**
-  - [ ] Prices loaded from config
+  - [x] Prices loaded from config
 
 ### C-1003 — Help center & docs
 - **Priority:** P2 · **Estimate:** 3h · **Depends on:** C-103
