@@ -46,4 +46,4 @@ C-1004,"Dashboard (projects grid, recent, quick create)","Phase 10 — Landing, 
 C-1101,Security review,Phase 11 — Hardening & Launch,P0,4h,C-702,Done,phase-11;P0,"Authz on every route, rate limits, CSP, upload validation, webhook verification.",Checklist in RULES §Security all ticked
 C-1102,E2E tests of core journeys,Phase 11 — Hardening & Launch,P0,6h,"C-602,C-702",Done,phase-11;P0,Signup → create → edit → publish → export → upgrade; admin import.,Playwright suite green in CI
 C-1103,"Performance, a11y & responsive QA",Phase 11 — Hardening & Launch,P1,4h,"C-1001,C-406",Done,phase-11;P1,"Axe checks, Lighthouse, 375/768/1440 screenshots.",No critical axe issues
-C-1104,Production deploy & monitoring,Phase 11 — Hardening & Launch,P0,3h,"C-1101,C-1102",Todo,phase-11;P0,"Vercel prod, Fly/Railway worker, Neon prod branch, Sentry, backups.",Health checks green | Rollback documented
+C-1104,Production deploy & monitoring,Phase 11 — Hardening & Launch,P0,3h,"C-1101,C-1102",Done,phase-11;P0,"Vercel prod, Fly/Railway worker, Neon prod branch, Sentry, backups.",Health checks green | Rollback documented

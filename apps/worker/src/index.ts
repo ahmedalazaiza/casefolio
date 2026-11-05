@@ -20,6 +20,15 @@ export function getWorkerHealth() {
   };
 }
 
+export function buildWorkerHealthHttpResponse() {
+  return {
+    ok: true as const,
+    ...getWorkerHealth(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  };
+}
+
 export interface RunningWorkerServer {
   server: Server;
   consumer: ExportWorkerConsumerHandle;
@@ -51,7 +60,7 @@ export async function startWorkerServer(options?: {
 
   const server = createServer((req, res) => {
     if (req.method === "GET" && (req.url === "/health" || req.url === "/")) {
-      const body = JSON.stringify(getWorkerHealth());
+      const body = JSON.stringify(buildWorkerHealthHttpResponse());
       res.writeHead(200, {
         "Content-Type": "application/json",
         "Cache-Control": "no-store",
