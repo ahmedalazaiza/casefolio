@@ -281,7 +281,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P2 · **Estimate:** 2h · **Depends on:** C-902
 - **Description:** CRUD + ordering.
 - **Acceptance criteria:**
-  - [ ] Category used in library filters
+  - [x] Category used in library filters
 
 ### C-904 — Admin users & subscriptions
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-701
