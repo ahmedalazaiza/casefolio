@@ -148,10 +148,11 @@ export function readImageDimensionsFromBytes(
  */
 export function sanitizeCropRect(area: CropRect): CropRect {
   return {
-    x: Math.max(0, Math.round(area.x)),
-    y: Math.max(0, Math.round(area.y)),
-    width: Math.max(1, Math.round(area.width)),
-    height: Math.max(1, Math.round(area.height)),
+    x: Number.isFinite(area.x) ? Math.max(0, Math.round(area.x)) : 0,
+    y: Number.isFinite(area.y) ? Math.max(0, Math.round(area.y)) : 0,
+    width: Number.isFinite(area.width) && area.width > 0 ? Math.max(1, Math.round(area.width)) : 1,
+    height:
+      Number.isFinite(area.height) && area.height > 0 ? Math.max(1, Math.round(area.height)) : 1,
   };
 }
 
@@ -199,7 +200,10 @@ export function parseNaturalDimensionsFromSrc(
 }
 
 export function isUrlServerPreCropped(src: string): boolean {
-  return src.includes("/cdn-cgi/image/") && src.includes("trim=");
+  return (
+    src.includes("trim=") &&
+    (src.includes("/cdn-cgi/image/") || src.includes("imagedelivery.net/"))
+  );
 }
 
 /**

@@ -23,7 +23,7 @@ C-405,"State, undo/redo, autosave",Phase 4 — Create Wizard & Editor,P0,4h,C-40
 C-406,Editor responsive behavior,Phase 4 — Create Wizard & Editor,P1,3h,C-402,Done,phase-4;P1,Mobile: preview + bottom-sheet fields; desktop: 3-panel.,Usable at 375px
 C-501,R2 uploads via presigned URLs,Phase 5 — Images & Media,P0,4h,C-003,Done,phase-5;P0,"Upload API, size/type limits, per-plan quotas, assets table.",Uploads > limit rejected | Files private until published
 C-502,Image slot field with react-easy-crop,Phase 5 — Images & Media,P0,4h,"C-501,C-402",Done,phase-5;P0,Ratio locked from template.slots; save crop rect; replace/remove.,Crop ratio always matches slot | Crop persisted and re-editable
-C-503,Cloudflare Images delivery + srcset,Phase 5 — Images & Media,P1,3h,C-502,Todo,phase-5;P1,Variant URLs with crop params; next/image loader.,Images served via CDN with correct size
+C-503,Cloudflare Images delivery + srcset,Phase 5 — Images & Media,P1,3h,C-502,Done,phase-5;P1,Variant URLs with crop params; next/image loader.,Images served via CDN with correct size
 C-601,Publish & public share page,"Phase 6 — Publish, Share & Export",P0,4h,C-402,Todo,phase-6;P0,"Slug, public/unlisted, /p/[slug] SSR via Puck <Render>, OG image via Satori.",Public page loads < 2s | Unpublish returns 404
 C-602,Playwright export worker (Fly/Railway),"Phase 6 — Publish, Share & Export",P0,8h,C-601,Todo,phase-6;P0,"Queue (pg-boss), render /export/[id] page, PNG long, PDF, Behance 1400px slices; upload to R2.",Exports match editor fonts | Job status visible | Free: watermark + limits
 C-603,Export UI & history,"Phase 6 — Publish, Share & Export",P1,3h,C-602,Todo,phase-6;P1,"Export dialog with presets, progress, download history.",User can re-download past exports

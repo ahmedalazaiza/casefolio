@@ -281,6 +281,16 @@ export function ImageSlotField({
   );
 
   const handleCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+    if (
+      !Number.isFinite(croppedAreaPixels.x) ||
+      !Number.isFinite(croppedAreaPixels.y) ||
+      !Number.isFinite(croppedAreaPixels.width) ||
+      !Number.isFinite(croppedAreaPixels.height) ||
+      croppedAreaPixels.width <= 0 ||
+      croppedAreaPixels.height <= 0
+    ) {
+      return;
+    }
     setPendingCropPixels(sanitizeCropRect(croppedAreaPixels));
   }, []);
 

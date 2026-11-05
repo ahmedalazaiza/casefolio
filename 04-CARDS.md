@@ -226,10 +226,11 @@ Summary: Built `ImageSlotField` custom Puck field with drag-and-drop/file upload
 
 ---
 **[C-503] Cloudflare Images delivery + srcset**  
-Phase: Phase 5 — Images & Media · Priority: P1 · Estimate: 3h · Deps: C-502 · Status: Todo  
-- [ ] Images served via CDN with correct size
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 5 — Images & Media · Priority: P1 · Estimate: 3h · Deps: C-502 · Status: Done  
+Summary: Implemented Cloudflare Images variant URL generator (`buildCloudflareImageVariantUrl`) with `trim` crop directives + local dev `/cdn/images/[assetId]` private-until-published CDN route, `next/image` custom loader (`createCasefolioImageLoader`), responsive `srcset` + device-chrome `sizes` (`CdnResponsiveImage`), and end-to-end Playwright verification (`phase5-images.spec.ts`).  
+- [x] Images served via CDN with correct size
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-601] Publish & public share page**  

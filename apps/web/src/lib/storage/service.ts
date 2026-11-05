@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, count, eq, sql, type PlanTier, type UserRole } from "@casefolio/db";
 import { db, dbSchema } from "@/lib/db";
+import { buildAssetCdnBaseUrl } from "@/lib/storage/cloudflare-images";
 import {
   completeUploadInputSchema,
   extensionForMimeType,
@@ -117,10 +118,7 @@ export function buildPrivateOrPublicAssetPath(
   width?: number,
   height?: number,
 ): string {
-  if (width && width > 0 && height && height > 0) {
-    return `/api/assets/${assetId}?nw=${width}&nh=${height}`;
-  }
-  return `/api/assets/${assetId}`;
+  return buildAssetCdnBaseUrl(assetId, width, height);
 }
 
 async function canActorEditProject(
