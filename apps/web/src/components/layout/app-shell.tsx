@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   BarChart3,
   Bell,
   Download,
@@ -53,9 +54,11 @@ export interface AppShellProps {
   userEmail?: string;
   userImage?: string | null;
   showProBadge?: boolean;
+  planLabel?: string;
   projectsUsed?: number;
-  projectsLimit?: number;
+  projectsLimit?: number | null;
   renewsLabel?: string;
+  failedPaymentPauseDateLabel?: string | null;
 }
 
 function isNavItemActive(pathname: string, href: string): boolean {
@@ -63,29 +66,32 @@ function isNavItemActive(pathname: string, href: string): boolean {
 }
 
 function PlanUsageCard({
+  planLabel,
   projectsUsed,
   projectsLimit,
   renewsLabel,
 }: {
+  planLabel: string;
   projectsUsed: number;
-  projectsLimit: number;
+  projectsLimit: number | null;
   renewsLabel: string;
 }) {
-  const ratio = Math.min(100, Math.max(0, Math.round((projectsUsed / projectsLimit) * 100)));
+  const effectiveMax = projectsLimit ?? Math.max(10, projectsUsed + 2);
+  const ratio = Math.min(100, Math.max(0, Math.round((projectsUsed / effectiveMax) * 100)));
 
   return (
     <div
       data-slot="plan-usage-card"
       className="border-border bg-surface flex flex-col gap-2.5 rounded-lg border p-4"
     >
-      <span className="text-muted-foreground type-overline">Pro · Active</span>
+      <span className="text-muted-foreground type-overline">{planLabel}</span>
       <p className="text-foreground type-caption">{renewsLabel}</p>
       <div
         role="progressbar"
         aria-label="Project quota usage"
         aria-valuenow={projectsUsed}
         aria-valuemin={0}
-        aria-valuemax={projectsLimit}
+        aria-valuemax={effectiveMax}
         className="bg-border h-1.5 w-full overflow-hidden rounded-full"
       >
         <div
@@ -94,7 +100,9 @@ function PlanUsageCard({
         />
       </div>
       <p className="text-tertiary type-caption">
-        {projectsUsed} of {projectsLimit} projects used
+        {projectsLimit !== null
+          ? `${projectsUsed} of ${projectsLimit} projects used`
+          : `${projectsUsed} project${projectsUsed === 1 ? "" : "s"} · Unlimited`}
       </p>
     </div>
   );
@@ -107,9 +115,11 @@ export function AppShell({
   userEmail,
   userImage,
   showProBadge = true,
+  planLabel = "Pro · Active",
   projectsUsed = 6,
   projectsLimit = 10,
   renewsLabel = "Renews Nov 30, 2026",
+  failedPaymentPauseDateLabel = null,
 }: AppShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -173,6 +183,7 @@ export function AppShell({
                   })}
                 </nav>
                 <PlanUsageCard
+                  planLabel={planLabel}
                   projectsUsed={projectsUsed}
                   projectsLimit={projectsLimit}
                   renewsLabel={renewsLabel}
@@ -201,6 +212,25 @@ export function AppShell({
             />
           </div>
         </div>
+
+        {failedPaymentPauseDateLabel && (
+          <div
+            role="alert"
+            data-testid="app-failed-payment-banner"
+            className="border-destructive/30 bg-destructive-soft text-destructive flex flex-wrap items-center justify-center gap-2 border-t px-4 py-2 text-center"
+          >
+            <AlertTriangle className="size-4 shrink-0" />
+            <span className="type-body-s">
+              Your last payment failed — Pro features pause on {failedPaymentPauseDateLabel}.
+            </span>
+            <Link
+              href="/account/billing"
+              className="text-destructive type-body-s-strong underline underline-offset-4"
+            >
+              Update payment &rarr;
+            </Link>
+          </div>
+        )}
       </header>
 
       <div className="flex flex-1">
@@ -237,6 +267,7 @@ export function AppShell({
           </nav>
 
           <PlanUsageCard
+            planLabel={planLabel}
             projectsUsed={projectsUsed}
             projectsLimit={projectsLimit}
             renewsLabel={renewsLabel}

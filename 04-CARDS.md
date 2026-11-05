@@ -285,10 +285,12 @@ Summary: Implemented single canonical `can(user, feature, context?)` + `evaluate
 
 ---
 **[C-703] Account & billing pages**  
-Phase: Phase 7 — Billing & Gating · Priority: P1 · Estimate: 3h · Deps: C-701 · Status: Todo  
-- [ ] Plan changes reflected after webhook
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 7 — Billing & Gating · Priority: P1 · Estimate: 3h · Deps: C-701 · Status: Done  
+Branch: `feat/C-703-account-billing-pages`  
+Summary: Built unified `AccountSettingsShell` + `/account` (`ProfileSettingsPanel`), `/account/security` (`SecuritySettingsPanel` with password change, active sessions & revoke, and cascading account deletion), `/account/billing` (`BillingSettingsPanel` with `Current plan`, `Payment method`, `Billing details`, `Change plan` 3-tier picker, `Downgrade to Free?`, 2-step cancellation, `Resume subscription`, `past_due` & `cancel_at_period_end` banners, and Paddle Customer Portal link), `/account/invoices` (table + receipt downloads), `/settings` redirect, live `(app)` sidebar/topbar billing badges + app-wide failed-payment banner, Vitest tests, and full Phase 7 Playwright E2E verification (`phase7-billing-gating.spec.ts`).  
+- [x] Plan changes reflected after webhook
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-801] PostHog product analytics**  

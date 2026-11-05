@@ -1,11 +1,11 @@
 import { and, eq, inArray, type MembershipRole } from "@casefolio/db";
 import type { Metadata } from "next";
-import Link from "next/link";
 import {
   TeamWorkspaceClient,
   type IncomingTeamInvitation,
   type TeamOrganizationSummary,
 } from "@/app/(app)/account/team/team-workspace-client";
+import { AccountSettingsShell } from "@/components/account/account-settings-shell";
 import { requireSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
 import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
@@ -110,48 +110,24 @@ export default async function AccountTeamPage({
   }));
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <span className="text-primary type-overline">Workspace settings</span>
-        <h1 className="type-display-m text-foreground">Team &amp; invites</h1>
-        <p className="text-muted-foreground type-body-m">
-          Create shared studio workspaces and invite editors or reviewers.
-        </p>
+    <AccountSettingsShell activeTab="team">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-foreground type-heading-m">Team &amp; invites</h2>
+          <p className="text-muted-foreground type-body-s">
+            Create shared studio workspaces and invite editors or reviewers.
+          </p>
+        </div>
+
+        <TeamWorkspaceClient
+          userPlan={effectivePlan}
+          activeOrganizationId={session.activeOrganizationId ?? null}
+          organizations={organizations}
+          incomingInvitations={incomingInvitations}
+          highlightedInvitationId={invitationId}
+        />
       </div>
-
-      <nav
-        aria-label="Account sections"
-        className="border-border flex flex-wrap items-center gap-2 border-b pb-3"
-      >
-        <Link
-          href="/account"
-          className="text-muted-foreground hover:text-foreground type-body-s rounded-full px-4 py-1.5 transition-colors"
-        >
-          Profile
-        </Link>
-        <Link
-          href="/account/team"
-          aria-current="page"
-          className="border-border bg-elevated text-foreground type-body-s-strong rounded-full border px-4 py-1.5"
-        >
-          Team &amp; invites
-        </Link>
-        <Link
-          href="/account/billing"
-          className="text-muted-foreground hover:text-foreground type-body-s rounded-full px-4 py-1.5 transition-colors"
-        >
-          Billing &amp; plan
-        </Link>
-      </nav>
-
-      <TeamWorkspaceClient
-        userPlan={effectivePlan}
-        activeOrganizationId={session.activeOrganizationId ?? null}
-        organizations={organizations}
-        incomingInvitations={incomingInvitations}
-        highlightedInvitationId={invitationId}
-      />
-    </div>
+    </AccountSettingsShell>
   );
 }
 
