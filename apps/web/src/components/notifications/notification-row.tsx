@@ -24,6 +24,7 @@ export function NotificationIconTile({ kind }: { kind: NotificationKind }) {
       );
     case "export_failed":
     case "payment_failed":
+    case "moderation_takedown":
       return (
         <span className="bg-destructive-soft text-destructive inline-flex size-9 shrink-0 items-center justify-center rounded-xl">
           <AlertTriangle className="size-4" />
