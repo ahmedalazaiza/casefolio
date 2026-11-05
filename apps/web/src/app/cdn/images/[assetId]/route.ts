@@ -1,3 +1,4 @@
+import { verifyExportRenderToken } from "@casefolio/worker/token";
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/session";
 import { authorizeAndReadAsset } from "@/lib/storage/service";
@@ -9,6 +10,10 @@ interface CdnRouteContext {
 export async function GET(request: Request, context: CdnRouteContext): Promise<Response> {
   const { assetId } = await context.params;
   const ctx = await getServerSession();
+  const reqUrl = new URL(request.url);
+  const rawExportToken =
+    request.headers.get("x-casefolio-export-token") ?? reqUrl.searchParams.get("exportToken");
+  const verifiedExport = verifyExportRenderToken(rawExportToken);
 
   const access = await authorizeAndReadAsset(
     assetId,
@@ -19,6 +24,9 @@ export async function GET(request: Request, context: CdnRouteContext): Promise<R
           plan: ctx.user.plan,
         }
       : null,
+    {
+      authorizedExportProjectId: verifiedExport?.projectId ?? null,
+    },
   );
 
   if (access.status === "not_found") {
@@ -44,7 +52,6 @@ export async function GET(request: Request, context: CdnRouteContext): Promise<R
     );
   }
 
-  const reqUrl = new URL(request.url);
   const requestedWidth = reqUrl.searchParams.get("w") || String(access.asset.width);
   const cx = reqUrl.searchParams.get("cx");
   const cy = reqUrl.searchParams.get("cy");

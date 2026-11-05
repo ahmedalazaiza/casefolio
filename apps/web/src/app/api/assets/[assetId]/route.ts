@@ -1,3 +1,4 @@
+import { verifyExportRenderToken } from "@casefolio/worker/token";
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/session";
 import {
@@ -10,9 +11,13 @@ interface RouteContext {
   params: Promise<{ assetId: string }>;
 }
 
-export async function GET(_request: Request, context: RouteContext): Promise<Response> {
+export async function GET(request: Request, context: RouteContext): Promise<Response> {
   const { assetId } = await context.params;
   const ctx = await getServerSession();
+  const reqUrl = new URL(request.url);
+  const rawExportToken =
+    request.headers.get("x-casefolio-export-token") ?? reqUrl.searchParams.get("exportToken");
+  const verifiedExport = verifyExportRenderToken(rawExportToken);
 
   const access = await authorizeAndReadAsset(
     assetId,
@@ -23,6 +28,9 @@ export async function GET(_request: Request, context: RouteContext): Promise<Res
           plan: ctx.user.plan,
         }
       : null,
+    {
+      authorizedExportProjectId: verifiedExport?.projectId ?? null,
+    },
   );
 
   if (access.status === "not_found") {

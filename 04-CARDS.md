@@ -244,12 +244,14 @@ Summary: Implemented custom slug validation & uniqueness, `public`/`unlisted` (`
 
 ---
 **[C-602] Playwright export worker (Fly/Railway)**  
-Phase: Phase 6 — Publish, Share & Export · Priority: P0 · Estimate: 8h · Deps: C-601 · Status: Todo  
-- [ ] Exports match editor fonts
-- [ ] Job status visible
-- [ ] Free: watermark + limits
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 6 — Publish, Share & Export · Priority: P0 · Estimate: 8h · Deps: C-601 · Status: Done  
+Branch: `feat/C-602-playwright-export-worker`  
+Summary: Built `@casefolio/worker` (`pg-boss` v12 queue consumer, headless Playwright Chromium renderer for 1440px `png_long`, `pdf`, and 1400px `behance` `.zip` slices, R2 + local storage writer, `Dockerfile`), HMAC-signed `/export/[jobId]?token=` SSR render route with Google Fonts parity and private-asset export token auth, and `/api/exports` endpoints enforcing Free plan watermark + format/monthly limits.  
+- [x] Exports match editor fonts
+- [x] Job status visible
+- [x] Free: watermark + limits
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-603] Export UI & history**  
