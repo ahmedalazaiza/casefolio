@@ -308,8 +308,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 6h · **Depends on:** C-102
 - **Description:** Hero, features, templates showcase, pricing, FAQ, footer; SEO metadata.
 - **Acceptance criteria:**
-  - [ ] Pixel-close to Figma
-  - [ ] Lighthouse ≥ 90
+  - [x] Pixel-close to Figma
+  - [x] Lighthouse ≥ 90
 
 ### C-1002 — Pricing page & plan comparison
 - **Priority:** P1 · **Estimate:** 2h · **Depends on:** C-1001,C-701
