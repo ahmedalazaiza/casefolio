@@ -150,7 +150,7 @@ export function AdminModerationPanel({
         <div
           role="tablist"
           aria-label="Moderation status filter"
-          className="bg-sunken inline-flex max-w-full flex-wrap items-center gap-1 rounded-full p-1"
+          className="bg-sunken inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full p-1 whitespace-nowrap"
         >
           {segments.map((seg) => {
             const active = filter === seg.key;
