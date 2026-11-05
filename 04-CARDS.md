@@ -351,10 +351,12 @@ Summary: Implemented admin categories CRUD & sort ordering (`src/lib/admin/categ
 
 ---
 **[C-904] Admin users & subscriptions**  
-Phase: Phase 9 — Admin Panel (full) · Priority: P1 · Estimate: 4h · Deps: C-701 · Status: Todo  
-- [ ] Suspend blocks login
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 9 — Admin Panel (full) · Priority: P1 · Estimate: 4h · Deps: C-701 · Status: Done  
+Branch: `feat/C-904-admin-users-subscriptions`  
+Summary: Implemented admin users directory, user detail, and subscriptions overview (`src/lib/admin/users.ts`, `src/lib/admin/users-types.ts`, `/api/admin/users`) matching Figma `32:8993`, `32:9241`, and `32:9489`; added live Paddle subscription status fetch & sync (`fetchLivePaddleSubscription`, `syncUserSubscriptionFromPaddle`), immediate session revocation + Better Auth login blocking on suspend (`auth/server.ts`), and `audit_logs` recording (`users.test.ts`, `admin-users.test.tsx`).  
+- [x] Suspend blocks login
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-905] Moderation**  

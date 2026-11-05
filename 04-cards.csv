@@ -36,7 +36,7 @@ C-803,Notifications (in-app + email),Phase 8 — Analytics & Notifications,P2,4h
 C-901,Admin overview dashboard,Phase 9 — Admin Panel (full),P1,4h,"C-202,C-802",Done,phase-9;P1,"KPIs: users, MRR, publishes, exports, top templates.",Numbers match DB queries
 C-902,"Admin templates list, filters & detail",Phase 9 — Admin Panel (full),P0,4h,C-304,Done,phase-9;P0,"Search, filter by status/type/category/tier, detail with versions & usage.",Matches Figma Admin Panel 31:6665
 C-903,Admin categories management,Phase 9 — Admin Panel (full),P2,2h,C-902,Done,phase-9;P2,CRUD + ordering.,Category used in library filters
-C-904,Admin users & subscriptions,Phase 9 — Admin Panel (full),P1,4h,C-701,Todo,phase-9;P1,"List, search, view, suspend; subscription status (read from Paddle).",Suspend blocks login
+C-904,Admin users & subscriptions,Phase 9 — Admin Panel (full),P1,4h,C-701,Done,phase-9;P1,"List, search, view, suspend; subscription status (read from Paddle).",Suspend blocks login
 C-905,Moderation,Phase 9 — Admin Panel (full),P2,4h,C-601,Todo,phase-9;P2,"Report public case studies, review queue, takedown.",Takedown makes page 404 | Audit log entry
 C-906,"Admin settings, roles & audit log",Phase 9 — Admin Panel (full),P1,3h,C-202,Todo,phase-9;P1,"Role management, feature flags, audit log for admin actions.",Every admin mutation logged
 C-1001,Marketing landing page from Figma 27:6665,"Phase 10 — Landing, Help & Polish",P0,6h,C-102,Todo,phase-10;P0,"Hero, features, templates showcase, pricing, FAQ, footer; SEO metadata.",Pixel-close to Figma | Lighthouse ≥ 90

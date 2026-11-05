@@ -287,7 +287,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-701
 - **Description:** List, search, view, suspend; subscription status (read from Paddle).
 - **Acceptance criteria:**
-  - [ ] Suspend blocks login
+  - [x] Suspend blocks login
 
 ### C-905 — Moderation
 - **Priority:** P2 · **Estimate:** 4h · **Depends on:** C-601

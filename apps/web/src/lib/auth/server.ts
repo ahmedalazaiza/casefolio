@@ -1,5 +1,7 @@
+import { eq } from "@casefolio/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, magicLink, organization } from "better-auth/plugins";
 import { env } from "@/env";
@@ -39,7 +41,53 @@ export const auth = betterAuth({
       generateId: "uuid",
     },
   },
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      const signInPaths = new Set([
+        "/sign-in/email",
+        "/sign-in/magic-link",
+        "/sign-in/email-otp",
+        "/email-otp/send-verification-otp",
+      ]);
+
+      if (signInPaths.has(ctx.path)) {
+        const body = (ctx.body ?? {}) as { email?: unknown };
+        const rawEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : null;
+        if (rawEmail) {
+          const [targetUser] = await db
+            .select({ suspended: dbSchema.users.suspended })
+            .from(dbSchema.users)
+            .where(eq(dbSchema.users.email, rawEmail))
+            .limit(1);
+
+          if (targetUser?.suspended) {
+            throw new APIError("FORBIDDEN", {
+              message: "Your account has been suspended. Please contact support.",
+            });
+          }
+        }
+      }
+    }),
+  },
   databaseHooks: {
+    session: {
+      create: {
+        async before(session) {
+          const [targetUser] = await db
+            .select({ suspended: dbSchema.users.suspended })
+            .from(dbSchema.users)
+            .where(eq(dbSchema.users.id, session.userId))
+            .limit(1);
+
+          if (targetUser?.suspended) {
+            throw new APIError("FORBIDDEN", {
+              message: "Your account has been suspended. Please contact support.",
+            });
+          }
+          return { data: session };
+        },
+      },
+    },
     user: {
       create: {
         async after(user) {
