@@ -15,6 +15,7 @@ import {
 } from "@casefolio/worker";
 import { PgBoss } from "pg-boss";
 import { env } from "@/env";
+import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { db, dbSchema } from "@/lib/db";
 import { can, evaluateEntitlement, type EntitlementFeature } from "@/lib/entitlements";
 import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
@@ -331,6 +332,17 @@ export async function enqueueProjectExportForUser(
       console.error("[exports] embedded worker wakeup warning:", err);
     });
   }
+
+  await trackServerProductEvent({
+    event: "exported",
+    distinctId: actor.id,
+    properties: {
+      projectId: projectRow.project.id,
+      exportId: created.id,
+      format: valid.format,
+      plan: ownerPlan,
+    },
+  });
 
   return {
     ok: true,

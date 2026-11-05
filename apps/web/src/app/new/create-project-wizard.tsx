@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { trackClientProductEvent } from "@/components/analytics/posthog-provider";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { Badge, ProBadge } from "@/components/ui/badge";
@@ -534,6 +535,12 @@ export function CreateProjectWizard({
                           onClick={() => {
                             if (!isLocked) {
                               setSelectedTemplateId(item.id);
+                              trackClientProductEvent("template_selected", {
+                                templateSlug: item.slug,
+                                templateTier: item.tier,
+                                projectType: selectedType,
+                                surface: "wizard_card",
+                              });
                             }
                           }}
                           className="focus-visible:ring-ring/40 flex flex-col gap-3.5 text-left outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
@@ -638,7 +645,15 @@ export function CreateProjectWizard({
                               variant={isSelected ? "default" : "outline"}
                               size="sm"
                               className="flex-1"
-                              onClick={() => setSelectedTemplateId(item.id)}
+                              onClick={() => {
+                                setSelectedTemplateId(item.id);
+                                trackClientProductEvent("template_selected", {
+                                  templateSlug: item.slug,
+                                  templateTier: item.tier,
+                                  projectType: selectedType,
+                                  surface: "wizard_select_button",
+                                });
+                              }}
                             >
                               {isSelected ? "Selected" : "Select"}
                             </Button>
@@ -673,7 +688,17 @@ export function CreateProjectWizard({
                   size="lg"
                   disabled={!selectedTemplate}
                   data-testid="wizard-next-to-details"
-                  onClick={() => setStep("details")}
+                  onClick={() => {
+                    if (selectedTemplate) {
+                      trackClientProductEvent("template_selected", {
+                        templateSlug: selectedTemplate.slug,
+                        templateTier: selectedTemplate.tier,
+                        projectType: selectedType,
+                        surface: "wizard_confirm",
+                      });
+                    }
+                    setStep("details");
+                  }}
                 >
                   Use this template
                   <ArrowRight className="size-4" />

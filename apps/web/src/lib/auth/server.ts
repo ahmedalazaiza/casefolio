@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, magicLink, organization } from "better-auth/plugins";
 import { env } from "@/env";
+import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import {
   sendMagicLinkEmail,
   sendPasswordResetEmail,
@@ -36,6 +37,22 @@ export const auth = betterAuth({
   advanced: {
     database: {
       generateId: "uuid",
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        async after(user) {
+          await trackServerProductEvent({
+            event: "signup",
+            distinctId: user.id,
+            properties: {
+              plan: "free",
+              source: "auth",
+            },
+          });
+        },
+      },
     },
   },
   user: {

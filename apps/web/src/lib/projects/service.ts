@@ -1,4 +1,5 @@
 import { and, count, eq, type PlanTier, type UserRole } from "@casefolio/db";
+import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { db, dbSchema } from "@/lib/db";
 import { can, evaluateEntitlement } from "@/lib/entitlements";
 import {
@@ -147,6 +148,18 @@ export async function createProjectFromTemplate({
       error: "Failed to create project record.",
     };
   }
+
+  await trackServerProductEvent({
+    event: "project_created",
+    distinctId: userId,
+    properties: {
+      projectId: created.id,
+      projectType: valid.type,
+      templateSlug: tplRow.template.slug,
+      templateTier: tplRow.template.tier,
+      hasOrg: Boolean(orgId),
+    },
+  });
 
   return {
     ok: true,

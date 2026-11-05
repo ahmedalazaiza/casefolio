@@ -1,5 +1,6 @@
 import { and, eq, ne, type PlanTier, type UserRole } from "@casefolio/db";
 import { z } from "zod";
+import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { db, dbSchema } from "@/lib/db";
 import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { slugifyProjectName } from "@/lib/projects/types";
@@ -519,6 +520,16 @@ export async function publishProjectForUser(
         error: "Failed to publish project.",
       };
     }
+
+    await trackServerProductEvent({
+      event: "published",
+      distinctId: user.id,
+      properties: {
+        projectId: updated.id,
+        visibility: valid.visibility,
+        isFirstPublish: existing.publishedAt === null,
+      },
+    });
 
     return {
       ok: true,
