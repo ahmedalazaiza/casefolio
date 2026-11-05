@@ -60,3 +60,4 @@ export function searchHelpArticles<T extends HelpArticleSummary>(
     .sort((a, b) => b.score - a.score || a.article.order - b.article.order)
     .map((entry) => entry.article);
 }
+

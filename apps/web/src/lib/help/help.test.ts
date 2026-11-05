@@ -56,3 +56,4 @@ describe("Help Center MDX loader & search (C-1003)", () => {
     expect(invalid.success).toBe(false);
   });
 });
+

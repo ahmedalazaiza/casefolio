@@ -217,3 +217,4 @@ export function getHelpArticleBySlug(slug: string): HelpArticle | null {
   const raw = readFileSync(fullPath, "utf-8");
   return parseMdxDocument(safeSlug, raw);
 }
+

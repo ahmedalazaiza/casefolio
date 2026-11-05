@@ -136,3 +136,4 @@ describe("Help Center & Support UI (C-1003 · Figma 2:9899 / 2:10019 / 2:10147)"
     expect(screen.getByText("ahmed@example.com")).toBeInTheDocument();
   });
 });
+

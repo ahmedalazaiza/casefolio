@@ -4,6 +4,19 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "@/lib/auth/session";
 import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import {
+  deleteProjectForUser,
+  duplicateProjectForUser,
+  renameProjectForUser,
+} from "@/lib/projects/dashboard";
+import type {
+  DeleteProjectInput,
+  DeleteProjectResult,
+  DuplicateProjectInput,
+  DuplicateProjectResult,
+  RenameProjectInput,
+  RenameProjectResult,
+} from "@/lib/projects/dashboard-types";
+import {
   checkProjectSlugAvailability,
   publishProjectForUser,
   unpublishProjectForUser,
@@ -19,9 +32,7 @@ import type {
   SaveProjectEditorResult,
 } from "@/lib/projects/types";
 
-export async function createProjectAction(
-  input: CreateProjectInput,
-): Promise<CreateProjectResult> {
+export async function createProjectAction(input: CreateProjectInput): Promise<CreateProjectResult> {
   const ctx = await getServerSession();
   if (!ctx) {
     return {
@@ -117,9 +128,7 @@ export async function publishProjectAction(
   return result;
 }
 
-export async function unpublishProjectAction(
-  projectId: string,
-): Promise<UnpublishProjectResult> {
+export async function unpublishProjectAction(projectId: string): Promise<UnpublishProjectResult> {
   const ctx = await getServerSession();
   if (!ctx) {
     return {
@@ -140,6 +149,79 @@ export async function unpublishProjectAction(
     }
     revalidatePath(`/projects/${result.projectId}/share`);
     revalidatePath("/dashboard");
+  }
+
+  return result;
+}
+
+export async function renameProjectAction(input: RenameProjectInput): Promise<RenameProjectResult> {
+  const ctx = await getServerSession();
+  if (!ctx) {
+    return {
+      ok: false,
+      code: "UNAUTHORIZED",
+      error: "Please sign in to rename this project.",
+    };
+  }
+
+  const result = await renameProjectForUser(input, {
+    id: ctx.user.id,
+    role: ctx.user.role,
+  });
+
+  if (result.ok) {
+    revalidatePath("/dashboard");
+    revalidatePath("/published");
+  }
+
+  return result;
+}
+
+export async function duplicateProjectAction(
+  input: DuplicateProjectInput,
+): Promise<DuplicateProjectResult> {
+  const ctx = await getServerSession();
+  if (!ctx) {
+    return {
+      ok: false,
+      code: "UNAUTHORIZED",
+      error: "Please sign in to duplicate this project.",
+    };
+  }
+
+  const effectivePlan = await resolveEffectivePlanForUser(ctx.user.id);
+  const result = await duplicateProjectForUser(
+    input,
+    { id: ctx.user.id, role: ctx.user.role },
+    effectivePlan,
+  );
+
+  if (result.ok) {
+    revalidatePath("/dashboard");
+  }
+
+  return result;
+}
+
+export async function deleteProjectAction(input: DeleteProjectInput): Promise<DeleteProjectResult> {
+  const ctx = await getServerSession();
+  if (!ctx) {
+    return {
+      ok: false,
+      code: "UNAUTHORIZED",
+      error: "Please sign in to delete this project.",
+    };
+  }
+
+  const result = await deleteProjectForUser(input, {
+    id: ctx.user.id,
+    role: ctx.user.role,
+  });
+
+  if (result.ok) {
+    revalidatePath("/dashboard");
+    revalidatePath("/published");
+    revalidatePath("/exports");
   }
 
   return result;

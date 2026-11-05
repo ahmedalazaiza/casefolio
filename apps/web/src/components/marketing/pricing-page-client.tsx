@@ -7,11 +7,7 @@ import { useState } from "react";
 import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
 import { Badge } from "@/components/ui/badge";
-import {
-  BILLING_PLAN_CATALOG,
-  type BillingInterval,
-  type PaidPlanTier,
-} from "@/lib/billing/plans";
+import { BILLING_PLAN_CATALOG, type BillingInterval, type PaidPlanTier } from "@/lib/billing/plans";
 import { FREE_MONTHLY_EXPORT_LIMIT } from "@/lib/exports/types";
 import { FREE_PROJECT_LIMIT } from "@/lib/projects/types";
 
@@ -155,8 +151,7 @@ export function PricingPageClient({
 }: PricingPageClientProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PaidPlanTier>("pro");
-  const [selectedInterval, setSelectedInterval] =
-    useState<BillingInterval>(initialInterval);
+  const [selectedInterval, setSelectedInterval] = useState<BillingInterval>(initialInterval);
 
   function handleSelectPaidPlan(plan: PaidPlanTier, interval: BillingInterval) {
     setSelectedPlan(plan);
@@ -165,25 +160,19 @@ export function PricingPageClient({
   }
 
   return (
-    <div className="bg-background px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-      <div className="mx-auto flex max-w-6xl flex-col gap-16 lg:gap-20">
+    <div className="bg-background min-w-0 px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+      <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-16 lg:gap-20">
         {/* Header matching Figma 2:8861 */}
         <header className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
           <Badge tone="neutral">Case Study Builder</Badge>
-          <h1 className="text-foreground type-display-l text-balance">
-            Unlock the full builder
-          </h1>
+          <h1 className="text-foreground type-display-l text-balance">Unlock the full builder</h1>
           <p className="text-muted-foreground type-body-l">
-            Create, publish and export case studies from Casefolio templates.
-            Start free with {FREE_PROJECT_LIMIT} projects — upgrade whenever
-            your portfolio or studio grows.
+            Create, publish and export case studies from Casefolio templates. Start free with{" "}
+            {FREE_PROJECT_LIMIT} projects — upgrade whenever your portfolio or studio grows.
           </p>
           {isAuthenticated && currentTier && (
             <p className="text-muted-foreground type-caption pt-1">
-              Signed in on{" "}
-              <strong className="text-foreground capitalize">
-                {currentTier}
-              </strong>{" "}
+              Signed in on <strong className="text-foreground capitalize">{currentTier}</strong>{" "}
               plan ·{" "}
               <Link
                 href="/account/billing"
@@ -210,43 +199,30 @@ export function PricingPageClient({
             data-pro-yearly={paddlePriceMap.pro_yearly}
             data-team-monthly={paddlePriceMap.team_monthly}
             data-team-yearly={paddlePriceMap.team_yearly}
-            className="bg-warning-soft text-foreground mx-auto flex max-w-2xl items-center justify-center gap-2.5 rounded-full px-4 py-2 text-center"
+            className="bg-warning-soft text-foreground mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2.5 rounded-2xl px-4 py-2 text-center sm:rounded-full"
           >
-            <ShieldCheck
-              className="text-warning size-4 shrink-0"
-              aria-hidden="true"
-            />
+            <ShieldCheck className="text-warning size-4 shrink-0" aria-hidden="true" />
             <span className="type-caption">
-              Secure checkout via Paddle ({paddlePriceMap.environment} environment)
-              · Instant VAT receipts · Cancel anytime.
+              Secure checkout via Paddle ({paddlePriceMap.environment} environment) · Instant VAT
+              receipts · Cancel anytime.
             </span>
           </div>
         </section>
 
         {/* Plan comparison matrix */}
-        <section
-          aria-labelledby="plan-comparison-heading"
-          className="flex flex-col gap-6"
-        >
+        <section aria-labelledby="plan-comparison-heading" className="flex min-w-0 flex-col gap-6">
           <div className="flex flex-col gap-2 text-center">
-            <p className="text-accent-foreground type-overline">
-              Plan comparison
-            </p>
-            <h2
-              id="plan-comparison-heading"
-              className="text-foreground type-heading-l"
-            >
+            <p className="text-accent-foreground type-overline">Plan comparison</p>
+            <h2 id="plan-comparison-heading" className="text-foreground type-heading-l">
               Compare every feature &amp; quota
             </h2>
           </div>
 
-          <div className="border-border bg-card overflow-x-auto rounded-xl border">
+          <div className="border-border bg-card relative w-full max-w-full overflow-x-auto rounded-xl border">
             <table className="w-full min-w-160 border-collapse text-left">
               <thead>
                 <tr className="border-border bg-surface border-b">
-                  <th className="text-foreground type-body-s-strong px-5 py-4">
-                    Capability
-                  </th>
+                  <th className="text-foreground type-body-s-strong px-5 py-4">Capability</th>
                   <th className="text-foreground type-body-s-strong px-5 py-4">
                     {BILLING_PLAN_CATALOG.free.name}{" "}
                     <span className="text-muted-foreground font-normal">
@@ -271,12 +247,8 @@ export function PricingPageClient({
                 {COMPARISON_ROWS.map((row) => (
                   <tr key={row.feature} className="hover:bg-surface/60">
                     <td className="px-5 py-3.5">
-                      <p className="text-foreground type-body-s-strong">
-                        {row.feature}
-                      </p>
-                      <p className="text-muted-foreground type-caption">
-                        {row.category}
-                      </p>
+                      <p className="text-foreground type-body-s-strong">{row.feature}</p>
+                      <p className="text-muted-foreground type-caption">{row.category}</p>
                     </td>
                     <td className="px-5 py-3.5">{renderCellValue(row.free)}</td>
                     <td className="px-5 py-3.5">{renderCellValue(row.pro)}</td>
@@ -295,9 +267,7 @@ export function PricingPageClient({
         >
           {PRICING_FAQ_STRIP.map((item) => (
             <div key={item.question} className="flex flex-col gap-2">
-              <h3 className="text-foreground type-heading-s">
-                {item.question}
-              </h3>
+              <h3 className="text-foreground type-heading-s">{item.question}</h3>
               <p className="text-muted-foreground type-body-s">{item.answer}</p>
             </div>
           ))}

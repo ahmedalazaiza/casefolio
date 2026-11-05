@@ -407,10 +407,12 @@ Summary: Implemented the Help Center (`/help`), MDX article pages (`/help/[slug]
 
 ---
 **[C-1004] Dashboard (projects grid, recent, quick create)**  
-Phase: Phase 10 — Landing, Help & Polish · Priority: P0 · Estimate: 4h · Deps: C-401 · Status: Todo  
-- [ ] Empty state matches Figma
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 10 — Landing, Help & Polish · Priority: P0 · Estimate: 4h · Deps: C-401 · Status: Done  
+Branch: `feat/C-1004-dashboard-projects`  
+Summary: Built the Dashboard (`/dashboard`) matching Figma `2:2172` (empty state with `Aa` layered artwork, quick-start CTA, and 3-step guide), `2:2003` (responsive 3-column project grid with `Published`/`Unlisted`/`Draft` badges, segmented status pills, search, type/sort filters, and `Quick create: Mobile / Website` pills), `2:2583` (card context menu), `2:2783` (rename modal preserving public slug), and `2:2980` (type-to-confirm delete modal), backed by owner-authorized Server Actions and `can(userPlan, "create_project")` quota enforcement on duplication, plus Vitest and Playwright E2E/visual verification at `1440px` and `375px`.  
+- [x] Empty state matches Figma
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-1101] Security review**  

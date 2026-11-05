@@ -75,10 +75,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:h-21 lg:px-8">
           <BrandLogo href="/" />
 
-          <nav
-            aria-label="Marketing navigation"
-            className="hidden items-center gap-8 lg:flex"
-          >
+          <nav aria-label="Marketing navigation" className="hidden items-center gap-8 lg:flex">
             {MARKETING_NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -127,10 +124,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                     Explore templates, pricing, and account access.
                   </SheetDescription>
                 </SheetHeader>
-                <nav
-                  aria-label="Mobile marketing navigation"
-                  className="mt-4 flex flex-col gap-1"
-                >
+                <nav aria-label="Mobile marketing navigation" className="mt-4 flex flex-col gap-1">
                   {MARKETING_NAV_ITEMS.map((item) => {
                     const isActive = pathname === item.href;
                     return (
@@ -165,7 +159,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main id="main-content" className="flex-1">
+      <main id="main-content" className="w-full max-w-full min-w-0 flex-1">
         {children}
       </main>
 
@@ -237,4 +231,3 @@ export function MarketingShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
