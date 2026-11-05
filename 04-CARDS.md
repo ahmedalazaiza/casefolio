@@ -217,11 +217,12 @@ Summary: Implemented R2 S3v4 presigned PUT uploads (`@aws-sdk/client-s3` + `@aws
 
 ---
 **[C-502] Image slot field with react-easy-crop**  
-Phase: Phase 5 — Images & Media · Priority: P0 · Estimate: 4h · Deps: C-501,C-402 · Status: Todo  
-- [ ] Crop ratio always matches slot
-- [ ] Crop persisted and re-editable
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 5 — Images & Media · Priority: P0 · Estimate: 4h · Deps: C-501,C-402 · Status: Done  
+Summary: Built `ImageSlotField` custom Puck field with drag-and-drop/file upload, live `%` progress bar, Figma `2:6162` error alerts, `react-easy-crop` modal strictly locked to `template.slots[key].ratio`, persisted pixel `crop` rect (`ImageSlotValue.crop` + `PATCH /api/assets/[assetId]`), re-editable crop restoration, `Replace`/`Remove` actions, and SSR/CSR-pure crop framing in `ImageSlotFrame`.  
+- [x] Crop ratio always matches slot
+- [x] Crop persisted and re-editable
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-503] Cloudflare Images delivery + srcset**  

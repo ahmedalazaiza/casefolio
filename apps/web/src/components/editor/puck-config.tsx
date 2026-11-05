@@ -1,4 +1,5 @@
 import { Render, type Config, type CustomField, type Data } from "@puckeditor/core";
+import { ImageSlotField } from "@/components/editor/image-slot-field";
 import { RichTextField } from "@/components/editor/rich-text-field";
 import {
   CtaSection,
@@ -20,7 +21,6 @@ import {
   type ResultsSectionProps,
   type ScreensGallerySectionProps,
 } from "@/components/sections";
-import { Input } from "@/components/ui/input";
 import type {
   ImageSlotValue,
   PuckDocument,
@@ -66,50 +66,33 @@ function buildColorTokenSelectField(label: string, colorKeys: readonly string[])
   };
 }
 
+export interface CasefolioPuckEditorContext {
+  projectId?: string;
+  slots?: Record<string, TemplateSlotDefinition>;
+}
+
 function createImageSlotCustomField(
   slotKey: string,
   label: string,
+  editorContext?: CasefolioPuckEditorContext,
 ): CustomField<ImageSlotValue | undefined> {
   return {
     type: "custom",
     label,
     render: ({ value, onChange, readOnly }) => {
-      const current: ImageSlotValue = value ?? {
-        slot: slotKey,
-        src: "",
-        alt: "",
-        crop: null,
-      };
+      const resolvedKey = value?.slot || slotKey;
+      const slotDefinition =
+        editorContext?.slots?.[resolvedKey] ?? editorContext?.slots?.[slotKey];
       return (
-        <div className="border-border bg-surface flex flex-col gap-2 rounded-lg border p-3">
-          <span className="text-tertiary type-overline">{label}</span>
-          <Input
-            type="url"
-            placeholder="Image URL (slot upload in editor)"
-            value={current.src}
-            disabled={readOnly}
-            onChange={(event) =>
-              onChange({
-                ...current,
-                slot: current.slot || slotKey,
-                src: event.target.value,
-              })
-            }
-          />
-          <Input
-            type="text"
-            placeholder="Alt text"
-            value={current.alt}
-            disabled={readOnly}
-            onChange={(event) =>
-              onChange({
-                ...current,
-                slot: current.slot || slotKey,
-                alt: event.target.value,
-              })
-            }
-          />
-        </div>
+        <ImageSlotField
+          slotKey={slotKey}
+          label={label}
+          slotDefinition={slotDefinition}
+          projectId={editorContext?.projectId}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+        />
       );
     },
   };
@@ -127,6 +110,7 @@ function createRichTextCustomField(label: string): CustomField<RichTextValue> {
 
 export function createCasefolioPuckConfig(
   themeColorKeys: readonly string[] = DEFAULT_COLOR_TOKENS,
+  editorContext?: CasefolioPuckEditorContext,
 ): Config<CasefolioPuckComponentMap> {
   const colorField = buildColorTokenSelectField("Background token", themeColorKeys);
   const accentField = buildColorTokenSelectField("Accent token", themeColorKeys);
@@ -145,8 +129,8 @@ export function createCasefolioPuckConfig(
           eyebrow: { type: "text", label: "Eyebrow" },
           title: { type: "text", label: "Title" },
           subtitle: { type: "textarea", label: "Subtitle" },
-          logo: createImageSlotCustomField("hero.logo", "Logo slot"),
-          mockup: createImageSlotCustomField("hero.mockup", "Hero mockup slot"),
+          logo: createImageSlotCustomField("hero.logo", "Logo slot", editorContext),
+          mockup: createImageSlotCustomField("hero.mockup", "Hero mockup slot", editorContext),
           background: colorField,
           accent: accentField,
         },
@@ -166,7 +150,7 @@ export function createCasefolioPuckConfig(
               value: { type: "text", label: "Value" },
             },
           },
-          banner: createImageSlotCustomField("overview.banner", "Banner slot"),
+          banner: createImageSlotCustomField("overview.banner", "Banner slot", editorContext),
           background: colorField,
         },
         render: ({ id, puck, ...props }) => <OverviewSection id={id} puck={puck} {...props} />,
@@ -203,7 +187,11 @@ export function createCasefolioPuckConfig(
               number: { type: "text", label: "Step number" },
               title: { type: "text", label: "Step title" },
               body: { type: "textarea", label: "Step description" },
-              image: createImageSlotCustomField("process.step.image", "Step image"),
+              image: createImageSlotCustomField(
+                "process.step.image",
+                "Step image",
+                editorContext,
+              ),
             },
           },
           background: colorField,
@@ -233,6 +221,7 @@ export function createCasefolioPuckConfig(
               image: createImageSlotCustomField(
                 "gallery.screen",
                 "Screen image",
+                editorContext,
               ) as CustomField<ImageSlotValue>,
             },
           },
@@ -267,7 +256,7 @@ export function createCasefolioPuckConfig(
           quote: { type: "textarea", label: "Quote" },
           author: { type: "text", label: "Author" },
           role: { type: "text", label: "Role" },
-          avatar: createImageSlotCustomField("quote.avatar", "Avatar"),
+          avatar: createImageSlotCustomField("quote.avatar", "Avatar", editorContext),
           background: colorField,
         },
         render: ({ id, puck, ...props }) => <QuoteSection id={id} puck={puck} {...props} />,
@@ -291,7 +280,7 @@ export function createCasefolioPuckConfig(
         fields: {
           heading: { type: "text", label: "Heading" },
           body: createRichTextCustomField("Body"),
-          image: createImageSlotCustomField("custom.image", "Image"),
+          image: createImageSlotCustomField("custom.image", "Image", editorContext),
           background: colorField,
         },
         render: ({ id, puck, ...props }) => <CustomSection id={id} puck={puck} {...props} />,

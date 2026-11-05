@@ -185,8 +185,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-501,C-402
 - **Description:** Ratio locked from template.slots; save crop rect; replace/remove.
 - **Acceptance criteria:**
-  - [ ] Crop ratio always matches slot
-  - [ ] Crop persisted and re-editable
+  - [x] Crop ratio always matches slot
+  - [x] Crop persisted and re-editable
 
 ### C-503 — Cloudflare Images delivery + srcset
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-502

@@ -1,5 +1,10 @@
 import { ImageIcon } from "lucide-react";
 import {
+  computeCssCropFramingStyle,
+  isUrlServerPreCropped,
+  parseNaturalDimensionsFromSrc,
+} from "@/lib/storage/image-dimensions";
+import {
   parseAspectRatio,
   type ImageSlotValue,
   type TemplateProjectType,
@@ -56,17 +61,28 @@ export function ImageSlotFrame({
   const chrome = resolveDeviceChrome(slotDefinition, projectType, preferDeviceChrome);
   const hasSrc = Boolean(image?.src && image.src.trim().length > 0);
   const altText = image?.alt || image?.slot || "Case study visual";
+  const naturalDims = hasSrc ? parseNaturalDimensionsFromSrc(image!.src) : null;
+  const cropFramingStyle =
+    hasSrc && image?.crop && naturalDims && !isUrlServerPreCropped(image.src)
+      ? computeCssCropFramingStyle(naturalDims.width, naturalDims.height, image.crop)
+      : null;
 
   const viewportContent = (
     <div
       data-slot="image-slot-viewport"
       data-slot-key={image?.slot ?? "unbound"}
       data-ratio={ratioText}
+      data-cropped={image?.crop ? "true" : "false"}
       style={{ aspectRatio: `${parsedRatio.width} / ${parsedRatio.height}` }}
       className="bg-sunken/70 relative flex w-full items-center justify-center overflow-hidden"
     >
       {hasSrc ? (
-        <img src={image!.src} alt={altText} className="size-full object-cover" />
+        <img
+          src={image!.src}
+          alt={altText}
+          style={cropFramingStyle ?? undefined}
+          className={cn(!cropFramingStyle && "size-full object-cover")}
+        />
       ) : compact ? (
         <span
           title={altText}
