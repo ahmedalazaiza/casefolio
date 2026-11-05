@@ -293,8 +293,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P2 · **Estimate:** 4h · **Depends on:** C-601
 - **Description:** Report public case studies, review queue, takedown.
 - **Acceptance criteria:**
-  - [ ] Takedown makes page 404
-  - [ ] Audit log entry
+  - [x] Takedown makes page 404
+  - [x] Audit log entry
 
 ### C-906 — Admin settings, roles & audit log
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-202

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
+import { ReportCaseStudyButton } from "@/components/public/report-case-study-button";
 import { CasefolioWatermark } from "@/components/sections/casefolio-watermark";
 import { recordPublishedProjectView } from "@/lib/analytics/page-views";
 import { can } from "@/lib/entitlements";
@@ -110,6 +111,10 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
         className="rounded-none"
       />
       <CasefolioWatermark visible={!can(published.owner.plan, "remove_watermark")} />
+      <ReportCaseStudyButton
+        projectId={published.project.id}
+        projectName={published.project.name}
+      />
     </main>
   );
 }

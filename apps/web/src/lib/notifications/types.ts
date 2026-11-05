@@ -7,6 +7,7 @@ export const NOTIFICATION_KINDS = [
   "payment_failed",
   "team_invite",
   "template_update",
+  "moderation_takedown",
 ] as const;
 
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

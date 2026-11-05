@@ -360,11 +360,13 @@ Summary: Implemented admin users directory, user detail, and subscriptions overv
 
 ---
 **[C-905] Moderation**  
-Phase: Phase 9 — Admin Panel (full) · Priority: P2 · Estimate: 4h · Deps: C-601 · Status: Todo  
-- [ ] Takedown makes page 404
-- [ ] Audit log entry
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 9 — Admin Panel (full) · Priority: P2 · Estimate: 4h · Deps: C-601 · Status: Done  
+Branch: `feat/C-905-admin-moderation`  
+Summary: Added public case-study reporting (`ReportCaseStudyButton` on `/p/[slug]` + rate-limited `POST /api/reports`), moderation queue & review service (`src/lib/admin/moderation.ts`, `src/lib/admin/moderation-types.ts`, `/api/admin/moderation`), `/admin/moderation` UI (`32:9737` queue + review panel and `32:10481` empty state), owner takedown notification + email, immediate unpublish so `/p/[slug]` returns HTTP 404, and `audit_logs` recording (`moderation.test.ts`, `admin-moderation.test.tsx`).  
+- [x] Takedown makes page 404
+- [x] Audit log entry
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-906] Admin settings, roles & audit log**  
