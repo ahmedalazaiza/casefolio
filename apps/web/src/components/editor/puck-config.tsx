@@ -21,6 +21,7 @@ import {
   type ResultsSectionProps,
   type ScreensGallerySectionProps,
 } from "@/components/sections";
+import { buildGoogleFontsStylesheetHref } from "@/lib/template/curated-themes";
 import type {
   ImageSlotValue,
   PuckDocument,
@@ -319,6 +320,11 @@ export function TemplatePuckRenderer({
 
   const colorKeys = resolvedTheme ? Object.keys(resolvedTheme.colors) : DEFAULT_COLOR_TOKENS;
   const config = createCasefolioPuckConfig(colorKeys);
+  const googleFontsHref = buildGoogleFontsStylesheetHref(resolvedTheme);
+  const visiblePuckData: PuckDocument = {
+    ...resolvedPuck,
+    content: resolvedPuck.content.filter((section) => !section.props.hidden),
+  };
 
   return (
     <div
@@ -327,9 +333,12 @@ export function TemplatePuckRenderer({
       style={buildTemplateThemeStyle(resolvedTheme)}
       className={cn("overflow-hidden rounded-xl", className)}
     >
+      {googleFontsHref && (
+        <link rel="stylesheet" href={googleFontsHref} data-casefolio-theme-fonts="true" />
+      )}
       <Render
         config={config as unknown as Config}
-        data={resolvedPuck as unknown as Data}
+        data={visiblePuckData as unknown as Data}
         metadata={{
           projectType: resolvedType,
           slots: resolvedSlots,
