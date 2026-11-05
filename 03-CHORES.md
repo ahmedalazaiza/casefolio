@@ -275,7 +275,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-304
 - **Description:** Search, filter by status/type/category/tier, detail with versions & usage.
 - **Acceptance criteria:**
-  - [ ] Matches Figma Admin Panel 31:6665
+  - [x] Matches Figma Admin Panel 31:6665
 
 ### C-903 — Admin categories management
 - **Priority:** P2 · **Estimate:** 2h · **Depends on:** C-902

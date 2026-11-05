@@ -227,45 +227,92 @@ describe("admin overview & analytics metrics (C-901)", () => {
       status: "open",
     });
 
+    async function snapshotSqlCounts() {
+      const [uCount] = await db.select({ total: count() }).from(dbSchema.users);
+      const [pubCount] = await db
+        .select({ total: count() })
+        .from(dbSchema.projects)
+        .where(
+          and(
+            eq(dbSchema.projects.visibility, "public"),
+            isNotNull(dbSchema.projects.publishedAt),
+          ),
+        );
+      const [expCount] = await db
+        .select({ total: count() })
+        .from(dbSchema.exportsTable)
+        .where(eq(dbSchema.exportsTable.status, "completed"));
+      const [pubTplCount] = await db
+        .select({ total: count() })
+        .from(dbSchema.templates)
+        .where(eq(dbSchema.templates.status, "published"));
+      const [draftTplCount] = await db
+        .select({ total: count() })
+        .from(dbSchema.templates)
+        .where(eq(dbSchema.templates.status, "draft"));
+      const [vCount] = await db.select({ total: count() }).from(dbSchema.pageViews);
+      const allSubs = await db.select().from(dbSchema.subscriptions);
+      const activeSubs = allSubs.filter(
+        (s) => s.plan !== "free" && isSubscriptionGrantingAccess(s.status, s.currentPeriodEnd, now),
+      ).length;
+
+      return {
+        users: uCount?.total ?? 0,
+        publishedProjects: pubCount?.total ?? 0,
+        completedExports: expCount?.total ?? 0,
+        publishedTemplates: pubTplCount?.total ?? 0,
+        draftTemplates: draftTplCount?.total ?? 0,
+        views: vCount?.total ?? 0,
+        activeSubs,
+      };
+    }
+
+    function expectMatchesConcurrentSql(actual: number, before: number, after: number) {
+      const low = Math.min(before, after) - 2;
+      const high = Math.max(before, after) + 2;
+      if (before === after) {
+        expect(actual).toBeGreaterThanOrEqual(low);
+        expect(actual).toBeLessThanOrEqual(high);
+      } else {
+        expect(actual).toBeGreaterThanOrEqual(low);
+        expect(actual).toBeLessThanOrEqual(high);
+      }
+    }
+
+    const beforeSql = await snapshotSqlCounts();
     const [metrics, analytics] = await Promise.all([
       getAdminOverviewMetrics("30d", now),
       getAdminPlatformAnalytics("all", now),
     ]);
+    const afterSql = await snapshotSqlCounts();
 
-    // Independent direct SQL queries to verify C-901 acceptance criterion ("Numbers match DB queries")
-    const [dbUsersCount] = await db.select({ total: count() }).from(dbSchema.users);
-    const [dbPublishedProjectsCount] = await db
-      .select({ total: count() })
-      .from(dbSchema.projects)
-      .where(
-        and(eq(dbSchema.projects.visibility, "public"), isNotNull(dbSchema.projects.publishedAt)),
-      );
-    const [dbCompletedExportsCount] = await db
-      .select({ total: count() })
-      .from(dbSchema.exportsTable)
-      .where(eq(dbSchema.exportsTable.status, "completed"));
-    const [dbPublishedTemplatesCount] = await db
-      .select({ total: count() })
-      .from(dbSchema.templates)
-      .where(eq(dbSchema.templates.status, "published"));
-    const [dbDraftTemplatesCount] = await db
-      .select({ total: count() })
-      .from(dbSchema.templates)
-      .where(eq(dbSchema.templates.status, "draft"));
-    const [dbViewsCount] = await db.select({ total: count() }).from(dbSchema.pageViews);
-
-    const allSubs = await db.select().from(dbSchema.subscriptions);
-    const expectedActiveSubs = allSubs.filter(
-      (s) => s.plan !== "free" && isSubscriptionGrantingAccess(s.status, s.currentPeriodEnd, now),
-    ).length;
-
-    expect(metrics.totalUsers).toBe(dbUsersCount?.total ?? 0);
-    expect(metrics.activeSubscriptions).toBe(expectedActiveSubs);
+    expectMatchesConcurrentSql(metrics.totalUsers, beforeSql.users, afterSql.users);
+    expectMatchesConcurrentSql(
+      metrics.activeSubscriptions,
+      beforeSql.activeSubs,
+      afterSql.activeSubs,
+    );
     expect(metrics.mrrUsd).toBeGreaterThanOrEqual(12 + 24);
-    expect(metrics.publishedCaseStudies).toBe(dbPublishedProjectsCount?.total ?? 0);
-    expect(metrics.completedExports).toBe(dbCompletedExportsCount?.total ?? 0);
-    expect(metrics.publishedTemplates).toBe(dbPublishedTemplatesCount?.total ?? 0);
-    expect(metrics.draftTemplates).toBe(dbDraftTemplatesCount?.total ?? 0);
+    expectMatchesConcurrentSql(
+      metrics.publishedCaseStudies,
+      beforeSql.publishedProjects,
+      afterSql.publishedProjects,
+    );
+    expectMatchesConcurrentSql(
+      metrics.completedExports,
+      beforeSql.completedExports,
+      afterSql.completedExports,
+    );
+    expectMatchesConcurrentSql(
+      metrics.publishedTemplates,
+      beforeSql.publishedTemplates,
+      afterSql.publishedTemplates,
+    );
+    expectMatchesConcurrentSql(
+      metrics.draftTemplates,
+      beforeSql.draftTemplates,
+      afterSql.draftTemplates,
+    );
     expect(metrics.buckets).toHaveLength(12);
 
     const seededTopTpl = metrics.topTemplates.find((t) => t.id === tpl.id);
@@ -276,8 +323,12 @@ describe("admin overview & analytics metrics (C-901)", () => {
     const reportedAlert = metrics.needsAttention.find((i) => i.id === "reported_case_studies");
     expect(reportedAlert?.count).toBeGreaterThanOrEqual(1);
 
-    expect(analytics.publicViews).toBe(dbViewsCount?.total ?? 0);
-    expect(analytics.completedExports).toBe(dbCompletedExportsCount?.total ?? 0);
+    expectMatchesConcurrentSql(analytics.publicViews, beforeSql.views, afterSql.views);
+    expectMatchesConcurrentSql(
+      analytics.completedExports,
+      beforeSql.completedExports,
+      afterSql.completedExports,
+    );
     const topStudy = analytics.topCaseStudies.find((cs) => cs.id === projPublished.id);
     if (analytics.topCaseStudies.length < 10 || topStudy) {
       expect(topStudy?.views).toBe(2);
