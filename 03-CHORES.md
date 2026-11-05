@@ -260,8 +260,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P2 · **Estimate:** 4h · **Depends on:** C-201
 - **Description:** Export ready, payment issues, team invites, template updates.
 - **Acceptance criteria:**
-  - [ ] Bell shows unread count
-  - [ ] Email via Resend
+  - [x] Bell shows unread count
+  - [x] Email via Resend
 
 ## Phase 9 — Admin Panel (full)
 

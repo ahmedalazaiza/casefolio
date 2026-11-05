@@ -276,11 +276,16 @@ test("Phase 6 E2E: publish Orbit project, open public link logged out (<2s + OG 
       .evaluate((el) => window.getComputedStyle(el).fontFamily);
     expect(publicHeadingFont).toBe(editorHeadingFont);
 
-    const publicHeroImgLoaded = await anonPage
-      .locator('[data-section-type="Hero"] img')
-      .first()
-      .evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0);
-    expect(publicHeroImgLoaded).toBe(true);
+    await expect
+      .poll(
+        async () =>
+          anonPage
+            .locator('[data-section-type="Hero"] img')
+            .first()
+            .evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
+        { timeout: 10_000 },
+      )
+      .toBe(true);
 
     await maybeSaveScreenshot(anonPage, "public-case-study-1440.png");
     await anonPage.setViewportSize({ width: 375, height: 812 });

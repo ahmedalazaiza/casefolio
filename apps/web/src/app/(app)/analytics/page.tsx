@@ -30,7 +30,7 @@ export default async function WorkspaceAnalyticsOverviewPage() {
   return (
     <div
       data-testid="workspace-analytics-overview"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8"
+      className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-2 py-4 sm:px-6 sm:py-8 lg:px-8"
     >
       {/* Page Header (Matches Figma 2:8707) */}
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -73,7 +73,7 @@ export default async function WorkspaceAnalyticsOverviewPage() {
 
         <article
           data-testid="overview-kpi-top-page"
-          className="border-border bg-elevated flex flex-col gap-2 rounded-2xl border p-6"
+          className="border-border bg-elevated flex min-w-0 flex-col gap-2 rounded-2xl border p-6"
         >
           <span className="text-tertiary type-overline">TOP PAGE</span>
           <span className="text-foreground type-heading-l truncate">
@@ -103,7 +103,7 @@ export default async function WorkspaceAnalyticsOverviewPage() {
       ) : (
         <section
           data-testid="overview-projects-table"
-          className="border-border bg-elevated overflow-x-auto rounded-2xl border"
+          className="border-border bg-elevated w-full max-w-full min-w-0 overflow-x-auto rounded-2xl border"
         >
           <table className="w-full min-w-[600px] border-collapse text-left">
             <thead>

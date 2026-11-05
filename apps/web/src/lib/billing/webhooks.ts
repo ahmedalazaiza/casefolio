@@ -2,6 +2,7 @@ import { desc, eq, or, type PlanTier } from "@casefolio/db";
 import { z } from "zod";
 import { env } from "@/env";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
+import { notifyPaymentIssue } from "@/lib/notifications/service";
 import {
   isSubscriptionGrantingAccess,
   type BillingInterval,
@@ -473,6 +474,9 @@ export async function processValidatedPaddleWebhook(
       },
       upgraded: isUpgradeEvent,
       distinctId: verifiedUserId ?? verifiedOrgId,
+      paymentFailedUserId:
+        details.lifecycleStatus === "past_due" ? verifiedUserId : null,
+      storedPlan,
     };
   });
 
@@ -486,6 +490,18 @@ export async function processValidatedPaddleWebhook(
         eventType: envelope.event_type,
       },
     });
+  }
+
+  if (
+    !txOutcome.result.deduplicated &&
+    "paymentFailedUserId" in txOutcome &&
+    txOutcome.paymentFailedUserId
+  ) {
+    await notifyPaymentIssue({
+      userId: txOutcome.paymentFailedUserId,
+      plan: txOutcome.storedPlan,
+      eventId: envelope.event_id,
+    }).catch(() => undefined);
   }
 
   return txOutcome.result;

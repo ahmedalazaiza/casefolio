@@ -18,6 +18,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { ProBadge } from "@/components/ui/badge";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import {
@@ -28,6 +29,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import type { NotificationItem } from "@/lib/notifications/types";
 import { cn } from "@/lib/utils";
 
 export interface WorkspaceNavItem {
@@ -59,6 +61,8 @@ export interface AppShellProps {
   projectsLimit?: number | null;
   renewsLabel?: string;
   failedPaymentPauseDateLabel?: string | null;
+  initialUnreadNotifications?: number;
+  initialNotifications?: NotificationItem[];
 }
 
 function isNavItemActive(pathname: string, href: string): boolean {
@@ -120,6 +124,8 @@ export function AppShell({
   projectsLimit = 10,
   renewsLabel = "Renews Nov 30, 2026",
   failedPaymentPauseDateLabel = null,
+  initialUnreadNotifications = 0,
+  initialNotifications = [],
 }: AppShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -203,6 +209,10 @@ export function AppShell({
             >
               <Search className="size-4" />
             </button>
+            <NotificationsBell
+              initialUnreadCount={initialUnreadNotifications}
+              initialNotifications={initialNotifications}
+            />
             <ThemeToggle />
             <UserAccountMenu
               initials={userInitials}
@@ -233,7 +243,7 @@ export function AppShell({
         )}
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex min-w-0 flex-1">
         <aside
           aria-label="Workspace sidebar"
           className="border-border bg-background hidden w-64 shrink-0 flex-col justify-between border-r p-4 lg:flex"
