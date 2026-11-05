@@ -215,7 +215,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-602
 - **Description:** Export dialog with presets, progress, download history.
 - **Acceptance criteria:**
-  - [ ] User can re-download past exports
+  - [x] User can re-download past exports
 
 ## Phase 7 — Billing & Gating
 
