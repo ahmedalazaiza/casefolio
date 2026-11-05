@@ -226,7 +226,7 @@ export function PaddleCheckoutModal({
                     onClick={() => setSelectedPlan(tier)}
                     className={`flex flex-col items-start gap-1 rounded-lg border p-3.5 text-left transition-colors ${
                       active
-                        ? "border-primary bg-accent-soft text-foreground"
+                        ? "border-primary bg-accent text-foreground"
                         : "border-border bg-surface text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -287,7 +287,7 @@ export function PaddleCheckoutModal({
               <ul className="flex flex-col gap-2">
                 {planDef.features.map((feat) => (
                   <li key={feat} className="text-muted-foreground type-body-s flex items-center gap-2">
-                    <Check className="text-status-success size-4 shrink-0" />
+                    <Check className="text-success size-4 shrink-0" />
                     <span>{feat}</span>
                   </li>
                 ))}
@@ -297,7 +297,7 @@ export function PaddleCheckoutModal({
             {errorMessage && (
               <p
                 role="alert"
-                className="border-status-danger/30 bg-status-danger-soft text-status-danger type-body-s rounded-lg border px-3.5 py-2.5"
+                className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
               >
                 {errorMessage}
               </p>
@@ -373,13 +373,13 @@ export function PaddleCheckoutModal({
                   </span>
                 </div>
               </div>
-              <ShieldCheck className="text-status-success size-4 shrink-0" />
+              <ShieldCheck className="text-success size-4 shrink-0" />
             </div>
 
             {errorMessage && (
               <p
                 role="alert"
-                className="border-status-danger/30 bg-status-danger-soft text-status-danger type-body-s rounded-lg border px-3.5 py-2.5"
+                className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
               >
                 {errorMessage}
               </p>

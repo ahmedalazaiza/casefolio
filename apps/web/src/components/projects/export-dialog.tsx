@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { can } from "@/lib/entitlements";
 import {
   EXPORT_PRESETS,
   type EnqueueExportResult,
@@ -64,10 +66,16 @@ export function ExportCaseStudyDialog({
   const [activeJob, setActiveJob] = useState<ExportHistoryItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  const isFreePlan = ownerPlan === "free";
+  const isFreePlan = !can(ownerPlan, "remove_watermark");
   const selectedPreset = EXPORT_PRESETS.find((p) => p.format === selectedFormat) ?? EXPORT_PRESETS[0]!;
-  const isSelectedLocked = isFreePlan && selectedPreset.requiresPro;
+  const isSelectedLocked =
+    selectedPreset.format === "pdf"
+      ? !can(ownerPlan, "export_pdf")
+      : selectedPreset.format === "behance"
+        ? !can(ownerPlan, "export_behance")
+        : false;
 
   useEffect(() => {
     if (!activeJob) return;
@@ -292,7 +300,15 @@ export function ExportCaseStudyDialog({
         <DialogFooter>
           {isSelectedLocked ? (
             <Button asChild>
-              <Link href="/account" data-testid="dialog-upgrade-pro-cta">
+              <Link
+                href="/account"
+                data-testid="dialog-upgrade-pro-cta"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setOpen(false);
+                  setUpgradeOpen(true);
+                }}
+              >
                 Upgrade to Pro to Unlock {selectedPreset.fileExtension.toUpperCase()}
               </Link>
             </Button>
@@ -317,6 +333,14 @@ export function ExportCaseStudyDialog({
           )}
         </DialogFooter>
       </DialogContent>
+
+      <UpgradePromptDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        featureTitle={`Unlock ${selectedPreset.label}`}
+        featureDescription="Upgrade to Casefolio Pro for high-resolution PDF case studies, Behance 1400px slices, and watermark-free exports."
+      />
     </Dialog>
   );
 }
+

@@ -8,6 +8,7 @@ import {
 } from "@/app/(app)/account/team/team-workspace-client";
 import { requireSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
+import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 
 export const metadata: Metadata = {
   title: "Team Workspace — Casefolio",
@@ -32,47 +33,49 @@ export default async function AccountTeamPage({
 
   const orgIds = userMemberships.map((row) => row.organization.id);
 
-  const [allOrgMembers, allOrgPendingInvites, incomingInviteRows] = await Promise.all([
-    orgIds.length > 0
-      ? db
-          .select({
-            membership: dbSchema.memberships,
-            memberUser: dbSchema.users,
-          })
-          .from(dbSchema.memberships)
-          .innerJoin(dbSchema.users, eq(dbSchema.memberships.userId, dbSchema.users.id))
-          .where(inArray(dbSchema.memberships.orgId, orgIds))
-      : Promise.resolve([]),
-    orgIds.length > 0
-      ? db
-          .select()
-          .from(dbSchema.invitations)
-          .where(
-            and(
-              inArray(dbSchema.invitations.organizationId, orgIds),
-              eq(dbSchema.invitations.status, "pending"),
-            ),
-          )
-      : Promise.resolve([]),
-    db
-      .select({
-        invitation: dbSchema.invitations,
-        organization: dbSchema.organizations,
-        inviter: dbSchema.users,
-      })
-      .from(dbSchema.invitations)
-      .innerJoin(
-        dbSchema.organizations,
-        eq(dbSchema.invitations.organizationId, dbSchema.organizations.id),
-      )
-      .innerJoin(dbSchema.users, eq(dbSchema.invitations.inviterId, dbSchema.users.id))
-      .where(
-        and(
-          eq(dbSchema.invitations.email, user.email.toLowerCase()),
-          eq(dbSchema.invitations.status, "pending"),
+  const [allOrgMembers, allOrgPendingInvites, incomingInviteRows, effectivePlan] =
+    await Promise.all([
+      orgIds.length > 0
+        ? db
+            .select({
+              membership: dbSchema.memberships,
+              memberUser: dbSchema.users,
+            })
+            .from(dbSchema.memberships)
+            .innerJoin(dbSchema.users, eq(dbSchema.memberships.userId, dbSchema.users.id))
+            .where(inArray(dbSchema.memberships.orgId, orgIds))
+        : Promise.resolve([]),
+      orgIds.length > 0
+        ? db
+            .select()
+            .from(dbSchema.invitations)
+            .where(
+              and(
+                inArray(dbSchema.invitations.organizationId, orgIds),
+                eq(dbSchema.invitations.status, "pending"),
+              ),
+            )
+        : Promise.resolve([]),
+      db
+        .select({
+          invitation: dbSchema.invitations,
+          organization: dbSchema.organizations,
+          inviter: dbSchema.users,
+        })
+        .from(dbSchema.invitations)
+        .innerJoin(
+          dbSchema.organizations,
+          eq(dbSchema.invitations.organizationId, dbSchema.organizations.id),
+        )
+        .innerJoin(dbSchema.users, eq(dbSchema.invitations.inviterId, dbSchema.users.id))
+        .where(
+          and(
+            eq(dbSchema.invitations.email, user.email.toLowerCase()),
+            eq(dbSchema.invitations.status, "pending"),
+          ),
         ),
-      ),
-  ]);
+      resolveEffectivePlanForUser(user.id),
+    ]);
 
   const organizations: TeamOrganizationSummary[] = userMemberships.map((row) => ({
     id: row.organization.id,
@@ -142,6 +145,7 @@ export default async function AccountTeamPage({
       </nav>
 
       <TeamWorkspaceClient
+        userPlan={effectivePlan}
         activeOrganizationId={session.activeOrganizationId ?? null}
         organizations={organizations}
         incomingInvitations={incomingInvitations}

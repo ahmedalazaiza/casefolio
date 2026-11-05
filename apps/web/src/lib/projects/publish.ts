@@ -1,6 +1,7 @@
 import { and, eq, ne, type PlanTier, type UserRole } from "@casefolio/db";
 import { z } from "zod";
 import { db, dbSchema } from "@/lib/db";
+import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { slugifyProjectName } from "@/lib/projects/types";
 import {
   puckDocumentSchema,
@@ -398,6 +399,8 @@ export async function getProjectShareSettingsForUser(
     row.project.publishedAt !== null &&
     Boolean(row.project.slug);
 
+  const effectiveOwnerPlan = await resolveEffectivePlanForUser(row.project.ownerId);
+
   return {
     status: "ok",
     settings: {
@@ -411,7 +414,7 @@ export async function getProjectShareSettingsForUser(
       isPublished,
       publishedAtIso: row.project.publishedAt ? row.project.publishedAt.toISOString() : null,
       updatedAtIso: row.project.updatedAt.toISOString(),
-      ownerPlan: row.ownerPlan,
+      ownerPlan: effectiveOwnerPlan,
       appBaseUrl: resolvePublicAppBaseUrl(),
       preview: {
         eyebrow: meta.eyebrow,
@@ -661,6 +664,7 @@ export async function getPublishedProjectBySlug(
     : structuredClone(tplDoc.template.theme);
 
   const meta = extractCaseStudyMetaFromPuck(row.project.name, resolvedPuck);
+  const effectiveOwnerPlan = await resolveEffectivePlanForUser(row.owner.id);
 
   return {
     project: {
@@ -684,8 +688,9 @@ export async function getPublishedProjectBySlug(
     owner: {
       id: row.owner.id,
       name: row.owner.name,
-      plan: row.owner.plan,
+      plan: effectiveOwnerPlan,
     },
     meta,
   };
 }
+

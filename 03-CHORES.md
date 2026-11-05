@@ -231,8 +231,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 4h · **Depends on:** C-701,C-305
 - **Description:** `can(user, feature)` helper; Pro badge/tag; gate templates, exports, watermark, team seats.
 - **Acceptance criteria:**
-  - [ ] Server-side checks on every gated API
-  - [ ] Upgrade prompts shown
+  - [x] Server-side checks on every gated API
+  - [x] Upgrade prompts shown
 
 ### C-703 — Account & billing pages
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-701

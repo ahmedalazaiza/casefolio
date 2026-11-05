@@ -159,6 +159,115 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
       .set({ currentVersionId: versionRow.id, updatedAt: new Date() })
       .where(eq(templates.id, tpl.id));
 
+    // Seed published Pro template ("Meridian") for Pro badge & entitlement gating
+    const [saasCategory] = await db
+      .insert(categories)
+      .values({
+        name: "SaaS",
+        slug: "saas",
+        sort: 2,
+      })
+      .onConflictDoUpdate({
+        target: categories.slug,
+        set: {
+          name: "SaaS",
+          sort: 2,
+        },
+      })
+      .returning({ id: categories.id });
+
+    if (saasCategory) {
+      const meridianPayload = structuredClone(orbitPayload) as unknown as Record<
+        string,
+        unknown
+      > & {
+        template: Record<string, unknown>;
+        puck: {
+          root: { props: Record<string, unknown> };
+          content: Array<{ type: string; props: Record<string, unknown> }>;
+        };
+      };
+      meridianPayload.template.id = "tpl_meridian_web_v1";
+      meridianPayload.template.slug = "meridian-pro";
+      meridianPayload.template.name = "Meridian";
+      meridianPayload.template.type = "web";
+      meridianPayload.template.version = "1.0.0";
+      meridianPayload.template.status = "published";
+      meridianPayload.template.category = "SaaS";
+      meridianPayload.template.tier = "pro";
+      meridianPayload.template.cover = {
+        src: "https://cdn.casefolio.app/templates/meridian-pro/cover.png",
+        ratio: "4:3",
+      };
+      meridianPayload.template.slots = {
+        "hero.mockup": { ratio: "16:10", minWidth: 1200, device: "browser" },
+        "hero.logo": { ratio: "1:1", minWidth: 120 },
+        "overview.banner": { ratio: "16:9", minWidth: 1200 },
+        "process.step.image": { ratio: "4:3", minWidth: 600 },
+        "gallery.screen": { ratio: "16:10", minWidth: 1200, device: "browser" },
+      };
+      meridianPayload.puck.root.props.title = "Meridian — B2B Revenue OS";
+      const heroNode = meridianPayload.puck.content.find((item) => item.type === "Hero");
+      if (heroNode) {
+        heroNode.props.eyebrow = "Case Study · Web SaaS";
+        heroNode.props.title = "Meridian — Revenue analytics without spreadsheets";
+        heroNode.props.subtitle =
+          "Designing a unified forecasting workspace for enterprise RevOps teams.";
+      }
+
+      const [proTpl] = await db
+        .insert(templates)
+        .values({
+          slug: "meridian-pro",
+          name: "Meridian",
+          type: "web",
+          categoryId: saasCategory.id,
+          tier: "pro",
+          status: "published",
+          coverUrl: "https://cdn.casefolio.app/templates/meridian-pro/cover.png",
+        })
+        .onConflictDoUpdate({
+          target: templates.slug,
+          set: {
+            name: "Meridian",
+            type: "web",
+            categoryId: saasCategory.id,
+            tier: "pro",
+            status: "published",
+            coverUrl: "https://cdn.casefolio.app/templates/meridian-pro/cover.png",
+            updatedAt: new Date(),
+          },
+        })
+        .returning({ id: templates.id });
+
+      if (proTpl) {
+        const [proVersion] = await db
+          .insert(templateVersions)
+          .values({
+            templateId: proTpl.id,
+            version: "1.0.0",
+            data: meridianPayload,
+            changelog: "Initial Meridian Pro web SaaS template",
+            publishedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: [templateVersions.templateId, templateVersions.version],
+            set: {
+              data: meridianPayload,
+              publishedAt: new Date(),
+            },
+          })
+          .returning({ id: templateVersions.id });
+
+        if (proVersion) {
+          await db
+            .update(templates)
+            .set({ currentVersionId: proVersion.id, updatedAt: new Date() })
+            .where(eq(templates.id, proTpl.id));
+        }
+      }
+    }
+
     return {
       adminUserId: admin.id,
       categoryId: category.id,

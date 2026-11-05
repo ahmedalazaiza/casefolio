@@ -16,10 +16,12 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { can } from "@/lib/entitlements";
 import type {
   ProjectShareSettingsPayload,
   PublishProjectInput,
@@ -71,6 +73,9 @@ export function ProjectSharePanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUnpublishing, setIsUnpublishing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const canRemoveWatermark = can(initialSettings.ownerPlan, "remove_watermark");
 
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -517,14 +522,14 @@ export function ProjectSharePanel({
                 <Sparkles className="text-primary size-4" />
                 <span>Public Page Branding</span>
               </span>
-              {initialSettings.ownerPlan === "free" ? (
+              {!canRemoveWatermark ? (
                 <Badge tone="neutral">Free Plan</Badge>
               ) : (
                 <ProBadge />
               )}
             </div>
 
-            {initialSettings.ownerPlan === "free" ? (
+            {!canRemoveWatermark ? (
               <>
                 <p className="text-muted-foreground type-body-s">
                   Free plan public pages and PNG exports include a subtle &ldquo;Made with
@@ -532,8 +537,13 @@ export function ProjectSharePanel({
                   Behance exports.
                 </p>
                 <div>
-                  <Button asChild variant="secondary" size="sm">
-                    <Link href="/account">Upgrade to Pro</Link>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setUpgradeOpen(true)}
+                  >
+                    Upgrade to Pro
                   </Button>
                 </div>
               </>
@@ -546,6 +556,13 @@ export function ProjectSharePanel({
           </section>
         </div>
       </div>
+
+      <UpgradePromptDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        featureTitle="Remove Casefolio watermarks"
+        featureDescription="Upgrade to Casefolio Pro to publish clean, unbranded case study URLs and export watermark-free PDFs and Behance slices."
+      />
     </div>
   );
 }

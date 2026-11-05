@@ -17,9 +17,11 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { ExportCaseStudyDialog } from "@/components/projects/export-dialog";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { can } from "@/lib/entitlements";
 import {
   EXPORT_PRESETS,
   type EnqueueExportResult,
@@ -101,11 +103,17 @@ export function ProjectExportsPanel({
   const [selectedFormat, setSelectedFormat] = useState<ExportFormatOption>("png_long");
   const [isStartingExport, setIsStartingExport] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  const isFreePlan = overview.ownerPlan === "free";
+  const isFreePlan = !can(overview.ownerPlan, "remove_watermark");
   const selectedPreset =
     EXPORT_PRESETS.find((item) => item.format === selectedFormat) ?? EXPORT_PRESETS[0]!;
-  const isSelectedLocked = isFreePlan && selectedPreset.requiresPro;
+  const isSelectedLocked =
+    selectedPreset.format === "pdf"
+      ? !can(overview.ownerPlan, "export_pdf")
+      : selectedPreset.format === "behance"
+        ? !can(overview.ownerPlan, "export_behance")
+        : false;
 
   const hasActiveJobs = useMemo(
     () =>
@@ -354,7 +362,13 @@ export function ProjectExportsPanel({
 
           {isSelectedLocked ? (
             <Button asChild data-testid="upgrade-export-cta">
-              <Link href="/account">
+              <Link
+                href="/account"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setUpgradeOpen(true);
+                }}
+              >
                 Upgrade to Pro for {selectedPreset.fileExtension.toUpperCase()}
               </Link>
             </Button>
@@ -466,6 +480,13 @@ export function ProjectExportsPanel({
           </div>
         )}
       </section>
+      <UpgradePromptDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        featureTitle={`Unlock ${selectedPreset.label}`}
+        featureDescription="Upgrade to Casefolio Pro for PDF case studies, Behance 1400px slices, unlimited monthly exports, and watermark removal."
+      />
     </div>
   );
 }
+

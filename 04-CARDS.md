@@ -275,11 +275,13 @@ Summary: Implemented Free/Pro/Team monthly & yearly catalog + server Paddle pric
 
 ---
 **[C-702] Entitlements & gating**  
-Phase: Phase 7 — Billing & Gating · Priority: P0 · Estimate: 4h · Deps: C-701,C-305 · Status: Todo  
-- [ ] Server-side checks on every gated API
-- [ ] Upgrade prompts shown
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 7 — Billing & Gating · Priority: P0 · Estimate: 4h · Deps: C-701,C-305 · Status: Done  
+Branch: `feat/C-702-entitlements-gating`  
+Summary: Implemented single canonical `can(user, feature, context?)` + `evaluateEntitlement()` (`src/lib/entitlements/index.ts`) and authoritative DB subscription reconciliation (`resolveEffectivePlanForUser`, `resolveEffectivePlanForOrganization` in `src/lib/entitlements/server.ts`); seeded published `Meridian` Pro template (`packages/db/src/seed.ts`); enforced server-side checks across project creation, Pro templates, PNG/PDF/Behance exports, public/export watermarks, storage quotas, and team seat invitations (`/api/team/invitations`); wired `UpgradePromptDialog` across library, wizard, export, share, and team UIs.  
+- [x] Server-side checks on every gated API
+- [x] Upgrade prompts shown
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-703] Account & billing pages**  
