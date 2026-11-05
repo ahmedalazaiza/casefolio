@@ -1,6 +1,7 @@
 import { desc, eq, or, type PlanTier } from "@casefolio/db";
 import { z } from "zod";
 import { env } from "@/env";
+import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import {
   isSubscriptionGrantingAccess,
   type BillingInterval,
@@ -245,7 +246,7 @@ export async function processValidatedPaddleWebhook(
 ): Promise<ProcessPaddleWebhookResult> {
   const details = extractPaddleEventDetails(envelope.event_type, envelope.data);
 
-  return db.transaction(async (tx) => {
+  const txOutcome = await db.transaction(async (tx) => {
     // 1. Idempotency guard via webhook_events PK (event_id)
     const insertedEvents = await tx
       .insert(dbSchema.webhookEvents)
@@ -261,13 +262,17 @@ export async function processValidatedPaddleWebhook(
 
     if (insertedEvents.length === 0) {
       return {
-        ok: true,
-        eventId: envelope.event_id,
-        eventType: envelope.event_type,
-        deduplicated: true,
-        subscriptionId: details.paddleSubscriptionId,
-        effectivePlan: null,
-        lifecycleStatus: null,
+        result: {
+          ok: true as const,
+          eventId: envelope.event_id,
+          eventType: envelope.event_type,
+          deduplicated: true,
+          subscriptionId: details.paddleSubscriptionId,
+          effectivePlan: null,
+          lifecycleStatus: null,
+        },
+        upgraded: false,
+        distinctId: null as string | null,
       };
     }
 
@@ -318,25 +323,31 @@ export async function processValidatedPaddleWebhook(
     // If neither user/org nor subscription could be matched (e.g., unrelated product event), record event & exit cleanly
     if (!targetUserId && !targetOrgId && !existingSub) {
       return {
-        ok: true,
-        eventId: envelope.event_id,
-        eventType: envelope.event_type,
-        deduplicated: false,
-        subscriptionId: null,
-        effectivePlan: null,
-        lifecycleStatus: null,
+        result: {
+          ok: true as const,
+          eventId: envelope.event_id,
+          eventType: envelope.event_type,
+          deduplicated: false,
+          subscriptionId: null,
+          effectivePlan: null,
+          lifecycleStatus: null,
+        },
+        upgraded: false,
+        distinctId: null as string | null,
       };
     }
 
     // Verify userId actually exists before FK write
     let verifiedUserId: string | null = null;
+    let previousUserPlan: PlanTier = "free";
     if (targetUserId) {
       const [u] = await tx
-        .select({ id: dbSchema.users.id })
+        .select({ id: dbSchema.users.id, plan: dbSchema.users.plan })
         .from(dbSchema.users)
         .where(eq(dbSchema.users.id, targetUserId))
         .limit(1);
       verifiedUserId = u?.id ?? null;
+      previousUserPlan = u?.plan ?? "free";
     }
 
     let verifiedOrgId: string | null = null;
@@ -351,13 +362,17 @@ export async function processValidatedPaddleWebhook(
 
     if (!verifiedUserId && !verifiedOrgId) {
       return {
-        ok: true,
-        eventId: envelope.event_id,
-        eventType: envelope.event_type,
-        deduplicated: false,
-        subscriptionId: null,
-        effectivePlan: null,
-        lifecycleStatus: null,
+        result: {
+          ok: true as const,
+          eventId: envelope.event_id,
+          eventType: envelope.event_type,
+          deduplicated: false,
+          subscriptionId: null,
+          effectivePlan: null,
+          lifecycleStatus: null,
+        },
+        upgraded: false,
+        distinctId: null as string | null,
       };
     }
 
@@ -439,14 +454,39 @@ export async function processValidatedPaddleWebhook(
         .where(eq(dbSchema.organizations.id, verifiedOrgId));
     }
 
+    const previousEffectivePlan: PlanTier = existingSub ? existingSub.plan : previousUserPlan;
+    const isUpgradeEvent =
+      (effectivePlan === "pro" || effectivePlan === "team") &&
+      (envelope.event_type === "subscription.activated" ||
+        envelope.event_type === "subscription.created" ||
+        previousEffectivePlan !== effectivePlan);
+
     return {
-      ok: true,
-      eventId: envelope.event_id,
-      eventType: envelope.event_type,
-      deduplicated: false,
-      subscriptionId: savedSubscriptionId,
-      effectivePlan,
-      lifecycleStatus: details.lifecycleStatus,
+      result: {
+        ok: true as const,
+        eventId: envelope.event_id,
+        eventType: envelope.event_type,
+        deduplicated: false,
+        subscriptionId: savedSubscriptionId,
+        effectivePlan,
+        lifecycleStatus: details.lifecycleStatus,
+      },
+      upgraded: isUpgradeEvent,
+      distinctId: verifiedUserId ?? verifiedOrgId,
     };
   });
+
+  if (txOutcome.upgraded && txOutcome.result.effectivePlan) {
+    await trackServerProductEvent({
+      event: "upgrade",
+      distinctId: txOutcome.distinctId,
+      properties: {
+        plan: txOutcome.result.effectivePlan,
+        interval: details.interval,
+        eventType: envelope.event_type,
+      },
+    });
+  }
+
+  return txOutcome.result;
 }

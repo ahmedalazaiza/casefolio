@@ -3,6 +3,7 @@
 import { Eye, Lock, RotateCcw, Search, Smartphone, Globe, Layers } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { trackClientProductEvent } from "@/components/analytics/posthog-provider";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { Badge, ProBadge } from "@/components/ui/badge";
@@ -385,7 +386,19 @@ export function TemplateLibraryClient({
                     </Button>
                   ) : (
                     <Button asChild size="sm" className="flex-1">
-                      <Link href={useHref}>Use template</Link>
+                      <Link
+                        href={useHref}
+                        onClick={() =>
+                          trackClientProductEvent("template_selected", {
+                            templateSlug: item.slug,
+                            templateTier: item.tier,
+                            projectType: item.type,
+                            surface: "library_card",
+                          })
+                        }
+                      >
+                        Use template
+                      </Link>
                     </Button>
                   )}
                 </div>
@@ -455,6 +468,14 @@ export function TemplateLibraryClient({
                         isAuthenticated
                           ? `/new?template=${encodeURIComponent(previewItem.slug)}`
                           : `/sign-up?template=${encodeURIComponent(previewItem.slug)}`
+                      }
+                      onClick={() =>
+                        trackClientProductEvent("template_selected", {
+                          templateSlug: previewItem.slug,
+                          templateTier: previewItem.tier,
+                          projectType: previewItem.type,
+                          surface: "library_preview",
+                        })
                       }
                     >
                       Use {previewItem.name}

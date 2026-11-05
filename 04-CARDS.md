@@ -294,11 +294,13 @@ Summary: Built unified `AccountSettingsShell` + `/account` (`ProfileSettingsPane
 
 ---
 **[C-801] PostHog product analytics**  
-Phase: Phase 8 — Analytics & Notifications · Priority: P1 · Estimate: 3h · Deps: C-201 · Status: Todo  
-- [ ] Events visible in PostHog
-- [ ] No PII in props
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 8 — Analytics & Notifications · Priority: P1 · Estimate: 3h · Deps: C-201 · Status: Done  
+Branch: `feat/C-801-posthog-analytics`  
+Summary: Implemented `posthog-js` client provider (`PostHogProvider`, `trackClientProductEvent` with autocapture/session-recording/IP disabled) and server PostHog `/capture/` dispatcher (`trackServerProductEvent`) guarded by a strict PII scrubber (`sanitizeAnalyticsProps`, `sanitizeDistinctId` stripping email/name/IP/token keys & values), dev ring buffer + `/api/dev/analytics-events` test inspection route, and instrumented `signup`, `template_selected`, `project_created`, `published`, `exported`, and `upgrade` with Vitest verification (`posthog.test.ts`).  
+- [x] Events visible in PostHog
+- [x] No PII in props
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-802] Case-study view analytics**  

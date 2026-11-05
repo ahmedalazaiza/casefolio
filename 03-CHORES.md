@@ -246,8 +246,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 3h · **Depends on:** C-201
 - **Description:** Events: signup, project_created, template_selected, published, exported, upgrade.
 - **Acceptance criteria:**
-  - [ ] Events visible in PostHog
-  - [ ] No PII in props
+  - [x] Events visible in PostHog
+  - [x] No PII in props
 
 ### C-802 — Case-study view analytics
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-601

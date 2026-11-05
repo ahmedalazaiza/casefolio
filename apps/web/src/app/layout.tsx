@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
+import { PostHogProvider } from "@/components/analytics/posthog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";
 import "@/styles/globals.css";
@@ -30,8 +31,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     >
       <body>
         <ThemeProvider>
-          {children}
-          <Toaster />
+          <PostHogProvider>
+            {children}
+            <Toaster />
+          </PostHogProvider>
         </ThemeProvider>
       </body>
     </html>
