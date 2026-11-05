@@ -347,7 +347,7 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-1001,C-406
 - **Description:** Axe checks, Lighthouse, 375/768/1440 screenshots.
 - **Acceptance criteria:**
-  - [ ] No critical axe issues
+  - [x] No critical axe issues
 
 ### C-1104 — Production deploy & monitoring
 - **Priority:** P0 · **Estimate:** 3h · **Depends on:** C-1101,C-1102

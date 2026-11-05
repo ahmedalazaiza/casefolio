@@ -8,11 +8,11 @@ const badgeVariants = cva(
     variants: {
       tone: {
         neutral: "bg-sunken text-muted-foreground",
-        draft: "bg-warning-soft text-warning",
-        published: "bg-success-soft text-success",
+        draft: "bg-warning-soft text-foreground",
+        published: "bg-success-soft text-foreground",
         accent: "bg-accent text-accent-foreground",
         pro: "bg-secondary text-foreground",
-        danger: "bg-destructive-soft text-destructive",
+        danger: "bg-destructive-soft text-foreground",
       },
     },
     defaultVariants: {
@@ -60,4 +60,3 @@ function ProBadge({ className, ...props }: Omit<BadgeProps, "tone" | "children">
 }
 
 export { Badge, badgeVariants, ProBadge, type BadgeProps };
-

@@ -1,12 +1,4 @@
-import {
-  AlertCircle,
-  ArrowLeft,
-  CloudCheck,
-  Redo2,
-  RefreshCw,
-  Undo2,
-  Upload,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, CloudCheck, Redo2, RefreshCw, Undo2, Upload } from "lucide-react";
 
 const TOKEN_SWATCHES = [
   {
@@ -69,7 +61,7 @@ const SLOT_ROWS = [
     spec: "Phone · 9:19.5",
     statusLabel: "Failed",
     thumbClass: "bg-destructive-soft border border-destructive/20",
-    badgeClass: "bg-destructive-soft text-destructive",
+    badgeClass: "bg-destructive-soft text-foreground",
     dotClass: "bg-destructive",
   },
 ] as const;
@@ -104,9 +96,7 @@ export function LandingHeroVisual() {
           <span className="bg-elevated text-foreground type-caption rounded-full px-3 py-1 shadow-xs">
             Desktop
           </span>
-          <span className="text-muted-foreground type-caption rounded-full px-3 py-1">
-            Mobile
-          </span>
+          <span className="text-muted-foreground type-caption rounded-full px-3 py-1">Mobile</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -142,9 +132,7 @@ export function LandingHeroVisual() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-muted-foreground type-overline">
-              Colors · Template tokens
-            </span>
+            <span className="text-muted-foreground type-overline">Colors · Template tokens</span>
             <div className="flex flex-col gap-2">
               {TOKEN_SWATCHES.map((token) => (
                 <div
@@ -210,16 +198,13 @@ export function LandingHeroVisual() {
             <div className="flex flex-col gap-5">
               <div className="flex items-center justify-between gap-3">
                 <span className="type-body-s-strong">Mosaed</span>
-                <span className="text-[var(--tmpl-primary)] type-overline">
-                  Case study · 2026
-                </span>
+                <span className="text-[var(--tmpl-primary)] type-overline">Case study · 2026</span>
               </div>
 
               <div className="flex flex-col gap-2.5">
                 <p className="type-display-m max-w-md">Debt, finally under control</p>
                 <p className="text-[var(--tmpl-muted)] type-body-s max-w-md">
-                  A calm money app that helps people track, plan and pay off personal
-                  debts.
+                  A calm money app that helps people track, plan and pay off personal debts.
                 </p>
               </div>
 
@@ -280,16 +265,12 @@ export function LandingHeroVisual() {
               <Upload className="size-3.5" />
             </span>
             <span className="text-foreground type-caption">Drop screenshots</span>
-            <span className="text-muted-foreground type-caption">
-              PNG / JPG · up to 15 MB
-            </span>
+            <span className="text-muted-foreground type-caption">PNG / JPG · up to 15 MB</span>
           </div>
 
           <div className="bg-warning-soft text-foreground flex items-start gap-2 rounded-lg p-2.5">
             <AlertCircle className="text-warning mt-0.5 size-3.5 shrink-0" />
-            <span className="type-caption">
-              1 required slot is empty: “Onboarding”
-            </span>
+            <span className="type-caption">1 required slot is empty: “Onboarding”</span>
           </div>
 
           <span className="text-muted-foreground type-overline pt-1">Slots</span>
@@ -304,9 +285,7 @@ export function LandingHeroVisual() {
                   <span className={`h-8 w-6 shrink-0 rounded-xs ${slot.thumbClass}`} />
                   <div className="min-w-0">
                     <p className="text-foreground type-caption truncate">{slot.name}</p>
-                    <p className="text-muted-foreground type-caption truncate">
-                      {slot.spec}
-                    </p>
+                    <p className="text-muted-foreground type-caption truncate">{slot.spec}</p>
                   </div>
                 </div>
                 <span
@@ -323,4 +302,3 @@ export function LandingHeroVisual() {
     </figure>
   );
 }
-

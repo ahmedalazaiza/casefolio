@@ -35,9 +35,9 @@ export function UserAccountMenu({ initials, name, email, image }: UserAccountMen
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label="Open account menu"
           className="focus-visible:ring-ring/40 rounded-full outline-none focus-visible:ring-2"
         >
+          <span className="sr-only">Open account menu </span>
           <AvatarBadge initials={initials} src={image} alt={name ?? initials} />
         </button>
       </DropdownMenuTrigger>
@@ -72,4 +72,3 @@ export function UserAccountMenu({ initials, name, email, image }: UserAccountMen
     </DropdownMenu>
   );
 }
-

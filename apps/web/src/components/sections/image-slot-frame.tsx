@@ -65,7 +65,7 @@ export function ImageSlotFrame({
       data-ratio={ratioText}
       data-cropped={image?.crop ? "true" : "false"}
       style={{ aspectRatio: `${parsedRatio.width} / ${parsedRatio.height}` }}
-      className="bg-sunken/70 relative flex w-full items-center justify-center overflow-hidden"
+      className="bg-sunken relative flex w-full items-center justify-center overflow-hidden"
     >
       {hasSrc ? (
         <CdnResponsiveImage
@@ -79,6 +79,7 @@ export function ImageSlotFrame({
         />
       ) : compact ? (
         <span
+          role="img"
           title={altText}
           aria-label={altText}
           className="text-muted-foreground inline-flex items-center justify-center"

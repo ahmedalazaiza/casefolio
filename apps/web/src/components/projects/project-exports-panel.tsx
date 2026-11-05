@@ -117,10 +117,7 @@ export function ProjectExportsPanel({
         : false;
 
   const hasActiveJobs = useMemo(
-    () =>
-      overview.exports.some(
-        (item) => item.status === "queued" || item.status === "processing",
-      ),
+    () => overview.exports.some((item) => item.status === "queued" || item.status === "processing"),
     [overview.exports],
   );
 
@@ -344,8 +341,8 @@ export function ProjectExportsPanel({
                 </div>
 
                 {locked ? (
-                  <span className="text-warning type-caption inline-flex items-center gap-1.5">
-                    <Lock className="size-3.5" />
+                  <span className="text-muted-foreground type-caption inline-flex items-center gap-1.5">
+                    <Lock className="text-warning size-3.5" />
                     <span>Pro plan required</span>
                   </span>
                 ) : (
@@ -497,4 +494,3 @@ export function ProjectExportsPanel({
     </div>
   );
 }
-

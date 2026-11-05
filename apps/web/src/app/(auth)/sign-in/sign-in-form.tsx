@@ -111,9 +111,7 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
         <h1 className="type-heading-l text-foreground">Welcome back</h1>
-        <p className="text-muted-foreground type-body-m">
-          Log in to continue your case studies.
-        </p>
+        <p className="text-muted-foreground type-body-m">Log in to continue your case studies.</p>
       </div>
 
       <Button
@@ -216,7 +214,8 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
                 <p className="type-body-s-strong">Check your inbox</p>
               </div>
               <p className="text-muted-foreground type-body-s">
-                We sent a one-click sign-in link to <strong className="text-foreground">{magicEmail}</strong>.
+                We sent a one-click sign-in link to{" "}
+                <strong className="text-foreground">{magicEmail}</strong>.
               </p>
               <Button
                 type="button"
@@ -254,11 +253,10 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
 
       <p className="text-muted-foreground type-caption">
         New to Casefolio?{" "}
-        <Link href="/sign-up" className="text-primary font-medium hover:underline">
+        <Link href="/sign-up" className="text-primary font-medium underline underline-offset-4">
           Create an account
         </Link>
       </p>
     </div>
   );
 }
-
