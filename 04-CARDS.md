@@ -443,8 +443,10 @@ Summary: Added `@axe-core/playwright` and `tests/e2e/phase11-a11y-responsive-qa.
 
 ---
 **[C-1104] Production deploy & monitoring**  
-Phase: Phase 11 — Hardening & Launch · Priority: P0 · Estimate: 3h · Deps: C-1101,C-1102 · Status: Todo  
-- [ ] Health checks green
-- [ ] Rollback documented
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 11 — Hardening & Launch · Priority: P0 · Estimate: 3h · Deps: C-1101,C-1102 · Status: Done  
+Branch: `feat/C-1104-prod-deploy-monitoring`  
+Summary: Implemented `GET /api/health` (`apps/web/src/lib/monitoring/health.ts` & `route.ts`) probing PostgreSQL liveness/latency and published template readiness plus `buildWorkerHealthHttpResponse` on `@casefolio/worker`; added PII-redacting Sentry Envelope error reporting (`apps/web/src/lib/monitoring/sentry.ts`), Next.js `instrumentation.ts` (`onRequestError`), and `global-error.tsx`; added containerized Chromium worker deployment config (`apps/worker/Dockerfile`, `.dockerignore`, `apps/worker/fly.toml`) keeping `PADDLE_ENV="sandbox"`; authored `DEPLOYMENT.md` covering Vercel prod, Fly/Railway worker, Neon `main` branch + PITR/logical backups, Sentry alerts, and Web/Worker/Database rollback runbooks; verified via `health-and-sentry.test.ts` and `pnpm build`.  
+- [x] Health checks green
+- [x] Rollback documented
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)

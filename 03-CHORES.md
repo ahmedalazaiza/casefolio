@@ -353,5 +353,5 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P0 · **Estimate:** 3h · **Depends on:** C-1101,C-1102
 - **Description:** Vercel prod, Fly/Railway worker, Neon prod branch, Sentry, backups.
 - **Acceptance criteria:**
-  - [ ] Health checks green
-  - [ ] Rollback documented
+  - [x] Health checks green
+  - [x] Rollback documented
