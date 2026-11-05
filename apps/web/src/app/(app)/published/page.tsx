@@ -1,5 +1,5 @@
 import { and, desc, eq, isNotNull } from "@casefolio/db";
-import { ExternalLink, Globe, Settings2 } from "lucide-react";
+import { BarChart3, ExternalLink, Globe, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,13 @@ export default async function WorkspacePublishedPagesList() {
                 <span className="text-tertiary type-caption">/p/{project.slug}</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button asChild variant="secondary" size="sm">
+                  <Link href={`/projects/${project.id}/analytics`}>
+                    <BarChart3 className="size-3.5" />
+                    <span>Analytics</span>
+                  </Link>
+                </Button>
                 <Button asChild variant="secondary" size="sm">
                   <Link href={`/projects/${project.id}/share`}>
                     <Settings2 className="size-3.5" />

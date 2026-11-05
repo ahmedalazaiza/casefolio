@@ -304,11 +304,13 @@ Summary: Implemented `posthog-js` client provider (`PostHogProvider`, `trackClie
 
 ---
 **[C-802] Case-study view analytics**  
-Phase: Phase 8 — Analytics & Notifications · Priority: P1 · Estimate: 4h · Deps: C-601 · Status: Todo  
-- [ ] Bots filtered
-- [ ] Owner sees chart
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 8 — Analytics & Notifications · Priority: P1 · Estimate: 4h · Deps: C-601 · Status: Done  
+Branch: `feat/C-802-case-study-analytics`  
+Summary: Implemented privacy-safe daily-salted SHA-256 `visitorHash` view tracking (`page-views.ts`, `/p/[slug]` SSR recording + `/api/track` rate-limited endpoint) with strict crawler/bot & prefetch filtering, referrer source bucketing (`Direct / link`, `LinkedIn`, `Dribbble`, `Behance`, `Google`, `X / Twitter`, `Other`), `/projects/[id]/analytics` (`ProjectAnalyticsPanel` matching Figma `2:8485` & `2:8745` with SVG bar chart + `can(plan, "full_analytics")` 90d/All gating), `/analytics` workspace overview (`2:8629`), and Vitest tests (`page-views.test.tsx`).  
+- [x] Bots filtered
+- [x] Owner sees chart
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-803] Notifications (in-app + email)**  

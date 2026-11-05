@@ -253,8 +253,8 @@ Rules: follow `02-RULES.md`. Do tasks in order; never start a task whose depende
 - **Priority:** P1 · **Estimate:** 4h · **Depends on:** C-601
 - **Description:** Count views/unique visitors/referrers per published project; dashboard chart.
 - **Acceptance criteria:**
-  - [ ] Bots filtered
-  - [ ] Owner sees chart
+  - [x] Bots filtered
+  - [x] Owner sees chart
 
 ### C-803 — Notifications (in-app + email)
 - **Priority:** P2 · **Estimate:** 4h · **Depends on:** C-201
