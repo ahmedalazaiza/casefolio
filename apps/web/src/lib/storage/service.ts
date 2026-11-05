@@ -112,7 +112,14 @@ function sanitizeSlotKeySegment(slot: string): string {
     .slice(0, 64);
 }
 
-export function buildPrivateOrPublicAssetPath(assetId: string): string {
+export function buildPrivateOrPublicAssetPath(
+  assetId: string,
+  width?: number,
+  height?: number,
+): string {
+  if (width && width > 0 && height && height > 0) {
+    return `/api/assets/${assetId}?nw=${width}&nh=${height}`;
+  }
   return `/api/assets/${assetId}`;
 }
 
@@ -486,7 +493,11 @@ export async function completePresignedUpload(
       height: inserted.height,
       bytes: inserted.bytes,
       mimeType: inserted.mimeType,
-      deliveryUrl: buildPrivateOrPublicAssetPath(inserted.id),
+      deliveryUrl: buildPrivateOrPublicAssetPath(
+        inserted.id,
+        inserted.width,
+        inserted.height,
+      ),
     },
   };
 }

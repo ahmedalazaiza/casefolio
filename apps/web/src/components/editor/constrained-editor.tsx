@@ -204,7 +204,14 @@ export function ConstrainedEditor({
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const colorKeys = useMemo(() => Object.keys(theme.colors), [theme.colors]);
-  const puckConfig = useMemo(() => createCasefolioPuckConfig(colorKeys), [colorKeys]);
+  const puckConfig = useMemo(
+    () =>
+      createCasefolioPuckConfig(colorKeys, {
+        projectId: initialPayload.project.id,
+        slots: initialPayload.template.slots,
+      }),
+    [colorKeys, initialPayload.project.id, initialPayload.template.slots],
+  );
 
   const performAutosave = useCallback(async () => {
     if (!onSaveProject || inFlightSaveRef.current) {
@@ -467,6 +474,7 @@ export function ConstrainedEditor({
         }}
         iframe={{ enabled: false }}
         metadata={{
+          projectId: initialPayload.project.id,
           projectType: initialPayload.project.type,
           slots: initialPayload.template.slots,
         }}
@@ -924,7 +932,13 @@ export function ConstrainedEditor({
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <span className="bg-sunken border-border inline-flex h-11 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border">
-                            {slot.filled ? (
+                            {slot.filled && slot.src ? (
+                              <img
+                                src={slot.src}
+                                alt={slot.label}
+                                className="size-full object-cover"
+                              />
+                            ) : slot.filled ? (
                               <Check className="text-success size-3.5" />
                             ) : (
                               <span className="bg-border size-2 rounded-full" />
