@@ -202,8 +202,8 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="border-border mt-12 hidden items-center justify-between border-t pt-8 md:flex">
-            <p className="text-tertiary type-caption">© 2026 Casefolio</p>
-            <p className="text-tertiary type-caption">Made for designers</p>
+            <p className="text-muted-foreground type-caption">© 2026 Casefolio</p>
+            <p className="text-muted-foreground type-caption">Made for designers</p>
           </div>
 
           {/* Compact mobile footer matching Figma 30:7233 */}
@@ -230,7 +230,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                 Privacy
               </Link>
             </div>
-            <p className="text-tertiary type-caption">© 2026 Casefolio</p>
+            <p className="text-muted-foreground type-caption">© 2026 Casefolio</p>
           </div>
         </div>
       </footer>

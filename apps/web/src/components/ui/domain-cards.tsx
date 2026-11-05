@@ -1,4 +1,5 @@
 import { Check, Smartphone } from "lucide-react";
+import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,7 +129,7 @@ export function TemplateTypeCard({
         state === "default" &&
           "border-border bg-card text-card-foreground hover:border-border-strong",
         isSelected && "border-primary bg-card text-card-foreground shadow-card border-2",
-        isComingSoon && "border-border bg-sunken text-tertiary cursor-not-allowed",
+        isComingSoon && "border-border bg-sunken text-muted-foreground cursor-not-allowed",
         className,
       )}
       {...props}
@@ -140,7 +141,7 @@ export function TemplateTypeCard({
             "inline-flex size-12 items-center justify-center rounded-md",
             state === "default" && "bg-accent text-accent-foreground",
             isSelected && "bg-primary text-primary-foreground",
-            isComingSoon && "bg-elevated text-tertiary",
+            isComingSoon && "bg-elevated text-muted-foreground",
           )}
         >
           {icon ?? <Smartphone className="size-5" />}
@@ -167,7 +168,7 @@ export function TemplateTypeCard({
         <h3
           className={cn(
             "type-heading-m",
-            isComingSoon ? "text-tertiary" : "text-foreground",
+            isComingSoon ? "text-muted-foreground" : "text-foreground",
           )}
         >
           {title}
@@ -175,7 +176,7 @@ export function TemplateTypeCard({
         <p
           className={cn(
             "type-body-s",
-            isComingSoon ? "text-tertiary" : "text-muted-foreground",
+            isComingSoon ? "text-muted-foreground" : "text-muted-foreground",
           )}
         >
           {description}
@@ -183,7 +184,7 @@ export function TemplateTypeCard({
       </div>
 
       <div className="border-border border-t pt-4">
-        <span className="text-tertiary type-overline">{resolvedFooter}</span>
+        <span className="text-muted-foreground type-overline">{resolvedFooter}</span>
       </div>
     </div>
   );
@@ -196,6 +197,7 @@ export interface PlanCardProps extends ComponentProps<"section"> {
   badgeLabel?: string;
   description: string;
   ctaLabel?: string;
+  ctaHref?: string;
   features: readonly string[];
   highlighted?: boolean;
   onSelectPlan?: () => void;
@@ -208,6 +210,7 @@ export function PlanCard({
   badgeLabel,
   description,
   ctaLabel = "Choose plan",
+  ctaHref,
   features,
   highlighted = false,
   onSelectPlan,
@@ -240,7 +243,7 @@ export function PlanCard({
           <span
             className={cn(
               "type-body-m",
-              highlighted ? "text-inverse-foreground/80" : "text-tertiary",
+              highlighted ? "text-inverse-foreground/80" : "text-muted-foreground",
             )}
           >
             {period}
@@ -257,15 +260,26 @@ export function PlanCard({
         {description}
       </p>
 
-      <Button
-        type="button"
-        variant={highlighted ? "default" : "secondary"}
-        size="lg"
-        className="w-full"
-        onClick={onSelectPlan}
-      >
-        {ctaLabel}
-      </Button>
+      {ctaHref && !onSelectPlan ? (
+        <Button
+          variant={highlighted ? "default" : "secondary"}
+          size="lg"
+          className="w-full"
+          asChild
+        >
+          <Link href={ctaHref}>{ctaLabel}</Link>
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant={highlighted ? "default" : "secondary"}
+          size="lg"
+          className="w-full"
+          onClick={onSelectPlan}
+        >
+          {ctaLabel}
+        </Button>
+      )}
 
       <ul className="flex flex-col gap-3 pt-1">
         {features.map((feature) => (

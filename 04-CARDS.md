@@ -379,11 +379,13 @@ Summary: Implemented `/admin/settings` (`32:10233`) with admin team role managem
 
 ---
 **[C-1001] Marketing landing page from Figma 27:6665**  
-Phase: Phase 10 — Landing, Help & Polish · Priority: P0 · Estimate: 6h · Deps: C-102 · Status: Todo  
-- [ ] Pixel-close to Figma
-- [ ] Lighthouse ≥ 90
-- [ ] Tests added & passing
-- [ ] Verified against Figma (if UI)
+Phase: Phase 10 — Landing, Help & Polish · Priority: P0 · Estimate: 6h · Deps: C-102 · Status: Done  
+Branch: `feat/C-1001-marketing-landing`  
+Summary: Implemented the 13-section marketing landing page (`apps/web/src/app/(marketing)/page.tsx`) matching Figma `27:6665` (`27:6666` Desktop 1440 & `30:6997` Mobile 390) with token-driven `LandingHeroVisual`, `LandingPricingSection` wired to `BILLING_PLAN_CATALOG`, accessible `LandingFaqAccordion`, full OpenGraph/Twitter/canonical SEO `Metadata`, Vitest tests (`page.test.tsx`), and verified Lighthouse scores (`Performance: 99`, `Accessibility: 100`, `Best Practices: 96`, `SEO: 91`).  
+- [x] Pixel-close to Figma
+- [x] Lighthouse ≥ 90
+- [x] Tests added & passing
+- [x] Verified against Figma (if UI)
 
 ---
 **[C-1002] Pricing page & plan comparison**  
