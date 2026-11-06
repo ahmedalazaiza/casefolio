@@ -91,6 +91,28 @@ test.describe("Phase 11 Performance, Accessibility & Responsive QA (C-1103)", ()
     try {
       await page.setViewportSize({ width: 1440, height: 900 });
 
+      // Verify full-motion GSAP hero entrance settles cleanly to opacity 1 and passes axe
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await expect
+        .poll(() =>
+          page
+            .locator("[data-hero-copy]")
+            .evaluate((el) => window.getComputedStyle(el).opacity),
+        )
+        .toBe("1");
+      await expect
+        .poll(() =>
+          page
+            .locator("[data-hero-visual]")
+            .evaluate((el) => window.getComputedStyle(el).opacity),
+        )
+        .toBe("1");
+      await collectAudit("/ (motion settled)");
+
+      // Use reduced-motion preference during rapid route sweeps so mid-tween opacity never skews static contrast checks
+      await page.emulateMedia({ reducedMotion: "reduce" });
+
       // 1. Audit anonymous public & auth routes
       const publicRoutes = [
         { path: "/", slug: "landing" },
