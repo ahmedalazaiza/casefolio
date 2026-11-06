@@ -19,7 +19,10 @@ describe("Auth UI forms (C-201)", () => {
     render(<SignUpForm />);
 
     expect(screen.getByRole("heading", { name: "Create your account" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeInTheDocument();
+    const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
+    expect(googleBtn).toBeInTheDocument();
+    expect(googleBtn.querySelector('svg[data-slot="google-icon"]')).not.toBeNull();
+    expect(googleBtn.querySelectorAll('svg[data-slot="google-icon"] path')).toHaveLength(4);
 
     await user.click(screen.getByRole("button", { name: "Create account" }));
     expect(screen.getByText(/Enter your full name/i)).toBeInTheDocument();
@@ -30,6 +33,9 @@ describe("Auth UI forms (C-201)", () => {
     render(<SignInForm />);
 
     expect(screen.getByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
+    const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
+    expect(googleBtn.querySelector('svg[data-slot="google-icon"]')).not.toBeNull();
+    expect(googleBtn.querySelectorAll('svg[data-slot="google-icon"] path')).toHaveLength(4);
     expect(screen.getByRole("button", { name: "Log in" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Magic link" }));

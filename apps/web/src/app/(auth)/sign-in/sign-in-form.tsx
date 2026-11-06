@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { GoogleIcon } from "@/components/ui/google-icon";
 import { InputField } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth/client";
@@ -122,12 +123,7 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
         disabled={submitting}
         onClick={handleGoogleSignIn}
       >
-        <span
-          aria-hidden="true"
-          className="bg-sunken text-foreground inline-flex size-5 items-center justify-center rounded-full type-caption"
-        >
-          G
-        </span>
+        <GoogleIcon />
         Continue with Google
       </Button>
 

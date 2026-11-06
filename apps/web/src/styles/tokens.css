@@ -83,6 +83,12 @@
   --tmpl-primary: #e6c36a;
   --tmpl-secondary: #ff4f1f;
 
+  /* Official Google Identity brand colors */
+  --brand-google-blue: #4285f4;
+  --brand-google-green: #34a853;
+  --brand-google-yellow: #fbbc05;
+  --brand-google-red: #ea4335;
+
   /* shadcn/ui semantic bindings (derived strictly from Figma variables) */
   --background: var(--bg-canvas);
   --foreground: var(--text-primary);

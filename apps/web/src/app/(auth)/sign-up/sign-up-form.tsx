@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { GoogleIcon } from "@/components/ui/google-icon";
 import { InputField } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 import { signUpSchema } from "@/lib/auth/schemas";
@@ -91,12 +92,7 @@ export function SignUpForm() {
         disabled={submitting}
         onClick={handleGoogleSignUp}
       >
-        <span
-          aria-hidden="true"
-          className="bg-sunken text-foreground inline-flex size-5 items-center justify-center rounded-full type-caption"
-        >
-          G
-        </span>
+        <GoogleIcon />
         Continue with Google
       </Button>
 
