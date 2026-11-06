@@ -4,6 +4,7 @@
 
 ## 1. Stack locks
 - Use ONLY the stack in `01-MASTER-SHEET.md §4`. Do not add a library, framework, UI kit, ORM, or service without asking.
+- GSAP (`gsap` + `@gsap/react`, installed in `apps/web` only) is the ONLY animation library — no Framer Motion or other animation libraries.
 - Puck `@puckeditor/core` pinned to `0.24.x`. TypeScript `strict: true`. pnpm only.
 - Server Actions/Route Handlers validate every input with zod.
 
@@ -51,3 +52,11 @@
 - Matches Figma; responsive; accessible (keyboard + labels).
 - Security rules respected; env vars documented.
 - Card moved to Done with a short summary.
+
+## 10. Animation (GSAP)
+- Register GSAP plugins (`useGSAP`, `ScrollTrigger`) once on the client in `apps/web/src/lib/animation/gsap.ts`, and consume shared presets (`fadeUp`, `stagger`, `scaleIn`) and named duration/easing/distance constants from there — no magic numbers in components.
+- Use the `useGSAP()` hook with explicit `scope` refs in `"use client"` components only; never animate in Server Components.
+- Always clean up animations and triggers on unmount (via `useGSAP` context reversion).
+- Always respect `prefers-reduced-motion: reduce` (disable or simplify all animations).
+- Animate `transform` and `opacity` properties only.
+- Never run animations inside the Puck editor canvas (`/editor/[projectId]`) or on export/render pages (`/export/[jobId]`) — exports must remain strictly static.

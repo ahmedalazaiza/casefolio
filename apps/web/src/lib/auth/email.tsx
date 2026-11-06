@@ -15,7 +15,11 @@ import {
 import { Resend } from "resend";
 import { env } from "@/env";
 
-const FROM_ADDRESS = "Casefolio <noreply@casefolio.app>";
+const DEFAULT_FROM_ADDRESS = "Casefolio <noreply@casefolio.app>";
+
+function resolveFromAddress(): string {
+  return process.env.RESEND_FROM_EMAIL?.trim() || DEFAULT_FROM_ADDRESS;
+}
 
 function isLiveResendKey(apiKey: string): boolean {
   return (
@@ -113,7 +117,7 @@ export async function renderAndDeliverEmail(params: {
 
   const resend = new Resend(env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
-    from: FROM_ADDRESS,
+    from: resolveFromAddress(),
     to: params.to,
     subject: params.subject,
     html,

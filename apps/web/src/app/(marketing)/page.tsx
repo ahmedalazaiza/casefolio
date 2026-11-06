@@ -14,6 +14,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LandingFaqAccordion } from "@/components/marketing/landing-faq-accordion";
+import { LandingHeroMotion } from "@/components/marketing/landing-hero-motion";
 import { LandingHeroVisual } from "@/components/marketing/landing-hero-visual";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
 import { AvatarBadge } from "@/components/ui/avatar-badge";
@@ -230,36 +231,32 @@ export default function HomePage() {
     <div className="flex flex-col">
       {/* 1. Hero section (Figma 27:6694) */}
       <section className="bg-background px-4 pt-14 pb-16 sm:px-6 lg:px-8 lg:pt-20 lg:pb-24">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-12 text-center lg:gap-16">
-          <div className="flex max-w-3xl flex-col items-center gap-6">
-            <Badge tone="accent">New · Mobile &amp; Website templates</Badge>
+        <LandingHeroMotion visual={<LandingHeroVisual />}>
+          <Badge tone="accent">New · Mobile &amp; Website templates</Badge>
 
-            <h1 className="text-foreground type-display-l sm:type-display-xl text-balance">
-              Turn finished projects into publishable case studies
-            </h1>
+          <h1 className="text-foreground type-display-l sm:type-display-xl text-balance">
+            Turn finished projects into publishable case studies
+          </h1>
 
-            <p className="text-muted-foreground type-body-l max-w-2xl text-pretty">
-              Pick a template made by the Casefolio team, drop in your screens,
-              tweak colors and text — then publish a public page or export PNG
-              &amp; PDF in minutes, not weeks.
-            </p>
+          <p className="text-muted-foreground type-body-l max-w-2xl text-pretty">
+            Pick a template made by the Casefolio team, drop in your screens,
+            tweak colors and text — then publish a public page or export PNG
+            &amp; PDF in minutes, not weeks.
+          </p>
 
-            <div className="flex w-full flex-col items-stretch justify-center gap-3 pt-1 sm:w-auto sm:flex-row sm:items-center">
-              <Button size="lg" asChild>
-                <Link href="/sign-up">Start free</Link>
-              </Button>
-              <Button variant="secondary" size="lg" asChild>
-                <Link href="/templates">Browse templates</Link>
-              </Button>
-            </div>
-
-            <p className="text-muted-foreground type-caption">
-              Start free · No credit card required
-            </p>
+          <div className="flex w-full flex-col items-stretch justify-center gap-3 pt-1 sm:w-auto sm:flex-row sm:items-center">
+            <Button size="lg" asChild>
+              <Link href="/sign-up">Start free</Link>
+            </Button>
+            <Button variant="secondary" size="lg" asChild>
+              <Link href="/templates">Browse templates</Link>
+            </Button>
           </div>
 
-          <LandingHeroVisual />
-        </div>
+          <p className="text-muted-foreground type-caption">
+            Start free · No credit card required
+          </p>
+        </LandingHeroMotion>
       </section>
 
       {/* 2. Social proof strip (Figma 27:6713) */}

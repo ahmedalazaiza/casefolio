@@ -21,6 +21,7 @@ Casefolio helps designers build polished UI case studies in minutes: pick a proj
 |---|---|
 | Framework | Next.js (App Router) + TypeScript strict + pnpm |
 | UI | Tailwind CSS v4 + shadcn/ui, tokens from Figma |
+| Animation | GSAP (`gsap` + `@gsap/react` in `apps/web` only; no Framer Motion) |
 | Editor | Puck `@puckeditor/core` 0.24 (constrained, fields-only) |
 | Rich text | TipTap (custom Puck field) |
 | State/undo | Zustand + Immer + zundo |
@@ -115,7 +116,7 @@ casefolio/
 │  │     ├─ components/ui/      # shadcn (token-styled)
 │  │     ├─ components/editor/  # Puck config, fields (ImageSlotField, RichTextField, ThemePanel)
 │  │     ├─ components/sections/# Hero, Overview, Problem, Process, ScreensGallery, Results, Quote, CTA, Custom
-│  │     ├─ lib/{auth,db,billing,entitlements,storage,analytics,template}/
+│  │     ├─ lib/{animation,auth,db,billing,entitlements,storage,analytics,template}/
 │  │     ├─ stores/             # zustand + zundo
 │  │     ├─ styles/tokens.css   # generated from Figma
 │  │     └─ env.ts
