@@ -274,7 +274,7 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
         expect(badSlot.code).toBe("INVALID_SLOT");
       }
 
-      // 3. Non-owner upload attempt is forbidden
+      // 3. Cross-tenant upload attempt returns NOT_FOUND (404 per Spec §10.2 & §15)
       const unauthorizedUpload = await createPresignedUpload(
         {
           projectId,
@@ -289,17 +289,17 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
       );
       expect(unauthorizedUpload.ok).toBe(false);
       if (!unauthorizedUpload.ok) {
-        expect(unauthorizedUpload.code).toBe("FORBIDDEN");
+        expect(unauthorizedUpload.code).toBe("NOT_FOUND");
       }
 
-      // 4. Uploads > Free plan limit (5 MB) are rejected
+      // 4. Uploads > Free plan limit (10 MB) are rejected
       const overFreeFileLimit = await createPresignedUpload(
         {
           projectId,
           slot: "hero.mockup",
           fileName: "huge-render.png",
           mimeType: "image/png",
-          bytes: 6 * 1024 * 1024, // 6 MB > 5 MB Free limit
+          bytes: 11 * 1_000_000, // 11 MB > 10 MB Free limit
           width: 1800,
           height: 3900,
         },
@@ -308,10 +308,10 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
       expect(overFreeFileLimit.ok).toBe(false);
       if (!overFreeFileLimit.ok) {
         expect(overFreeFileLimit.code).toBe("FILE_TOO_LARGE");
-        expect(overFreeFileLimit.error).toContain("5 MB");
+        expect(overFreeFileLimit.error).toContain("10 MB");
       }
 
-      // 5. Upgrading owner to Pro allows 6 MB file, still rejects > 15 MB
+      // 5. Upgrading owner to Pro allows 12 MB file, still rejects > 25 MB
       await db
         .update(dbSchema.users)
         .set({ plan: "pro" })
@@ -323,7 +323,7 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
           slot: "hero.mockup",
           fileName: "pro-render.png",
           mimeType: "image/png",
-          bytes: 6 * 1024 * 1024,
+          bytes: 12 * 1_000_000,
           width: 1800,
           height: 3900,
         },
@@ -337,7 +337,7 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
           slot: "hero.mockup",
           fileName: "massive-render.png",
           mimeType: "image/png",
-          bytes: 16 * 1024 * 1024,
+          bytes: 26 * 1_000_000,
           width: 2400,
           height: 5200,
         },
@@ -346,7 +346,7 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
       expect(overProLimit.ok).toBe(false);
       if (!overProLimit.ok) {
         expect(overProLimit.code).toBe("FILE_TOO_LARGE");
-        expect(overProLimit.error).toContain("15 MB");
+        expect(overProLimit.error).toContain("25 MB");
       }
 
       // Reset back to Free plan for end-to-end upload + total quota + private-until-published check
@@ -395,10 +395,10 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
 
       const assetId = completed.asset.id;
 
-      // 7. FILES PRIVATE UNTIL PUBLISHED:
+      // 7. FILES PRIVATE UNTIL PUBLISHED (404 not_found per Spec §10.2 & §15):
       // 7a. Logged-out visitor cannot read asset while project is private/unpublished
       const anonymousPrivateRead = await authorizeAndReadAsset(assetId, null);
-      expect(anonymousPrivateRead.status).toBe("forbidden");
+      expect(anonymousPrivateRead.status).toBe("not_found");
 
       // 7b. Logged-in non-owner cannot read asset while project is private/unpublished
       const strangerPrivateRead = await authorizeAndReadAsset(assetId, {
@@ -406,7 +406,7 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
         role: "user",
         plan: "free",
       });
-      expect(strangerPrivateRead.status).toBe("forbidden");
+      expect(strangerPrivateRead.status).toBe("not_found");
 
       // 7c. Project owner CAN read asset in editor with private no-store cache header, and EXIF was stripped!
       const ownerPrivateRead = await authorizeAndReadAsset(assetId, {
@@ -421,7 +421,7 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
         expect(new TextDecoder().decode(ownerPrivateRead.bytes)).not.toContain("GPS-LAT-37.7749");
       }
 
-      // 7d. Publish the project -> anonymous visitors can now read with public immutable cache header!
+      // 7d. Publish the project -> anonymous visitors can now read with public cache header!
       await db
         .update(dbSchema.projects)
         .set({
@@ -434,10 +434,10 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
       expect(anonymousPublicRead.status).toBe("ok");
       if (anonymousPublicRead.status === "ok") {
         expect(anonymousPublicRead.isPublished).toBe(true);
-        expect(anonymousPublicRead.cacheControl).toContain("public, max-age=31536000, immutable");
+        expect(anonymousPublicRead.cacheControl).toContain("public");
       }
 
-      // 7e. Unpublish the project -> immediately private again!
+      // 7e. Unpublish the project -> immediately private (404) again!
       await db
         .update(dbSchema.projects)
         .set({
@@ -447,9 +447,9 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
         .where(eq(dbSchema.projects.id, projectId));
 
       const afterUnpublishRead = await authorizeAndReadAsset(assetId, null);
-      expect(afterUnpublishRead.status).toBe("forbidden");
+      expect(afterUnpublishRead.status).toBe("not_found");
 
-      // 8. Re-editing crop and cumulative quota check (> 50 MB total on Free plan)
+      // 8. Re-editing crop and cumulative quota check (> 250 MB total on Free plan)
       const updatedCrop = await updateAssetCropForUser(
         assetId,
         { crop: { x: 45, y: 90, width: 810, height: 1755 } },
@@ -460,14 +460,14 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
         expect(updatedCrop.asset.crop).toEqual({ x: 45, y: 90, width: 810, height: 1755 });
       }
 
-      // Simulate 48 MB already used on Free plan -> 4 MB upload exceeds 50 MB total quota
+      // Simulate 248 MB already used on Free plan -> 4 MB upload exceeds 250 MB total quota
       await db.insert(dbSchema.assets).values({
         projectId,
         r2Key: `projects/${projectId}/slots/gallery.screen/quota-fill.png`,
         slot: "gallery.screen",
         width: 1200,
         height: 2600,
-        bytes: 48 * 1024 * 1024,
+        bytes: 248 * 1_000_000,
         mimeType: "image/png",
       });
 
@@ -477,7 +477,7 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
           slot: "gallery.screen",
           fileName: "next-screen.png",
           mimeType: "image/png",
-          bytes: 4 * 1024 * 1024, // 48 MB + 4 MB = 52 MB > 50 MB Free quota
+          bytes: 4 * 1_000_000, // 248 MB + 4 MB = 252 MB > 250 MB Free quota
           width: 900,
           height: 1950,
         },

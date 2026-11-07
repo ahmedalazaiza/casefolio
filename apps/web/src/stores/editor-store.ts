@@ -14,19 +14,22 @@ export interface EditorStoreInit {
   puckData: PuckDocument;
   theme: TemplateTheme;
   updatedAtIso: string;
+  revision?: number;
 }
 
 export interface EditorStoreState extends EditorDocumentSnapshot {
   expectedUpdatedAtIso: string;
+  expectedRevision: number | undefined;
   saveStatus: EditorSaveStatus;
   saveError: string | null;
   conflictServerUpdatedAtIso: string | null;
+  conflictServerRevision: number | null;
   setPuckData: (updater: PuckDocument | ((prev: PuckDocument) => PuckDocument)) => void;
   setTheme: (updater: TemplateTheme | ((prev: TemplateTheme) => TemplateTheme)) => void;
   markUnsaved: () => void;
   markSaving: () => void;
-  markSaved: (updatedAtIso: string) => void;
-  markConflict: (message: string, serverUpdatedAtIso?: string) => void;
+  markSaved: (updatedAtIso: string, revision?: number) => void;
+  markConflict: (message: string, serverUpdatedAtIso?: string, serverRevision?: number) => void;
   markError: (message: string) => void;
 }
 
@@ -52,9 +55,11 @@ export function createEditorStore(initial: EditorStoreInit) {
         puckData: structuredClone(initial.puckData),
         theme: structuredClone(initial.theme),
         expectedUpdatedAtIso: initial.updatedAtIso,
+        expectedRevision: initial.revision,
         saveStatus: "saved",
         saveError: null,
         conflictServerUpdatedAtIso: null,
+        conflictServerRevision: null,
 
         setPuckData: (updater) => {
           const prevPuck = get().puckData;
@@ -94,20 +99,26 @@ export function createEditorStore(initial: EditorStoreInit) {
           });
         },
 
-        markSaved: (updatedAtIso) => {
+        markSaved: (updatedAtIso, revision) => {
           set((draft) => {
             draft.expectedUpdatedAtIso = updatedAtIso;
+            if (typeof revision === "number") {
+              draft.expectedRevision = revision;
+            }
             draft.saveStatus = "saved";
             draft.saveError = null;
             draft.conflictServerUpdatedAtIso = null;
+            draft.conflictServerRevision = null;
           });
         },
 
-        markConflict: (message, serverUpdatedAtIso) => {
+        markConflict: (message, serverUpdatedAtIso, serverRevision) => {
           set((draft) => {
             draft.saveStatus = "conflict";
             draft.saveError = message;
             draft.conflictServerUpdatedAtIso = serverUpdatedAtIso ?? null;
+            draft.conflictServerRevision =
+              typeof serverRevision === "number" ? serverRevision : null;
           });
         },
 

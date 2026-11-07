@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/guards";
 import { createOrganizationSchema, inviteTeamMemberSchema } from "@/lib/auth/schemas";
 import { auth } from "@/lib/auth/server";
+import { completeSandboxCheckoutForUser } from "@/lib/billing/service";
 import { db, dbSchema } from "@/lib/db";
 
 function extractCookieHeader(setCookie: string | null): string {
@@ -147,7 +148,7 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
         .from(dbSchema.organizations)
         .where(eq(dbSchema.organizations.id, orgId));
       expect(dbOrg?.slug).toBe(orgSlug);
-      expect(dbOrg?.seats).toBe(3);
+      expect(dbOrg?.seats).toBe(1);
 
       const [ownerMembership] = await db
         .select()
@@ -160,7 +161,24 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
         );
       expect(ownerMembership?.role).toBe("owner");
 
-      // 3. Owner invites teammate as `editor` and another as `viewer`
+      // Unpaid org cannot invite members before activating Casefolio Teams
+      await expect(
+        auth.api.createInvitation({
+          body: {
+            organizationId: orgId,
+            email: editorEmail,
+            role: "editor",
+          },
+          headers: ownerHeaders,
+        }),
+      ).rejects.toThrow(/Casefolio Teams subscription/i);
+
+      await completeSandboxCheckoutForUser(
+        { id: ownerSignUp.response.user.id, email: ownerEmail },
+        { plan: "team", interval: "monthly", orgId, seats: 3 },
+      );
+
+      // 3. Owner invites teammate as legacy `editor` (normalized to canonical `admin`) and another as `viewer` (normalized to `member`)
       const editorInvite = await auth.api.createInvitation({
         body: {
           organizationId: orgId,
@@ -169,7 +187,7 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
         },
         headers: ownerHeaders,
       });
-      expect(editorInvite.role).toBe("editor");
+      expect(editorInvite.role).toBe("admin");
       expect(editorInvite.status).toBe("pending");
 
       const viewerInvite = await auth.api.createInvitation({
@@ -180,9 +198,9 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
         },
         headers: ownerHeaders,
       });
-      expect(viewerInvite.role).toBe("viewer");
+      expect(viewerInvite.role).toBe("member");
 
-      // 4. Editor & Viewer accept their invitations -> added to `memberships`
+      // 4. Admin & Member accept their invitations -> added to `memberships`
       await auth.api.acceptInvitation({
         body: { invitationId: editorInvite.id },
         headers: editorHeaders,
@@ -201,7 +219,7 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
             eq(dbSchema.memberships.userId, editorSignUp.response.user.id),
           ),
         );
-      expect(editorMembership?.role).toBe("editor");
+      expect(editorMembership?.role).toBe("admin");
 
       const [viewerMembership] = await db
         .select()
@@ -212,7 +230,7 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
             eq(dbSchema.memberships.userId, viewerSignUp.response.user.id),
           ),
         );
-      expect(viewerMembership?.role).toBe("viewer");
+      expect(viewerMembership?.role).toBe("member");
 
       // 5. Viewer is forbidden from inviting new members
       await expect(

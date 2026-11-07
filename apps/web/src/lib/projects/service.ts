@@ -1,7 +1,13 @@
-import { and, count, eq, type PlanTier, type UserRole } from "@casefolio/db";
+import { and, eq, type PlanTier, type UserRole } from "@casefolio/db";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
+import { evaluateQuotaUsage, getWorkspaceQuotas } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import { can, evaluateEntitlement } from "@/lib/entitlements";
+import {
+  ensurePersonalWorkspaceForUser,
+  ensureTeamWorkspaceForOrganization,
+  resolveWorkspaceEntitlementState,
+} from "@/lib/entitlements/server";
 import {
   buildInitialProjectPuckData,
   createProjectInputSchema,
@@ -17,6 +23,12 @@ import {
   templateThemeSchema,
   validateTemplateDocument,
 } from "@/lib/template/schema";
+import { authorizeProjectAccess, authorizeSpaceAccess } from "@/lib/workspaces/acl";
+import { acquireOrRefreshEditLease, inspectProjectEditLease } from "@/lib/workspaces/leases";
+import {
+  getWorkspaceProjectCounts,
+  getWorkspaceStorageUsageBytes,
+} from "@/lib/workspaces/service";
 
 export interface CreateProjectServiceArgs {
   userId: string;
@@ -50,31 +62,116 @@ export async function createProjectFromTemplate({
 
   const valid = parsed.data;
 
-  if (!can(userPlan, "create_project", { projectsCount: 0 })) {
-    const decision = evaluateEntitlement(userPlan, "create_project", { projectsCount: 0 });
+  let targetWorkspaceId: string;
+  let targetSpaceId: string;
+  let targetOrgId: string | null;
+  let effectivePlan: PlanTier;
+  let maxActiveProjects: number;
+  let maxRetainedProjects: number;
+
+  if (valid.spaceId) {
+    const spaceAuth = await authorizeSpaceAccess(valid.spaceId, userId, "create_project");
+    if (!spaceAuth.ok) {
+      return {
+        ok: false,
+        code: spaceAuth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+        error: spaceAuth.error,
+      };
+    }
+    targetWorkspaceId = spaceAuth.workspace.id;
+    targetSpaceId = spaceAuth.space.id;
+    targetOrgId = spaceAuth.workspace.organizationId;
+    effectivePlan = spaceAuth.entitlement.plan;
+    maxActiveProjects = spaceAuth.entitlement.quotas.activeProjectsLimit;
+    maxRetainedProjects = spaceAuth.entitlement.quotas.retainedProjectsLimit;
+  } else if (orgId) {
+    const [membership] = await db
+      .select({ id: dbSchema.memberships.id })
+      .from(dbSchema.memberships)
+      .where(
+        and(
+          eq(dbSchema.memberships.orgId, orgId),
+          eq(dbSchema.memberships.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    if (!membership) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+        error: "Team workspace not found.",
+      };
+    }
+
+    const ensured = await ensureTeamWorkspaceForOrganization(orgId, userId);
+    const selectedSpaceId = ensured.memberPrivateSpaceId ?? ensured.defaultSharedSpaceId;
+    if (!selectedSpaceId) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+        error: "Workspace space not found.",
+      };
+    }
+
+    const spaceAuth = await authorizeSpaceAccess(selectedSpaceId, userId, "create_project");
+    if (!spaceAuth.ok) {
+      return {
+        ok: false,
+        code: spaceAuth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+        error: spaceAuth.error,
+      };
+    }
+
+    targetWorkspaceId = ensured.workspaceId;
+    targetSpaceId = selectedSpaceId;
+    targetOrgId = orgId;
+    effectivePlan = spaceAuth.entitlement.plan;
+    maxActiveProjects = spaceAuth.entitlement.quotas.activeProjectsLimit;
+    maxRetainedProjects = spaceAuth.entitlement.quotas.retainedProjectsLimit;
+  } else {
+    const personal = await ensurePersonalWorkspaceForUser(userId);
+    const ent = await resolveWorkspaceEntitlementState(personal.workspaceId);
+    if (ent?.isFrozen) {
+      return {
+        ok: false,
+        code: "FORBIDDEN",
+        error: "This workspace is currently read-only due to billing status.",
+      };
+    }
+
+    targetWorkspaceId = personal.workspaceId;
+    targetSpaceId = personal.defaultSpaceId;
+    targetOrgId = null;
+    effectivePlan =
+      ent && ent.plan !== "free" ? ent.plan : userPlan === "pro" ? "pro" : "free";
+    const personalQuotas = getWorkspaceQuotas(effectivePlan, 1);
+    maxActiveProjects = personalQuotas.activeProjectsLimit;
+    maxRetainedProjects = personalQuotas.retainedProjectsLimit;
+  }
+
+  const counts = await getWorkspaceProjectCounts(targetWorkspaceId);
+  if (counts.activeProjects >= maxActiveProjects) {
+    const decision = evaluateEntitlement(effectivePlan, "create_project", {
+      projectsCount: counts.activeProjects,
+      paidSeats: targetOrgId ? Math.max(1, Math.round(maxActiveProjects / 20)) : 1,
+    });
     return {
       ok: false,
       code: "PLAN_LIMIT_REACHED",
-      error: decision.message,
+      error:
+        decision.allowed === false
+          ? decision.message
+          : `You have reached the limit of ${maxActiveProjects} active case studies in this workspace.`,
     };
   }
 
-  if (userPlan === "free") {
-    const [existingCount] = await db
-      .select({ total: count() })
-      .from(dbSchema.projects)
-      .where(eq(dbSchema.projects.ownerId, userId));
-
-    const projectEntitlement = evaluateEntitlement(userPlan, "create_project", {
-      projectsCount: existingCount?.total ?? 0,
-    });
-    if (!projectEntitlement.allowed) {
-      return {
-        ok: false,
-        code: "PLAN_LIMIT_REACHED",
-        error: projectEntitlement.message,
-      };
-    }
+  if (counts.retainedProjects >= maxRetainedProjects) {
+    return {
+      ok: false,
+      code: "PLAN_LIMIT_REACHED",
+      error: `This workspace has reached its limit of ${maxRetainedProjects} total retained projects (including archives).`,
+    };
   }
 
   const [tplRow] = await db
@@ -103,8 +200,8 @@ export async function createProjectFromTemplate({
     };
   }
 
-  if (tplRow.template.tier === "pro" && !can(userPlan, "pro_templates")) {
-    const proDecision = evaluateEntitlement(userPlan, "pro_templates");
+  if (tplRow.template.tier === "pro" && !can(effectivePlan, "pro_templates")) {
+    const proDecision = evaluateEntitlement(effectivePlan, "pro_templates");
     return {
       ok: false,
       code: "PRO_TEMPLATE_LOCKED",
@@ -129,13 +226,18 @@ export async function createProjectFromTemplate({
     .insert(dbSchema.projects)
     .values({
       ownerId: userId,
-      orgId: orgId ?? null,
+      orgId: targetOrgId,
+      workspaceId: targetWorkspaceId,
+      spaceId: targetSpaceId,
+      createdByUserId: userId,
       templateVersionId: tplRow.version.id,
       name: valid.name,
       type: valid.type,
       puckData: initialPuckData as unknown as Record<string, unknown>,
       theme: initialTheme as unknown as Record<string, unknown>,
+      revision: 1,
       visibility: "private",
+      brandingRemoved: false,
       createdAt: now,
       updatedAt: now,
     })
@@ -157,7 +259,7 @@ export async function createProjectFromTemplate({
       projectType: valid.type,
       templateSlug: tplRow.template.slug,
       templateTier: tplRow.template.tier,
-      hasOrg: Boolean(orgId),
+      hasOrg: Boolean(targetOrgId),
     },
   });
 
@@ -183,47 +285,24 @@ export async function getProjectEditorAccess(
     return { status: "not_found" };
   }
 
+  // Verify read visibility first (`404` for cross-tenant OR Owner/Admin probing teammate's private project!)
+  const readAuth = await authorizeProjectAccess(projectId, user.id, "read");
+  if (!readAuth.ok) {
+    return { status: "not_found" };
+  }
+
   const [row] = await db
     .select({
-      project: dbSchema.projects,
       version: dbSchema.templateVersions,
       template: dbSchema.templates,
     })
-    .from(dbSchema.projects)
-    .innerJoin(
-      dbSchema.templateVersions,
-      eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
-    )
+    .from(dbSchema.templateVersions)
     .innerJoin(dbSchema.templates, eq(dbSchema.templateVersions.templateId, dbSchema.templates.id))
-    .where(eq(dbSchema.projects.id, projectId))
+    .where(eq(dbSchema.templateVersions.id, readAuth.project.templateVersionId))
     .limit(1);
 
   if (!row) {
     return { status: "not_found" };
-  }
-
-  const isPlatformAdmin = user.role === "admin" || user.role === "superadmin";
-  let canEdit = row.project.ownerId === user.id || isPlatformAdmin;
-
-  if (!canEdit && row.project.orgId) {
-    const [membership] = await db
-      .select({ role: dbSchema.memberships.role })
-      .from(dbSchema.memberships)
-      .where(
-        and(
-          eq(dbSchema.memberships.orgId, row.project.orgId),
-          eq(dbSchema.memberships.userId, user.id),
-        ),
-      )
-      .limit(1);
-
-    if (membership && (membership.role === "owner" || membership.role === "editor")) {
-      canEdit = true;
-    }
-  }
-
-  if (!canEdit) {
-    return { status: "forbidden" };
   }
 
   const tplDocCheck = validateTemplateDocument(row.version.data);
@@ -231,9 +310,33 @@ export async function getProjectEditorAccess(
     return { status: "not_found" };
   }
 
+  const editAuth = await authorizeProjectAccess(projectId, user.id, "edit");
+  let leaseState = await inspectProjectEditLease(projectId, user.id);
+
+  // If editable and in a shared space, proactively acquire/refresh caller's 120s lease if free
+  if (editAuth.ok && readAuth.space.visibility === "shared") {
+    const acquired = await acquireOrRefreshEditLease({
+      projectId,
+      actorUserId: user.id,
+    });
+    if (acquired.ok) {
+      leaseState = acquired.lease;
+    } else if (acquired.lease) {
+      leaseState = acquired.lease;
+    }
+  }
+
+  const isReadOnly =
+    !editAuth.ok || Boolean(leaseState && !leaseState.isHeldByCurrentUser);
+  const readOnlyReason = !editAuth.ok
+    ? editAuth.error
+    : leaseState && !leaseState.isHeldByCurrentUser
+      ? `${leaseState.holderName || "Another teammate"} is currently editing this case study.`
+      : null;
+
   const tplDoc = tplDocCheck.data;
-  const puckCheck = puckDocumentSchema.safeParse(row.project.puckData);
-  const themeCheck = templateThemeSchema.safeParse(row.project.theme);
+  const puckCheck = puckDocumentSchema.safeParse(readAuth.project.puckData);
+  const themeCheck = templateThemeSchema.safeParse(readAuth.project.theme);
 
   const resolvedPuck = puckCheck.success ? puckCheck.data : structuredClone(tplDoc.puck);
   const resolvedTheme = themeCheck.success
@@ -244,14 +347,22 @@ export async function getProjectEditorAccess(
     status: "ok",
     payload: {
       project: {
-        id: row.project.id,
-        name: row.project.name,
-        type: row.project.type,
+        id: readAuth.project.id,
+        name: readAuth.project.name,
+        type: readAuth.project.type,
         puckData: resolvedPuck,
         theme: resolvedTheme,
-        visibility: row.project.visibility,
-        slug: row.project.slug,
-        updatedAtIso: row.project.updatedAt.toISOString(),
+        visibility: readAuth.project.visibility,
+        slug: readAuth.project.slug,
+        revision: readAuth.project.revision,
+        brandingRemoved: readAuth.project.brandingRemoved,
+        archivedAtIso: readAuth.project.archivedAt
+          ? readAuth.project.archivedAt.toISOString()
+          : null,
+        updatedAtIso: readAuth.project.updatedAt.toISOString(),
+        workspaceId: readAuth.workspace.id,
+        spaceId: readAuth.space.id,
+        spaceVisibility: readAuth.space.visibility,
       },
       template: {
         id: row.template.id,
@@ -263,38 +374,18 @@ export async function getProjectEditorAccess(
         defaultPuck: tplDoc.puck,
         allowSectionMutations: tplDoc.template.canvas.allowSectionMutations,
       },
+      lease: leaseState,
+      isReadOnly,
+      readOnlyReason,
     },
   };
 }
 
-async function canUserEditProjectRow(
-  project: { ownerId: string; orgId: string | null },
-  user: { id: string; role: UserRole },
-): Promise<boolean> {
-  if (project.ownerId === user.id || user.role === "admin" || user.role === "superadmin") {
-    return true;
-  }
-
-  if (project.orgId) {
-    const [membership] = await db
-      .select({ role: dbSchema.memberships.role })
-      .from(dbSchema.memberships)
-      .where(
-        and(
-          eq(dbSchema.memberships.orgId, project.orgId),
-          eq(dbSchema.memberships.userId, user.id),
-        ),
-      )
-      .limit(1);
-
-    if (membership && (membership.role === "owner" || membership.role === "editor")) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
+/**
+ * Saves editor changes with `expectedRevision` / `expectedUpdatedAtIso` compare-and-swap (`409 CONFLICT`),
+ * single-writer 120s server lease enforcement (`LEASE_HELD`), and storage-capped recoverable content
+ * history (`Spec §5.8 & §13`).
+ */
 export async function saveProjectEditorState(
   input: SaveProjectEditorInput,
   user: { id: string; role: UserRole },
@@ -309,42 +400,93 @@ export async function saveProjectEditorState(
   }
 
   const valid = parsed.data;
-  const expectedMs = new Date(valid.expectedUpdatedAtIso).getTime();
+  const now = new Date();
 
-  const [existing] = await db
-    .select()
-    .from(dbSchema.projects)
-    .where(eq(dbSchema.projects.id, valid.projectId))
-    .limit(1);
-
-  if (!existing) {
+  const auth = await authorizeProjectAccess(valid.projectId, user.id, "edit", now);
+  if (!auth.ok) {
     return {
       ok: false,
-      code: "NOT_FOUND",
-      error: "Project not found.",
+      code: auth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+      error: auth.status === 404 ? "Project not found." : auth.error,
     };
   }
 
-  const allowed = await canUserEditProjectRow(existing, user);
-  if (!allowed) {
+  const existing = auth.project;
+
+  // Enforce 120s single-writer server lease (`Spec §13`)
+  const activeLease = await inspectProjectEditLease(existing.id, user.id, now);
+  if (activeLease && !activeLease.isHeldByCurrentUser) {
     return {
       ok: false,
-      code: "FORBIDDEN",
-      error: "You do not have permission to edit this project.",
+      code: "LEASE_HELD",
+      error: `${activeLease.holderName || "Another teammate"} holds the active editing lease on this project.`,
+      lease: activeLease,
     };
   }
 
-  if (existing.updatedAt.getTime() !== expectedMs) {
+  if (auth.space.visibility === "shared" || valid.leaseToken) {
+    const leaseRes = await acquireOrRefreshEditLease({
+      projectId: existing.id,
+      actorUserId: user.id,
+      leaseToken: valid.leaseToken,
+      now,
+    });
+    if (!leaseRes.ok && leaseRes.code === "LEASE_HELD") {
+      return {
+        ok: false,
+        code: "LEASE_HELD",
+        error: leaseRes.error,
+        lease: leaseRes.lease,
+      };
+    }
+  }
+
+  // Compare-and-swap on `expectedRevision` (if supplied) AND `expectedUpdatedAtIso` (if supplied)
+  const expectedMs = valid.expectedUpdatedAtIso
+    ? new Date(valid.expectedUpdatedAtIso).getTime()
+    : null;
+  if (
+    (typeof valid.expectedRevision === "number" &&
+      existing.revision !== valid.expectedRevision) ||
+    (expectedMs !== null && existing.updatedAt.getTime() !== expectedMs)
+  ) {
     return {
       ok: false,
       code: "CONFLICT",
-      error: "This project was updated in another tab or session.",
+      error: "This project was updated in another tab or session. Reload to get the latest version.",
       serverUpdatedAtIso: existing.updatedAt.toISOString(),
+      serverRevision: existing.revision,
     };
   }
 
-  const nextMs = Math.max(Date.now(), existing.updatedAt.getTime() + 1);
+  // Enforce storage cap on recoverable content history WITHOUT silently deleting older versions (`Spec §5.8`)
+  const serializedHistoryBytes = Buffer.byteLength(
+    JSON.stringify({ puckData: valid.puckData, theme: valid.theme }),
+    "utf8",
+  );
+  const currentStorageBytes = await getWorkspaceStorageUsageBytes(auth.workspace.id);
+  const storageEval = evaluateQuotaUsage({
+    used: currentStorageBytes,
+    adding: serializedHistoryBytes,
+    limit: auth.entitlement.quotas.storageBytesLimit,
+    isPaid: auth.entitlement.plan !== "free",
+    graceUsedAt: auth.entitlement.graceUsedAt,
+    graceExpiresAt: auth.entitlement.graceExpiresAt,
+    now,
+  });
+
+  if (!storageEval.allowed) {
+    return {
+      ok: false,
+      code: "STORAGE_QUOTA_EXCEEDED",
+      error:
+        "Workspace storage quota is full, so a new recoverable version cannot be saved. Remove unused assets or upgrade your plan (existing history is preserved).",
+    };
+  }
+
+  const nextMs = Math.max(now.getTime(), existing.updatedAt.getTime() + 1);
   const nextUpdatedAt = new Date(nextMs);
+  const nextRevision = existing.revision + 1;
   const nextTitle = valid.puckData.root.props.title.trim() || existing.name;
 
   const [updated] = await db
@@ -353,19 +495,27 @@ export async function saveProjectEditorState(
       name: nextTitle,
       puckData: valid.puckData as unknown as Record<string, unknown>,
       theme: valid.theme as unknown as Record<string, unknown>,
+      revision: nextRevision,
       updatedAt: nextUpdatedAt,
     })
     .where(
       and(
         eq(dbSchema.projects.id, valid.projectId),
+        eq(dbSchema.projects.revision, existing.revision),
         eq(dbSchema.projects.updatedAt, existing.updatedAt),
       ),
     )
-    .returning({ updatedAt: dbSchema.projects.updatedAt });
+    .returning({
+      updatedAt: dbSchema.projects.updatedAt,
+      revision: dbSchema.projects.revision,
+    });
 
   if (!updated) {
     const [latest] = await db
-      .select({ updatedAt: dbSchema.projects.updatedAt })
+      .select({
+        updatedAt: dbSchema.projects.updatedAt,
+        revision: dbSchema.projects.revision,
+      })
       .from(dbSchema.projects)
       .where(eq(dbSchema.projects.id, valid.projectId))
       .limit(1);
@@ -373,13 +523,31 @@ export async function saveProjectEditorState(
     return {
       ok: false,
       code: "CONFLICT",
-      error: "This project was updated in another tab or session.",
+      error: "This project was updated in another tab or session. Reload to get the latest version.",
       serverUpdatedAtIso: latest?.updatedAt.toISOString(),
+      serverRevision: latest?.revision,
     };
   }
+
+  await db
+    .insert(dbSchema.projectRevisions)
+    .values({
+      projectId: existing.id,
+      workspaceId: auth.workspace.id,
+      revision: updated.revision,
+      puckData: valid.puckData as unknown as Record<string, unknown>,
+      theme: valid.theme as unknown as Record<string, unknown>,
+      bytes: serializedHistoryBytes,
+      createdByUserId: user.id,
+      createdAt: nextUpdatedAt,
+    })
+    .onConflictDoNothing({
+      target: [dbSchema.projectRevisions.projectId, dbSchema.projectRevisions.revision],
+    });
 
   return {
     ok: true,
     updatedAtIso: updated.updatedAt.toISOString(),
+    revision: updated.revision,
   };
 }

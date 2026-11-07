@@ -1,4 +1,10 @@
-import type { ProjectType, ProjectVisibility, TemplateTier } from "@casefolio/db";
+import type {
+  ProjectType,
+  ProjectVisibility,
+  SpaceVisibility,
+  TemplateTier,
+  WorkspaceKind,
+} from "@casefolio/db";
 import { z } from "zod";
 
 export const renameProjectInputSchema = z.object({
@@ -26,6 +32,12 @@ export const deleteProjectInputSchema = z.object({
 
 export type DeleteProjectInput = z.infer<typeof deleteProjectInputSchema>;
 
+export const archiveProjectInputSchema = z.object({
+  projectId: z.string().uuid("Invalid project ID."),
+});
+
+export type ArchiveProjectInput = z.infer<typeof archiveProjectInputSchema>;
+
 export interface DashboardProjectItem {
   id: string;
   name: string;
@@ -33,6 +45,7 @@ export interface DashboardProjectItem {
   visibility: ProjectVisibility;
   slug: string | null;
   publishedAtIso: string | null;
+  archivedAtIso?: string | null;
   createdAtIso: string;
   updatedAtIso: string;
   templateName: string;
@@ -40,10 +53,21 @@ export interface DashboardProjectItem {
   templateSlug?: string;
   templateCoverUrl?: string | null;
   thumbnailUrl?: string | null;
+  workspaceId?: string | null;
+  workspaceKind?: WorkspaceKind;
+  spaceId?: string | null;
+  spaceName?: string;
+  spaceVisibility?: SpaceVisibility;
+  isCreator?: boolean;
 }
 
 export type DashboardProjectMutationCode =
-  "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "VALIDATION_ERROR" | "PLAN_LIMIT_REACHED";
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "PLAN_LIMIT_REACHED"
+  | "WORKSPACE_FROZEN";
 
 export type RenameProjectResult =
   | { ok: true; projectId: string; name: string; updatedAtIso: string }
@@ -55,4 +79,8 @@ export type DuplicateProjectResult =
 
 export type DeleteProjectResult =
   | { ok: true; deletedProjectId: string }
+  | { ok: false; code: DashboardProjectMutationCode; error: string };
+
+export type ArchiveProjectResult =
+  | { ok: true; projectId: string; archivedAtIso: string | null }
   | { ok: false; code: DashboardProjectMutationCode; error: string };

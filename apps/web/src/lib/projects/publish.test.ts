@@ -134,7 +134,7 @@ describe("publish & public share page service (C-601)", () => {
         expect(reservedRes.code).toBe("SLUG_RESERVED");
       }
 
-      // Stranger cannot publish owner's project
+      // Cross-tenant stranger receives NOT_FOUND (404 per Spec §10.2 & §15) when probing owner's project
       const forbiddenRes = await publishProjectForUser(
         {
           projectId: firstProject.projectId,
@@ -145,7 +145,7 @@ describe("publish & public share page service (C-601)", () => {
       );
       expect(forbiddenRes.ok).toBe(false);
       if (!forbiddenRes.ok) {
-        expect(forbiddenRes.code).toBe("FORBIDDEN");
+        expect(forbiddenRes.code).toBe("NOT_FOUND");
       }
 
       // Owner publishes as public

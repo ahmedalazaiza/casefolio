@@ -46,6 +46,7 @@ import type { TemplateProjectType } from "@/lib/template/schema";
 import { buildTemplateThemeStyle } from "@/lib/template/theme-vars";
 import type { PublishedTemplateItem } from "@/lib/template/types";
 import { cn } from "@/lib/utils";
+import type { SpaceSummaryItem } from "@/lib/workspaces/service";
 
 export type WizardStepKey = "type" | "template" | "details";
 
@@ -65,6 +66,11 @@ export interface CreateProjectWizardProps {
   templates: PublishedTemplateItem[];
   userPlan: "free" | "pro" | "team";
   existingProjectCount: number;
+  activeProjectsLimit?: number;
+  spaces?: SpaceSummaryItem[];
+  workspaceName?: string;
+  workspaceKind?: "personal" | "team";
+  initialSpaceId?: string;
   initialStep?: WizardStepKey;
   initialTemplateSlug?: string;
   initialDesignFocus?: TemplateProjectType | null;
@@ -75,6 +81,11 @@ export function CreateProjectWizard({
   templates,
   userPlan,
   existingProjectCount,
+  activeProjectsLimit,
+  spaces = [],
+  workspaceName,
+  workspaceKind = "personal",
+  initialSpaceId,
   initialStep = "type",
   initialTemplateSlug,
   initialDesignFocus,
@@ -88,9 +99,22 @@ export function CreateProjectWizard({
   } | null>(null);
 
   const canUseProTemplates = can(userPlan, "pro_templates");
-  const isFreeQuotaReached = !can(userPlan, "create_project", {
-    projectsCount: existingProjectCount,
-  });
+  const effectiveActiveLimit =
+    activeProjectsLimit ?? (userPlan === "free" ? FREE_PROJECT_LIMIT : 20);
+  const isFreeQuotaReached =
+    !can(userPlan, "create_project", {
+      projectsCount: existingProjectCount,
+    }) || existingProjectCount >= effectiveActiveLimit;
+
+  const defaultSpaceId = useMemo(() => {
+    if (initialSpaceId && spaces.some((s) => s.id === initialSpaceId)) {
+      return initialSpaceId;
+    }
+    const ownPrivate = spaces.find((s) => s.visibility === "private" && s.isMine);
+    return ownPrivate?.id ?? spaces[0]?.id ?? "";
+  }, [initialSpaceId, spaces]);
+
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string>(defaultSpaceId);
 
   const preselectedFromSlug = useMemo(() => {
     if (!initialTemplateSlug) return null;
@@ -217,6 +241,7 @@ export function CreateProjectWizard({
       const result = await onCreateProject({
         type: selectedType,
         templateId: selectedTemplate.id,
+        spaceId: selectedSpaceId || undefined,
         name: trimmedName,
         description: description.trim() || undefined,
         client: client.trim() || undefined,
@@ -336,28 +361,31 @@ export function CreateProjectWizard({
               <AlertCircle className="text-warning mt-0.5 size-5 shrink-0" />
               <div className="flex flex-col gap-0.5">
                 <p className="type-body-s-strong">
-                  You&apos;ve reached the Free plan limit ({existingProjectCount} of{" "}
-                  {FREE_PROJECT_LIMIT} projects).
+                  You&apos;ve reached your active project limit ({existingProjectCount} of{" "}
+                  {effectiveActiveLimit} active projects).
                 </p>
                 <p className="text-muted-foreground type-body-s">
-                  Upgrade to Pro for unlimited case studies, Pro templates, and watermark-free PDF
-                  &amp; Behance exports.
+                  {userPlan === "free"
+                    ? "Archive an existing project or upgrade to Pro for up to 20 active case studies, Pro templates, and unbranded exports."
+                    : "Archive a finished draft to free an active project slot, or add seats on Casefolio Teams."}
                 </p>
               </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              className="w-fit shrink-0"
-              onClick={() =>
-                setUpgradePrompt({
-                  title: "Unlock unlimited case studies",
-                  description: `Free plan includes up to ${FREE_PROJECT_LIMIT} projects. Upgrade to Casefolio Pro for unlimited projects, Pro templates, and watermark-free PDF exports.`,
-                })
-              }
-            >
-              Upgrade to Pro
-            </Button>
+            {userPlan === "free" && (
+              <Button
+                type="button"
+                size="sm"
+                className="w-fit shrink-0"
+                onClick={() =>
+                  setUpgradePrompt({
+                    title: "Unlock 20 active case studies",
+                    description: `Free plan includes up to ${FREE_PROJECT_LIMIT} active projects. Upgrade to Casefolio Pro for up to 20 active projects, Pro templates, and unbranded PDF & 2x PNG exports.`,
+                  })
+                }
+              >
+                Upgrade to Pro
+              </Button>
+            )}
           </div>
         )}
 
@@ -816,6 +844,34 @@ export function CreateProjectWizard({
                     />
                   </div>
                 </div>
+
+                {spaces.length > 0 && (spaces.length > 1 || workspaceKind === "team") && (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="wizard-project-space">
+                      Destination space{workspaceName ? ` (${workspaceName})` : ""}
+                    </Label>
+                    <select
+                      id="wizard-project-space"
+                      data-testid="wizard-space-select"
+                      value={selectedSpaceId}
+                      onChange={(e) => setSelectedSpaceId(e.target.value)}
+                      className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 type-body-s h-11 rounded-2xl border px-3.5 outline-none focus-visible:ring-2"
+                    >
+                      {spaces.map((sp) => (
+                        <option key={sp.id} value={sp.id}>
+                          {sp.name} —{" "}
+                          {sp.visibility === "private"
+                            ? "Private Space (only visible to you)"
+                            : "Shared Team Space (visible to teammates)"}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-tertiary type-caption">
+                      Defaults to your Private Space so drafts stay invisible to teammates until you
+                      move them to a Shared Space.
+                    </p>
+                  </div>
+                )}
 
                 <div className="bg-sunken text-muted-foreground type-caption flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5">
                   <div className="flex items-center gap-3">

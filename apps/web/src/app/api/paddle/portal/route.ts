@@ -8,7 +8,7 @@ import {
 
 export const runtime = "nodejs";
 
-export async function POST() {
+export async function POST(request: Request) {
   const sessionData = await getServerSession();
   if (!sessionData) {
     return NextResponse.json(
@@ -17,7 +17,15 @@ export async function POST() {
     );
   }
 
-  const result = await createPaddlePortalSessionForUser(sessionData.user.id);
+  let orgId: string | null = null;
+  try {
+    const body = (await request.json()) as { orgId?: string | null };
+    if (typeof body?.orgId === "string") orgId = body.orgId;
+  } catch {
+    // Optional body
+  }
+
+  const result = await createPaddlePortalSessionForUser(sessionData.user.id, orgId);
   if (!result.ok) {
     return NextResponse.json(result, { status: 400 });
   }
@@ -57,7 +65,7 @@ export async function DELETE(request: Request) {
   return NextResponse.json(result);
 }
 
-export async function PATCH() {
+export async function PATCH(request: Request) {
   const sessionData = await getServerSession();
   if (!sessionData) {
     return NextResponse.json(
@@ -66,11 +74,22 @@ export async function PATCH() {
     );
   }
 
-  const result = await resumeUserSubscription({
-    id: sessionData.user.id,
-    email: sessionData.user.email,
-    name: sessionData.user.name,
-  });
+  let orgId: string | null = null;
+  try {
+    const body = (await request.json()) as { orgId?: string | null };
+    if (typeof body?.orgId === "string") orgId = body.orgId;
+  } catch {
+    // Optional body
+  }
+
+  const result = await resumeUserSubscription(
+    {
+      id: sessionData.user.id,
+      email: sessionData.user.email,
+      name: sessionData.user.name,
+    },
+    orgId,
+  );
 
   if (!result.ok) {
     return NextResponse.json(result, { status: 400 });

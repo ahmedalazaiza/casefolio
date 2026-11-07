@@ -145,14 +145,14 @@ describe("Dashboard project management service (C-1004)", () => {
         expect(dupBlocked.code).toBe("PLAN_LIMIT_REACHED");
       }
 
-      // 5. Stranger is forbidden from renaming or deleting
+      // 5. Cross-tenant stranger receives NOT_FOUND (404 per Spec §10.2 & §15) when probing rename
       const forbiddenRename = await renameProjectForUser(
         { projectId: created.projectId, name: "Hacked" },
         { id: strangerId, role: "user" },
       );
       expect(forbiddenRename.ok).toBe(false);
       if (!forbiddenRename.ok) {
-        expect(forbiddenRename.code).toBe("FORBIDDEN");
+        expect(forbiddenRename.code).toBe("NOT_FOUND");
       }
 
       // 6. Delete rejects wrong confirmation string, then deletes on exact match

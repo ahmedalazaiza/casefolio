@@ -1,7 +1,7 @@
 "use client";
 
 import { initializePaddle, type Paddle } from "@paddle/paddle-js";
-import { Check, CreditCard, Loader2, ShieldCheck } from "lucide-react";
+import { Check, CreditCard, Loader2, Minus, Plus, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -17,8 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   BILLING_PLAN_CATALOG,
+  clampTeamsSeats,
   formatPlanHeadingLabel,
   getChargeAmountUsd,
+  TEAMS_CALCULATOR_DEFAULT_SEATS,
+  TEAMS_MAX_SELF_SERVE_SEATS,
+  TEAMS_MIN_SEATS,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
@@ -47,6 +51,7 @@ export interface PaddleCheckoutModalProps {
   onOpenChange: (open: boolean) => void;
   initialPlan?: PaidPlanTier;
   initialInterval?: BillingInterval;
+  initialSeats?: number;
   orgId?: string | null;
   onCheckoutCompleted?: (plan: PaidPlanTier) => void;
 }
@@ -56,6 +61,7 @@ export function PaddleCheckoutModal({
   onOpenChange,
   initialPlan = "pro",
   initialInterval = "monthly",
+  initialSeats = TEAMS_CALCULATOR_DEFAULT_SEATS,
   orgId = null,
   onCheckoutCompleted,
 }: PaddleCheckoutModalProps) {
@@ -63,6 +69,9 @@ export function PaddleCheckoutModal({
   const [selectedPlan, setSelectedPlan] = useState<PaidPlanTier>(initialPlan);
   const [selectedInterval, setSelectedInterval] =
     useState<BillingInterval>(initialInterval);
+  const [selectedSeats, setSelectedSeats] = useState<number>(
+    clampTeamsSeats(initialSeats),
+  );
   const [loadingSession, setLoadingSession] = useState(false);
   const [submittingSandbox, setSubmittingSandbox] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -72,13 +81,15 @@ export function PaddleCheckoutModal({
     if (open) {
       setSelectedPlan(initialPlan);
       setSelectedInterval(initialInterval);
+      setSelectedSeats(clampTeamsSeats(initialSeats));
       setErrorMessage(null);
       setPrepared(null);
     }
-  }, [open, initialPlan, initialInterval]);
+  }, [open, initialPlan, initialInterval, initialSeats]);
 
   const planDef = BILLING_PLAN_CATALOG[selectedPlan];
-  const displayAmount = getChargeAmountUsd(selectedPlan, selectedInterval);
+  const effectiveSeats = selectedPlan === "team" ? selectedSeats : 1;
+  const displayAmount = getChargeAmountUsd(selectedPlan, selectedInterval, effectiveSeats);
 
   async function launchPaddleOverlay(session: PreparedCheckoutPayload) {
     const paddle: Paddle | undefined = await initializePaddle({
@@ -125,7 +136,8 @@ export function PaddleCheckoutModal({
         body: JSON.stringify({
           plan: selectedPlan,
           interval: selectedInterval,
-          orgId,
+          orgId: selectedPlan === "team" ? orgId : null,
+          seats: effectiveSeats,
         }),
       });
 
@@ -164,7 +176,8 @@ export function PaddleCheckoutModal({
         body: JSON.stringify({
           plan: selectedPlan,
           interval: selectedInterval,
-          orgId,
+          orgId: selectedPlan === "team" ? orgId : null,
+          seats: effectiveSeats,
         }),
       });
 
@@ -218,6 +231,10 @@ export function PaddleCheckoutModal({
               {(["pro", "team"] as const).map((tier) => {
                 const def = BILLING_PLAN_CATALOG[tier];
                 const active = selectedPlan === tier;
+                const unitUsd =
+                  selectedInterval === "yearly"
+                    ? def.yearlyMonthlyEquivalentUsd
+                    : def.monthlyPriceUsd;
                 return (
                   <button
                     key={tier}
@@ -232,8 +249,8 @@ export function PaddleCheckoutModal({
                   >
                     <span className="text-foreground type-body-s-strong">{def.name}</span>
                     <span className="type-caption">
-                      ${selectedInterval === "yearly" ? def.yearlyMonthlyEquivalentUsd : def.monthlyPriceUsd}
-                      /mo
+                      ${unitUsd}
+                      {tier === "team" ? "/seat/mo" : "/mo"}
                     </span>
                   </button>
                 );
@@ -271,12 +288,62 @@ export function PaddleCheckoutModal({
               </button>
             </div>
 
+            {selectedPlan === "team" && (
+              <div
+                data-testid="checkout-team-seats-picker"
+                className="border-border bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+              >
+                <div className="flex flex-col">
+                  <span className="text-foreground type-body-s-strong">
+                    Paid seats (1–{TEAMS_MAX_SELF_SERVE_SEATS})
+                  </span>
+                  <span className="text-muted-foreground type-caption">
+                    Includes Owner, Admin &amp; Member accounts
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="Decrease checkout seats"
+                    data-testid="checkout-seats-decrement"
+                    disabled={selectedSeats <= TEAMS_MIN_SEATS}
+                    onClick={() =>
+                      setSelectedSeats((prev) => Math.max(TEAMS_MIN_SEATS, prev - 1))
+                    }
+                    className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
+                  >
+                    <Minus className="size-3.5" />
+                  </button>
+                  <span
+                    data-testid="checkout-seats-value"
+                    className="text-foreground type-body-s-strong min-w-8 text-center tabular-nums"
+                  >
+                    {selectedSeats}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Increase checkout seats"
+                    data-testid="checkout-seats-increment"
+                    disabled={selectedSeats >= TEAMS_MAX_SELF_SERVE_SEATS}
+                    onClick={() =>
+                      setSelectedSeats((prev) =>
+                        Math.min(TEAMS_MAX_SELF_SERVE_SEATS, prev + 1),
+                      )
+                    }
+                    className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
+                  >
+                    <Plus className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="border-border bg-surface flex flex-col gap-3 rounded-xl border p-4">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-foreground type-heading-s">
-                  {formatPlanHeadingLabel(selectedPlan, selectedInterval)}
+                  {formatPlanHeadingLabel(selectedPlan, selectedInterval, effectiveSeats)}
                 </span>
-                <span className="text-foreground type-heading-m font-mono">
+                <span className="text-foreground type-heading-m font-mono tabular-nums">
                   ${displayAmount}
                   <span className="text-muted-foreground type-caption font-sans">
                     /{selectedInterval === "yearly" ? "yr" : "mo"}
@@ -344,7 +411,7 @@ export function PaddleCheckoutModal({
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground type-caption">Plan</span>
                 <span className="text-foreground type-body-s-strong">
-                  {formatPlanHeadingLabel(prepared.plan, prepared.interval)}
+                  {formatPlanHeadingLabel(prepared.plan, prepared.interval, prepared.seats)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -353,7 +420,7 @@ export function PaddleCheckoutModal({
               </div>
               <div className="border-border flex items-center justify-between border-t pt-2.5">
                 <span className="text-foreground type-body-s-strong">Total due today</span>
-                <span className="text-foreground type-heading-s font-mono">
+                <span className="text-foreground type-heading-s font-mono tabular-nums">
                   ${prepared.amountUsd}.00 USD
                 </span>
               </div>

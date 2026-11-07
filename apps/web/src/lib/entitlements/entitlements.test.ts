@@ -33,25 +33,30 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
     expect(can("free", "remove_watermark")).toBe(false);
     expect(can("free", "full_analytics")).toBe(false);
     expect(can("free", "team_seats", { seatsUsed: 1, seatsLimit: 3 })).toBe(false);
-    expect(can("free", "brand_kit")).toBe(false);
+    expect(can("free", "shared_spaces")).toBe(false);
+    expect(can("free", "export_png_2x")).toBe(false);
     expect(can(null, "pro_templates")).toBe(false);
 
     // Pro plan checks
-    expect(can({ plan: "pro" }, "create_project", { projectsCount: 50 })).toBe(true);
+    expect(can({ plan: "pro" }, "create_project", { projectsCount: 19 })).toBe(true);
+    expect(can({ plan: "pro" }, "create_project", { projectsCount: 20 })).toBe(false);
     expect(can({ plan: "pro" }, "pro_templates")).toBe(true);
-    expect(can({ plan: "pro" }, "export_png", { monthlyExportsCount: 50 })).toBe(true);
+    expect(can({ plan: "pro" }, "export_png", { monthlyExportsCount: 59 })).toBe(true);
+    expect(can({ plan: "pro" }, "export_png", { monthlyExportsCount: 60 })).toBe(false);
+    expect(can({ plan: "pro" }, "export_png_2x")).toBe(true);
     expect(can({ plan: "pro" }, "export_pdf")).toBe(true);
     expect(can({ plan: "pro" }, "export_behance")).toBe(true);
     expect(can({ plan: "pro" }, "remove_watermark")).toBe(true);
     expect(can({ plan: "pro" }, "full_analytics")).toBe(true);
     expect(can({ plan: "pro" }, "team_seats", { seatsUsed: 1, seatsLimit: 3 })).toBe(false);
-    expect(can({ plan: "pro" }, "brand_kit")).toBe(false);
+    expect(can({ plan: "pro" }, "shared_spaces")).toBe(false);
 
     // Team plan checks
     expect(can({ plan: "team" }, "pro_templates")).toBe(true);
     expect(can({ plan: "team" }, "export_pdf")).toBe(true);
+    expect(can({ plan: "team" }, "export_png_2x")).toBe(true);
     expect(can({ plan: "team" }, "remove_watermark")).toBe(true);
-    expect(can({ plan: "team" }, "brand_kit")).toBe(true);
+    expect(can({ plan: "team" }, "shared_spaces")).toBe(true);
     expect(can({ plan: "team" }, "team_seats", { seatsUsed: 2, seatsLimit: 3 })).toBe(true);
     expect(can({ plan: "team" }, "team_seats", { seatsUsed: 3, seatsLimit: 3 })).toBe(false);
 
@@ -212,7 +217,7 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
       expect(proPdf.ok).toBe(true);
       if (proPdf.ok) {
         expect(proPdf.hasWatermark).toBe(false);
-        expect(proPdf.monthlyExportsLimit).toBeNull();
+        expect(proPdf.monthlyExportsLimit).toBe(60);
       }
 
       // Pro user STILL cannot invite collaborative Team seats
@@ -230,10 +235,10 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
         expect(blockedProInvite.code).toBe("TEAM_PLAN_REQUIRED");
       }
 
-      // 6. Upgrade organization to Team -> unlocks gated Team invitations up to seat limit
+      // 6. Upgrade organization to 3-seat Team -> unlocks gated Team invitations up to 3-seat limit
       const teamUpgrade = await completeSandboxCheckoutForUser(
         { id: userId, email: userEmail },
-        { plan: "team", interval: "monthly", orgId },
+        { plan: "team", interval: "monthly", orgId, seats: 3 },
       );
       expect(teamUpgrade.ok).toBe(true);
 

@@ -6,10 +6,25 @@ import Link from "next/link";
 import { useState } from "react";
 import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
+import { TeamsSeatCalculator } from "@/components/marketing/teams-seat-calculator";
 import { Eyebrow } from "@/components/ui/eyebrow";
-import { BILLING_PLAN_CATALOG, type BillingInterval, type PaidPlanTier } from "@/lib/billing/plans";
-import { FREE_MONTHLY_EXPORT_LIMIT } from "@/lib/exports/types";
-import { FREE_PROJECT_LIMIT } from "@/lib/projects/types";
+import {
+  BILLING_PLAN_CATALOG,
+  TEAMS_CALCULATOR_DEFAULT_SEATS,
+  TEAMS_MAX_SELF_SERVE_SEATS,
+  type BillingInterval,
+  type PaidPlanTier,
+} from "@/lib/billing/plans";
+import {
+  FREE_MONTHLY_EXPORT_LIMIT,
+  PRO_MONTHLY_EXPORT_LIMIT,
+  TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT,
+} from "@/lib/exports/types";
+import {
+  FREE_PROJECT_LIMIT,
+  PRO_PROJECT_LIMIT,
+  TEAMS_PROJECT_LIMIT_PER_SEAT,
+} from "@/lib/projects/types";
 
 export interface ConfiguredPaddlePriceMap {
   environment: "sandbox" | "production";
@@ -38,24 +53,31 @@ interface ComparisonRow {
 const COMPARISON_ROWS: readonly ComparisonRow[] = [
   {
     category: "Workspace",
-    feature: "Case study projects",
-    free: `Up to ${FREE_PROJECT_LIMIT} projects`,
-    pro: "Unlimited",
-    team: "Unlimited",
+    feature: "Workspace scope & seats",
+    free: "1 personal workspace · 1 person",
+    pro: "1 personal workspace · 1 person",
+    team: `1 team workspace · S = 1–${TEAMS_MAX_SELF_SERVE_SEATS} paid seats`,
   },
   {
     category: "Workspace",
-    feature: "Curated Casefolio templates",
-    free: "Free templates",
-    pro: "All Free & Pro templates",
-    team: "All Free & Pro templates",
+    feature: "Active, published & retained case studies",
+    free: `Up to ${FREE_PROJECT_LIMIT} active (1 live, 10 retained)`,
+    pro: `Up to ${PRO_PROJECT_LIMIT} active (10 live, 100 retained)`,
+    team: `${TEAMS_PROJECT_LIMIT_PER_SEAT} × S active (10 × S live, 100 × S retained)`,
   },
   {
-    category: "Editor",
-    feature: "Constrained slot editor, crops & version history",
-    free: true,
-    pro: true,
-    team: true,
+    category: "Workspace",
+    feature: "Private & shared spaces",
+    free: "1 personal space",
+    pro: "Up to 5 private spaces",
+    team: "5 private spaces/member (hidden from Owner/Admin) + 10 × S shared",
+  },
+  {
+    category: "Templates",
+    feature: "Curated Casefolio templates",
+    free: "3 approved Starter templates",
+    pro: "All eligible published templates",
+    team: "All eligible published templates",
   },
   {
     category: "Publishing",
@@ -66,62 +88,70 @@ const COMPARISON_ROWS: readonly ComparisonRow[] = [
   },
   {
     category: "Publishing",
-    feature: "Remove “Made with Casefolio” badge",
+    feature: "Removable “Made with Casefolio” branding",
     free: false,
     pro: true,
     team: true,
   },
   {
     category: "Exports",
-    feature: "High-res long PNG export",
-    free: `${FREE_MONTHLY_EXPORT_LIMIT}/mo (watermarked)`,
-    pro: "Unlimited · no watermark",
-    team: "Unlimited · no watermark",
+    feature: "Long PNG export & resolution",
+    free: `${FREE_MONTHLY_EXPORT_LIMIT}/mo · 1x (1,440 px, branded)`,
+    pro: `${PRO_MONTHLY_EXPORT_LIMIT}/mo · 1x & 2x (2,880 px, clean)`,
+    team: `${TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT} × S/mo · 1x & 2x (2,880 px, clean)`,
   },
   {
     category: "Exports",
-    feature: "Paged A4 PDF & Behance 1400w slices",
+    feature: "Paged A4 PDF & Behance 1,400w slices",
     free: false,
     pro: true,
     team: true,
   },
   {
-    category: "Analytics",
-    feature: "Case study analytics",
-    free: "Total page views",
-    pro: "Views, visitors, referrers & countries",
-    team: "Studio-wide views, visitors & referrers",
+    category: "Storage & Delivery",
+    feature: "Storage, monthly uploads & max file size",
+    free: "250 MB · 500 MB/mo · 10 MB/file",
+    pro: "5 GB · 10 GB/mo · 25 MB/file",
+    team: "10 GB × S · 20 GB × S/mo · 25 MB/file",
   },
   {
-    category: "Team",
-    feature: "Collaborative seats & roles",
-    free: "1 designer",
-    pro: "1 designer",
-    team: `${BILLING_PLAN_CATALOG.team.defaultSeats}+ seats (Owner, Editor, Viewer)`,
+    category: "Storage & Delivery",
+    feature: "Monthly public delivery bandwidth",
+    free: "1 GB/mo",
+    pro: "25 GB/mo",
+    team: "25 GB × S/mo",
   },
   {
-    category: "Team",
-    feature: "Shared studio brand kit & 10 GB storage",
-    free: false,
-    pro: false,
-    team: true,
+    category: "Analytics & History",
+    feature: "Visitor analytics & recoverable content history",
+    free: "7-day analytics · 7-day history",
+    pro: "90-day analytics · 30-day history",
+    team: "365-day analytics · 90-day history",
+  },
+  {
+    category: "Governance",
+    feature: "Team roles & departed member recovery",
+    free: "Personal owner",
+    pro: "Personal owner",
+    team: "Owner, Admin & Member · ≥90-day private recovery portal",
   },
 ];
 
 const PRICING_FAQ_STRIP = [
   {
-    question: "What happens to published pages if I cancel?",
+    question: "Are personal and team workspaces separate?",
     answer:
-      "Paid access remains active through the end of your current billing period. Afterwards, your projects and assets remain safe in your account under Free plan limits.",
+      "Yes. Pro covers one personal workspace ($12/mo or $120/yr), while Teams covers one shared team workspace ($18 × S/mo or $180 × S/yr). Joining a team workspace never alters or exposes your personal workspace.",
   },
   {
-    question: "Which actions need a paid plan?",
-    answer: `Creating more than ${FREE_PROJECT_LIMIT} projects, unlocking Pro templates, exporting unwatermarked PNG/PDF/Behance files, removing the public badge, and viewing full referrer analytics.`,
+    question: "Can Team Owners or Admins read my private space?",
+    answer:
+      "No. Every member's private spaces inside a Team workspace are hidden from Owners, Admins, and other teammates by default — returning 404 on unauthorized probes. Shared spaces are collaborative across the team.",
   },
   {
-    question: "Who handles payment & invoices?",
+    question: "How do seat changes and billing work?",
     answer:
-      "Paddle acts as our Merchant of Record — handling cards, Apple/Google Pay, global VAT/sales tax and downloadable invoices. Casefolio never stores card data.",
+      "Paddle acts as our Merchant of Record for cards, VAT, and invoices. Adding seats previews the exact prorated charge before billing; decreasing seats takes effect at your next renewal with full paid capacity preserved until then.",
   },
 ] as const;
 
@@ -152,47 +182,58 @@ export function PricingPageClient({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PaidPlanTier>("pro");
   const [selectedInterval, setSelectedInterval] = useState<BillingInterval>(initialInterval);
+  const [selectedSeats, setSelectedSeats] = useState<number>(TEAMS_CALCULATOR_DEFAULT_SEATS);
 
   function handleSelectPaidPlan(plan: PaidPlanTier, interval: BillingInterval) {
     setSelectedPlan(plan);
     setSelectedInterval(interval);
+    setSelectedSeats(plan === "team" ? TEAMS_CALCULATOR_DEFAULT_SEATS : 1);
+    setCheckoutOpen(true);
+  }
+
+  function handleStartCalculatorCheckout(seats: number, interval: BillingInterval) {
+    setSelectedPlan("team");
+    setSelectedInterval(interval);
+    setSelectedSeats(seats);
     setCheckoutOpen(true);
   }
 
   return (
     <div className="min-w-0 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
       <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-16 lg:gap-20">
-        {/* Header matching Figma 2:8861 */}
+        {/* Header */}
         <header className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
-          <Eyebrow icon={<Sparkles />}>Case Study Builder</Eyebrow>
+          <Eyebrow icon={<Sparkles />}>Pricing &amp; Teams</Eyebrow>
           <h1 className="text-foreground type-section text-balance">Unlock the full builder</h1>
-          <p className="text-muted-foreground type-lead max-w-xl">
-            Create, publish and export case studies from Casefolio templates. Start free with{" "}
-            {FREE_PROJECT_LIMIT} projects — upgrade whenever your portfolio or studio grows.
+          <p className="text-muted-foreground type-lead max-w-2xl">
+            Honest, predictable plans for individual designers and product design teams. Start free
+            with {FREE_PROJECT_LIMIT} active case studies — upgrade to Pro for unbranded 2x exports
+            or Teams for private member spaces plus shared team publishing.
           </p>
           {isAuthenticated && currentTier && (
             <p className="text-muted-foreground type-caption pt-1">
               Signed in on <strong className="text-foreground capitalize">{currentTier}</strong>{" "}
-              plan ·{" "}
+              personal plan ·{" "}
               <Link
                 href="/account/billing"
                 className="text-accent-foreground underline underline-offset-4"
               >
-                Manage billing &amp; invoices
+                Manage billing &amp; seats
               </Link>
             </p>
           )}
         </header>
 
-        {/* Plans grid + Monthly/Yearly toggle (Figma 2:8867 + 2:8872) */}
+        {/* Plans grid + Monthly/Yearly toggle */}
         <section aria-label="Subscription plans" className="flex flex-col gap-8">
           <LandingPricingSection
-            defaultInterval={initialInterval}
+            interval={selectedInterval}
+            onIntervalChange={setSelectedInterval}
             currentTier={currentTier}
             onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
           />
 
-          {/* Merchant of Record note (Figma 2:8972) */}
+          {/* Merchant of Record note */}
           <div
             data-testid="paddle-config-summary"
             data-pro-monthly={paddlePriceMap.pro_monthly}
@@ -207,6 +248,17 @@ export function PricingPageClient({
               receipts · Cancel anytime.
             </span>
           </div>
+        </section>
+
+        {/* Interactive Teams Seat Calculator (Spec §6 & §14) */}
+        <section aria-label="Teams seat calculator" className="min-w-0">
+          <TeamsSeatCalculator
+            interval={selectedInterval}
+            onIntervalChange={setSelectedInterval}
+            onStartTeamsCheckout={
+              isAuthenticated ? handleStartCalculatorCheckout : undefined
+            }
+          />
         </section>
 
         {/* Plan comparison matrix */}
@@ -238,7 +290,7 @@ export function PricingPageClient({
                   <th className="text-foreground type-body-s-strong px-5 py-4">
                     {BILLING_PLAN_CATALOG.team.name}{" "}
                     <span className="text-muted-foreground font-normal">
-                      (${BILLING_PLAN_CATALOG.team.monthlyPriceUsd}/mo)
+                      (${BILLING_PLAN_CATALOG.team.monthlyPriceUsd}/seat/mo)
                     </span>
                   </th>
                 </tr>
@@ -278,7 +330,7 @@ export function PricingPageClient({
           </div>
         </section>
 
-        {/* Bottom 3-column FAQ strip matching Figma 2:8977 */}
+        {/* Bottom 3-column FAQ strip */}
         <section
           aria-label="Billing questions"
           className="border-border grid grid-cols-1 gap-8 border-t pt-10 md:grid-cols-3"
@@ -298,6 +350,7 @@ export function PricingPageClient({
           onOpenChange={setCheckoutOpen}
           initialPlan={selectedPlan}
           initialInterval={selectedInterval}
+          initialSeats={selectedSeats}
           orgId={activeOrgId}
         />
       )}

@@ -6,6 +6,9 @@ export type ExportFormat = "png_long" | "pdf" | "behance";
 export const EXPORT_DESKTOP_WIDTH = 1440;
 export const BEHANCE_SLICE_WIDTH = 1400;
 export const BEHANCE_MAX_SLICE_HEIGHT = 1960;
+export const FREE_MAX_EXPORT_MEGAPIXELS = 40;
+export const PAID_MAX_EXPORT_MEGAPIXELS = 120;
+export const MAX_PDF_EXPORT_PAGES = 60;
 
 export interface RenderExportInput {
   exportId: string;
@@ -13,6 +16,10 @@ export interface RenderExportInput {
   format: ExportFormat;
   appUrl: string;
   renderToken: string;
+  scale?: 1 | 2;
+  maxMegapixels?: number;
+  maxPdfPages?: number;
+  timeoutMs?: number;
 }
 
 export interface RenderedExportArtifact {
@@ -21,6 +28,110 @@ export interface RenderedExportArtifact {
   extension: "png" | "pdf" | "zip";
   sliceCount: number;
   computedHeadingFont: string;
+}
+
+const ALLOWED_RASTER_DATA_PREFIXES = [
+  "data:image/png;",
+  "data:image/jpeg;",
+  "data:image/jpg;",
+  "data:image/webp;",
+] as const;
+
+const BLOCKED_INTERNAL_HOSTS = new Set([
+  "169.254.169.254",
+  "metadata.google.internal",
+  "metadata.goog",
+  "[fd00:ec2::254]",
+]);
+
+function isPrivateOrMetadataHost(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  if (BLOCKED_INTERNAL_HOSTS.has(lower)) {
+    return true;
+  }
+  if (
+    lower === "localhost" ||
+    lower === "0.0.0.0" ||
+    lower === "[::1]" ||
+    lower === "::1" ||
+    lower.endsWith(".local") ||
+    lower.endsWith(".internal")
+  ) {
+    return true;
+  }
+  // IPv4 private / loopback / link-local ranges
+  const ipv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(lower);
+  if (ipv4Match) {
+    const a = Number(ipv4Match[1]);
+    const b = Number(ipv4Match[2]);
+    if (a === 127 || a === 10 || a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+  }
+  return false;
+}
+
+/**
+ * SSRF & arbitrary URL fetch defense for Playwright export rendering (`Spec §5.6 & §10.7`).
+ * Allows ONLY:
+ * 1. Exact `allowedOrigin` (`http(s)://host:port` of the Casefolio web app)
+ * 2. First-party static asset CDN (`https://cdn.casefolio.app`)
+ * 3. Non-SVG raster `data:image/(png|jpeg|webp);...` URIs
+ * Blocks all arbitrary external hosts, `data:image/svg+xml`, `data:text/html`, `file:`, and internal/metadata IPs.
+ */
+export function isAllowedExportWorkerRequestUrl(
+  requestUrl: string,
+  allowedOrigin: string,
+): boolean {
+  const trimmed = requestUrl.trim();
+  if (!trimmed) return false;
+
+  const lower = trimmed.toLowerCase();
+  for (const prefix of ALLOWED_RASTER_DATA_PREFIXES) {
+    if (lower.startsWith(prefix)) {
+      return true;
+    }
+  }
+
+  let parsedAllowed: URL;
+  let parsedRequest: URL;
+  try {
+    parsedAllowed = new URL(allowedOrigin);
+    parsedRequest = new URL(trimmed);
+  } catch {
+    return false;
+  }
+
+  if (parsedRequest.protocol !== "http:" && parsedRequest.protocol !== "https:") {
+    return false;
+  }
+
+  // Exact match to the configured Casefolio application origin (supports localhost in dev/test while blocking any other port/host)
+  if (parsedRequest.origin === parsedAllowed.origin) {
+    if (BLOCKED_INTERNAL_HOSTS.has(parsedRequest.hostname.toLowerCase())) {
+      return false;
+    }
+    return true;
+  }
+
+  // First-party static template asset host
+  if (
+    parsedRequest.protocol === "https:" &&
+    parsedRequest.hostname.toLowerCase() === "cdn.casefolio.app" &&
+    !isPrivateOrMetadataHost(parsedRequest.hostname)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function countPdfPages(pdfBytes: Uint8Array): number {
+  const text = new TextDecoder("latin1").decode(pdfBytes);
+  const matches = text.match(/\/Type\s*\/Page\b(?!s)/g);
+  return matches ? matches.length : 1;
 }
 
 let sharedBrowserPromise: Promise<Browser> | null = null;
@@ -78,13 +189,19 @@ export async function renderExportWithPlaywright(
 ): Promise<RenderedExportArtifact> {
   const browser = await getSharedChromiumBrowser();
   const cleanAppUrl = input.appUrl.replace(/\/+$/, "");
+  const allowedOrigin = new URL(cleanAppUrl).origin;
   const targetUrl = `${cleanAppUrl}/export/${encodeURIComponent(input.exportId)}?token=${encodeURIComponent(input.renderToken)}`;
+
+  const requestedScale = input.scale === 2 ? 2 : 1;
+  const deviceScaleFactor = input.format === "png_long" ? requestedScale : 1;
+  const maxMegapixels = input.maxMegapixels ?? PAID_MAX_EXPORT_MEGAPIXELS;
+  const maxPdfPages = input.maxPdfPages ?? MAX_PDF_EXPORT_PAGES;
+  const timeoutMs = Math.max(10_000, Math.min(input.timeoutMs ?? 60_000, 120_000));
 
   const viewportWidth =
     input.format === "behance" ? BEHANCE_SLICE_WIDTH : EXPORT_DESKTOP_WIDTH;
   const viewportHeight =
     input.format === "behance" ? BEHANCE_MAX_SLICE_HEIGHT : 960;
-  const deviceScaleFactor = input.format === "png_long" ? 2 : 1;
 
   const context = await browser.newContext({
     viewport: { width: viewportWidth, height: viewportHeight },
@@ -96,9 +213,22 @@ export async function renderExportWithPlaywright(
 
   try {
     const page = await context.newPage();
+    page.setDefaultTimeout(timeoutMs);
+
+    // Enforce SSRF & arbitrary URL fetch allowlist on every network request
+    await page.route("**/*", async (route) => {
+      const reqUrl = route.request().url();
+      if (!isAllowedExportWorkerRequestUrl(reqUrl, allowedOrigin)) {
+        await route.abort("blockedbyclient");
+        return;
+      }
+      await route.continue();
+    });
+
+    const navTimeoutMs = Math.min(45_000, timeoutMs);
     const response = await page.goto(targetUrl, {
       waitUntil: "networkidle",
-      timeout: 45_000,
+      timeout: navTimeoutMs,
     });
 
     if (!response || response.status() >= 400) {
@@ -109,12 +239,10 @@ export async function renderExportWithPlaywright(
 
     await page.locator('[data-testid="export-render-ready"]').waitFor({
       state: "visible",
-      timeout: 15_000,
+      timeout: Math.min(15_000, timeoutMs),
     });
 
-    // Force eager loading on all images, scroll full page to trigger responsive srcset fetches,
-    // wait for web fonts (`document.fonts.ready`) and full image decode, then return to top.
-    const computedHeadingFont = await page.evaluate(async () => {
+    const { computedHeadingFont, totalHeight } = await page.evaluate(async () => {
       const images = Array.from(document.querySelectorAll("img"));
       for (const img of images) {
         img.loading = "eager";
@@ -146,17 +274,34 @@ export async function renderExportWithPlaywright(
             try {
               await img.decode();
             } catch {
-              // Ignore decode warnings on broken external URLs
+              // Ignore decode warnings on blocked/missing URLs
             }
           }
         }),
       );
 
+      const measuredHeight = Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight,
+        1,
+      );
       const heading =
         document.querySelector('[data-section-type="Hero"] h1') ??
         document.querySelector("h1, h2");
-      return heading ? window.getComputedStyle(heading).fontFamily : "";
+      return {
+        computedHeadingFont: heading ? window.getComputedStyle(heading).fontFamily : "",
+        totalHeight: measuredHeight,
+      };
     });
+
+    const renderedWidthPx = viewportWidth * deviceScaleFactor;
+    const renderedHeightPx = totalHeight * deviceScaleFactor;
+    const totalMegapixels = (renderedWidthPx * renderedHeightPx) / 1_000_000;
+    if (totalMegapixels > maxMegapixels) {
+      throw new Error(
+        `Export exceeds maximum pixel budget (${totalMegapixels.toFixed(1)} MP > ${maxMegapixels} MP).`,
+      );
+    }
 
     if (input.format === "png_long") {
       const pngBuffer = await page.screenshot({
@@ -179,19 +324,27 @@ export async function renderExportWithPlaywright(
         printBackground: true,
         preferCSSPageSize: false,
       });
+      const pdfBytes = new Uint8Array(
+        pdfBuffer.buffer,
+        pdfBuffer.byteOffset,
+        pdfBuffer.byteLength,
+      );
+      const pageCount = countPdfPages(pdfBytes);
+      if (pageCount > maxPdfPages) {
+        throw new Error(
+          `PDF export exceeds maximum allowed page count (${pageCount} > ${maxPdfPages} pages).`,
+        );
+      }
       return {
-        bytes: new Uint8Array(pdfBuffer.buffer, pdfBuffer.byteOffset, pdfBuffer.byteLength),
+        bytes: pdfBytes,
         contentType: "application/pdf",
         extension: "pdf",
-        sliceCount: 1,
+        sliceCount: pageCount,
         computedHeadingFont,
       };
     }
 
-    // Behance 1400px vertical slices bundled into .zip
-    const totalHeight = await page.evaluate(() =>
-      Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, 1),
-    );
+    // Behance 1400px vertical slices bundled into .zip (`Spec §5.5`: sliced panels rather than giant canvas)
     const sliceRanges = computeBehanceSliceRanges(totalHeight, BEHANCE_MAX_SLICE_HEIGHT);
     const entries: Array<{ name: string; data: Uint8Array }> = [];
 
@@ -225,4 +378,3 @@ export async function renderExportWithPlaywright(
     await context.close();
   }
 }
-

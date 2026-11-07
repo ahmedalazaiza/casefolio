@@ -5,7 +5,6 @@ import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { ReportCaseStudyButton } from "@/components/public/report-case-study-button";
 import { CasefolioWatermark } from "@/components/sections/casefolio-watermark";
 import { recordPublishedProjectView } from "@/lib/analytics/page-views";
-import { can } from "@/lib/entitlements";
 import {
   buildPublicCaseStudyUrl,
   getPublishedProjectBySlug,
@@ -110,7 +109,7 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
         projectType={published.project.type}
         className="rounded-none"
       />
-      <CasefolioWatermark visible={!can(published.owner.plan, "remove_watermark")} />
+      <CasefolioWatermark visible={!published.project.brandingRemoved} />
       <ReportCaseStudyButton
         projectId={published.project.id}
         projectName={published.project.name}

@@ -67,7 +67,7 @@ describe("ProjectExportsPanel & ExportCaseStudyDialog (C-603)", () => {
       ...FREE_OVERVIEW,
       ownerPlan: "pro",
       hasWatermark: false,
-      monthlyExportsLimit: null,
+      monthlyExportsLimit: 60,
       exports: [],
     };
 
@@ -85,7 +85,7 @@ describe("ProjectExportsPanel & ExportCaseStudyDialog (C-603)", () => {
       },
       hasWatermark: false,
       monthlyExportsUsed: 1,
-      monthlyExportsLimit: null,
+      monthlyExportsLimit: 60,
     });
 
     const pollOverview = vi.fn().mockResolvedValue({

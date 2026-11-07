@@ -1,12 +1,18 @@
 "use client";
 
-import type { ProjectType } from "@casefolio/db";
+import type { ProjectType, SpaceVisibility } from "@casefolio/db";
 import {
   AlertTriangle,
+  Archive,
+  ArchiveRestore,
+  Building2,
   Copy,
   Download,
   ExternalLink,
+  FolderInput,
+  FolderPlus,
   Loader2,
+  Lock,
   Monitor,
   MoreHorizontal,
   Pencil,
@@ -15,10 +21,11 @@ import {
   Share2,
   Smartphone,
   Trash2,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -48,8 +55,9 @@ import {
 } from "@/lib/projects/actions";
 import type { DashboardProjectItem } from "@/lib/projects/dashboard-types";
 import { cn } from "@/lib/utils";
+import type { SpaceSummaryItem, WorkspaceSwitcherState } from "@/lib/workspaces/service";
 
-type StatusFilter = "all" | "draft" | "published";
+type StatusFilter = "all" | "draft" | "published" | "archived";
 type TypeFilter = "all" | ProjectType;
 type SortMode = "updated" | "created" | "name";
 
@@ -100,6 +108,18 @@ function formatProjectTypeLabel(type: ProjectType): string {
   return "Mobile app";
 }
 
+function formatBytesCompact(bytes: number): string {
+  const gb = 1024 * 1024 * 1024;
+  const mb = 1024 * 1024;
+  if (bytes >= gb) {
+    return `${(bytes / gb).toFixed(bytes % gb === 0 ? 0 : 1)} GB`;
+  }
+  if (bytes >= mb) {
+    return `${Math.round(bytes / mb)} MB`;
+  }
+  return `${Math.max(0, Math.round(bytes / 1024))} KB`;
+}
+
 function formatRelativeEdited(iso: string): string {
   const updatedMs = new Date(iso).getTime();
   if (Number.isNaN(updatedMs)) return "Edited recently";
@@ -122,27 +142,41 @@ function resolveProjectStatusBadge(project: DashboardProjectItem): {
   label: string;
   tone: BadgeProps["tone"];
   isPublished: boolean;
+  isArchived: boolean;
 } {
+  if (project.archivedAtIso) {
+    return { label: "Archived", tone: "neutral", isPublished: false, isArchived: true };
+  }
   if (project.visibility === "public" && project.publishedAtIso) {
-    return { label: "Published", tone: "published", isPublished: true };
+    return { label: "Published", tone: "published", isPublished: true, isArchived: false };
   }
   if (project.visibility === "unlisted" && project.publishedAtIso) {
-    return { label: "Unlisted", tone: "accent", isPublished: true };
+    return { label: "Unlisted", tone: "accent", isPublished: true, isArchived: false };
   }
-  return { label: "Draft", tone: "draft", isPublished: false };
+  return { label: "Draft", tone: "draft", isPublished: false, isArchived: false };
 }
 
 export interface DashboardProjectsClientProps {
   initialProjects: DashboardProjectItem[];
+  workspaceContext?: WorkspaceSwitcherState;
 }
 
-export function DashboardProjectsClient({ initialProjects }: DashboardProjectsClientProps) {
+export function DashboardProjectsClient({
+  initialProjects,
+  workspaceContext,
+}: DashboardProjectsClientProps) {
   const router = useRouter();
   const [projects, setProjects] = useState<DashboardProjectItem[]>(initialProjects);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [spaceFilter, setSpaceFilter] = useState<string>("all");
   const [sortMode, setSortMode] = useState<SortMode>("updated");
   const [searchQuery, setSearchQuery] = useState("");
+  const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
+
+  useEffect(() => {
+    setProjects(initialProjects);
+  }, [initialProjects]);
 
   // Rename modal state (Figma 2:2783)
   const [renameTarget, setRenameTarget] = useState<DashboardProjectItem | null>(null);
@@ -157,29 +191,68 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Duplicate busy id
-  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  // Create Space modal state
+  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
+  const [newSpaceName, setNewSpaceName] = useState("");
+  const [newSpaceVisibility, setNewSpaceVisibility] = useState<SpaceVisibility>("private");
+  const [createSpaceBusy, setCreateSpaceBusy] = useState(false);
+  const [createSpaceError, setCreateSpaceError] = useState<string | null>(null);
+
+  // Transition Space Visibility modal state
+  const [transitionSpaceTarget, setTransitionSpaceTarget] = useState<SpaceSummaryItem | null>(null);
+  const [transitionConfirmed, setTransitionConfirmed] = useState(false);
+  const [transitionBusy, setTransitionBusy] = useState(false);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
+
+  // Move Project between spaces modal state
+  const [moveTarget, setMoveTarget] = useState<DashboardProjectItem | null>(null);
+  const [destinationSpaceId, setDestinationSpaceId] = useState<string>("");
+  const [moveConfirmed, setMoveConfirmed] = useState(false);
+  const [moveBusy, setMoveBusy] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
+
+  // Busy action ID
+  const [busyProjectId, setBusyProjectId] = useState<string | null>(null);
+
+  const activeWorkspace = workspaceContext?.activeWorkspace ?? null;
+  const spaces = workspaceContext?.spaces ?? [];
+  const selectedSpaceObj = spaces.find((s) => s.id === spaceFilter) ?? null;
 
   const counts = useMemo(() => {
+    let activeAll = 0;
     let published = 0;
     let draft = 0;
+    let archived = 0;
     for (const proj of projects) {
-      if (resolveProjectStatusBadge(proj).isPublished) {
-        published += 1;
+      if (spaceFilter !== "all" && proj.spaceId !== spaceFilter) continue;
+      const badge = resolveProjectStatusBadge(proj);
+      if (badge.isArchived) {
+        archived += 1;
       } else {
-        draft += 1;
+        activeAll += 1;
+        if (badge.isPublished) {
+          published += 1;
+        } else {
+          draft += 1;
+        }
       }
     }
-    return { all: projects.length, published, draft };
-  }, [projects]);
+    return { all: activeAll, published, draft, archived };
+  }, [projects, spaceFilter]);
 
   const visibleProjects = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return projects
       .filter((proj) => {
+        if (spaceFilter !== "all" && proj.spaceId !== spaceFilter) return false;
         const badge = resolveProjectStatusBadge(proj);
-        if (statusFilter === "published" && !badge.isPublished) return false;
-        if (statusFilter === "draft" && badge.isPublished) return false;
+        if (statusFilter === "archived") {
+          if (!badge.isArchived) return false;
+        } else {
+          if (badge.isArchived) return false;
+          if (statusFilter === "published" && !badge.isPublished) return false;
+          if (statusFilter === "draft" && badge.isPublished) return false;
+        }
         if (typeFilter !== "all" && proj.type !== typeFilter) return false;
         if (q) {
           const hay = `${proj.name} ${proj.templateName} ${proj.slug ?? ""}`.toLowerCase();
@@ -196,7 +269,216 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
         }
         return new Date(b.updatedAtIso).getTime() - new Date(a.updatedAtIso).getTime();
       });
-  }, [projects, searchQuery, sortMode, statusFilter, typeFilter]);
+  }, [projects, searchQuery, sortMode, spaceFilter, statusFilter, typeFilter]);
+
+  async function handleSwitchWorkspace(nextOrgId: string | null) {
+    setSwitchingWorkspace(true);
+    try {
+      const response = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ organizationId: nextOrgId }),
+      });
+      const json = (await response.json()) as { ok: boolean; error?: string };
+      if (!response.ok || !json.ok) {
+        toast.error(json.error ?? "Could not switch workspace.");
+        return;
+      }
+      setSpaceFilter("all");
+      router.refresh();
+    } catch {
+      toast.error("Network error while switching workspace.");
+    } finally {
+      setSwitchingWorkspace(false);
+    }
+  }
+
+  async function handleCreateSpaceSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeWorkspace) return;
+    setCreateSpaceBusy(true);
+    setCreateSpaceError(null);
+    try {
+      const response = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          workspaceId: activeWorkspace.workspaceId,
+          name: newSpaceName.trim(),
+          visibility: activeWorkspace.kind === "team" ? newSpaceVisibility : "private",
+        }),
+      });
+      const json = (await response.json()) as {
+        ok: boolean;
+        space?: SpaceSummaryItem;
+        error?: string;
+      };
+      if (!response.ok || !json.ok) {
+        setCreateSpaceError(json.error ?? "Could not create space.");
+        return;
+      }
+      toast.success(`Created space “${newSpaceName.trim()}”`);
+      setNewSpaceName("");
+      setCreateSpaceOpen(false);
+      if (json.space?.id) {
+        setSpaceFilter(json.space.id);
+      }
+      router.refresh();
+    } catch {
+      setCreateSpaceError("Network error while creating space.");
+    } finally {
+      setCreateSpaceBusy(false);
+    }
+  }
+
+  async function handleTransitionSpaceVisibilitySubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!transitionSpaceTarget) return;
+    const targetVis: SpaceVisibility =
+      transitionSpaceTarget.visibility === "private" ? "shared" : "private";
+    setTransitionBusy(true);
+    setTransitionError(null);
+    try {
+      const response = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "transition_visibility",
+          spaceId: transitionSpaceTarget.id,
+          targetVisibility: targetVis,
+          confirmed: transitionConfirmed,
+        }),
+      });
+      const json = (await response.json()) as { ok: boolean; error?: string };
+      if (!response.ok || !json.ok) {
+        setTransitionError(json.error ?? "Could not update space visibility.");
+        return;
+      }
+      toast.success(
+        targetVis === "shared"
+          ? `“${transitionSpaceTarget.name}” is now Shared with teammates`
+          : `“${transitionSpaceTarget.name}” is now Private (projects unpublished & collaborator sessions revoked)`,
+      );
+      setTransitionSpaceTarget(null);
+      setTransitionConfirmed(false);
+      router.refresh();
+    } catch {
+      setTransitionError("Network error while updating space visibility.");
+    } finally {
+      setTransitionBusy(false);
+    }
+  }
+
+  function openMoveModal(project: DashboardProjectItem) {
+    const candidate = spaces.find((s) => s.id !== project.spaceId);
+    setMoveTarget(project);
+    setDestinationSpaceId(candidate?.id ?? "");
+    setMoveConfirmed(false);
+    setMoveError(null);
+  }
+
+  async function handleMoveProjectSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!moveTarget || !destinationSpaceId) return;
+    setMoveBusy(true);
+    setMoveError(null);
+    try {
+      const response = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "move_project",
+          projectId: moveTarget.id,
+          destinationSpaceId,
+          confirmed: moveConfirmed,
+        }),
+      });
+      const json = (await response.json()) as { ok: boolean; error?: string };
+      if (!response.ok || !json.ok) {
+        setMoveError(json.error ?? "Could not move project.");
+        return;
+      }
+      toast.success("Moved project to selected space");
+      setMoveTarget(null);
+      router.refresh();
+    } catch {
+      setMoveError("Network error while moving project.");
+    } finally {
+      setMoveBusy(false);
+    }
+  }
+
+  async function handleArchiveToggle(project: DashboardProjectItem) {
+    const isArchived = Boolean(project.archivedAtIso);
+    setBusyProjectId(project.id);
+    try {
+      const response = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: isArchived ? "unarchive_project" : "archive_project",
+          projectId: project.id,
+        }),
+      });
+      const json = (await response.json()) as {
+        ok: boolean;
+        archivedAtIso?: string | null;
+        error?: string;
+      };
+      if (!response.ok || !json.ok) {
+        toast.error(json.error ?? "Could not update project archive status.");
+        return;
+      }
+      setProjects((prev) =>
+        prev.map((item) =>
+          item.id === project.id
+            ? {
+                ...item,
+                archivedAtIso: isArchived ? null : (json.archivedAtIso ?? new Date().toISOString()),
+                visibility: isArchived ? item.visibility : "private",
+                publishedAtIso: isArchived ? item.publishedAtIso : null,
+              }
+            : item,
+        ),
+      );
+      toast.success(
+        isArchived
+          ? `Restored “${project.name}” to active drafts`
+          : `Archived “${project.name}” (frees an active project slot)`,
+      );
+      router.refresh();
+    } catch {
+      toast.error("Network error while updating archive state.");
+    } finally {
+      setBusyProjectId(null);
+    }
+  }
+
+  async function handleCopyToPersonal(project: DashboardProjectItem) {
+    setBusyProjectId(project.id);
+    try {
+      const response = await fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "copy_project",
+          projectId: project.id,
+        }),
+      });
+      const json = (await response.json()) as { ok: boolean; error?: string };
+      if (!response.ok || !json.ok) {
+        toast.error(json.error ?? "Could not copy project to Personal Workspace.");
+        return;
+      }
+      toast.success(`Copied “${project.name}” to your Personal Workspace`);
+      router.refresh();
+    } catch {
+      toast.error("Network error while copying project.");
+    } finally {
+      setBusyProjectId(null);
+    }
+  }
 
   function openRenameModal(project: DashboardProjectItem) {
     setRenameTarget(project);
@@ -246,7 +528,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
   }
 
   async function handleDuplicate(project: DashboardProjectItem) {
-    setDuplicatingId(project.id);
+    setBusyProjectId(project.id);
     try {
       const res = await duplicateProjectAction({ projectId: project.id });
       if (!res.ok) {
@@ -260,7 +542,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
     } catch {
       toast.error("Could not duplicate project.");
     } finally {
-      setDuplicatingId(null);
+      setBusyProjectId(null);
     }
   }
 
@@ -298,12 +580,424 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
     setSearchQuery("");
     setStatusFilter("all");
     setTypeFilter("all");
+    setSpaceFilter("all");
   }
+
+  const workspaceBar = workspaceContext && activeWorkspace && (
+    <div className="flex flex-col gap-3">
+      {workspaceContext.recoverySpacesCount > 0 && (
+        <div
+          data-testid="dashboard-recovery-banner"
+          className="border-primary/30 bg-accent/40 flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"
+        >
+          <div className="flex items-center gap-2.5">
+            <ArchiveRestore className="text-primary size-4 shrink-0" />
+            <p className="text-foreground type-body-s">
+              You have{" "}
+              <span className="font-semibold">{workspaceContext.recoverySpacesCount}</span>{" "}
+              departed-team private{" "}
+              {workspaceContext.recoverySpacesCount === 1 ? "space" : "spaces"} available in your
+              90-day Recovery Portal.
+            </p>
+          </div>
+          <Button asChild size="sm" variant="secondary">
+            <Link href="/account/recovery">Open Recovery Portal</Link>
+          </Button>
+        </div>
+      )}
+
+      {activeWorkspace.isFrozen && (
+        <div
+          role="alert"
+          data-testid="dashboard-frozen-banner"
+          className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"
+        >
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="text-warning size-4 shrink-0" />
+            <p className="type-body-s">
+              This workspace is currently in read-only mode (
+              {activeWorkspace.frozenReason === "past_due_expired"
+                ? "past-due grace period ended"
+                : "subscription inactive"}
+              ). Existing projects remain safe and downloadable.
+            </p>
+          </div>
+          <Button asChild size="sm" variant="secondary">
+            <Link href="/account/billing">Manage billing</Link>
+          </Button>
+        </div>
+      )}
+
+      <div
+        data-testid="dashboard-workspace-bar"
+        className="border-border/70 bg-elevated/90 shadow-card flex flex-col gap-3 rounded-2xl border p-3.5"
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* Workspace Switcher + Space Pills */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              <Building2 className="text-primary size-4 shrink-0" />
+              <label htmlFor="dashboard-workspace-select" className="sr-only">
+                Active workspace
+              </label>
+              <select
+                id="dashboard-workspace-select"
+                data-testid="dashboard-workspace-select"
+                disabled={switchingWorkspace}
+                value={activeWorkspace.organizationId ?? "personal"}
+                onChange={(e) =>
+                  handleSwitchWorkspace(e.target.value === "personal" ? null : e.target.value)
+                }
+                className="border-border bg-surface text-foreground type-body-s-strong h-9 rounded-xl border px-3"
+              >
+                {workspaceContext.workspaces.map((ws) => (
+                  <option key={ws.workspaceId} value={ws.organizationId ?? "personal"}>
+                    {ws.kind === "personal"
+                      ? `Personal Workspace (${ws.plan.toUpperCase()})`
+                      : `${ws.name} · Team (${ws.paidSeats} ${ws.paidSeats === 1 ? "seat" : "seats"})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {spaces.length > 0 && (
+              <div
+                role="group"
+                aria-label="Filter by space"
+                className="border-border/70 bg-sunken/70 flex flex-wrap items-center gap-1 rounded-xl border p-1"
+              >
+                <button
+                  type="button"
+                  onClick={() => setSpaceFilter("all")}
+                  className={cn(
+                    "type-caption rounded-lg px-2.5 py-1 font-medium transition-colors",
+                    spaceFilter === "all"
+                      ? "bg-elevated text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  All visible spaces
+                </button>
+                {spaces.map((sp) => (
+                  <button
+                    key={sp.id}
+                    type="button"
+                    onClick={() => setSpaceFilter(sp.id)}
+                    className={cn(
+                      "type-caption inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition-colors",
+                      spaceFilter === sp.id
+                        ? "bg-elevated text-foreground shadow-2xs"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {sp.visibility === "private" ? (
+                      <Lock className="size-3" />
+                    ) : (
+                      <Users className="size-3" />
+                    )}
+                    <span>{sp.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              data-testid="dashboard-create-space-button"
+              onClick={() => {
+                setNewSpaceVisibility("private");
+                setCreateSpaceError(null);
+                setCreateSpaceOpen(true);
+              }}
+            >
+              <FolderPlus className="size-3.5" />
+              New space
+            </Button>
+
+            {activeWorkspace.kind === "team" &&
+              selectedSpaceObj &&
+              (selectedSpaceObj.isMine ||
+                activeWorkspace.role === "owner" ||
+                activeWorkspace.role === "admin") && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  data-testid="dashboard-transition-space-button"
+                  onClick={() => {
+                    setTransitionSpaceTarget(selectedSpaceObj);
+                    setTransitionConfirmed(false);
+                    setTransitionError(null);
+                  }}
+                >
+                  {selectedSpaceObj.visibility === "private" ? (
+                    <>
+                      <Users className="size-3.5" />
+                      Make Shared
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="size-3.5" />
+                      Make Private
+                    </>
+                  )}
+                </Button>
+              )}
+          </div>
+
+          {/* Numeric Quota Meters (`80%` soft warning / `100%` hard cap — Spec §5.9) */}
+          <div className="text-muted-foreground type-caption flex flex-wrap items-center gap-3">
+            <span
+              className={cn(
+                activeWorkspace.usage.activeProjects >= activeWorkspace.quotas.activeProjectsLimit
+                  ? "text-destructive font-medium"
+                  : activeWorkspace.usage.activeProjects /
+                        Math.max(1, activeWorkspace.quotas.activeProjectsLimit) >=
+                      0.8
+                    ? "text-warning font-medium"
+                    : "",
+              )}
+            >
+              Active: {activeWorkspace.usage.activeProjects}/
+              {activeWorkspace.quotas.activeProjectsLimit}
+            </span>
+            <span>·</span>
+            <span>
+              Published: {activeWorkspace.usage.publishedProjects}/
+              {activeWorkspace.quotas.publishedProjectsLimit}
+            </span>
+            <span>·</span>
+            <span
+              className={cn(
+                activeWorkspace.usage.storageBytes >= activeWorkspace.quotas.storageBytesLimit
+                  ? "text-destructive font-medium"
+                  : activeWorkspace.usage.storageBytes /
+                        Math.max(1, activeWorkspace.quotas.storageBytesLimit) >=
+                      0.8
+                    ? "text-warning font-medium"
+                    : "",
+              )}
+            >
+              Storage: {formatBytesCompact(activeWorkspace.usage.storageBytes)}/
+              {formatBytesCompact(activeWorkspace.quotas.storageBytesLimit)}
+            </span>
+            <span>·</span>
+            <span>
+              Exports: {activeWorkspace.usage.monthlyExportsUsed}/
+              {activeWorkspace.quotas.monthlyExportsLimit}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const createProjectHref =
+    spaceFilter !== "all" ? `/new?spaceId=${encodeURIComponent(spaceFilter)}` : "/new";
+
+  const spaceDialogs = (
+    <>
+      {/* Create Space Dialog */}
+      <Dialog open={createSpaceOpen} onOpenChange={setCreateSpaceOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create a space</DialogTitle>
+            <DialogDescription>
+              {activeWorkspace?.kind === "team"
+                ? "Private Spaces are strictly invisible to teammates, Admins, and Owners. Shared Spaces let your team co-edit drafts."
+                : "Organize projects into dedicated spaces inside your Personal Workspace."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateSpaceSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-space-name-input">Space name</Label>
+              <Input
+                id="new-space-name-input"
+                value={newSpaceName}
+                onChange={(e) => setNewSpaceName(e.target.value)}
+                placeholder="Q4 Portfolio Explorations"
+                minLength={2}
+                maxLength={60}
+                required
+              />
+            </div>
+
+            {activeWorkspace?.kind === "team" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-space-visibility-select">Visibility</Label>
+                <select
+                  id="new-space-visibility-select"
+                  value={newSpaceVisibility}
+                  onChange={(e) => setNewSpaceVisibility(e.target.value as SpaceVisibility)}
+                  className="border-input bg-elevated text-foreground type-body-s h-10 rounded-xl border px-3"
+                >
+                  <option value="private">Private Space (only you — 404 to teammates)</option>
+                  {(activeWorkspace.role === "owner" || activeWorkspace.role === "admin") && (
+                    <option value="shared">Shared Team Space (visible to all members)</option>
+                  )}
+                </select>
+              </div>
+            )}
+
+            {createSpaceError && (
+              <p role="alert" className="text-destructive type-caption">
+                {createSpaceError}
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setCreateSpaceOpen(false)}
+                disabled={createSpaceBusy}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createSpaceBusy}>
+                {createSpaceBusy ? "Creating…" : "Create space"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transition Space Visibility Dialog (`Spec §10.4 & §10.5`) */}
+      <Dialog
+        open={Boolean(transitionSpaceTarget)}
+        onOpenChange={(open) => {
+          if (!open) setTransitionSpaceTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {transitionSpaceTarget?.visibility === "private"
+                ? `Make “${transitionSpaceTarget.name}” Shared?`
+                : `Make “${transitionSpaceTarget?.name ?? "space"}” Private?`}
+            </DialogTitle>
+            <DialogDescription>
+              {transitionSpaceTarget?.visibility === "private"
+                ? "All workspace Owners, Admins, and Members will gain access to projects, drafts, and assets inside this space."
+                : "Projects in this space will become invisible (404) to teammates, active collaborator edit leases will be revoked immediately, and any published projects in this space will be unpublished."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleTransitionSpaceVisibilitySubmit} className="flex flex-col gap-4">
+            <label className="text-foreground type-body-s flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                checked={transitionConfirmed}
+                onChange={(e) => setTransitionConfirmed(e.target.checked)}
+                className="accent-primary mt-1 size-4 rounded-xs"
+              />
+              <span>
+                I understand the visibility and publishing changes for all projects in this space.
+              </span>
+            </label>
+
+            {transitionError && (
+              <p role="alert" className="text-destructive type-caption">
+                {transitionError}
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setTransitionSpaceTarget(null)}
+                disabled={transitionBusy}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={transitionBusy || !transitionConfirmed}>
+                {transitionBusy ? "Updating…" : "Confirm visibility change"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Project Between Spaces Dialog */}
+      <Dialog
+        open={Boolean(moveTarget)}
+        onOpenChange={(open) => {
+          if (!open) setMoveTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move “{moveTarget?.name ?? "project"}”</DialogTitle>
+            <DialogDescription>
+              Choose a destination space in this workspace. Moving between Private and Shared spaces
+              updates teammate visibility immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleMoveProjectSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="move-destination-space-select">Destination space</Label>
+              <select
+                id="move-destination-space-select"
+                value={destinationSpaceId}
+                onChange={(e) => setDestinationSpaceId(e.target.value)}
+                className="border-input bg-elevated text-foreground type-body-s h-10 rounded-xl border px-3"
+              >
+                {spaces
+                  .filter((sp) => sp.id !== moveTarget?.spaceId)
+                  .map((sp) => (
+                    <option key={sp.id} value={sp.id}>
+                      {sp.name} ({sp.visibility === "private" ? "Private" : "Shared"})
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <label className="text-foreground type-body-s flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                checked={moveConfirmed}
+                onChange={(e) => setMoveConfirmed(e.target.checked)}
+                className="accent-primary mt-1 size-4 rounded-xs"
+              />
+              <span>Confirm moving this project and updating its space permissions.</span>
+            </label>
+
+            {moveError && (
+              <p role="alert" className="text-destructive type-caption">
+                {moveError}
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setMoveTarget(null)}
+                disabled={moveBusy}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={moveBusy || !destinationSpaceId || !moveConfirmed}
+              >
+                {moveBusy ? "Moving…" : "Move project"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 
   // Empty state matching Figma 2:2172 1:1
   if (projects.length === 0) {
     return (
       <div className="mx-auto flex max-w-6xl flex-col gap-9">
+        {workspaceBar}
+
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-2.5">
             <Eyebrow className="w-fit">Case Study Builder</Eyebrow>
@@ -314,7 +1008,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
           </div>
 
           <Button asChild size="lg" className="w-fit">
-            <Link href="/new">
+            <Link href={createProjectHref}>
               <Plus className="size-4" />
               New project
             </Link>
@@ -326,7 +1020,6 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
           aria-labelledby="empty-dashboard-heading"
           className="border-border/80 bg-elevated shadow-card flex flex-col items-center justify-between gap-12 rounded-3xl border px-6 py-16 text-center sm:px-14 sm:py-20"
         >
-          {/* Layered Aa card illustration matching Figma 2:2258 */}
           <div className="flex flex-col items-center gap-6">
             <div aria-hidden="true" className="relative flex h-44 w-64 items-center justify-center">
               <div className="bg-accent/80 absolute h-34 w-48 -rotate-4 rounded-2xl" />
@@ -352,7 +1045,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
 
             <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
               <Button size="lg" asChild>
-                <Link href="/new">
+                <Link href={createProjectHref}>
                   <Plus className="size-4" />
                   Create your first project
                 </Link>
@@ -363,7 +1056,6 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
             </div>
           </div>
 
-          {/* 3-step hint strip matching Figma 2:2280 */}
           <div className="grid w-full max-w-4xl grid-cols-1 gap-4 pt-2 text-left sm:grid-cols-3">
             {EMPTY_STATE_HINTS.map((hint) => (
               <div
@@ -377,16 +1069,31 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
             ))}
           </div>
         </section>
+
+        {spaceDialogs}
       </div>
     );
   }
 
-  // Populated dashboard matching Figma 2:2003, 2:2583, 2:3534, 2:3694
   const hasFilters =
-    searchQuery.trim().length > 0 || statusFilter !== "all" || typeFilter !== "all";
+    searchQuery.trim().length > 0 ||
+    statusFilter !== "all" ||
+    typeFilter !== "all" ||
+    spaceFilter !== "all";
+
+  const statusTabs: Array<{ id: StatusFilter; label: string }> = [
+    { id: "all", label: `All · ${counts.all}` },
+    { id: "draft", label: `Drafts · ${counts.draft}` },
+    { id: "published", label: `Published · ${counts.published}` },
+    ...(counts.archived > 0
+      ? [{ id: "archived" as const, label: `Archived · ${counts.archived}` }]
+      : []),
+  ];
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8">
+      {workspaceBar}
+
       {/* Header + status segments + New project CTA (Figma 2:2076) */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-2.5">
@@ -401,15 +1108,9 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
           <div
             role="group"
             aria-label="Filter projects by status"
-            className="border-border/70 bg-sunken/80 inline-flex items-center gap-1 rounded-full border p-1"
+            className="border-border/70 bg-sunken/80 inline-flex flex-wrap items-center gap-1 rounded-full border p-1"
           >
-            {(
-              [
-                { id: "all", label: `All · ${counts.all}` },
-                { id: "draft", label: `Drafts · ${counts.draft}` },
-                { id: "published", label: `Published · ${counts.published}` },
-              ] as const
-            ).map((tab) => {
+            {statusTabs.map((tab) => {
               const active = statusFilter === tab.id;
               return (
                 <button
@@ -431,7 +1132,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
           </div>
 
           <Button asChild size="lg">
-            <Link href="/new">
+            <Link href={createProjectHref}>
               <Plus className="size-4" />
               New project
             </Link>
@@ -546,8 +1247,12 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
           {visibleProjects.map((project, idx) => {
             const palette = ARTWORK_PALETTES[idx % ARTWORK_PALETTES.length]!;
             const badge = resolveProjectStatusBadge(project);
-            const subtitle = `${formatProjectTypeLabel(project.type)} · ${formatRelativeEdited(project.updatedAtIso)}`;
-            const isDuplicating = duplicatingId === project.id;
+            const spaceLabel =
+              project.spaceName && (spaces.length > 1 || project.workspaceKind === "team")
+                ? ` · ${project.spaceVisibility === "shared" ? "Shared" : "Private"}: ${project.spaceName}`
+                : "";
+            const subtitle = `${formatProjectTypeLabel(project.type)} · ${formatRelativeEdited(project.updatedAtIso)}${spaceLabel}`;
+            const isBusy = busyProjectId === project.id;
 
             return (
               <article
@@ -609,10 +1314,10 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                           <button
                             type="button"
                             aria-label={`Actions for ${project.name}`}
-                            disabled={isDuplicating}
+                            disabled={isBusy}
                             className="text-muted-foreground hover:bg-surface hover:text-foreground focus-visible:ring-ring/40 inline-flex size-8 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-2"
                           >
-                            {isDuplicating ? (
+                            {isBusy ? (
                               <Loader2 className="size-4 animate-spin" />
                             ) : (
                               <MoreHorizontal className="size-4" />
@@ -620,8 +1325,8 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                           </button>
                         </DropdownMenuTrigger>
 
-                        {/* Context menu matching Figma 2:2583 */}
-                        <DropdownMenuContent align="end" className="w-52">
+                        {/* Context menu matching Figma 2:2583 + Space & Archive actions */}
+                        <DropdownMenuContent align="end" className="w-56">
                           <DropdownMenuItem asChild>
                             <Link href={`/editor/${project.id}`}>
                               <ExternalLink className="size-4" />
@@ -633,12 +1338,27 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                             <span>Rename</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            disabled={isDuplicating}
+                            disabled={isBusy}
                             onSelect={() => void handleDuplicate(project)}
                           >
                             <Copy className="size-4" />
                             <span>Duplicate</span>
                           </DropdownMenuItem>
+                          {spaces.length > 1 && (
+                            <DropdownMenuItem onSelect={() => openMoveModal(project)}>
+                              <FolderInput className="size-4" />
+                              <span>Move to space…</span>
+                            </DropdownMenuItem>
+                          )}
+                          {activeWorkspace?.kind === "team" && (
+                            <DropdownMenuItem
+                              disabled={isBusy}
+                              onSelect={() => void handleCopyToPersonal(project)}
+                            >
+                              <Copy className="size-4" />
+                              <span>Copy to Personal Workspace</span>
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem asChild>
                             <Link href={`/projects/${project.id}/share`}>
                               <Share2 className="size-4" />
@@ -652,6 +1372,22 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={isBusy}
+                            onSelect={() => void handleArchiveToggle(project)}
+                          >
+                            {badge.isArchived ? (
+                              <>
+                                <ArchiveRestore className="size-4" />
+                                <span>Unarchive</span>
+                              </>
+                            ) : (
+                              <>
+                                <Archive className="size-4" />
+                                <span>Archive</span>
+                              </>
+                            )}
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
                             onSelect={() => openDeleteModal(project)}
@@ -671,6 +1407,8 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
           })}
         </div>
       )}
+
+      {spaceDialogs}
 
       {/* Rename modal matching Figma 2:2783 */}
       <Dialog
@@ -803,11 +1541,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
               <Button
                 type="submit"
                 variant="destructive"
-                disabled={
-                  deleteBusy ||
-                  deleteConfirmText.trim().toLowerCase() !==
-                    (deleteTarget?.name ?? "").trim().toLowerCase()
-                }
+                disabled={deleteBusy || deleteConfirmText.trim() !== deleteTarget?.name.trim()}
               >
                 {deleteBusy ? (
                   <>

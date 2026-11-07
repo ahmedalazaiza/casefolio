@@ -31,7 +31,7 @@ export function UpgradePromptDialog({
   onOpenChange,
   requiredPlan = "pro",
   featureTitle = "Unlock Casefolio Pro",
-  featureDescription = "Upgrade to access all Pro templates, unlimited projects, and watermark-free PDF & Behance exports.",
+  featureDescription = "Upgrade to access up to 20 active projects, all eligible published templates, and clean 1x/2x PNG, PDF & Behance exports.",
   orgId = null,
   onUpgraded,
 }: UpgradePromptDialogProps) {
@@ -58,9 +58,11 @@ export function UpgradePromptDialog({
               <span className="text-foreground type-body-s-strong">
                 Casefolio {planDef.name}
               </span>
-              <span className="text-foreground type-heading-s font-mono">
+              <span className="text-foreground type-heading-s font-mono tabular-nums">
                 From ${planDef.yearlyMonthlyEquivalentUsd}
-                <span className="text-muted-foreground type-caption font-sans">/mo</span>
+                <span className="text-muted-foreground type-caption font-sans">
+                  {requiredPlan === "team" ? "/seat/mo" : "/mo"}
+                </span>
               </span>
             </div>
 

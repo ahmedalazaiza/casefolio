@@ -39,6 +39,7 @@ export interface ProjectExportsPanelProps {
   requestExport?: (input: {
     projectId: string;
     format: ExportFormatOption;
+    scale?: 1 | 2;
   }) => Promise<EnqueueExportResult>;
   pollOverview?: (projectId: string) => Promise<ProjectExportsOverviewPayload | null>;
 }
@@ -46,6 +47,7 @@ export interface ProjectExportsPanelProps {
 async function defaultRequestExport(input: {
   projectId: string;
   format: ExportFormatOption;
+  scale?: 1 | 2;
 }): Promise<EnqueueExportResult> {
   const response = await fetch("/api/exports", {
     method: "POST",
@@ -104,6 +106,8 @@ export function ProjectExportsPanel({
 }: ProjectExportsPanelProps) {
   const [overview, setOverview] = useState<ProjectExportsOverviewPayload>(initialOverview);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormatOption>("png_long");
+  const canUsePng2x = can(overview.ownerPlan, "export_png_2x");
+  const [pngScale, setPngScale] = useState<1 | 2>(1);
   const [isStartingExport, setIsStartingExport] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -141,7 +145,8 @@ export function ProjectExportsPanel({
   }, [hasActiveJobs, overview.projectId, pollOverview]);
 
   const newestQueuedWithRenderUrl = useMemo(
-    () => overview.exports.find((item) => item.status === "queued" && Boolean(item.renderUrl)) ?? null,
+    () =>
+      overview.exports.find((item) => item.status === "queued" && Boolean(item.renderUrl)) ?? null,
     [overview.exports],
   );
 
@@ -169,6 +174,7 @@ export function ProjectExportsPanel({
       const result = await requestExport({
         projectId: overview.projectId,
         format: selectedFormat,
+        ...(selectedFormat === "png_long" && pngScale === 2 ? { scale: 2 as const } : {}),
       });
 
       if (!result.ok) {
@@ -182,13 +188,17 @@ export function ProjectExportsPanel({
         monthlyExportsLimit: result.monthlyExportsLimit,
         exports: [result.exportJob, ...prev.exports.filter((e) => e.id !== result.exportJob.id)],
       }));
-      toast.success("Export job started");
+      toast.success(
+        result.reusedCachedArtifact
+          ? "Ready immediately from cached revision export"
+          : "Export job started",
+      );
     } catch {
       setErrorMessage("Unable to queue export right now. Please try again.");
     } finally {
       setIsStartingExport(false);
     }
-  }, [overview.projectId, selectedFormat, requestExport]);
+  }, [overview.projectId, pngScale, requestExport, selectedFormat]);
 
   const upsertExportItem = useCallback((job: ExportHistoryItem) => {
     setOverview((prev) => {
@@ -231,7 +241,8 @@ export function ProjectExportsPanel({
                 )}
               </div>
               <p className="text-muted-foreground type-body-s">
-                Template: {overview.templateName} · High-resolution Chromium exports
+                Template: {overview.templateName} · High-resolution Chromium exports · Retained 7
+                days per export
               </p>
             </div>
           </div>
@@ -310,14 +321,20 @@ export function ProjectExportsPanel({
             </p>
           </div>
 
-          {overview.monthlyExportsLimit !== null ? (
-            <Badge data-testid="free-export-quota-badge" tone="neutral">
-              {overview.monthlyExportsUsed} of {overview.monthlyExportsLimit} Free exports this
-              month
-            </Badge>
-          ) : (
-            <ProBadge />
-          )}
+          <div className="flex items-center gap-2">
+            {typeof overview.monthlyExportsLimit === "number" &&
+              (isFreePlan ? (
+                <Badge data-testid="free-export-quota-badge" tone="neutral">
+                  {overview.monthlyExportsUsed} of {overview.monthlyExportsLimit} Free exports this
+                  month
+                </Badge>
+              ) : (
+                <Badge data-testid="export-quota-badge" tone="neutral">
+                  {overview.monthlyExportsUsed} of {overview.monthlyExportsLimit} exports this month
+                </Badge>
+              ))}
+            {!isFreePlan && <ProBadge />}
+          </div>
         </div>
 
         <div
@@ -343,7 +360,7 @@ export function ProjectExportsPanel({
                 className={cn(
                   "flex flex-col justify-between gap-4 rounded-2xl border p-5 text-left transition-all",
                   isSelected
-                    ? "border-primary bg-accent/40 ring-primary/15 ring-2 -translate-y-0.5 shadow-card"
+                    ? "border-primary bg-accent/40 ring-primary/15 shadow-card -translate-y-0.5 ring-2"
                     : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
                 )}
               >
@@ -369,7 +386,7 @@ export function ProjectExportsPanel({
                 {locked ? (
                   <span className="text-muted-foreground type-caption inline-flex items-center gap-1.5">
                     <Lock className="text-warning size-3.5" />
-                    <span>Pro plan required</span>
+                    <span>Pro or Teams plan required</span>
                   </span>
                 ) : (
                   <span className="text-tertiary type-caption font-mono">
@@ -381,13 +398,67 @@ export function ProjectExportsPanel({
           })}
         </div>
 
+        {/* PNG Resolution Selector (`1x` 1,440 px vs `2x` 2,880 px — Spec §5.3) */}
+        {selectedFormat === "png_long" && (
+          <div className="border-border/70 bg-surface/60 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-foreground type-body-s-strong">PNG Output Resolution</span>
+              <span className="text-muted-foreground type-caption">
+                1× renders up to 1,440 px wide; 2× renders retina 2,880 px wide on Pro &amp; Teams.
+              </span>
+            </div>
+
+            <div
+              role="group"
+              aria-label="PNG output resolution"
+              className="border-border/70 bg-sunken/80 inline-flex items-center gap-1 rounded-full border p-1"
+            >
+              <button
+                type="button"
+                data-testid="export-png-scale-1x"
+                aria-pressed={pngScale === 1}
+                onClick={() => setPngScale(1)}
+                className={cn(
+                  "type-caption rounded-full px-3 py-1 font-medium transition-all",
+                  pngScale === 1
+                    ? "bg-elevated text-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                1× · 1,440 px
+              </button>
+              <button
+                type="button"
+                data-testid="export-png-scale-2x"
+                aria-pressed={pngScale === 2}
+                onClick={() => {
+                  if (!canUsePng2x) {
+                    setUpgradeOpen(true);
+                    return;
+                  }
+                  setPngScale(2);
+                }}
+                className={cn(
+                  "type-caption inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium transition-all",
+                  pngScale === 2
+                    ? "bg-elevated text-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {!canUsePng2x && <Lock className="size-3" />}
+                <span>2× · 2,880 px</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="border-border/70 flex flex-wrap items-center justify-between gap-4 border-t pt-5">
           <div className="flex items-center gap-2">
             <Sparkles className="text-primary size-4 shrink-0" />
             <span className="text-muted-foreground type-caption">
               {overview.hasWatermark
                 ? "Free exports include a subtle 'Made with Casefolio' footer badge."
-                : "Watermark-free Pro exports enabled."}
+                : "Unbranded Pro & Teams exports enabled."}
             </span>
           </div>
 
@@ -415,7 +486,10 @@ export function ProjectExportsPanel({
               ) : (
                 <Download className="size-4" />
               )}
-              <span>Export {selectedPreset.label}</span>
+              <span>
+                Export {selectedPreset.label}
+                {selectedFormat === "png_long" && pngScale === 2 ? " (2×)" : ""}
+              </span>
             </Button>
           )}
         </div>
@@ -430,7 +504,8 @@ export function ProjectExportsPanel({
           <div className="flex flex-col gap-0.5">
             <h2 className="text-foreground type-heading-m">Export History</h2>
             <p className="text-muted-foreground type-body-s">
-              Re-download any previously rendered presentation at any time.
+              Rendered export files are retained for 7 days and do not count against persistent
+              workspace storage.
             </p>
           </div>
           <Badge tone="neutral" withDot={false}>
@@ -446,7 +521,7 @@ export function ProjectExportsPanel({
             <Clock className="text-tertiary size-6" />
             <p className="text-foreground type-body-s-strong">No exports generated yet</p>
             <p className="text-tertiary type-caption max-w-md">
-              Select PNG Long, PDF, or Behance Slices above to render your first high-resolution
+              Select PNG Long, PDF, or Behance Image Pack above to render your first high-resolution
               export.
             </p>
           </div>
@@ -470,6 +545,11 @@ export function ProjectExportsPanel({
                       <span className="text-foreground type-body-s-strong">
                         {formatExportLabel(item.format)}
                       </span>
+                      {item.format === "png_long" && item.scale === 2 && (
+                        <Badge tone="accent" withDot={false}>
+                          2× Retina
+                        </Badge>
+                      )}
                       <StatusBadge status={item.status} />
                     </div>
                     <span className="text-tertiary type-caption">
@@ -480,6 +560,12 @@ export function ProjectExportsPanel({
                         hour: "numeric",
                         minute: "2-digit",
                       })}
+                      {item.expiresAtIso
+                        ? ` · Expires ${new Date(item.expiresAtIso).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}`
+                        : ""}
                       {item.error ? ` · ${item.error}` : ""}
                     </span>
                   </div>
@@ -514,8 +600,8 @@ export function ProjectExportsPanel({
       <UpgradePromptDialog
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
-        featureTitle={`Unlock ${selectedPreset.label}`}
-        featureDescription="Upgrade to Casefolio Pro for PDF case studies, Behance 1400px slices, unlimited monthly exports, and watermark removal."
+        featureTitle={`Unlock ${selectedFormat === "png_long" ? "2× Retina PNG Exports" : selectedPreset.label}`}
+        featureDescription="Upgrade to Casefolio Pro for PDF case studies (up to 60 pages), Behance 1,400px image packs, 2× 2,880px PNG exports, 60 monthly exports, and removable branding."
       />
     </div>
   );

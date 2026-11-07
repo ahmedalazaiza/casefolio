@@ -207,7 +207,7 @@ describe("createProjectFromTemplate (C-401)", () => {
       });
       expect(proSuccess.ok).toBe(true);
 
-      // 6. Editor authorization check: owner gets ok, stranger gets forbidden, unknown ID gets not_found
+      // 6. Editor authorization check: owner gets ok, cross-tenant stranger gets 404 (not_found per Spec §10.2 & §15), unknown ID gets not_found
       const ownerAccess = await getProjectEditorAccess(created1.projectId, {
         id: createdUserId,
         role: "user",
@@ -218,7 +218,7 @@ describe("createProjectFromTemplate (C-401)", () => {
         id: "00000000-0000-4000-8000-000000000001",
         role: "user",
       });
-      expect(strangerAccess.status).toBe("forbidden");
+      expect(strangerAccess.status).toBe("not_found");
 
       const missingAccess = await getProjectEditorAccess(
         "00000000-0000-4000-8000-000000000099",

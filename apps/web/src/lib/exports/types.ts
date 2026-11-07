@@ -7,6 +7,14 @@ export const EXPORT_STATUSES = ["queued", "processing", "completed", "failed"] a
 export type ExportJobStatus = (typeof EXPORT_STATUSES)[number];
 
 export const FREE_MONTHLY_EXPORT_LIMIT = 5;
+export const PRO_MONTHLY_EXPORT_LIMIT = 60;
+export const TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT = 100;
+
+export const FREE_MAX_PNG_WIDTH_PX = 1_440;
+export const PAID_MAX_PNG_WIDTH_PX = 2_880;
+export const FREE_MAX_EXPORT_MEGAPIXELS = 40;
+export const PAID_MAX_EXPORT_MEGAPIXELS = 120;
+export const PAID_MAX_PDF_PAGES = 60;
 
 export interface ExportPresetDescriptor {
   format: ExportFormatOption;
@@ -21,27 +29,27 @@ export const EXPORT_PRESETS: readonly ExportPresetDescriptor[] = [
   {
     format: "png_long",
     label: "PNG Long Presentation",
-    badge: "1440px · Retina 2×",
+    badge: "1,440px (1×) · 2,880px (2× Paid)",
     description:
-      "Full-length vertical PNG presentation optimized for Dribbble, Notion, and portfolio decks.",
+      "Full-length PNG presentation (1× branded up to 1,440px on Free; 1×/2× unbranded up to 2,880px on Pro & Teams).",
     requiresPro: false,
     fileExtension: "png",
   },
   {
     format: "pdf",
     label: "PDF Case Study",
-    badge: "Vector Text · Print Ready",
+    badge: "Up to 60 Pages · Selectable Text",
     description:
-      "Crisp multi-section PDF document with selectable typography and embedded theme backgrounds.",
+      "Multi-section PDF document (up to 60 pages) for offline presentations and hiring panels.",
     requiresPro: true,
     fileExtension: "pdf",
   },
   {
     format: "behance",
-    label: "Behance Slices (.zip)",
-    badge: "1400px Seamless Slices",
+    label: "Behance Image Pack (.zip)",
+    badge: "1,400px Slices · Manual Upload",
     description:
-      "Automatically slices your case study into 1400px-wide PNG panels ready to upload in sequence on Behance.",
+      "Slices your case study into seamless 1,400px PNG panels packaged in a ZIP for manual upload to Behance.",
     requiresPro: true,
     fileExtension: "zip",
   },
@@ -50,6 +58,7 @@ export const EXPORT_PRESETS: readonly ExportPresetDescriptor[] = [
 export const createExportInputSchema = z.object({
   projectId: z.string().uuid("Invalid project ID."),
   format: z.enum(EXPORT_FORMATS),
+  scale: z.union([z.literal(1), z.literal(2)]).optional(),
 });
 
 export type CreateExportInput = z.infer<typeof createExportInputSchema>;
@@ -59,9 +68,13 @@ export interface ExportHistoryItem {
   projectId: string;
   format: ExportFormatOption;
   status: ExportJobStatus;
+  scale?: number;
+  projectRevision?: number;
+  hasWatermark?: boolean;
   r2Key: string | null;
   error: string | null;
   createdAtIso: string;
+  expiresAtIso?: string | null;
   downloadUrl: string | null;
   renderUrl?: string | null;
 }
@@ -75,7 +88,7 @@ export interface ProjectExportsOverviewPayload {
   ownerPlan: "free" | "pro" | "team";
   hasWatermark: boolean;
   monthlyExportsUsed: number;
-  monthlyExportsLimit: number | null;
+  monthlyExportsLimit: number;
   exports: ExportHistoryItem[];
 }
 
@@ -86,19 +99,20 @@ export type EnqueueExportErrorCode =
   | "VALIDATION_ERROR"
   | "PLAN_UPGRADE_REQUIRED"
   | "EXPORT_LIMIT_REACHED"
+  | "PAST_DUE_READ_ONLY"
   | "RATE_LIMITED";
 
 export type EnqueueExportResult =
   | {
       ok: true;
       exportJob: ExportHistoryItem;
+      reusedCachedArtifact?: boolean;
       hasWatermark: boolean;
       monthlyExportsUsed: number;
-      monthlyExportsLimit: number | null;
+      monthlyExportsLimit: number;
     }
   | {
       ok: false;
       code: EnqueueExportErrorCode;
       error: string;
     };
-

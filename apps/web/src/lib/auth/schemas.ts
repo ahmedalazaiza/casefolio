@@ -56,7 +56,11 @@ export const createOrganizationSchema = z.object({
 export const inviteTeamMemberSchema = z.object({
   organizationId: z.string().uuid("Select a valid team workspace."),
   email: z.string().trim().email("Enter a valid teammate email address."),
-  role: z.enum(["editor", "viewer"]),
+  role: z
+    .enum(["admin", "member", "editor", "viewer"])
+    .transform((val): "admin" | "member" =>
+      val === "admin" || val === "editor" ? "admin" : "member",
+    ),
 });
 
 export const DESIGNER_ROLE_IDS = [

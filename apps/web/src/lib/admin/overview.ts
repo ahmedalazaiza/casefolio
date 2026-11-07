@@ -145,7 +145,7 @@ export async function getAdminOverviewMetrics(
       pastDueSubscriptionsCount += 1;
     }
     if (sub.plan === "free") continue;
-    if (!isSubscriptionGrantingAccess(sub.status, sub.currentPeriodEnd, now)) {
+    if (!isSubscriptionGrantingAccess(sub.status, sub.currentPeriodEnd, now, sub.pastDueSince)) {
       continue;
     }
     activeSubscriptions += 1;
@@ -156,7 +156,7 @@ export async function getAdminOverviewMetrics(
         ? (webhookIntervals.get(sub.paddleSubscriptionId) ?? null)
         : null,
     });
-    mrrUsd += computeSubscriptionMrrUsd(sub.plan, interval);
+    mrrUsd += computeSubscriptionMrrUsd(sub.plan, interval, sub.currentPaidCapacity ?? 1);
   }
 
   let publishedCaseStudies = 0;
@@ -502,9 +502,9 @@ export async function getAdminPlatformAnalytics(
     },
   );
 
-  // Top case studies sorted by views DESC, exports DESC
+  // Top case studies sorted by views DESC, exports DESC (strictly public case studies only — never leak private titles)
   const topCaseStudies: AdminTopCaseStudyRow[] = projectRows
-    .filter((p) => p.visibility === "public" || (viewsByProject.get(p.id) ?? 0) > 0)
+    .filter((p) => p.visibility === "public")
     .map((p) => {
       const tplId = versionToTemplateId.get(p.templateVersionId);
       const tpl = tplId ? templateById.get(tplId) : undefined;

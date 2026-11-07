@@ -12,27 +12,27 @@ export const LANDING_FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Who designs the templates?",
     answer:
-      "The Casefolio team designs, versions and uploads every template so layouts stay consistent, responsive and publication-ready.",
+      "The Casefolio team designs, versions and uploads every template so layouts stay consistent, responsive, and ready for live pages and exports. Free includes 3 Starter templates at launch; Pro and Teams unlock all eligible published templates.",
   },
   {
     question: "Can I use my own colors and fonts?",
     answer:
-      "Yes. Every template exposes curated theme tokens — primary, secondary, background and text colors plus licensed heading and body font pairs — while preserving spacing and visual hierarchy.",
+      "Yes. Every template exposes curated theme tokens — primary, secondary, background, and text colors plus licensed heading and body font pairs — while preserving spacing and visual hierarchy.",
   },
   {
-    question: "What can I export?",
+    question: "What can I export on each plan?",
     answer:
-      "Free accounts can publish case studies and export watermarked long PNGs. Pro and Team unlock crisp, unwatermarked PNGs, Behance-ready 1400px slices and multi-page A4 PDFs rendered from the exact same canvas.",
+      "Free includes 5 branded 1x PNG exports per month (up to 1,440 px). Pro (60/mo) and Teams (100 × S/mo) unlock clean, unbranded 1x and 2x PNGs (up to 2,880 px), multi-page A4 PDFs, and Behance-ready 1,400 px slices.",
   },
   {
-    question: "What happens to published pages if I cancel?",
+    question: "How do private spaces work inside Casefolio Teams?",
     answer:
-      "Your projects and uploaded screenshots stay safe in your workspace. After the billing period ends, paid-only perks pause gracefully and you can still edit or export within Free plan limits.",
+      "Every Teams member gets up to 5 private spaces that are hidden from Owners, Admins, and teammates by default — plus shared team spaces (10 × S) where the studio collaborates and Owners or Admins publish.",
   },
   {
-    question: "Do you support Mobile + Web in one case study?",
+    question: "What happens if I downgrade or leave a team?",
     answer:
-      "Yes. Choose a Mobile + Web template when creating a project to showcase iOS/Android flows alongside responsive desktop browser frames in a single narrative.",
+      "Nothing is deleted immediately. On Pro → Free, you keep 1 chosen public page live while extra projects remain safe to edit or archive within Free limits. If you leave a Team workspace, your private spaces enter a ≥90-day personal Recovery Portal so you can copy projects to your Personal Workspace.",
   },
 ];
 
@@ -93,4 +93,3 @@ export function LandingFaqAccordion({
     </div>
   );
 }
-

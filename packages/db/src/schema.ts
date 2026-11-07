@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  bigint,
   bigserial,
   boolean,
   index,
@@ -18,8 +19,55 @@ export type UserRole = (typeof USER_ROLES)[number];
 export const PLAN_TIERS = ["free", "pro", "team"] as const;
 export type PlanTier = (typeof PLAN_TIERS)[number];
 
-export const MEMBERSHIP_ROLES = ["owner", "editor", "viewer"] as const;
+export const CANONICAL_MEMBERSHIP_ROLES = ["owner", "admin", "member"] as const;
+export type CanonicalMembershipRole = (typeof CANONICAL_MEMBERSHIP_ROLES)[number];
+
+export const MEMBERSHIP_ROLES = ["owner", "admin", "member", "editor", "viewer"] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
+
+export const WORKSPACE_KINDS = ["personal", "team"] as const;
+export type WorkspaceKind = (typeof WORKSPACE_KINDS)[number];
+
+export const SPACE_VISIBILITIES = ["private", "shared"] as const;
+export type SpaceVisibility = (typeof SPACE_VISIBILITIES)[number];
+
+export const SPACE_RECOVERY_STATES = [
+  "active",
+  "frozen_member_departed",
+  "frozen_workspace",
+] as const;
+export type SpaceRecoveryState = (typeof SPACE_RECOVERY_STATES)[number];
+
+export const BILLING_OPERATION_KINDS = [
+  "checkout",
+  "seat_increase",
+  "seat_decrease",
+  "cancel_seat_decrease",
+  "cancel_subscription",
+  "resume_subscription",
+  "owner_transfer",
+] as const;
+export type BillingOperationKind = (typeof BILLING_OPERATION_KINDS)[number];
+
+export const BILLING_OPERATION_STATUSES = [
+  "previewed",
+  "pending",
+  "completed",
+  "failed",
+  "canceled",
+] as const;
+export type BillingOperationStatus = (typeof BILLING_OPERATION_STATUSES)[number];
+
+export const USAGE_METER_KEYS = ["exports", "uploads_bytes", "bandwidth_bytes"] as const;
+export type UsageMeterKey = (typeof USAGE_METER_KEYS)[number];
+
+export function normalizeMembershipRole(
+  role: string | null | undefined,
+): CanonicalMembershipRole {
+  if (role === "owner") return "owner";
+  if (role === "admin" || role === "editor") return "admin";
+  return "member";
+}
 
 export const PROJECT_TYPES = ["mobile", "web", "both"] as const;
 export type ProjectType = (typeof PROJECT_TYPES)[number];
@@ -66,7 +114,7 @@ export const organizations = pgTable("organizations", {
   slug: text("slug").notNull().unique(),
   logo: text("logo"),
   metadata: text("metadata"),
-  seats: integer("seats").notNull().default(3),
+  seats: integer("seats").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -81,10 +129,70 @@ export const memberships = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    role: text("role").$type<MembershipRole>().notNull().default("viewer"),
+    role: text("role").$type<MembershipRole>().notNull().default("member"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("memberships_user_org_uidx").on(table.userId, table.orgId)],
+);
+
+// Business Tenancy: workspaces (1 personal workspace per user; 1 team workspace per organization)
+export const workspaces = pgTable(
+  "workspaces",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kind: text("kind").$type<WorkspaceKind>().notNull(),
+    personalOwnerId: uuid("personal_owner_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    frozenAt: timestamp("frozen_at", { withTimezone: true }),
+    frozenReason: text("frozen_reason"),
+    graceUsedAt: timestamp("grace_used_at", { withTimezone: true }),
+    graceExpiresAt: timestamp("grace_expires_at", { withTimezone: true }),
+    keepPublicProjectId: uuid("keep_public_project_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("workspaces_personal_owner_uidx").on(table.personalOwnerId),
+    uniqueIndex("workspaces_organization_uidx").on(table.organizationId),
+  ],
+);
+
+// Business Privacy: spaces (strictly private to controllerUserId OR shared across active workspace members)
+export const spaces = pgTable(
+  "spaces",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    visibility: text("visibility").$type<SpaceVisibility>().notNull().default("private"),
+    isDefault: boolean("is_default").notNull().default(false),
+    controllerUserId: uuid("controller_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    aclVersion: integer("acl_version").notNull().default(1),
+    recoveryState: text("recovery_state")
+      .$type<SpaceRecoveryState>()
+      .notNull()
+      .default("active"),
+    departedAt: timestamp("departed_at", { withTimezone: true }),
+    recoveryUntil: timestamp("recovery_until", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("spaces_workspace_vis_idx").on(table.workspaceId, table.visibility),
+    index("spaces_controller_recovery_idx").on(table.controllerUserId, table.recoveryState),
+    uniqueIndex("spaces_workspace_slug_uidx").on(table.workspaceId, table.slug),
+  ],
 );
 
 // Better Auth: sessions
@@ -148,7 +256,7 @@ export const verifications = pgTable(
   (table) => [index("verifications_identifier_idx").on(table.identifier)],
 );
 
-// Better Auth organization plugin: invitations
+// Better Auth organization plugin: invitations (+ opaque single-use token hash & revocation tracking)
 export const invitations = pgTable(
   "invitations",
   {
@@ -157,15 +265,23 @@ export const invitations = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
-    role: text("role").$type<MembershipRole>().notNull().default("viewer"),
+    role: text("role").$type<MembershipRole>().notNull().default("member"),
     status: text("status").notNull().default("pending"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     inviterId: uuid("inviter_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash"),
+    resentCount: integer("resent_count").notNull().default(0),
+    resentAt: timestamp("resent_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("invitations_org_email_idx").on(table.organizationId, table.email)],
+  (table) => [
+    index("invitations_org_email_idx").on(table.organizationId, table.email),
+    index("invitations_token_hash_idx").on(table.tokenHash),
+  ],
 );
 
 // 4. categories (ERD)
@@ -216,7 +332,7 @@ export const templateVersions = pgTable(
   (table) => [uniqueIndex("template_versions_tpl_ver_uidx").on(table.templateId, table.version)],
 );
 
-// 7. projects (ERD)
+// 7. projects (ERD + additive workspace/space/revision/archive/branding columns)
 export const projects = pgTable(
   "projects",
   {
@@ -225,6 +341,11 @@ export const projects = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     orgId: uuid("org_id").references(() => organizations.id, { onDelete: "set null" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
+    spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "set null" }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     templateVersionId: uuid("template_version_id")
       .notNull()
       .references(() => templateVersions.id, { onDelete: "restrict" }),
@@ -232,19 +353,24 @@ export const projects = pgTable(
     type: text("type").$type<ProjectType>().notNull(),
     puckData: jsonb("puck_data").$type<Record<string, unknown>>().notNull(),
     theme: jsonb("theme").$type<Record<string, unknown>>().notNull(),
+    revision: integer("revision").notNull().default(1),
     slug: text("slug").unique(),
     visibility: text("visibility").$type<ProjectVisibility>().notNull().default("private"),
+    brandingRemoved: boolean("branding_removed").notNull().default(false),
+    publicAcknowledgedAt: timestamp("public_acknowledged_at", { withTimezone: true }),
     publishedAt: timestamp("published_at", { withTimezone: true }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("projects_owner_id_idx").on(table.ownerId),
     index("projects_org_id_idx").on(table.orgId),
+    index("projects_workspace_space_idx").on(table.workspaceId, table.spaceId),
   ],
 );
 
-// 8. assets (ERD)
+// 8. assets (ERD + additive workspace scoping & workspace-local sha256)
 export const assets = pgTable(
   "assets",
   {
@@ -252,6 +378,7 @@ export const assets = pgTable(
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
     r2Key: text("r2_key").notNull(),
     slot: text("slot").notNull(),
     crop: jsonb("crop").$type<{ x: number; y: number; width: number; height: number } | null>(),
@@ -259,12 +386,16 @@ export const assets = pgTable(
     height: integer("height").notNull(),
     bytes: integer("bytes").notNull(),
     mimeType: text("mime_type"),
+    sha256: text("sha256"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("assets_project_id_idx").on(table.projectId)],
+  (table) => [
+    index("assets_project_id_idx").on(table.projectId),
+    index("assets_workspace_id_idx").on(table.workspaceId),
+  ],
 );
 
-// 9. exports (ERD)
+// 9. exports (ERD + additive cacheKey, revision, scale, requester & 7-day artifact expiry)
 export const exportsTable = pgTable(
   "exports",
   {
@@ -272,26 +403,48 @@ export const exportsTable = pgTable(
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
+    requestedByUserId: uuid("requested_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     format: text("format").$type<ExportFormat>().notNull(),
     status: text("status").$type<ExportStatus>().notNull().default("queued"),
+    projectRevision: integer("project_revision").notNull().default(1),
+    scale: integer("scale").notNull().default(1),
+    hasWatermark: boolean("has_watermark").notNull().default(true),
+    cacheKey: text("cache_key"),
+    bytes: integer("bytes"),
     r2Key: text("r2_key"),
     error: text("error"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("exports_project_id_idx").on(table.projectId)],
+  (table) => [
+    index("exports_project_id_idx").on(table.projectId),
+    index("exports_workspace_cache_idx").on(table.workspaceId, table.cacheKey),
+  ],
 );
 
-// 10. subscriptions (ERD)
+// 10. subscriptions (ERD + additive workspace seat capacity, renewal decrease, pastDueSince & ordering)
 export const subscriptions = pgTable(
   "subscriptions",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
     paddleCustomerId: text("paddle_customer_id"),
     paddleSubscriptionId: text("paddle_subscription_id").unique(),
     plan: text("plan").$type<PlanTier>().notNull().default("free"),
+    planVersion: text("plan_version").notNull().default("2026-11-07.v1"),
+    interval: text("interval").$type<"monthly" | "yearly">().notNull().default("monthly"),
     status: text("status").notNull().default("active"),
+    currentPaidCapacity: integer("current_paid_capacity").notNull().default(1),
+    renewalQuantity: integer("renewal_quantity"),
+    pastDueSince: timestamp("past_due_since", { withTimezone: true }),
+    lastEventOccurredAt: timestamp("last_event_occurred_at", { withTimezone: true }),
+    scheduledChangeAction: text("scheduled_change_action"),
+    pendingOperationId: uuid("pending_operation_id"),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -299,6 +452,7 @@ export const subscriptions = pgTable(
   (table) => [
     index("subscriptions_user_id_idx").on(table.userId),
     index("subscriptions_org_id_idx").on(table.orgId),
+    index("subscriptions_workspace_id_idx").on(table.workspaceId),
   ],
 );
 
@@ -372,6 +526,198 @@ export const webhookEvents = pgTable("webhook_events", {
   processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Published snapshots: isolates public `/p/[slug]` delivery from private unpublished draft edits
+export const publishedSnapshots = pgTable("published_snapshots", {
+  projectId: uuid("project_id")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+  spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull().default(1),
+  puckData: jsonb("puck_data").$type<Record<string, unknown>>().notNull(),
+  theme: jsonb("theme").$type<Record<string, unknown>>().notNull(),
+  publishedAssetIds: jsonb("published_asset_ids").$type<string[]>().notNull().default([]),
+  brandingRemoved: boolean("branding_removed").notNull().default(false),
+  suspendedReason: text("suspended_reason"),
+  publishedByUserId: uuid("published_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  publicAcknowledgedAt: timestamp("public_acknowledged_at", { withTimezone: true }),
+  publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Recoverable content history (7d Free / 30d Pro / 90d Teams; counts toward storage quota)
+export const projectRevisions = pgTable(
+  "project_revisions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull(),
+    puckData: jsonb("puck_data").$type<Record<string, unknown>>().notNull(),
+    theme: jsonb("theme").$type<Record<string, unknown>>().notNull(),
+    bytes: integer("bytes").notNull().default(0),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("project_revisions_project_created_idx").on(table.projectId, table.createdAt),
+    uniqueIndex("project_revisions_proj_rev_uidx").on(table.projectId, table.revision),
+  ],
+);
+
+// Async collaboration lease (120s TTL, 30s heartbeat) for single-writer shared editing
+export const editLeases = pgTable("edit_leases", {
+  projectId: uuid("project_id")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+  holderUserId: uuid("holder_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  holderName: text("holder_name"),
+  leaseToken: text("lease_token").notNull(),
+  acquiredAt: timestamp("acquired_at", { withTimezone: true }).notNull().defaultNow(),
+  heartbeatAt: timestamp("heartbeat_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+// Resumable billing operations saga (seat increase preview/confirm, renewal decrease, cancel decrease)
+export const billingOperations = pgTable(
+  "billing_operations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    subscriptionId: uuid("subscription_id").references(() => subscriptions.id, {
+      onDelete: "set null",
+    }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    kind: text("kind").$type<BillingOperationKind>().notNull(),
+    status: text("status").$type<BillingOperationStatus>().notNull().default("pending"),
+    previousQuantity: integer("previous_quantity"),
+    targetQuantity: integer("target_quantity"),
+    previewAmountCents: integer("preview_amount_cents"),
+    renewalAmountCents: integer("renewal_amount_cents"),
+    currency: text("currency").notNull().default("USD"),
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    providerTransactionId: text("provider_transaction_id"),
+    meta: jsonb("meta").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("billing_operations_workspace_idx").on(table.workspaceId, table.createdAt)],
+);
+
+// Seat reservations: 1 reservation per pending invitation (7-day expiry, resend replaces without double-reserving)
+export const seatReservations = pgTable(
+  "seat_reservations",
+  {
+    invitationId: uuid("invitation_id")
+      .primaryKey()
+      .references(() => invitations.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    normalizedEmail: text("normalized_email").notNull(),
+    role: text("role").$type<MembershipRole>().notNull().default("member"),
+    status: text("status")
+      .$type<"active" | "consumed" | "revoked" | "expired">()
+      .notNull()
+      .default("active"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("seat_reservations_org_status_idx").on(
+      table.organizationId,
+      table.status,
+      table.expiresAt,
+    ),
+  ],
+);
+
+// UTC calendar-month usage meters (exports, new uploads bytes, bandwidth bytes)
+export const usageBuckets = pgTable(
+  "usage_buckets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    calendarMonth: text("calendar_month").notNull(),
+    meter: text("meter").$type<UsageMeterKey>().notNull(),
+    usedValue: bigint("used_value", { mode: "number" }).notNull().default(0),
+    reservedValue: bigint("reserved_value", { mode: "number" }).notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("usage_buckets_ws_month_meter_uidx").on(
+      table.workspaceId,
+      table.calendarMonth,
+      table.meter,
+    ),
+  ],
+);
+
+// Atomic idempotent usage reservations (reserve before enqueue -> commit on success / release on failure)
+export const usageReservations = pgTable(
+  "usage_reservations",
+  {
+    jobId: text("job_id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    calendarMonth: text("calendar_month").notNull(),
+    meter: text("meter").$type<UsageMeterKey>().notNull(),
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    status: text("status")
+      .$type<"reserved" | "committed" | "released">()
+      .notNull()
+      .default("reserved"),
+    cacheKey: text("cache_key"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("usage_reservations_ws_month_idx").on(table.workspaceId, table.calendarMonth)],
+);
+
+// Explicit owner transfer requests (recipient acceptance + reauthentication; preserves single owner)
+export const ownerTransferRequests = pgTable(
+  "owner_transfer_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    fromOwnerUserId: uuid("from_owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    toMemberUserId: uuid("to_member_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status")
+      .$type<"pending" | "accepted" | "canceled" | "expired">()
+      .notNull()
+      .default("pending"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("owner_transfer_org_status_idx").on(table.organizationId, table.status)],
+);
+
 // Drizzle relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   projects: many(projects),
@@ -379,6 +725,10 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   subscription: one(subscriptions, {
     fields: [users.id],
     references: [subscriptions.userId],
+  }),
+  personalWorkspace: one(workspaces, {
+    fields: [users.id],
+    references: [workspaces.personalOwnerId],
   }),
   notifications: many(notifications),
   auditLogs: many(auditLogs),
@@ -390,10 +740,40 @@ export const organizationsRelations = relations(organizations, ({ many, one }) =
   memberships: many(memberships),
   projects: many(projects),
   invitations: many(invitations),
+  workspace: one(workspaces, {
+    fields: [organizations.id],
+    references: [workspaces.organizationId],
+  }),
   subscription: one(subscriptions, {
     fields: [organizations.id],
     references: [subscriptions.orgId],
   }),
+}));
+
+export const workspacesRelations = relations(workspaces, ({ many, one }) => ({
+  personalOwner: one(users, {
+    fields: [workspaces.personalOwnerId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [workspaces.organizationId],
+    references: [organizations.id],
+  }),
+  spaces: many(spaces),
+  projects: many(projects),
+  subscriptions: many(subscriptions),
+}));
+
+export const spacesRelations = relations(spaces, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [spaces.workspaceId],
+    references: [workspaces.id],
+  }),
+  controller: one(users, {
+    fields: [spaces.controllerUserId],
+    references: [users.id],
+  }),
+  projects: many(projects),
 }));
 
 export const membershipsRelations = relations(memberships, ({ one }) => ({
@@ -430,12 +810,21 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     fields: [projects.orgId],
     references: [organizations.id],
   }),
+  workspace: one(workspaces, {
+    fields: [projects.workspaceId],
+    references: [workspaces.id],
+  }),
+  space: one(spaces, {
+    fields: [projects.spaceId],
+    references: [spaces.id],
+  }),
   templateVersion: one(templateVersions, {
     fields: [projects.templateVersionId],
     references: [templateVersions.id],
   }),
   assets: many(assets),
   exports: many(exportsTable),
+  revisions: many(projectRevisions),
   pageViews: many(pageViews),
   reports: many(reports),
 }));
@@ -463,6 +852,16 @@ export const SUPPORT_TABLE_NAMES = [
   "verifications",
   "invitations",
   "webhook_events",
+  "workspaces",
+  "spaces",
+  "published_snapshots",
+  "project_revisions",
+  "edit_leases",
+  "billing_operations",
+  "seat_reservations",
+  "usage_buckets",
+  "usage_reservations",
+  "owner_transfer_requests",
 ] as const;
 
 export const ALL_SCHEMA_TABLE_NAMES = [...ERD_TABLE_NAMES, ...SUPPORT_TABLE_NAMES] as const;

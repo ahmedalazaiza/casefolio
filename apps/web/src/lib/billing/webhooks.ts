@@ -1,10 +1,12 @@
-import { desc, eq, or, type PlanTier } from "@casefolio/db";
+import { and, desc, eq, inArray, isNull, ne, type PlanTier } from "@casefolio/db";
 import { z } from "zod";
 import { env } from "@/env";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
-import { notifyPaymentIssue } from "@/lib/notifications/service";
 import {
-  isSubscriptionGrantingAccess,
+  evaluateSubscriptionLifecycle,
+  PLAN_CATALOG_VERSION,
+  TEAMS_MAX_SELF_SERVE_SEATS,
+  TEAMS_MIN_SEATS,
   type BillingInterval,
   type PaidPlanTier,
   type SubscriptionLifecycleStatus,
@@ -12,6 +14,11 @@ import {
 import { resolvePlanFromServerPriceId } from "@/lib/billing/server-config";
 import { verifyPaddleWebhookSignature } from "@/lib/billing/signature";
 import { db, dbSchema } from "@/lib/db";
+import {
+  ensurePersonalWorkspaceForUser,
+  ensureTeamWorkspaceForOrganization,
+} from "@/lib/entitlements/server";
+import { notifyPaymentIssue } from "@/lib/notifications/service";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -31,9 +38,12 @@ export type ProcessPaddleWebhookResult =
       eventId: string;
       eventType: string;
       deduplicated: boolean;
+      outOfOrderIgnored?: boolean;
       subscriptionId: string | null;
       effectivePlan: PlanTier | null;
       lifecycleStatus: SubscriptionLifecycleStatus | null;
+      currentPaidCapacity?: number;
+      renewalQuantity?: number | null;
     }
   | {
       ok: false;
@@ -53,10 +63,13 @@ interface ExtractedPaddleData {
   paddleCustomerId: string | null;
   customUserId: string | null;
   customOrgId: string | null;
+  customOperationId: string | null;
+  prorationBillingMode: string | null;
   plan: PaidPlanTier | null;
   interval: BillingInterval;
   seats: number | null;
   lifecycleStatus: SubscriptionLifecycleStatus;
+  scheduledChangeAction: string | null;
   currentPeriodEnd: Date | null;
 }
 
@@ -78,6 +91,16 @@ function parseIsoDate(value: unknown): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function clampTeamSeats(rawSeats: number | null | undefined): number {
+  if (typeof rawSeats !== "number" || !Number.isFinite(rawSeats)) {
+    return TEAMS_MIN_SEATS;
+  }
+  return Math.max(
+    TEAMS_MIN_SEATS,
+    Math.min(TEAMS_MAX_SELF_SERVE_SEATS, Math.floor(rawSeats)),
+  );
+}
+
 function extractPaddleEventDetails(
   eventType: string,
   data: Record<string, unknown>,
@@ -87,9 +110,17 @@ function extractPaddleEventDetails(
     asNonEmptyString(customData?.userId) ?? asNonEmptyString(customData?.user_id);
   const rawOrgId =
     asNonEmptyString(customData?.orgId) ?? asNonEmptyString(customData?.org_id);
+  const rawOperationId =
+    asNonEmptyString(customData?.operationId) ?? asNonEmptyString(customData?.operation_id);
 
   const customUserId = rawUserId && UUID_REGEX.test(rawUserId) ? rawUserId : null;
   const customOrgId = rawOrgId && UUID_REGEX.test(rawOrgId) ? rawOrgId : null;
+  const customOperationId =
+    rawOperationId && UUID_REGEX.test(rawOperationId) ? rawOperationId : null;
+
+  const prorationBillingMode =
+    asNonEmptyString(customData?.prorationBillingMode) ??
+    asNonEmptyString(data.proration_billing_mode);
 
   const isSubscriptionEvent = eventType.startsWith("subscription.");
   const dataId = asNonEmptyString(data.id);
@@ -99,7 +130,6 @@ function extractPaddleEventDetails(
 
   const paddleCustomerId = asNonEmptyString(data.customer_id);
 
-  // Extract priceId + quantity + interval from items[0]
   let resolvedPlan: PaidPlanTier | null = null;
   let resolvedInterval: BillingInterval = "monthly";
   let seats: number | null = null;
@@ -128,7 +158,6 @@ function extractPaddleEventDetails(
     }
   }
 
-  // Fallback to custom_data plan/interval/seats if present
   const customPlan = asNonEmptyString(customData?.plan);
   if (!resolvedPlan && (customPlan === "pro" || customPlan === "team")) {
     resolvedPlan = customPlan;
@@ -141,10 +170,9 @@ function extractPaddleEventDetails(
     seats = Math.floor(customData.seats);
   }
 
-  // Extract period end
   const billingPeriod = asRecord(data.current_billing_period);
   const scheduledChange = asRecord(data.scheduled_change);
-  const scheduledAction = asNonEmptyString(scheduledChange?.action)?.toLowerCase();
+  const scheduledAction = asNonEmptyString(scheduledChange?.action)?.toLowerCase() ?? null;
 
   const currentPeriodEnd =
     parseIsoDate(scheduledChange?.effective_at) ??
@@ -152,7 +180,6 @@ function extractPaddleEventDetails(
     parseIsoDate(data.next_billed_at) ??
     parseIsoDate(data.canceled_at);
 
-  // Determine lifecycle status
   const rawStatus = asNonEmptyString(data.status)?.toLowerCase() ?? "";
   let lifecycleStatus: SubscriptionLifecycleStatus;
 
@@ -165,7 +192,8 @@ function extractPaddleEventDetails(
   } else if (
     eventType === "subscription.past_due" ||
     eventType === "transaction.payment_failed" ||
-    rawStatus === "past_due"
+    rawStatus === "past_due" ||
+    rawStatus === "payment_failed"
   ) {
     lifecycleStatus = "past_due";
   } else if (eventType === "subscription.paused" || rawStatus === "paused") {
@@ -183,10 +211,13 @@ function extractPaddleEventDetails(
     paddleCustomerId,
     customUserId,
     customOrgId,
+    customOperationId,
+    prorationBillingMode,
     plan: resolvedPlan,
     interval: resolvedInterval,
     seats,
     lifecycleStatus,
+    scheduledChangeAction: scheduledAction,
     currentPeriodEnd,
   };
 }
@@ -241,11 +272,111 @@ export async function handleSignedPaddleWebhookRequest(args: {
   return processValidatedPaddleWebhook(envelopeParsed.data, now);
 }
 
+export async function applyPersonalDowngradePublicationRules(
+  workspaceId: string,
+  now: Date = new Date(),
+): Promise<void> {
+  const [ws] = await db
+    .select()
+    .from(dbSchema.workspaces)
+    .where(eq(dbSchema.workspaces.id, workspaceId))
+    .limit(1);
+
+  if (!ws) return;
+
+  const publishedProjects = await db
+    .select({ id: dbSchema.projects.id })
+    .from(dbSchema.projects)
+    .where(
+      and(
+        eq(dbSchema.projects.workspaceId, workspaceId),
+        ne(dbSchema.projects.visibility, "private"),
+      ),
+    );
+
+  // Free plan requires branding (`Spec §11.7`)
+  await db
+    .update(dbSchema.projects)
+    .set({ brandingRemoved: false, updatedAt: now })
+    .where(eq(dbSchema.projects.workspaceId, workspaceId));
+
+  await db
+    .update(dbSchema.publishedSnapshots)
+    .set({ brandingRemoved: false, updatedAt: now })
+    .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
+
+  if (publishedProjects.length <= 1) {
+    // At most 1 published project -> keep it live with Free branding
+    await db
+      .update(dbSchema.publishedSnapshots)
+      .set({ suspendedReason: null, updatedAt: now })
+      .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
+    return;
+  }
+
+  const validKeepId =
+    ws.keepPublicProjectId && publishedProjects.some((p) => p.id === ws.keepPublicProjectId)
+      ? ws.keepPublicProjectId
+      : null;
+
+  if (!validKeepId) {
+    // `Spec §11.7`: If > 1 published and user hasn't chosen one, suspend all paid publications rather than guessing
+    await db
+      .update(dbSchema.publishedSnapshots)
+      .set({
+        suspendedReason: "downgraded_pro_to_free_select_one",
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
+    return;
+  }
+
+  const suspendIds = publishedProjects.filter((p) => p.id !== validKeepId).map((p) => p.id);
+  await db
+    .update(dbSchema.publishedSnapshots)
+    .set({ suspendedReason: null, updatedAt: now })
+    .where(eq(dbSchema.publishedSnapshots.projectId, validKeepId));
+
+  if (suspendIds.length > 0) {
+    await db
+      .update(dbSchema.publishedSnapshots)
+      .set({
+        suspendedReason: "downgraded_pro_to_free_select_one",
+        updatedAt: now,
+      })
+      .where(inArray(dbSchema.publishedSnapshots.projectId, suspendIds));
+  }
+}
+
 export async function processValidatedPaddleWebhook(
   envelope: PaddleWebhookEnvelope,
   now: Date = new Date(),
 ): Promise<ProcessPaddleWebhookResult> {
   const details = extractPaddleEventDetails(envelope.event_type, envelope.data);
+  const occurredAt = parseIsoDate(envelope.occurred_at) ?? now;
+
+  // Pre-verify & ensure workspace outside inner tx if needed
+  let verifiedUserId: string | null = null;
+  let previousUserPlan: PlanTier = "free";
+  if (details.customUserId) {
+    const [u] = await db
+      .select({ id: dbSchema.users.id, plan: dbSchema.users.plan })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, details.customUserId))
+      .limit(1);
+    verifiedUserId = u?.id ?? null;
+    previousUserPlan = u?.plan ?? "free";
+  }
+
+  let verifiedOrgId: string | null = null;
+  if (details.customOrgId) {
+    const [o] = await db
+      .select({ id: dbSchema.organizations.id })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, details.customOrgId))
+      .limit(1);
+    verifiedOrgId = o?.id ?? null;
+  }
 
   const txOutcome = await db.transaction(async (tx) => {
     // 1. Idempotency guard via webhook_events PK (event_id)
@@ -274,10 +405,11 @@ export async function processValidatedPaddleWebhook(
         },
         upgraded: false,
         distinctId: null as string | null,
+        postDowngradePersonalWorkspaceId: null as string | null,
       };
     }
 
-    // 2. Locate existing subscription record if present
+    // 2. Locate existing subscription record scoped cleanly (Personal vs Team)
     let existingSub: typeof dbSchema.subscriptions.$inferSelect | undefined;
 
     if (details.paddleSubscriptionId) {
@@ -289,40 +421,57 @@ export async function processValidatedPaddleWebhook(
       existingSub = bySubId;
     }
 
-    if (!existingSub && details.paddleCustomerId) {
+    const isTeamEvent =
+      details.plan === "team" ||
+      Boolean(verifiedOrgId) ||
+      Boolean(existingSub?.orgId);
+
+    if (!existingSub && isTeamEvent && verifiedOrgId) {
+      const [byOrg] = await tx
+        .select()
+        .from(dbSchema.subscriptions)
+        .where(eq(dbSchema.subscriptions.orgId, verifiedOrgId))
+        .orderBy(desc(dbSchema.subscriptions.updatedAt))
+        .limit(1);
+      existingSub = byOrg;
+    }
+
+    if (!existingSub && !isTeamEvent && details.paddleCustomerId) {
       const [byCustomerId] = await tx
         .select()
         .from(dbSchema.subscriptions)
-        .where(eq(dbSchema.subscriptions.paddleCustomerId, details.paddleCustomerId))
+        .where(
+          and(
+            eq(dbSchema.subscriptions.paddleCustomerId, details.paddleCustomerId),
+            isNull(dbSchema.subscriptions.orgId),
+          ),
+        )
         .orderBy(desc(dbSchema.subscriptions.updatedAt))
         .limit(1);
       existingSub = byCustomerId;
     }
 
-    const targetUserId = details.customUserId ?? existingSub?.userId ?? null;
-    const targetOrgId = details.customOrgId ?? existingSub?.orgId ?? null;
-
-    if (!existingSub && (targetUserId || targetOrgId)) {
-      const conditions = [];
-      if (targetUserId) {
-        conditions.push(eq(dbSchema.subscriptions.userId, targetUserId));
-      }
-      if (targetOrgId) {
-        conditions.push(eq(dbSchema.subscriptions.orgId, targetOrgId));
-      }
-      if (conditions.length > 0) {
-        const [byOwner] = await tx
-          .select()
-          .from(dbSchema.subscriptions)
-          .where(conditions.length === 1 ? conditions[0] : or(...conditions))
-          .orderBy(desc(dbSchema.subscriptions.updatedAt))
-          .limit(1);
-        existingSub = byOwner;
-      }
+    if (!existingSub && !isTeamEvent && verifiedUserId) {
+      const [byUser] = await tx
+        .select()
+        .from(dbSchema.subscriptions)
+        .where(
+          and(
+            eq(dbSchema.subscriptions.userId, verifiedUserId),
+            isNull(dbSchema.subscriptions.orgId),
+          ),
+        )
+        .orderBy(desc(dbSchema.subscriptions.updatedAt))
+        .limit(1);
+      existingSub = byUser;
     }
 
-    // If neither user/org nor subscription could be matched (e.g., unrelated product event), record event & exit cleanly
-    if (!targetUserId && !targetOrgId && !existingSub) {
+    const resolvedOrgId = verifiedOrgId ?? existingSub?.orgId ?? null;
+    const resolvedUserId = resolvedOrgId
+      ? null
+      : (verifiedUserId ?? existingSub?.userId ?? null);
+
+    if (!resolvedUserId && !resolvedOrgId && !existingSub) {
       return {
         result: {
           ok: true as const,
@@ -335,33 +484,48 @@ export async function processValidatedPaddleWebhook(
         },
         upgraded: false,
         distinctId: null as string | null,
+        postDowngradePersonalWorkspaceId: null as string | null,
       };
     }
 
-    // Verify userId actually exists before FK write
-    let verifiedUserId: string | null = null;
-    let previousUserPlan: PlanTier = "free";
-    if (targetUserId) {
-      const [u] = await tx
-        .select({ id: dbSchema.users.id, plan: dbSchema.users.plan })
-        .from(dbSchema.users)
-        .where(eq(dbSchema.users.id, targetUserId))
-        .limit(1);
-      verifiedUserId = u?.id ?? null;
-      previousUserPlan = u?.plan ?? "free";
+    // 3. Per-entity `occurred_at` ordering (`Spec §12 line 388`)
+    if (
+      existingSub?.lastEventOccurredAt &&
+      occurredAt.getTime() < existingSub.lastEventOccurredAt.getTime()
+    ) {
+      const currentEval = evaluateSubscriptionLifecycle({
+        status: existingSub.status,
+        currentPeriodEnd: existingSub.currentPeriodEnd,
+        pastDueSince: existingSub.pastDueSince,
+        now,
+      });
+      return {
+        result: {
+          ok: true as const,
+          eventId: envelope.event_id,
+          eventType: envelope.event_type,
+          deduplicated: false,
+          outOfOrderIgnored: true,
+          subscriptionId: existingSub.id,
+          effectivePlan: currentEval.grantsPaidAccess ? existingSub.plan : "free",
+          lifecycleStatus: existingSub.status as SubscriptionLifecycleStatus,
+          currentPaidCapacity: existingSub.currentPaidCapacity,
+          renewalQuantity: existingSub.renewalQuantity,
+        },
+        upgraded: false,
+        distinctId: null as string | null,
+        postDowngradePersonalWorkspaceId: null as string | null,
+      };
     }
 
-    let verifiedOrgId: string | null = null;
-    if (targetOrgId) {
-      const [o] = await tx
-        .select({ id: dbSchema.organizations.id })
-        .from(dbSchema.organizations)
-        .where(eq(dbSchema.organizations.id, targetOrgId))
-        .limit(1);
-      verifiedOrgId = o?.id ?? null;
-    }
-
-    if (!verifiedUserId && !verifiedOrgId) {
+    // 4. Failed initial payment grants NOTHING (`Spec §12 & §15`)
+    if (!existingSub && details.lifecycleStatus === "past_due") {
+      if (details.customOperationId) {
+        await tx
+          .update(dbSchema.billingOperations)
+          .set({ status: "failed", updatedAt: now })
+          .where(eq(dbSchema.billingOperations.id, details.customOperationId));
+      }
       return {
         result: {
           ok: true as const,
@@ -369,25 +533,162 @@ export async function processValidatedPaddleWebhook(
           eventType: envelope.event_type,
           deduplicated: false,
           subscriptionId: null,
-          effectivePlan: null,
-          lifecycleStatus: null,
+          effectivePlan: "free" as const,
+          lifecycleStatus: "past_due" as const,
+          currentPaidCapacity: 0,
+          renewalQuantity: null,
         },
         upgraded: false,
-        distinctId: null as string | null,
+        distinctId: verifiedUserId ?? resolvedOrgId,
+        paymentFailedUserId: verifiedUserId,
+        storedPlan: (details.plan ?? "pro") as PlanTier,
+        postDowngradePersonalWorkspaceId: null as string | null,
       };
     }
 
-    const storedPlan: PlanTier =
-      details.plan ??
-      (existingSub?.plan && existingSub.plan !== "free" ? existingSub.plan : "pro");
+    const storedPlan: PlanTier = resolvedOrgId
+      ? "team"
+      : (details.plan ??
+          (existingSub?.plan && existingSub.plan !== "free" ? existingSub.plan : "pro"));
 
-    const nextPeriodEnd =
-      details.currentPeriodEnd ?? existingSub?.currentPeriodEnd ?? null;
-
+    const nextInterval: BillingInterval = details.interval ?? existingSub?.interval ?? "monthly";
+    const nextPeriodEnd = details.currentPeriodEnd ?? existingSub?.currentPeriodEnd ?? null;
     const nextPaddleSubId =
       details.paddleSubscriptionId ?? existingSub?.paddleSubscriptionId ?? null;
     const nextPaddleCustId =
       details.paddleCustomerId ?? existingSub?.paddleCustomerId ?? null;
+
+    // 5. Anchor `pastDueSince` on FIRST failure without resetting on repeat webhooks (`Spec §12 line 374`)
+    let nextPastDueSince: Date | null = existingSub?.pastDueSince ?? null;
+    if (details.lifecycleStatus === "past_due") {
+      nextPastDueSince = existingSub?.pastDueSince ?? occurredAt;
+    } else if (
+      details.lifecycleStatus === "active" &&
+      envelope.event_type !== "transaction.payment_failed"
+    ) {
+      nextPastDueSince = null;
+    }
+
+    // 6. Seat capacity & renewal decrease rules (`Spec §8 lines 269-273`)
+    let nextPaidCapacity = 1;
+    let nextRenewalQuantity: number | null = null;
+    let nextPendingOpId: string | null = existingSub?.pendingOperationId ?? null;
+
+    if (storedPlan === "team") {
+      const requestedSeats = details.seats !== null ? clampTeamSeats(details.seats) : null;
+      const isFailedPayment =
+        details.lifecycleStatus === "past_due" ||
+        envelope.event_type === "transaction.payment_failed";
+
+      if (isFailedPayment) {
+        // Failed payment on a seat increase or renewal NEVER grants additional seats
+        nextPaidCapacity = existingSub?.currentPaidCapacity ?? 1;
+        nextRenewalQuantity = existingSub?.renewalQuantity ?? null;
+        if (details.customOperationId) {
+          await tx
+            .update(dbSchema.billingOperations)
+            .set({ status: "failed", updatedAt: now })
+            .where(eq(dbSchema.billingOperations.id, details.customOperationId));
+        }
+      } else if (!existingSub) {
+        nextPaidCapacity = requestedSeats ?? TEAMS_MIN_SEATS;
+        nextRenewalQuantity = null;
+        nextPendingOpId = null;
+      } else {
+        const periodAdvanced = Boolean(
+          nextPeriodEnd &&
+            existingSub.currentPeriodEnd &&
+            nextPeriodEnd.getTime() > existingSub.currentPeriodEnd.getTime() + 60_000,
+        );
+        const isGenuineRenewal =
+          details.lifecycleStatus === "active" &&
+          details.prorationBillingMode !== "do_not_bill" &&
+          (periodAdvanced ||
+            (envelope.event_type === "transaction.completed" &&
+              existingSub.renewalQuantity !== null &&
+              existingSub.currentPeriodEnd !== null &&
+              occurredAt.getTime() >= existingSub.currentPeriodEnd.getTime() - 60_000));
+
+        if (details.prorationBillingMode === "do_not_bill" && requestedSeats !== null) {
+          if (requestedSeats < existingSub.currentPaidCapacity) {
+            nextPaidCapacity = existingSub.currentPaidCapacity;
+            nextRenewalQuantity = requestedSeats;
+            nextPendingOpId = details.customOperationId ?? existingSub.pendingOperationId;
+          } else if (requestedSeats === existingSub.currentPaidCapacity) {
+            // Canceled pending decrease
+            nextPaidCapacity = existingSub.currentPaidCapacity;
+            nextRenewalQuantity = null;
+            nextPendingOpId = null;
+          } else {
+            nextPaidCapacity = existingSub.currentPaidCapacity;
+            nextRenewalQuantity = existingSub.renewalQuantity;
+          }
+        } else if (isGenuineRenewal) {
+          nextPaidCapacity =
+            requestedSeats ?? existingSub.renewalQuantity ?? existingSub.currentPaidCapacity;
+          nextRenewalQuantity = null;
+          if (existingSub.pendingOperationId) {
+            await tx
+              .update(dbSchema.billingOperations)
+              .set({ status: "completed", updatedAt: now })
+              .where(eq(dbSchema.billingOperations.id, existingSub.pendingOperationId));
+          }
+          nextPendingOpId = null;
+        } else if (
+          requestedSeats !== null &&
+          requestedSeats < existingSub.currentPaidCapacity
+        ) {
+          // Never shrink `currentPaidCapacity` mid-period based on webhook item quantity (`Spec §8 line 270`)
+          nextPaidCapacity = existingSub.currentPaidCapacity;
+          nextRenewalQuantity = requestedSeats;
+        } else if (
+          requestedSeats !== null &&
+          requestedSeats > existingSub.currentPaidCapacity &&
+          details.lifecycleStatus === "active"
+        ) {
+          // Funded prorated seat increase expands capacity immediately without resetting usage
+          nextPaidCapacity = requestedSeats;
+          nextRenewalQuantity = null;
+          if (details.customOperationId) {
+            await tx
+              .update(dbSchema.billingOperations)
+              .set({ status: "completed", updatedAt: now })
+              .where(eq(dbSchema.billingOperations.id, details.customOperationId));
+          }
+          nextPendingOpId = null;
+        } else {
+          nextPaidCapacity = existingSub.currentPaidCapacity;
+          nextRenewalQuantity = existingSub.renewalQuantity;
+        }
+      }
+    }
+
+    // Resolve `workspaceId`
+    let targetWorkspaceId: string | null = existingSub?.workspaceId ?? null;
+    if (!targetWorkspaceId) {
+      if (resolvedOrgId) {
+        const [ws] = await tx
+          .select({ id: dbSchema.workspaces.id })
+          .from(dbSchema.workspaces)
+          .where(eq(dbSchema.workspaces.organizationId, resolvedOrgId))
+          .limit(1);
+        targetWorkspaceId = ws?.id ?? null;
+      } else if (resolvedUserId) {
+        const [ws] = await tx
+          .select({ id: dbSchema.workspaces.id })
+          .from(dbSchema.workspaces)
+          .where(eq(dbSchema.workspaces.personalOwnerId, resolvedUserId))
+          .limit(1);
+        targetWorkspaceId = ws?.id ?? null;
+      }
+    }
+
+    const nextScheduledAction =
+      details.lifecycleStatus === "cancel_at_period_end"
+        ? "cancel"
+        : details.lifecycleStatus === "active"
+          ? null
+          : (details.scheduledChangeAction ?? null);
 
     let savedSubscriptionId: string;
 
@@ -395,12 +696,21 @@ export async function processValidatedPaddleWebhook(
       const [updated] = await tx
         .update(dbSchema.subscriptions)
         .set({
-          userId: verifiedUserId ?? existingSub.userId,
-          orgId: verifiedOrgId ?? existingSub.orgId,
+          userId: resolvedOrgId ? null : (resolvedUserId ?? existingSub.userId),
+          orgId: resolvedOrgId ?? existingSub.orgId,
+          workspaceId: targetWorkspaceId ?? existingSub.workspaceId,
           paddleCustomerId: nextPaddleCustId,
           paddleSubscriptionId: nextPaddleSubId,
           plan: storedPlan,
+          planVersion: PLAN_CATALOG_VERSION,
+          interval: nextInterval,
           status: details.lifecycleStatus,
+          currentPaidCapacity: nextPaidCapacity,
+          renewalQuantity: nextRenewalQuantity,
+          pastDueSince: nextPastDueSince,
+          lastEventOccurredAt: occurredAt,
+          scheduledChangeAction: nextScheduledAction,
+          pendingOperationId: nextPendingOpId,
           currentPeriodEnd: nextPeriodEnd,
           updatedAt: now,
         })
@@ -411,12 +721,21 @@ export async function processValidatedPaddleWebhook(
       const [inserted] = await tx
         .insert(dbSchema.subscriptions)
         .values({
-          userId: verifiedUserId,
-          orgId: verifiedOrgId,
+          userId: resolvedOrgId ? null : resolvedUserId,
+          orgId: resolvedOrgId,
+          workspaceId: targetWorkspaceId,
           paddleCustomerId: nextPaddleCustId,
           paddleSubscriptionId: nextPaddleSubId,
           plan: storedPlan,
+          planVersion: PLAN_CATALOG_VERSION,
+          interval: nextInterval,
           status: details.lifecycleStatus,
+          currentPaidCapacity: nextPaidCapacity,
+          renewalQuantity: nextRenewalQuantity,
+          pastDueSince: nextPastDueSince,
+          lastEventOccurredAt: occurredAt,
+          scheduledChangeAction: nextScheduledAction,
+          pendingOperationId: nextPendingOpId,
           currentPeriodEnd: nextPeriodEnd,
           createdAt: now,
           updatedAt: now,
@@ -425,34 +744,90 @@ export async function processValidatedPaddleWebhook(
       savedSubscriptionId = inserted!.id;
     }
 
-    const grantsAccess = isSubscriptionGrantingAccess(
-      details.lifecycleStatus,
-      nextPeriodEnd,
+    const lifecycle = evaluateSubscriptionLifecycle({
+      status: details.lifecycleStatus,
+      currentPeriodEnd: nextPeriodEnd,
+      pastDueSince: nextPastDueSince,
       now,
-    );
-    const effectivePlan: PlanTier = grantsAccess ? storedPlan : "free";
+    });
+    const effectivePlan: PlanTier = lifecycle.grantsPaidAccess ? storedPlan : "free";
 
-    if (verifiedUserId) {
+    // Personal workspace updates `users.plan`; Team workspace NEVER grants personal Pro (`Spec §4 line 177`)
+    if (!resolvedOrgId && resolvedUserId) {
       await tx
         .update(dbSchema.users)
         .set({
           plan: effectivePlan,
           updatedAt: now,
         })
-        .where(eq(dbSchema.users.id, verifiedUserId));
+        .where(eq(dbSchema.users.id, resolvedUserId));
     }
 
-    if (verifiedOrgId) {
-      const nextSeats =
-        effectivePlan === "team"
-          ? Math.max(3, details.seats ?? 3)
-          : 1;
+    if (resolvedOrgId) {
       await tx
         .update(dbSchema.organizations)
         .set({
-          seats: nextSeats,
+          seats: effectivePlan === "team" ? nextPaidCapacity : 0,
         })
-        .where(eq(dbSchema.organizations.id, verifiedOrgId));
+        .where(eq(dbSchema.organizations.id, resolvedOrgId));
+
+      if (targetWorkspaceId) {
+        if (!lifecycle.grantsPaidAccess || lifecycle.isPastDueReadOnly) {
+          await tx
+            .update(dbSchema.workspaces)
+            .set({
+              frozenAt: now,
+              frozenReason:
+                details.lifecycleStatus === "past_due"
+                  ? "past_due_over_7_days"
+                  : "team_subscription_ended",
+              updatedAt: now,
+            })
+            .where(eq(dbSchema.workspaces.id, targetWorkspaceId));
+
+          await tx
+            .update(dbSchema.publishedSnapshots)
+            .set({
+              suspendedReason: "team_subscription_inactive",
+              updatedAt: now,
+            })
+            .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
+        } else {
+          await tx
+            .update(dbSchema.workspaces)
+            .set({
+              frozenAt: null,
+              frozenReason: null,
+              updatedAt: now,
+            })
+            .where(eq(dbSchema.workspaces.id, targetWorkspaceId));
+
+          await tx
+            .update(dbSchema.publishedSnapshots)
+            .set({
+              suspendedReason: null,
+              updatedAt: now,
+            })
+            .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
+        }
+      }
+    } else if (targetWorkspaceId && lifecycle.grantsPaidAccess && !lifecycle.isPastDueReadOnly) {
+      await tx
+        .update(dbSchema.workspaces)
+        .set({
+          frozenAt: null,
+          frozenReason: null,
+          updatedAt: now,
+        })
+        .where(eq(dbSchema.workspaces.id, targetWorkspaceId));
+
+      await tx
+        .update(dbSchema.publishedSnapshots)
+        .set({
+          suspendedReason: null,
+          updatedAt: now,
+        })
+        .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
     }
 
     const previousEffectivePlan: PlanTier = existingSub ? existingSub.plan : previousUserPlan;
@@ -461,6 +836,18 @@ export async function processValidatedPaddleWebhook(
       (envelope.event_type === "subscription.activated" ||
         envelope.event_type === "subscription.created" ||
         previousEffectivePlan !== effectivePlan);
+
+    if (isUpgradeEvent && targetWorkspaceId) {
+      await tx
+        .update(dbSchema.projects)
+        .set({ brandingRemoved: true, updatedAt: now })
+        .where(eq(dbSchema.projects.workspaceId, targetWorkspaceId));
+
+      await tx
+        .update(dbSchema.publishedSnapshots)
+        .set({ brandingRemoved: true, updatedAt: now })
+        .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
+    }
 
     return {
       result: {
@@ -471,14 +858,58 @@ export async function processValidatedPaddleWebhook(
         subscriptionId: savedSubscriptionId,
         effectivePlan,
         lifecycleStatus: details.lifecycleStatus,
+        currentPaidCapacity: nextPaidCapacity,
+        renewalQuantity: nextRenewalQuantity,
       },
       upgraded: isUpgradeEvent,
-      distinctId: verifiedUserId ?? verifiedOrgId,
+      distinctId: verifiedUserId ?? resolvedUserId ?? resolvedOrgId,
       paymentFailedUserId:
-        details.lifecycleStatus === "past_due" ? verifiedUserId : null,
+        details.lifecycleStatus === "past_due" ? (verifiedUserId ?? resolvedUserId) : null,
       storedPlan,
+      resolvedOrgId,
+      resolvedUserId,
+      hasWorkspaceId: Boolean(targetWorkspaceId),
+      postDowngradePersonalWorkspaceId:
+        !resolvedOrgId && (!lifecycle.grantsPaidAccess || lifecycle.isPastDueReadOnly)
+          ? targetWorkspaceId
+          : null,
     };
   });
+
+  // Ensure workspace exists and link `subscriptions.workspaceId` if subscription arrived before lazy workspace creation
+  if (
+    !txOutcome.result.deduplicated &&
+    txOutcome.result.subscriptionId &&
+    "hasWorkspaceId" in txOutcome &&
+    !txOutcome.hasWorkspaceId
+  ) {
+    if (txOutcome.resolvedOrgId) {
+      const ensured = await ensureTeamWorkspaceForOrganization(
+        txOutcome.resolvedOrgId,
+        verifiedUserId ?? undefined,
+      );
+      await db
+        .update(dbSchema.subscriptions)
+        .set({ workspaceId: ensured.workspaceId, updatedAt: now })
+        .where(eq(dbSchema.subscriptions.id, txOutcome.result.subscriptionId));
+    } else if (txOutcome.resolvedUserId) {
+      const ensured = await ensurePersonalWorkspaceForUser(txOutcome.resolvedUserId);
+      await db
+        .update(dbSchema.subscriptions)
+        .set({ workspaceId: ensured.workspaceId, updatedAt: now })
+        .where(eq(dbSchema.subscriptions.id, txOutcome.result.subscriptionId));
+      if (txOutcome.result.effectivePlan === "free") {
+        await applyPersonalDowngradePublicationRules(ensured.workspaceId, now);
+      }
+    }
+  }
+
+  if (
+    "postDowngradePersonalWorkspaceId" in txOutcome &&
+    txOutcome.postDowngradePersonalWorkspaceId
+  ) {
+    await applyPersonalDowngradePublicationRules(txOutcome.postDowngradePersonalWorkspaceId, now);
+  }
 
   if (txOutcome.upgraded && txOutcome.result.effectivePlan) {
     await trackServerProductEvent({

@@ -170,7 +170,7 @@ describe("exports service, plan gating & worker job lifecycle (C-602)", () => {
       expect(proPdf.ok).toBe(true);
       if (!proPdf.ok) return;
       expect(proPdf.hasWatermark).toBe(false);
-      expect(proPdf.monthlyExportsLimit).toBeNull();
+      expect(proPdf.monthlyExportsLimit).toBe(60);
       expect(proPdf.exportJob.status).toBe("queued");
 
       const fakePdfBytes = new TextEncoder().encode("%PDF-1.7\nCasefolio Pro Export\n%%EOF");
@@ -211,12 +211,12 @@ describe("exports service, plan gating & worker job lifecycle (C-602)", () => {
         expect(overviewRes.overview.exports[0]?.status).toBe("completed");
       }
 
-      // Download authorized for owner, forbidden for stranger
+      // Download authorized for owner, 404 (not_found) for cross-tenant stranger per Spec §10.2 & §15
       const strangerDownload = await authorizeAndReadExportFile(proPdf.exportJob.id, {
         id: freeUser!.id,
         role: "user",
       });
-      expect(strangerDownload.status).toBe("forbidden");
+      expect(strangerDownload.status).toBe("not_found");
 
       const ownerDownload = await authorizeAndReadExportFile(proPdf.exportJob.id, {
         id: proUser!.id,

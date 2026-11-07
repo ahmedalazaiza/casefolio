@@ -98,6 +98,7 @@ describe("Zustand + zundo editor store & autosave (C-405)", () => {
         return {
           ok: true,
           updatedAtIso: "2026-11-04T12:01:00.000Z",
+          revision: 2,
         };
       }
       if (callCount === 2) {
@@ -110,6 +111,7 @@ describe("Zustand + zundo editor store & autosave (C-405)", () => {
       return {
         ok: true,
         updatedAtIso: "2026-11-04T12:02:00.000Z",
+        revision: 3,
       };
     });
 

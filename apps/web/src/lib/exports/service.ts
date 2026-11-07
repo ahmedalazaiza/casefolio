@@ -1,4 +1,5 @@
-import { and, count, desc, eq, gte, type PlanTier, type UserRole } from "@casefolio/db";
+import { randomUUID } from "node:crypto";
+import { and, desc, eq, gt, isNotNull, type PlanTier, type UserRole } from "@casefolio/db";
 import {
   enqueueExportJobToPgBoss,
   startPgBossExportConsumer,
@@ -9,23 +10,29 @@ import { signExportRenderToken } from "@casefolio/worker/token";
 import { PgBoss } from "pg-boss";
 import { env } from "@/env";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
+import { formatResetDateIstanbul } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
-import { can, evaluateEntitlement, type EntitlementFeature } from "@/lib/entitlements";
-import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
+import { can, type EntitlementFeature } from "@/lib/entitlements";
 import {
   createExportInputSchema,
-  FREE_MONTHLY_EXPORT_LIMIT,
   type EnqueueExportResult,
   type ExportFormatOption,
   type ExportHistoryItem,
   type ProjectExportsOverviewPayload,
 } from "@/lib/exports/types";
-import { resolvePublicAppBaseUrl } from "@/lib/projects/publish";
 import { notifyExportFinished } from "@/lib/notifications/service";
+import { resolvePublicAppBaseUrl } from "@/lib/projects/publish";
 import { slugifyProjectName } from "@/lib/projects/types";
+import { sanitizeErrorForLogging } from "@/lib/security/redact";
 import { readStoredObjectBytes, writeStoredObject } from "@/lib/storage/r2";
 import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
-import { sanitizeErrorForLogging } from "@/lib/security/redact";
+import {
+  commitWorkspaceReservation,
+  getWorkspaceMonthlyMeterUsage,
+  releaseWorkspaceReservation,
+  reserveWorkspaceMeter,
+} from "@/lib/usage/meter";
+import { authorizeProjectAccess } from "@/lib/workspaces/acl";
 
 export interface ExportActor {
   id: string;
@@ -34,6 +41,7 @@ export interface ExportActor {
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EXPORT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const globalForExportQueue = globalThis as unknown as {
   casefolioBossPublisherPromise?: Promise<PgBoss> | null;
@@ -78,8 +86,6 @@ async function ensureExportQueueConsumerActive(appUrl: string): Promise<void> {
     return;
   }
 
-  // In production when an external worker URL is configured in another cluster, pg-boss polls DB directly.
-  // In local dev / CI single-server environments, spin up an embedded pg-boss consumer automatically.
   if (
     process.env.NODE_ENV === "production" &&
     process.env.CASEFOLIO_ENABLE_EMBEDDED_WORKER !== "1" &&
@@ -131,7 +137,10 @@ export async function shutdownExportQueueForTests(): Promise<void> {
   }
 }
 
-function serializeExportRow(row: typeof dbSchema.exportsTable.$inferSelect): ExportHistoryItem {
+function serializeExportRow(
+  row: typeof dbSchema.exportsTable.$inferSelect,
+  now: Date = new Date(),
+): ExportHistoryItem {
   let renderUrl: string | null = null;
   if (row.status === "queued") {
     const token = signExportRenderToken(
@@ -145,46 +154,26 @@ function serializeExportRow(row: typeof dbSchema.exportsTable.$inferSelect): Exp
     renderUrl = `/export/${encodeURIComponent(row.id)}?token=${encodeURIComponent(token)}`;
   }
 
+  const isExpired = Boolean(row.expiresAt && row.expiresAt.getTime() <= now.getTime());
+
   return {
     id: row.id,
     projectId: row.projectId,
     format: row.format,
     status: row.status,
+    scale: row.scale,
+    projectRevision: row.projectRevision,
+    hasWatermark: row.hasWatermark,
     r2Key: row.r2Key ?? null,
     error: row.error ?? null,
     createdAtIso: row.createdAt.toISOString(),
-    downloadUrl: row.status === "completed" && row.r2Key ? `/api/exports/${row.id}/download` : null,
+    expiresAtIso: row.expiresAt ? row.expiresAt.toISOString() : null,
+    downloadUrl:
+      row.status === "completed" && row.r2Key && !isExpired
+        ? `/api/exports/${row.id}/download`
+        : null,
     renderUrl,
   };
-}
-
-async function canActorAccessProjectExports(
-  project: { ownerId: string; orgId: string | null },
-  actor: ExportActor,
-  requireEdit = false,
-): Promise<boolean> {
-  if (project.ownerId === actor.id || actor.role === "admin" || actor.role === "superadmin") {
-    return true;
-  }
-
-  if (project.orgId) {
-    const [membership] = await db
-      .select({ role: dbSchema.memberships.role })
-      .from(dbSchema.memberships)
-      .where(
-        and(
-          eq(dbSchema.memberships.orgId, project.orgId),
-          eq(dbSchema.memberships.userId, actor.id),
-        ),
-      )
-      .limit(1);
-
-    if (!membership) return false;
-    if (!requireEdit) return true;
-    return membership.role === "owner" || membership.role === "editor";
-  }
-
-  return false;
 }
 
 function exportFormatToEntitlementFeature(format: ExportFormatOption): EntitlementFeature {
@@ -201,21 +190,26 @@ export function doesPlanIncludeExportWatermark(plan: PlanTier): boolean {
   return !can(plan, "remove_watermark");
 }
 
-async function countOwnerMonthlyExports(ownerId: string, now = new Date()): Promise<number> {
-  const startOfUtcMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
-
-  const [row] = await db
-    .select({ total: count() })
-    .from(dbSchema.exportsTable)
-    .innerJoin(dbSchema.projects, eq(dbSchema.exportsTable.projectId, dbSchema.projects.id))
-    .where(
-      and(
-        eq(dbSchema.projects.ownerId, ownerId),
-        gte(dbSchema.exportsTable.createdAt, startOfUtcMonth),
-      ),
-    );
-
-  return Number(row?.total ?? 0);
+export function buildExportCacheKey(args: {
+  workspaceId: string;
+  projectId: string;
+  projectRevision: number;
+  format: ExportFormatOption;
+  scale: 1 | 2;
+  templateVersionId: string;
+  hasWatermark: boolean;
+  aclVersion: number;
+}): string {
+  return [
+    args.workspaceId,
+    args.projectId,
+    `r${args.projectRevision}`,
+    args.format,
+    `s${args.scale}`,
+    `tv:${args.templateVersionId}`,
+    `wm:${args.hasWatermark ? 1 : 0}`,
+    `acl:${args.aclVersion}`,
+  ].join("|");
 }
 
 export async function enqueueProjectExportForUser(
@@ -224,8 +218,10 @@ export async function enqueueProjectExportForUser(
   options?: {
     appUrl?: string;
     enqueueJobFn?: (payload: ExportQueueJobPayload) => Promise<void>;
+    now?: Date;
   },
 ): Promise<EnqueueExportResult> {
+  const now = options?.now ?? new Date();
   const rate = consumeUploadRateLimit(`export:${actor.id}`, 15, 60_000);
   if (!rate.allowed) {
     return {
@@ -245,18 +241,7 @@ export async function enqueueProjectExportForUser(
   }
 
   const valid = parsed.data;
-
-  const [projectRow] = await db
-    .select({
-      project: dbSchema.projects,
-      ownerPlan: dbSchema.users.plan,
-    })
-    .from(dbSchema.projects)
-    .innerJoin(dbSchema.users, eq(dbSchema.projects.ownerId, dbSchema.users.id))
-    .where(eq(dbSchema.projects.id, valid.projectId))
-    .limit(1);
-
-  if (!projectRow) {
+  if (!UUID_REGEX.test(valid.projectId)) {
     return {
       ok: false,
       code: "NOT_FOUND",
@@ -264,49 +249,146 @@ export async function enqueueProjectExportForUser(
     };
   }
 
-  const canExport = await canActorAccessProjectExports(projectRow.project, actor, true);
-  if (!canExport) {
+  // Workspace + Space ACL enforcement (`404` on cross-tenant OR private-from-Owner/Admin)
+  const auth = await authorizeProjectAccess(valid.projectId, actor.id, "export_aesthetic", now);
+  if (!auth.ok) {
+    if (auth.status === 404) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+        error: "Project not found.",
+      };
+    }
+    if (auth.code === "WORKSPACE_FROZEN") {
+      return {
+        ok: false,
+        code: "PAST_DUE_READ_ONLY",
+        error: auth.error,
+      };
+    }
     return {
       ok: false,
       code: "FORBIDDEN",
-      error: "You do not have permission to export this project.",
+      error: auth.error,
     };
   }
 
-  const ownerPlan = await resolveEffectivePlanForUser(projectRow.project.ownerId);
-  if (!isExportFormatAllowedOnPlan(ownerPlan, valid.format)) {
-    const formatLabel = valid.format === "pdf" ? "PDF Case Study" : "Behance 1400px Slices";
+  const workspacePlan = auth.entitlement.plan;
+  const quotas = auth.entitlement.quotas;
+
+  if (!isExportFormatAllowedOnPlan(workspacePlan, valid.format)) {
+    const formatLabel = valid.format === "pdf" ? "PDF Case Study" : "Behance Image Pack";
     return {
       ok: false,
       code: "PLAN_UPGRADE_REQUIRED",
-      error: `${formatLabel} export requires a Pro or Team plan. Free plan supports PNG Long exports.`,
+      error: `${formatLabel} export requires a Pro or Teams plan. Free plan supports branded 1× PNG exports up to 1,440px.`,
     };
   }
 
-  const usedThisMonth = await countOwnerMonthlyExports(projectRow.project.ownerId);
-  const quotaEntitlement = evaluateEntitlement(
-    ownerPlan,
-    exportFormatToEntitlementFeature(valid.format),
-    { monthlyExportsCount: usedThisMonth },
-  );
-  if (!quotaEntitlement.allowed) {
+  if (valid.format === "png_long" && valid.scale === 2 && !can(workspacePlan, "export_png_2x")) {
+    return {
+      ok: false,
+      code: "PLAN_UPGRADE_REQUIRED",
+      error: "2× PNG exports (2,880px) require a Pro or Teams plan. Free plan supports 1× PNG up to 1,440px.",
+    };
+  }
+
+  const resolvedScale: 1 | 2 =
+    valid.format === "png_long"
+      ? workspacePlan === "free"
+        ? 1
+        : (valid.scale ?? 2)
+      : 1;
+
+  const hasWatermark = doesPlanIncludeExportWatermark(workspacePlan);
+  const cacheKey = buildExportCacheKey({
+    workspaceId: auth.workspace.id,
+    projectId: auth.project.id,
+    projectRevision: auth.project.revision,
+    format: valid.format,
+    scale: resolvedScale,
+    templateVersionId: auth.project.templateVersionId,
+    hasWatermark,
+    aclVersion: auth.space.aclVersion,
+  });
+
+  // Reuse an unexpired completed artifact with the identical cache key without consuming quota (`Spec §5.4`)
+  const [cachedRow] = await db
+    .select()
+    .from(dbSchema.exportsTable)
+    .where(
+      and(
+        eq(dbSchema.exportsTable.workspaceId, auth.workspace.id),
+        eq(dbSchema.exportsTable.projectId, auth.project.id),
+        eq(dbSchema.exportsTable.cacheKey, cacheKey),
+        eq(dbSchema.exportsTable.status, "completed"),
+        isNotNull(dbSchema.exportsTable.r2Key),
+        gt(dbSchema.exportsTable.expiresAt, now),
+      ),
+    )
+    .orderBy(desc(dbSchema.exportsTable.createdAt))
+    .limit(1);
+
+  if (cachedRow?.r2Key) {
+    const existingBytes = await readStoredObjectBytes(cachedRow.r2Key);
+    if (existingBytes) {
+      const meter = await getWorkspaceMonthlyMeterUsage(auth.workspace.id, "exports", now);
+      return {
+        ok: true,
+        exportJob: serializeExportRow(cachedRow, now),
+        reusedCachedArtifact: true,
+        hasWatermark,
+        monthlyExportsUsed: meter.total,
+        monthlyExportsLimit: quotas.monthlyExportsLimit,
+      };
+    }
+  }
+
+  const exportId = randomUUID();
+  const reservationJobId = `export:${exportId}`;
+  const reservation = await reserveWorkspaceMeter({
+    workspaceId: auth.workspace.id,
+    meter: "exports",
+    amount: 1,
+    limit: quotas.monthlyExportsLimit,
+    jobId: reservationJobId,
+    isPaid: auth.entitlement.plan !== "free",
+    graceUsedAt: auth.workspace.graceUsedAt,
+    graceExpiresAt: auth.workspace.graceExpiresAt,
+    cacheKey,
+    now,
+  });
+
+  if (!reservation.ok) {
     return {
       ok: false,
       code: "EXPORT_LIMIT_REACHED",
-      error: quotaEntitlement.message,
+      error: `Monthly export limit reached (${reservation.used}/${quotas.monthlyExportsLimit}). Resets ${formatResetDateIstanbul(now)} (Europe/Istanbul).`,
     };
   }
+
+  const expiresAt = new Date(now.getTime() + EXPORT_RETENTION_MS);
 
   const [created] = await db
     .insert(dbSchema.exportsTable)
     .values({
-      projectId: projectRow.project.id,
+      id: exportId,
+      projectId: auth.project.id,
+      workspaceId: auth.workspace.id,
+      requestedByUserId: actor.id,
       format: valid.format,
       status: "queued",
+      projectRevision: auth.project.revision,
+      scale: resolvedScale,
+      hasWatermark,
+      cacheKey,
+      expiresAt,
+      createdAt: now,
     })
     .returning();
 
   if (!created) {
+    await releaseWorkspaceReservation(reservationJobId, now).catch(() => undefined);
     return {
       ok: false,
       code: "VALIDATION_ERROR",
@@ -317,39 +399,61 @@ export async function enqueueProjectExportForUser(
   const appUrl = options?.appUrl ?? resolvePublicAppBaseUrl();
   const jobPayload: ExportQueueJobPayload = {
     exportId: created.id,
-    projectId: projectRow.project.id,
+    projectId: auth.project.id,
     format: valid.format,
     appUrl,
+    workspaceId: auth.workspace.id,
+    requestedByUserId: actor.id,
+    scale: resolvedScale,
+    maxMegapixels: quotas.maxExportMegapixels,
+    maxPdfPages: quotas.maxPdfPages > 0 ? quotas.maxPdfPages : 60,
+    timeoutMs: quotas.exportTimeoutSeconds * 1000,
+    reservationJobId,
   };
 
-  if (options?.enqueueJobFn) {
-    await options.enqueueJobFn(jobPayload);
-  } else {
-    const boss = await getPgBossPublisher();
-    await enqueueExportJobToPgBoss(boss, jobPayload);
-    await ensureExportQueueConsumerActive(appUrl).catch((err) => {
-      const safeErr = sanitizeErrorForLogging(err);
-      console.error("[exports] embedded worker wakeup warning:", safeErr.message);
-    });
+  try {
+    if (options?.enqueueJobFn) {
+      await options.enqueueJobFn(jobPayload);
+    } else {
+      const boss = await getPgBossPublisher();
+      await enqueueExportJobToPgBoss(boss, jobPayload);
+      await ensureExportQueueConsumerActive(appUrl).catch((err) => {
+        const safeErr = sanitizeErrorForLogging(err);
+        console.error("[exports] embedded worker wakeup warning:", safeErr.message);
+      });
+    }
+  } catch (err) {
+    await db
+      .update(dbSchema.exportsTable)
+      .set({
+        status: "failed",
+        error: "Failed to enqueue export job.",
+      })
+      .where(eq(dbSchema.exportsTable.id, created.id))
+      .catch(() => undefined);
+    await releaseWorkspaceReservation(reservationJobId, now).catch(() => undefined);
+    throw err;
   }
 
+  // Privacy rule (`Spec §10.8`): never send project titles or tokens to PostHog
   await trackServerProductEvent({
     event: "exported",
     distinctId: actor.id,
     properties: {
-      projectId: projectRow.project.id,
       exportId: created.id,
       format: valid.format,
-      plan: ownerPlan,
+      scale: resolvedScale,
+      plan: workspacePlan,
     },
   });
 
   return {
     ok: true,
-    exportJob: serializeExportRow(created),
-    hasWatermark: doesPlanIncludeExportWatermark(ownerPlan),
-    monthlyExportsUsed: usedThisMonth + 1,
-    monthlyExportsLimit: ownerPlan === "free" ? FREE_MONTHLY_EXPORT_LIMIT : null,
+    exportJob: serializeExportRow(created, now),
+    reusedCachedArtifact: false,
+    hasWatermark,
+    monthlyExportsUsed: reservation.usedAfterReserve,
+    monthlyExportsLimit: quotas.monthlyExportsLimit,
   };
 }
 
@@ -365,60 +469,50 @@ export async function getProjectExportsOverviewForUser(
     return { status: "not_found" };
   }
 
-  const [row] = await db
-    .select({
-      project: dbSchema.projects,
-      templateName: dbSchema.templates.name,
-      ownerPlan: dbSchema.users.plan,
-    })
-    .from(dbSchema.projects)
-    .innerJoin(
-      dbSchema.templateVersions,
-      eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
-    )
-    .innerJoin(dbSchema.templates, eq(dbSchema.templateVersions.templateId, dbSchema.templates.id))
-    .innerJoin(dbSchema.users, eq(dbSchema.projects.ownerId, dbSchema.users.id))
-    .where(eq(dbSchema.projects.id, projectId))
-    .limit(1);
-
-  if (!row) {
-    return { status: "not_found" };
+  const auth = await authorizeProjectAccess(projectId, actor.id, "read");
+  if (!auth.ok) {
+    return { status: auth.status === 404 ? "not_found" : "forbidden" };
   }
 
-  const allowed = await canActorAccessProjectExports(row.project, actor, false);
-  if (!allowed) {
-    return { status: "forbidden" };
-  }
-
-  const [historyRows, usedThisMonth, resolvedOwnerPlan] = await Promise.all([
+  const [[tplRow], historyRows, meter] = await Promise.all([
+    db
+      .select({ templateName: dbSchema.templates.name })
+      .from(dbSchema.templateVersions)
+      .innerJoin(
+        dbSchema.templates,
+        eq(dbSchema.templateVersions.templateId, dbSchema.templates.id),
+      )
+      .where(eq(dbSchema.templateVersions.id, auth.project.templateVersionId))
+      .limit(1),
     db
       .select()
       .from(dbSchema.exportsTable)
-      .where(eq(dbSchema.exportsTable.projectId, row.project.id))
+      .where(eq(dbSchema.exportsTable.projectId, auth.project.id))
       .orderBy(desc(dbSchema.exportsTable.createdAt))
       .limit(50),
-    countOwnerMonthlyExports(row.project.ownerId),
-    resolveEffectivePlanForUser(row.project.ownerId),
+    getWorkspaceMonthlyMeterUsage(auth.workspace.id, "exports"),
   ]);
 
   const isPublished =
-    (row.project.visibility === "public" || row.project.visibility === "unlisted") &&
-    row.project.publishedAt !== null &&
-    Boolean(row.project.slug);
+    (auth.project.visibility === "public" || auth.project.visibility === "unlisted") &&
+    auth.project.publishedAt !== null &&
+    Boolean(auth.project.slug);
+
+  const plan = auth.entitlement.plan;
 
   return {
     status: "ok",
     overview: {
-      projectId: row.project.id,
-      projectName: row.project.name,
-      templateName: row.templateName,
-      slug: row.project.slug,
+      projectId: auth.project.id,
+      projectName: auth.project.name,
+      templateName: tplRow?.templateName ?? "Template",
+      slug: auth.project.slug,
       isPublished,
-      ownerPlan: resolvedOwnerPlan,
-      hasWatermark: doesPlanIncludeExportWatermark(resolvedOwnerPlan),
-      monthlyExportsUsed: usedThisMonth,
-      monthlyExportsLimit: resolvedOwnerPlan === "free" ? FREE_MONTHLY_EXPORT_LIMIT : null,
-      exports: historyRows.map(serializeExportRow),
+      ownerPlan: plan,
+      hasWatermark: doesPlanIncludeExportWatermark(plan),
+      monthlyExportsUsed: meter.total,
+      monthlyExportsLimit: auth.entitlement.quotas.monthlyExportsLimit,
+      exports: historyRows.map((r) => serializeExportRow(r)),
     },
   };
 }
@@ -433,41 +527,34 @@ export async function getExportJobForUser(
     return { status: "not_found" };
   }
 
-  const [row] = await db
-    .select({
-      exportJob: dbSchema.exportsTable,
-      project: {
-        ownerId: dbSchema.projects.ownerId,
-        orgId: dbSchema.projects.orgId,
-      },
-    })
+  const [exportJob] = await db
+    .select()
     .from(dbSchema.exportsTable)
-    .innerJoin(dbSchema.projects, eq(dbSchema.exportsTable.projectId, dbSchema.projects.id))
     .where(eq(dbSchema.exportsTable.id, exportId))
     .limit(1);
 
-  if (!row) {
+  if (!exportJob) {
     return { status: "not_found" };
   }
 
-  const allowed = await canActorAccessProjectExports(row.project, actor, false);
-  if (!allowed) {
-    return { status: "forbidden" };
+  const auth = await authorizeProjectAccess(exportJob.projectId, actor.id, "read");
+  if (!auth.ok) {
+    return { status: auth.status === 404 ? "not_found" : "forbidden" };
   }
 
-  if (row.exportJob.status === "completed" || row.exportJob.status === "failed") {
+  if (exportJob.status === "completed" || exportJob.status === "failed") {
     await notifyExportFinished({
-      exportId: row.exportJob.id,
-      projectId: row.exportJob.projectId,
-      format: row.exportJob.format,
-      status: row.exportJob.status,
-      error: row.exportJob.error ?? undefined,
+      exportId: exportJob.id,
+      projectId: exportJob.projectId,
+      format: exportJob.format,
+      status: exportJob.status,
+      error: exportJob.error ?? undefined,
     }).catch(() => undefined);
   }
 
   return {
     status: "ok",
-    exportJob: serializeExportRow(row.exportJob),
+    exportJob: serializeExportRow(exportJob),
   };
 }
 
@@ -489,43 +576,39 @@ export async function authorizeAndReadExportFile(
     return { status: "not_found" };
   }
 
-  const [row] = await db
-    .select({
-      exportJob: dbSchema.exportsTable,
-      project: {
-        name: dbSchema.projects.name,
-        ownerId: dbSchema.projects.ownerId,
-        orgId: dbSchema.projects.orgId,
-      },
-    })
+  const [exportJob] = await db
+    .select()
     .from(dbSchema.exportsTable)
-    .innerJoin(dbSchema.projects, eq(dbSchema.exportsTable.projectId, dbSchema.projects.id))
     .where(eq(dbSchema.exportsTable.id, exportId))
     .limit(1);
 
-  if (!row) {
+  if (!exportJob) {
     return { status: "not_found" };
   }
 
-  const allowed = await canActorAccessProjectExports(row.project, actor, false);
-  if (!allowed) {
-    return { status: "forbidden" };
+  const auth = await authorizeProjectAccess(exportJob.projectId, actor.id, "read");
+  if (!auth.ok) {
+    return { status: auth.status === 404 ? "not_found" : "forbidden" };
   }
 
-  if (row.exportJob.status !== "completed" || !row.exportJob.r2Key) {
+  if (exportJob.expiresAt && exportJob.expiresAt.getTime() <= Date.now()) {
+    return { status: "not_found" };
+  }
+
+  if (exportJob.status !== "completed" || !exportJob.r2Key) {
     return {
       status: "not_ready",
-      jobStatus: row.exportJob.status,
+      jobStatus: exportJob.status,
     };
   }
 
-  const bytes = await readStoredObjectBytes(row.exportJob.r2Key);
+  const bytes = await readStoredObjectBytes(exportJob.r2Key);
   if (!bytes) {
     return { status: "not_found" };
   }
 
-  const safeProjectSlug = slugifyProjectName(row.project.name);
-  const format = row.exportJob.format;
+  const safeProjectSlug = slugifyProjectName(auth.project.name);
+  const format = exportJob.format;
   const contentType =
     format === "pdf" ? "application/pdf" : format === "behance" ? "application/zip" : "image/png";
   const ext = format === "pdf" ? "pdf" : format === "behance" ? "zip" : "png";
@@ -592,37 +675,29 @@ export async function completeQueuedExportFromClient(
     };
   }
 
-  const [row] = await db
-    .select({
-      exportJob: dbSchema.exportsTable,
-      project: {
-        id: dbSchema.projects.id,
-        ownerId: dbSchema.projects.ownerId,
-        orgId: dbSchema.projects.orgId,
-      },
-    })
+  const [exportJob] = await db
+    .select()
     .from(dbSchema.exportsTable)
-    .innerJoin(dbSchema.projects, eq(dbSchema.exportsTable.projectId, dbSchema.projects.id))
     .where(eq(dbSchema.exportsTable.id, exportId))
     .limit(1);
 
-  if (!row) {
+  if (!exportJob) {
     return { status: "not_found" };
   }
 
-  const allowed = await canActorAccessProjectExports(row.project, actor, true);
-  if (!allowed) {
-    return { status: "forbidden" };
+  const auth = await authorizeProjectAccess(exportJob.projectId, actor.id, "export_aesthetic");
+  if (!auth.ok) {
+    return { status: auth.status === 404 ? "not_found" : "forbidden" };
   }
 
-  if (row.exportJob.status === "completed" && row.exportJob.r2Key) {
+  if (exportJob.status === "completed" && exportJob.r2Key) {
     return {
       status: "ok",
-      exportJob: serializeExportRow(row.exportJob),
+      exportJob: serializeExportRow(exportJob),
     };
   }
 
-  const format = row.exportJob.format;
+  const format = exportJob.format;
   if (!hasValidExportBinaryHeader(format, bytes)) {
     return {
       status: "invalid_payload",
@@ -633,11 +708,13 @@ export async function completeQueuedExportFromClient(
   const ext = format === "pdf" ? "pdf" : format === "behance" ? "zip" : "png";
   const contentType =
     format === "pdf" ? "application/pdf" : format === "behance" ? "application/zip" : "image/png";
-  const r2Key = `exports/${row.project.id}/${row.exportJob.id}.${ext}`;
+  const r2Key = `exports/${auth.project.id}/${exportJob.id}.${ext}`;
+  const now = new Date();
+  const expiresAt = exportJob.expiresAt ?? new Date(now.getTime() + EXPORT_RETENTION_MS);
 
   await writeStoredObject(r2Key, bytes, {
     contentType,
-    cacheControl: "private, max-age=31536000, immutable",
+    cacheControl: "private, no-store, max-age=0",
   });
 
   const [updated] = await db
@@ -645,15 +722,21 @@ export async function completeQueuedExportFromClient(
     .set({
       status: "completed",
       r2Key,
+      bytes: bytes.byteLength,
+      expiresAt,
       error: null,
     })
     .where(eq(dbSchema.exportsTable.id, exportId))
     .returning();
 
+  await commitWorkspaceReservation(`export:${exportId}`, now).catch(() => undefined);
+
   const finalRow = updated ?? {
-    ...row.exportJob,
+    ...exportJob,
     status: "completed" as const,
     r2Key,
+    bytes: bytes.byteLength,
+    expiresAt,
     error: null,
   };
 
@@ -666,6 +749,6 @@ export async function completeQueuedExportFromClient(
 
   return {
     status: "ok",
-    exportJob: serializeExportRow(finalRow),
+    exportJob: serializeExportRow(finalRow, now),
   };
 }

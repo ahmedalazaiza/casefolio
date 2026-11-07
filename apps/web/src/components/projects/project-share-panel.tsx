@@ -12,6 +12,8 @@ import {
   Globe,
   Link2,
   Loader2,
+  Lock,
+  ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
@@ -56,11 +58,24 @@ export function ProjectSharePanel({
   onUnpublish,
   onCheckSlug,
 }: ProjectSharePanelProps) {
+  const canRemoveWatermark =
+    initialSettings.canRemoveBranding ?? can(initialSettings.ownerPlan, "remove_watermark");
+  const canPublishInSpace = initialSettings.canPublish !== false;
+  const requiresPrivateAck = Boolean(
+    initialSettings.requiresTeamPrivatePublicAck && !initialSettings.publicAcknowledged,
+  );
+
   const [isPublished, setIsPublished] = useState(initialSettings.isPublished);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(initialSettings.slug);
   const [slugDraft, setSlugDraft] = useState(initialSettings.slug ?? initialSettings.suggestedSlug);
   const [visibility, setVisibility] = useState<"public" | "unlisted">(
     initialSettings.visibility === "unlisted" ? "unlisted" : "public",
+  );
+  const [brandingRemoved, setBrandingRemoved] = useState<boolean>(
+    canRemoveWatermark ? (initialSettings.brandingRemoved ?? true) : false,
+  );
+  const [publicAckChecked, setPublicAckChecked] = useState<boolean>(
+    Boolean(initialSettings.publicAcknowledged),
   );
   const [publishedAtIso, setPublishedAtIso] = useState<string | null>(
     initialSettings.publishedAtIso,
@@ -74,8 +89,6 @@ export function ProjectSharePanel({
   const [isUnpublishing, setIsUnpublishing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-
-  const canRemoveWatermark = can(initialSettings.ownerPlan, "remove_watermark");
 
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -131,11 +144,15 @@ export function ProjectSharePanel({
     setIsSubmitting(true);
 
     try {
-      const result = await onPublish({
+      const payload: PublishProjectInput = {
         projectId: initialSettings.projectId,
         slug: slugDraft,
         visibility,
-      });
+        ...(canRemoveWatermark ? { brandingRemoved } : {}),
+        ...(requiresPrivateAck && publicAckChecked ? { acknowledgePublicExposure: true } : {}),
+      };
+
+      const result = await onPublish(payload);
 
       if (!result.ok) {
         setErrorMessage(result.error);
@@ -146,6 +163,10 @@ export function ProjectSharePanel({
       setPublishedSlug(result.slug);
       setSlugDraft(result.slug);
       setVisibility(result.visibility);
+      if (typeof result.brandingRemoved === "boolean") {
+        setBrandingRemoved(result.brandingRemoved);
+      }
+      setPublicAckChecked(true);
       setPublishedAtIso(result.publishedAtIso);
       toast.success(isPublished ? "Share settings updated" : "Case study published!");
     } catch {
@@ -153,7 +174,17 @@ export function ProjectSharePanel({
     } finally {
       setIsSubmitting(false);
     }
-  }, [initialSettings.projectId, slugDraft, visibility, isPublished, onPublish]);
+  }, [
+    brandingRemoved,
+    canRemoveWatermark,
+    initialSettings.projectId,
+    isPublished,
+    onPublish,
+    publicAckChecked,
+    requiresPrivateAck,
+    slugDraft,
+    visibility,
+  ]);
 
   const handleUnpublish = useCallback(async () => {
     setErrorMessage(null);
@@ -227,6 +258,9 @@ export function ProjectSharePanel({
                       year: "numeric",
                     })}`
                   : " · Not published yet"}
+                {typeof initialSettings.maxPublishedProjects === "number"
+                  ? ` · ${initialSettings.publishedCount ?? 0} of ${initialSettings.maxPublishedProjects} published slots used`
+                  : ""}
               </p>
             </div>
           </div>
@@ -285,6 +319,21 @@ export function ProjectSharePanel({
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left Column: Slug + Visibility + Publish/Unpublish Controls */}
         <div className="flex flex-col gap-6 lg:col-span-7">
+          {!canPublishInSpace && (
+            <div
+              role="status"
+              data-testid="shared-space-publish-restricted-notice"
+              className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-2xl border p-4"
+            >
+              <Lock className="text-warning mt-0.5 size-4 shrink-0" />
+              <span className="type-body-s">
+                This project is inside a Shared Team Space. Team Members can edit drafts, while
+                publishing or unpublishing Shared Space projects requires a Workspace Owner or
+                Admin.
+              </span>
+            </div>
+          )}
+
           {errorMessage && (
             <div
               role="alert"
@@ -315,6 +364,7 @@ export function ProjectSharePanel({
                   <Input
                     id="publish-slug-input"
                     data-testid="publish-slug-input"
+                    disabled={!canPublishInSpace}
                     value={slugDraft}
                     onChange={(e) => setSlugDraft(normalizeClientSlugDraft(e.target.value))}
                     placeholder={initialSettings.suggestedSlug}
@@ -378,11 +428,12 @@ export function ProjectSharePanel({
               <button
                 type="button"
                 role="radio"
+                disabled={!canPublishInSpace}
                 aria-checked={visibility === "public"}
                 data-testid="visibility-option-public"
                 onClick={() => setVisibility("public")}
                 className={cn(
-                  "flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left transition-all",
+                  "flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
                   visibility === "public"
                     ? "border-primary bg-accent/40 ring-primary/15 ring-2"
                     : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
@@ -403,11 +454,12 @@ export function ProjectSharePanel({
               <button
                 type="button"
                 role="radio"
+                disabled={!canPublishInSpace}
                 aria-checked={visibility === "unlisted"}
                 data-testid="visibility-option-unlisted"
                 onClick={() => setVisibility("unlisted")}
                 className={cn(
-                  "flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left transition-all",
+                  "flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
                   visibility === "unlisted"
                     ? "border-primary bg-accent/40 ring-primary/15 ring-2"
                     : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
@@ -426,13 +478,40 @@ export function ProjectSharePanel({
               </button>
             </div>
 
+            {/* Team Private Space Public Exposure Acknowledgment (`Spec §9 line 314-316`) */}
+            {requiresPrivateAck && (
+              <label
+                data-testid="team-private-publish-ack"
+                className="border-primary/30 bg-accent/35 text-foreground type-caption flex items-start gap-2.5 rounded-2xl border p-4"
+              >
+                <input
+                  type="checkbox"
+                  data-testid="team-private-publish-ack-checkbox"
+                  checked={publicAckChecked}
+                  onChange={(e) => setPublicAckChecked(e.target.checked)}
+                  className="accent-primary mt-0.5 size-4 rounded-xs"
+                />
+                <span className="flex flex-col gap-0.5">
+                  <span className="inline-flex items-center gap-1.5 font-medium">
+                    <ShieldCheck className="text-primary size-3.5" />
+                    Publishing from your Team Private Space
+                  </span>
+                  <span className="text-muted-foreground">
+                    I understand publishing puts this published snapshot and its selected images
+                    online (visible to anyone with the URL, including teammates), while my Private
+                    Space draft and unreferenced assets remain hidden.
+                  </span>
+                </span>
+              </label>
+            )}
+
             <div className="border-border/70 mt-1 flex flex-wrap items-center justify-between gap-3 border-t pt-5">
               {isPublished ? (
                 <Button
                   type="button"
                   variant="destructive"
                   data-testid="unpublish-project-button"
-                  disabled={isUnpublishing || isSubmitting}
+                  disabled={!canPublishInSpace || isUnpublishing || isSubmitting}
                   onClick={handleUnpublish}
                 >
                   {isUnpublishing ? (
@@ -451,7 +530,13 @@ export function ProjectSharePanel({
               <Button
                 type="button"
                 data-testid="publish-project-button"
-                disabled={isSubmitting || isUnpublishing || slugCheckState.status === "unavailable"}
+                disabled={
+                  !canPublishInSpace ||
+                  isSubmitting ||
+                  isUnpublishing ||
+                  slugCheckState.status === "unavailable" ||
+                  (requiresPrivateAck && !publicAckChecked)
+                }
                 onClick={handlePublish}
               >
                 {isSubmitting ? (
@@ -546,8 +631,8 @@ export function ProjectSharePanel({
               <>
                 <p className="text-muted-foreground type-body-s">
                   Free plan public pages and PNG exports include a subtle &ldquo;Made with
-                  Casefolio&rdquo; badge. Upgrade to Pro to remove all watermarks and unlock PDF
-                  &amp; Behance exports.
+                  Casefolio&rdquo; badge. Upgrade to Pro to remove branding and unlock PDF &amp;
+                  Behance exports.
                 </p>
                 <div>
                   <Button
@@ -561,10 +646,23 @@ export function ProjectSharePanel({
                 </div>
               </>
             ) : (
-              <p className="text-muted-foreground type-body-s">
-                Your {initialSettings.ownerPlan.toUpperCase()} plan removes the Casefolio badge on
-                all public pages and exported case studies.
-              </p>
+              <div className="flex flex-col gap-3">
+                <p className="text-muted-foreground type-body-s">
+                  Your {initialSettings.ownerPlan.toUpperCase()} workspace lets you hide the
+                  &ldquo;Made with Casefolio&rdquo; footer on public pages and exports.
+                </p>
+                <label className="text-foreground type-body-s flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    data-testid="remove-branding-toggle"
+                    checked={brandingRemoved}
+                    disabled={!canPublishInSpace}
+                    onChange={(e) => setBrandingRemoved(e.target.checked)}
+                    className="accent-primary size-4 rounded-xs"
+                  />
+                  <span>Hide &ldquo;Made with Casefolio&rdquo; footer badge</span>
+                </label>
+              </div>
             )}
           </section>
         </div>
@@ -573,8 +671,8 @@ export function ProjectSharePanel({
       <UpgradePromptDialog
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
-        featureTitle="Remove Casefolio watermarks"
-        featureDescription="Upgrade to Casefolio Pro to publish clean, unbranded case study URLs and export watermark-free PDFs and Behance slices."
+        featureTitle="Remove Casefolio branding"
+        featureDescription="Upgrade to Casefolio Pro to publish clean, unbranded case study URLs and export unbranded PDFs, 2x PNGs, and Behance image packs."
       />
     </div>
   );

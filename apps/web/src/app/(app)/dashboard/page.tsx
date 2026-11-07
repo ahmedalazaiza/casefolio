@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { listDashboardProjectsForUser } from "@/lib/projects/dashboard";
+import { listWorkspaceSwitcherState } from "@/lib/workspaces/service";
 
 export const metadata: Metadata = {
   title: "Projects — Casefolio",
@@ -57,11 +58,12 @@ export default async function DashboardPage({
 }) {
   const { user, session } = await requireSession("/dashboard");
   const { welcome } = await searchParams;
+  const activeOrgId = session.activeOrganizationId ?? null;
 
-  const userProjects = await listDashboardProjectsForUser(
-    user.id,
-    session.activeOrganizationId ?? null,
-  );
+  const [userProjects, workspaceContext] = await Promise.all([
+    listDashboardProjectsForUser(user.id, activeOrgId, { includeArchived: true }),
+    listWorkspaceSwitcherState(user.id, activeOrgId),
+  ]);
 
   const firstName = user.name.trim().split(/\s+/)[0] || "Designer";
 
@@ -181,5 +183,10 @@ export default async function DashboardPage({
     );
   }
 
-  return <DashboardProjectsClient initialProjects={userProjects} />;
+  return (
+    <DashboardProjectsClient
+      initialProjects={userProjects}
+      workspaceContext={workspaceContext}
+    />
+  );
 }

@@ -32,7 +32,12 @@ export async function GET(request: Request, context: CdnRouteContext): Promise<R
   if (access.status === "not_found") {
     return NextResponse.json(
       { ok: false, code: "NOT_FOUND", error: "Image not found." },
-      { status: 404 },
+      {
+        status: 404,
+        headers: {
+          "Cache-Control": "private, no-store, max-age=0",
+        },
+      },
     );
   }
 
@@ -66,7 +71,8 @@ export async function GET(request: Request, context: CdnRouteContext): Promise<R
     "X-Content-Type-Options": "nosniff",
     "X-Casefolio-CDN": "cloudflare-images-compat",
     "X-Casefolio-Variant-Width": requestedWidth,
-    Vary: "Accept",
+    "X-Casefolio-ACL-Version": String(access.aclVersion),
+    Vary: access.isPublished ? "Accept" : "Accept, Cookie",
   });
 
   const numRegex = /^\d{1,5}(?:\.\d{1,4})?$/;

@@ -1,4 +1,12 @@
-import { and, eq, inArray, type MembershipRole, type UserRole } from "@casefolio/db";
+import {
+  and,
+  eq,
+  inArray,
+  normalizeMembershipRole,
+  type CanonicalMembershipRole,
+  type MembershipRole,
+  type UserRole,
+} from "@casefolio/db";
 import { forbidden } from "next/navigation";
 import { requireSession, type AuthenticatedContext } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
@@ -11,12 +19,26 @@ export function isSuperAdminRole(role: string | null | undefined): role is "supe
   return role === "superadmin";
 }
 
-export function canEditInOrganization(role: MembershipRole | string | null | undefined): boolean {
-  return role === "owner" || role === "editor";
-}
-
 export function isOrganizationOwner(role: MembershipRole | string | null | undefined): boolean {
   return role === "owner";
+}
+
+export function isOrganizationAdminOrOwner(
+  role: MembershipRole | string | null | undefined,
+): boolean {
+  if (!role) return false;
+  const canonical = normalizeMembershipRole(role);
+  return canonical === "owner" || canonical === "admin";
+}
+
+export function canEditInOrganization(role: MembershipRole | string | null | undefined): boolean {
+  return role === "owner" || role === "admin" || role === "member" || role === "editor";
+}
+
+export function canPublishSharedInOrganization(
+  role: MembershipRole | string | null | undefined,
+): boolean {
+  return isOrganizationAdminOrOwner(role);
 }
 
 export async function requireRole(
@@ -51,11 +73,12 @@ export async function requireSuperAdmin(
 export interface OrgMembershipContext extends AuthenticatedContext {
   organization: typeof dbSchema.organizations.$inferSelect;
   membership: typeof dbSchema.memberships.$inferSelect;
+  canonicalRole: CanonicalMembershipRole;
 }
 
 export async function requireOrgMembership(
   orgId: string,
-  allowedRoles: readonly MembershipRole[] = ["owner", "editor", "viewer"],
+  allowedRoles: readonly MembershipRole[] = ["owner", "admin", "member", "editor", "viewer"],
   callbackPath = "/account/team",
 ): Promise<OrgMembershipContext> {
   const ctx = await requireSession(callbackPath);
@@ -87,6 +110,6 @@ export async function requireOrgMembership(
     ...ctx,
     organization: row.organization,
     membership: row.membership,
+    canonicalRole: normalizeMembershipRole(row.membership.role),
   };
 }
-

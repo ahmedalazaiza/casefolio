@@ -48,7 +48,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!result.ok) {
     const status =
-      result.code === "FILE_TOO_LARGE" || result.code === "STORAGE_QUOTA_EXCEEDED"
+      result.code === "FILE_TOO_LARGE" ||
+      result.code === "STORAGE_QUOTA_EXCEEDED" ||
+      result.code === "MONTHLY_UPLOADS_EXCEEDED"
         ? 413
         : result.code === "FORBIDDEN" || result.code === "INVALID_TOKEN"
           ? 403

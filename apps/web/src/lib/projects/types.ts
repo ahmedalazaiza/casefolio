@@ -11,6 +11,16 @@ import {
 } from "@/lib/template/schema";
 
 export const FREE_PROJECT_LIMIT = 2;
+export const PRO_PROJECT_LIMIT = 20;
+export const TEAMS_PROJECT_LIMIT_PER_SEAT = 20;
+
+export const FREE_PUBLISHED_LIMIT = 1;
+export const PRO_PUBLISHED_LIMIT = 10;
+export const TEAMS_PUBLISHED_LIMIT_PER_SEAT = 10;
+
+export const FREE_RETAINED_LIMIT = 10;
+export const PRO_RETAINED_LIMIT = 100;
+export const TEAMS_RETAINED_LIMIT_PER_SEAT = 100;
 
 export const CONSTRAINED_PUCK_PERMISSIONS = {
   insert: false,
@@ -20,6 +30,23 @@ export const CONSTRAINED_PUCK_PERMISSIONS = {
   edit: true,
 } as const;
 
+export interface EditorLeaseState {
+  isHolder: boolean;
+  isHeldByCurrentUser: boolean;
+  readOnly: boolean;
+  holderUserId: string | null;
+  holderName: string | null;
+  leaseToken: string | null;
+  expiresAtIso: string | null;
+  reason?:
+    | "active_writer"
+    | "held_by_teammate"
+    | "archived"
+    | "workspace_frozen"
+    | "past_due_read_only"
+    | "pro_template_downgraded";
+}
+
 export interface ProjectEditorPayload {
   project: {
     id: string;
@@ -27,14 +54,25 @@ export interface ProjectEditorPayload {
     type: TemplateProjectType;
     puckData: PuckDocument;
     theme: TemplateTheme;
+    revision?: number;
     visibility: "private" | "unlisted" | "public";
+    brandingRemoved?: boolean;
+    archivedAtIso?: string | null;
     slug: string | null;
     updatedAtIso: string;
+    workspaceId?: string | null;
+    spaceId?: string | null;
+    spaceVisibility?: "private" | "shared";
   };
+  lease?: EditorLeaseState | null;
+  isReadOnly?: boolean;
+  readOnlyReason?: string | null;
+  workspacePlan?: "free" | "pro" | "team";
   template: {
     id: string;
     name: string;
     slug: string;
+    tier?: "free" | "pro";
     version: string;
     slots: Record<string, TemplateSlotDefinition>;
     defaultTheme: TemplateTheme;
@@ -59,6 +97,7 @@ export interface ProjectSlotChecklistItem {
 export const createProjectInputSchema = z.object({
   type: z.enum(["mobile", "web", "both"]),
   templateId: z.string().uuid("Select a valid template."),
+  spaceId: z.string().uuid().optional().nullable(),
   name: z
     .string()
     .trim()
@@ -75,6 +114,8 @@ export type CreateProjectInput = z.infer<typeof createProjectInputSchema>;
 
 export type CreateProjectErrorCode =
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
   | "VALIDATION_ERROR"
   | "PLAN_LIMIT_REACHED"
   | "PRO_TEMPLATE_LOCKED"
@@ -85,6 +126,8 @@ export type CreateProjectResult =
       ok: true;
       projectId: string;
       templateVersionId: string;
+      workspaceId?: string;
+      spaceId?: string;
     }
   | {
       ok: false;
@@ -95,7 +138,10 @@ export type CreateProjectResult =
 
 export const saveProjectEditorInputSchema = z.object({
   projectId: z.string().uuid("Invalid project ID."),
-  expectedUpdatedAtIso: z.string().datetime({ offset: true }),
+  expectedUpdatedAtIso: z.string().datetime({ offset: true }).optional(),
+  expectedRevision: z.number().int().positive().optional(),
+  leaseToken: z.string().min(8).max(200).optional(),
+  brandingRemoved: z.boolean().optional(),
   puckData: puckDocumentSchema,
   theme: templateThemeSchema,
 });
@@ -108,18 +154,24 @@ export type SaveProjectEditorErrorCode =
   | "NOT_FOUND"
   | "VALIDATION_ERROR"
   | "CONFLICT"
+  | "LEASE_HELD"
+  | "STORAGE_QUOTA_EXCEEDED"
   | "SAVE_FAILED";
 
 export type SaveProjectEditorResult =
   | {
       ok: true;
       updatedAtIso: string;
+      revision: number;
     }
   | {
       ok: false;
       code: SaveProjectEditorErrorCode;
       error: string;
       serverUpdatedAtIso?: string;
+      serverRevision?: number;
+      holderName?: string | null;
+      lease?: EditorLeaseState;
     };
 
 export function slugifyProjectName(name: string): string {

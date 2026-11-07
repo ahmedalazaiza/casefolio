@@ -112,7 +112,8 @@ describe("Phase 11 Security Review & Hardening Audit (C-1101)", () => {
   it("2. enforces single `can(plan, feature)` entitlement matrix across Free, Pro, and Team", () => {
     expect(can("free", "create_project", { projectsCount: 1 })).toBe(true);
     expect(can("free", "create_project", { projectsCount: 2 })).toBe(false);
-    expect(can("pro", "create_project", { projectsCount: 99 })).toBe(true);
+    expect(can("pro", "create_project", { projectsCount: 19 })).toBe(true);
+    expect(can("pro", "create_project", { projectsCount: 20 })).toBe(false);
 
     expect(can("free", "pro_templates")).toBe(false);
     expect(can("pro", "pro_templates")).toBe(true);
@@ -186,7 +187,8 @@ describe("Phase 11 Security Review & Hardening Audit (C-1101)", () => {
     const proQuota = getUploadQuotaForPlan("pro");
     const teamQuota = getUploadQuotaForPlan("team");
     expect(freeQuota.maxFileBytes).toBeLessThan(proQuota.maxFileBytes);
-    expect(proQuota.maxFileBytes).toBeLessThan(teamQuota.maxFileBytes);
+    expect(proQuota.maxFileBytes).toBe(teamQuota.maxFileBytes);
+    expect(proQuota.maxTotalBytes).toBeLessThan(teamQuota.maxTotalBytes);
 
     // Disguised SVG payload pretending to be PNG must fail magic-byte detection
     const svgPayload = new TextEncoder().encode('<svg onload="alert(1)"></svg>');

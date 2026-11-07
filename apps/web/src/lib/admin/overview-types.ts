@@ -31,10 +31,15 @@ export function formatTemplateStatusLabel(status: TemplateStatus): string {
   return "Draft";
 }
 
-export function computeSubscriptionMrrUsd(plan: PlanTier, interval: BillingInterval): number {
+export function computeSubscriptionMrrUsd(
+  plan: PlanTier,
+  interval: BillingInterval,
+  seats = 1,
+): number {
   const def = BILLING_PLAN_CATALOG[plan];
   if (!def || plan === "free") return 0;
-  return interval === "yearly" ? def.yearlyMonthlyEquivalentUsd : def.monthlyPriceUsd;
+  const unit = interval === "yearly" ? def.yearlyMonthlyEquivalentUsd : def.monthlyPriceUsd;
+  return def.perSeatPricing ? unit * Math.max(1, Math.floor(seats)) : unit;
 }
 
 export function detectSubscriptionInterval(args: {

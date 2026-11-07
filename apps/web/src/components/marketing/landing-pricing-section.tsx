@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PlanCard } from "@/components/ui/domain-cards";
 import {
   BILLING_PLAN_CATALOG,
+  TEAMS_MAX_SELF_SERVE_SEATS,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
@@ -14,20 +15,31 @@ const PLAN_ORDER: readonly PlanTier[] = ["free", "pro", "team"];
 
 export interface LandingPricingSectionProps {
   defaultInterval?: BillingInterval;
+  interval?: BillingInterval;
+  onIntervalChange?: (interval: BillingInterval) => void;
   onSelectPaidPlan?: (plan: PaidPlanTier, interval: BillingInterval) => void;
   currentTier?: PlanTier | null;
 }
 
 export function LandingPricingSection({
   defaultInterval = "monthly",
+  interval: controlledInterval,
+  onIntervalChange,
   onSelectPaidPlan,
   currentTier = null,
 }: LandingPricingSectionProps) {
-  const [interval, setInterval] = useState<BillingInterval>(defaultInterval);
+  const [uncontrolledInterval, setUncontrolledInterval] =
+    useState<BillingInterval>(defaultInterval);
+  const interval = controlledInterval ?? uncontrolledInterval;
+
+  function setInterval(next: BillingInterval) {
+    setUncontrolledInterval(next);
+    onIntervalChange?.(next);
+  }
 
   return (
     <div className="flex flex-col items-center gap-10">
-      {/* Billing interval segmented toggle (Figma 29:6787) */}
+      {/* Billing interval segmented toggle */}
       <div
         role="group"
         aria-label="Billing interval"
@@ -64,11 +76,12 @@ export function LandingPricingSection({
         </button>
       </div>
 
-      {/* 3-plan grid wired to BILLING_PLAN_CATALOG (Figma 29:6792) */}
+      {/* 3-plan grid wired to BILLING_PLAN_CATALOG */}
       <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
         {PLAN_ORDER.map((tier) => {
           const plan = BILLING_PLAN_CATALOG[tier];
           const isFree = tier === "free";
+          const isTeams = tier === "team";
           const isHighlighted = Boolean(plan.highlighted);
           const displayedMonthlyUsd =
             isFree || interval === "monthly"
@@ -77,14 +90,18 @@ export function LandingPricingSection({
           const priceLabel = `$${displayedMonthlyUsd}`;
           const periodLabel = isFree
             ? "/forever"
-            : interval === "yearly"
-              ? `/mo · $${plan.yearlyTotalUsd}/yr`
-              : "/mo";
+            : isTeams
+              ? interval === "yearly"
+                ? `/seat/mo · $${plan.yearlyTotalUsd}/seat/yr`
+                : "/seat/mo"
+              : interval === "yearly"
+                ? `/mo · $${plan.yearlyTotalUsd}/yr`
+                : "/mo";
           const badgeLabel = isHighlighted
             ? "Popular"
             : isFree
               ? "Starter"
-              : `${plan.defaultSeats}+ seats`;
+              : `1–${TEAMS_MAX_SELF_SERVE_SEATS} seats`;
 
           const isCurrent = currentTier === tier;
           const ctaLabel = isCurrent
@@ -93,7 +110,7 @@ export function LandingPricingSection({
               ? "Start free"
               : tier === "pro"
                 ? "Upgrade to Pro"
-                : "Start Team workspace";
+                : "Start Teams workspace";
 
           const ctaHref = isFree
             ? "/sign-up"
@@ -123,4 +140,3 @@ export function LandingPricingSection({
     </div>
   );
 }
-

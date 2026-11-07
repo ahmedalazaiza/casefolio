@@ -515,15 +515,21 @@ export async function getAdminSubscriptionsOverview(
       canceledLast30d += 1;
     }
 
-    if (sub.plan !== "free" && isSubscriptionGrantingAccess(sub.status, sub.currentPeriodEnd, now)) {
-      mrrUsd += computeSubscriptionMrrUsd(sub.plan, interval);
+    const subSeats = sub.currentPaidCapacity ?? 1;
+    if (
+      sub.plan !== "free" &&
+      isSubscriptionGrantingAccess(sub.status, sub.currentPeriodEnd, now, sub.pastDueSince)
+    ) {
+      mrrUsd += computeSubscriptionMrrUsd(sub.plan, interval, subSeats);
       if (sub.userId) payingUserIds.add(sub.userId);
     }
 
     if (recentSubscriptions.length < 25) {
       const owner = sub.userId ? userById.get(sub.userId) : undefined;
       const amountUsd =
-        sub.plan === "pro" || sub.plan === "team" ? getChargeAmountUsd(sub.plan, interval) : 0;
+        sub.plan === "pro" || sub.plan === "team"
+          ? getChargeAmountUsd(sub.plan, interval, subSeats)
+          : 0;
 
       recentSubscriptions.push({
         id: sub.id,

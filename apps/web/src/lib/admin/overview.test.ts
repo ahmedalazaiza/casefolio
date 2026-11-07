@@ -66,8 +66,10 @@ describe("admin overview & analytics metrics (C-901)", () => {
     expect(computeSubscriptionMrrUsd("free", "monthly")).toBe(0);
     expect(computeSubscriptionMrrUsd("pro", "monthly")).toBe(12);
     expect(computeSubscriptionMrrUsd("pro", "yearly")).toBe(10);
-    expect(computeSubscriptionMrrUsd("team", "monthly")).toBe(29);
-    expect(computeSubscriptionMrrUsd("team", "yearly")).toBe(24);
+    expect(computeSubscriptionMrrUsd("team", "monthly")).toBe(18);
+    expect(computeSubscriptionMrrUsd("team", "monthly", 3)).toBe(54);
+    expect(computeSubscriptionMrrUsd("team", "yearly")).toBe(15);
+    expect(computeSubscriptionMrrUsd("team", "yearly", 3)).toBe(45);
 
     const created = new Date("2026-01-01T00:00:00Z");
     expect(
@@ -266,7 +268,9 @@ describe("admin overview & analytics metrics (C-901)", () => {
       const [vCount] = await db.select({ total: count() }).from(dbSchema.pageViews);
       const allSubs = await db.select().from(dbSchema.subscriptions);
       const activeSubs = allSubs.filter(
-        (s) => s.plan !== "free" && isSubscriptionGrantingAccess(s.status, s.currentPeriodEnd, now),
+        (s) =>
+          s.plan !== "free" &&
+          isSubscriptionGrantingAccess(s.status, s.currentPeriodEnd, now, s.pastDueSince),
       ).length;
 
       return {
@@ -305,7 +309,7 @@ describe("admin overview & analytics metrics (C-901)", () => {
       beforeSql.activeSubs,
       afterSql.activeSubs,
     );
-    expect(metrics.mrrUsd).toBeGreaterThanOrEqual(12 + 24);
+    expect(metrics.mrrUsd).toBeGreaterThanOrEqual(15 + 12);
     expectMatchesConcurrentSql(
       metrics.publishedCaseStudies,
       beforeSql.publishedProjects,

@@ -5,7 +5,6 @@ import {
   eq,
   gte,
   inArray,
-  or,
   type UserRole,
 } from "@casefolio/db";
 import {
@@ -23,7 +22,8 @@ import {
 } from "@/lib/analytics/page-views-utils";
 import { db, dbSchema } from "@/lib/db";
 import { can } from "@/lib/entitlements";
-import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
+import { listDashboardProjectsForUser } from "@/lib/projects/dashboard";
+import { authorizeProjectAccess } from "@/lib/workspaces/acl";
 
 export * from "@/lib/analytics/page-views-utils";
 
@@ -106,6 +106,7 @@ export async function recordPublishedProjectView(args: {
       id: dbSchema.projects.id,
       visibility: dbSchema.projects.visibility,
       publishedAt: dbSchema.projects.publishedAt,
+      archivedAt: dbSchema.projects.archivedAt,
       slug: dbSchema.projects.slug,
     })
     .from(dbSchema.projects)
@@ -114,6 +115,7 @@ export async function recordPublishedProjectView(args: {
 
   if (
     !project ||
+    project.archivedAt !== null ||
     (project.visibility !== "public" && project.visibility !== "unlisted") ||
     !project.publishedAt ||
     !project.slug
@@ -160,35 +162,6 @@ export type ProjectAnalyticsAccessResult =
   | { status: "forbidden" }
   | { status: "ok"; analytics: ProjectAnalyticsPayload };
 
-async function canActorViewProjectAnalytics(
-  project: { ownerId: string; orgId: string | null },
-  actor: { id: string; role: UserRole },
-): Promise<boolean> {
-  if (
-    project.ownerId === actor.id ||
-    actor.role === "admin" ||
-    actor.role === "superadmin"
-  ) {
-    return true;
-  }
-
-  if (project.orgId) {
-    const [membership] = await db
-      .select({ id: dbSchema.memberships.id })
-      .from(dbSchema.memberships)
-      .where(
-        and(
-          eq(dbSchema.memberships.orgId, project.orgId),
-          eq(dbSchema.memberships.userId, actor.id),
-        ),
-      )
-      .limit(1);
-    return Boolean(membership);
-  }
-
-  return false;
-}
-
 function computeDeltaPercent(current: number, previous: number): number | null {
   if (previous === 0) {
     return current > 0 ? 100 : null;
@@ -230,42 +203,43 @@ export async function getProjectAnalyticsForActor(args: {
     return { status: "not_found" };
   }
 
-  const [row] = await db
-    .select({
-      project: dbSchema.projects,
-      templateName: dbSchema.templates.name,
-    })
-    .from(dbSchema.projects)
-    .innerJoin(
-      dbSchema.templateVersions,
-      eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
-    )
+  const now = args.now ?? new Date();
+  const auth = await authorizeProjectAccess(args.projectId, args.actor.id, "read", now);
+  if (!auth.ok) {
+    return { status: "not_found" };
+  }
+
+  const [tplRow] = await db
+    .select({ templateName: dbSchema.templates.name })
+    .from(dbSchema.templateVersions)
     .innerJoin(
       dbSchema.templates,
       eq(dbSchema.templateVersions.templateId, dbSchema.templates.id),
     )
-    .where(eq(dbSchema.projects.id, args.projectId))
+    .where(eq(dbSchema.templateVersions.id, auth.project.templateVersionId))
     .limit(1);
 
-  if (!row) {
+  if (!tplRow) {
     return { status: "not_found" };
   }
 
-  const allowed = await canActorViewProjectAnalytics(row.project, args.actor);
-  if (!allowed) {
-    return { status: "forbidden" };
-  }
-
-  const ownerPlan = await resolveEffectivePlanForUser(row.project.ownerId);
-  const hasFullAnalytics = can(ownerPlan, "full_analytics");
+  const workspacePlan = auth.entitlement.plan;
+  const maxAnalyticsDays = auth.entitlement.quotas.analyticsRetentionDays; // 7d Free, 90d Pro, 365d Teams (`Spec §4`)
+  const hasFullAnalytics = can(workspacePlan, "full_analytics");
 
   const parsedRange = analyticsRangeSchema.safeParse(args.requestedRange);
-  let effectiveRange: AnalyticsRangeKey = parsedRange.success ? parsedRange.data : "30d";
-  if (!hasFullAnalytics && (effectiveRange === "90d" || effectiveRange === "all")) {
-    effectiveRange = "30d";
+  let effectiveRange: AnalyticsRangeKey = parsedRange.success
+    ? parsedRange.data
+    : maxAnalyticsDays <= 7
+      ? "7d"
+      : "30d";
+
+  if (maxAnalyticsDays <= 7) {
+    effectiveRange = "7d";
+  } else if (maxAnalyticsDays <= 90 && effectiveRange === "all") {
+    effectiveRange = "90d";
   }
 
-  const now = args.now ?? new Date();
   const todayUtc = startOfUtcDay(now);
 
   const rangeDays =
@@ -275,11 +249,10 @@ export async function getProjectAnalyticsForActor(args: {
         ? 30
         : effectiveRange === "90d"
           ? 90
-          : null;
+          : maxAnalyticsDays; // Teams "all" caps at 365 days (`Spec §4`)
 
-  const periodStart = rangeDays !== null ? addUtcDays(todayUtc, -(rangeDays - 1)) : null;
-  const prevPeriodStart =
-    rangeDays !== null && periodStart !== null ? addUtcDays(periodStart, -rangeDays) : null;
+  const periodStart = addUtcDays(todayUtc, -(rangeDays - 1));
+  const prevPeriodStart = addUtcDays(periodStart, -rangeDays);
 
   const allProjectViews = await db
     .select({
@@ -289,7 +262,7 @@ export async function getProjectAnalyticsForActor(args: {
       at: dbSchema.pageViews.at,
     })
     .from(dbSchema.pageViews)
-    .where(eq(dbSchema.pageViews.projectId, row.project.id))
+    .where(eq(dbSchema.pageViews.projectId, auth.project.id))
     .orderBy(desc(dbSchema.pageViews.at));
 
   const [exportsRow] = await db
@@ -297,19 +270,15 @@ export async function getProjectAnalyticsForActor(args: {
     .from(dbSchema.exportsTable)
     .where(
       and(
-        eq(dbSchema.exportsTable.projectId, row.project.id),
+        eq(dbSchema.exportsTable.projectId, auth.project.id),
         eq(dbSchema.exportsTable.status, "completed"),
       ),
     );
 
-  const currentViews = periodStart
-    ? allProjectViews.filter((v) => v.at >= periodStart)
-    : allProjectViews;
-
-  const previousViews =
-    periodStart && prevPeriodStart
-      ? allProjectViews.filter((v) => v.at >= prevPeriodStart && v.at < periodStart)
-      : [];
+  const currentViews = allProjectViews.filter((v) => v.at >= periodStart);
+  const previousViews = allProjectViews.filter(
+    (v) => v.at >= prevPeriodStart && v.at < periodStart,
+  );
 
   const viewsCount = currentViews.length;
   const prevViewsCount = previousViews.length;
@@ -384,29 +353,30 @@ export async function getProjectAnalyticsForActor(args: {
     .slice(0, 5);
 
   const isPublished =
-    (row.project.visibility === "public" || row.project.visibility === "unlisted") &&
-    row.project.publishedAt !== null &&
-    Boolean(row.project.slug);
+    (auth.project.visibility === "public" || auth.project.visibility === "unlisted") &&
+    auth.project.publishedAt !== null &&
+    Boolean(auth.project.slug);
 
   return {
     status: "ok",
     analytics: {
-      projectId: row.project.id,
-      projectName: row.project.name,
-      templateName: row.templateName,
-      slug: row.project.slug,
-      visibility: row.project.visibility,
+      projectId: auth.project.id,
+      projectName: auth.project.name,
+      templateName: tplRow.templateName,
+      slug: auth.project.slug,
+      visibility: auth.project.visibility,
       isPublished,
-      publishedAtIso: row.project.publishedAt ? row.project.publishedAt.toISOString() : null,
-      ownerPlan,
+      publishedAtIso: auth.project.publishedAt
+        ? auth.project.publishedAt.toISOString()
+        : null,
+      ownerPlan: workspacePlan,
       hasFullAnalyticsEntitlement: hasFullAnalytics,
       range: effectiveRange,
       kpis: {
         views: viewsCount,
-        viewsDeltaPercent: rangeDays !== null ? computeDeltaPercent(viewsCount, prevViewsCount) : null,
+        viewsDeltaPercent: computeDeltaPercent(viewsCount, prevViewsCount),
         uniqueVisitors: uniqueVisitorsCount,
-        visitorsDeltaPercent:
-          rangeDays !== null ? computeDeltaPercent(uniqueVisitorsCount, prevVisitorsCount) : null,
+        visitorsDeltaPercent: computeDeltaPercent(uniqueVisitorsCount, prevVisitorsCount),
         viewsPerVisitor:
           viewsCount > 0 ? (viewsCount / Math.max(1, uniqueVisitorsCount)).toFixed(1) : "0.0",
         topCountry,
@@ -445,25 +415,14 @@ export interface WorkspaceAnalyticsOverview {
 export async function getWorkspaceAnalyticsOverview(
   userId: string,
   now: Date = new Date(),
+  activeOrgId: string | null = null,
 ): Promise<WorkspaceAnalyticsOverview> {
-  const userMemberships = await db
-    .select({ orgId: dbSchema.memberships.orgId })
-    .from(dbSchema.memberships)
-    .where(eq(dbSchema.memberships.userId, userId));
+  // Strictly scoped to visible spaces in the active workspace (`Spec §9 & §10.1`)
+  const visibleProjects = await listDashboardProjectsForUser(userId, activeOrgId, {
+    includeArchived: false,
+  });
 
-  const orgIds = userMemberships.map((m) => m.orgId);
-
-  const projects = await db
-    .select()
-    .from(dbSchema.projects)
-    .where(
-      orgIds.length > 0
-        ? or(eq(dbSchema.projects.ownerId, userId), inArray(dbSchema.projects.orgId, orgIds))
-        : eq(dbSchema.projects.ownerId, userId),
-    )
-    .orderBy(desc(dbSchema.projects.updatedAt));
-
-  if (projects.length === 0) {
+  if (visibleProjects.length === 0) {
     return {
       totalViews30d: 0,
       publishedCount: 0,
@@ -473,7 +432,7 @@ export async function getWorkspaceAnalyticsOverview(
     };
   }
 
-  const projectIds = projects.map((p) => p.id);
+  const projectIds = visibleProjects.map((p) => p.id);
   const cutoff30d = addUtcDays(startOfUtcDay(now), -29);
 
   const viewsRows = await db
@@ -503,10 +462,10 @@ export async function getWorkspaceAnalyticsOverview(
   let totalViews30d = 0;
   let publishedCount = 0;
 
-  const projectRows: WorkspaceAnalyticsProjectRow[] = projects.map((project) => {
+  const projectRows: WorkspaceAnalyticsProjectRow[] = visibleProjects.map((project) => {
     const isPublished =
       (project.visibility === "public" || project.visibility === "unlisted") &&
-      project.publishedAt !== null &&
+      project.publishedAtIso !== null &&
       Boolean(project.slug);
     if (isPublished) {
       publishedCount += 1;
@@ -523,7 +482,7 @@ export async function getWorkspaceAnalyticsOverview(
       slug: project.slug,
       visibility: project.visibility,
       isPublished,
-      publishedAtIso: project.publishedAt ? project.publishedAt.toISOString() : null,
+      publishedAtIso: project.publishedAtIso,
       views30d,
       visitors30d,
     };
@@ -540,7 +499,7 @@ export async function getWorkspaceAnalyticsOverview(
   return {
     totalViews30d,
     publishedCount,
-    totalProjectsCount: projects.length,
+    totalProjectsCount: visibleProjects.length,
     topPage: topCandidate
       ? {
           projectId: topCandidate.projectId,

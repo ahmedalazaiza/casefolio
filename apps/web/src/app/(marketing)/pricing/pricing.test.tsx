@@ -40,18 +40,23 @@ describe("PricingPageClient (C-1002 · Figma 2:8841)", () => {
 
     // Config-sourced monthly prices
     expect(
-      screen.getByText(`$${BILLING_PLAN_CATALOG.pro.monthlyPriceUsd}`),
-    ).toBeInTheDocument();
+      screen.getAllByText(`$${BILLING_PLAN_CATALOG.pro.monthlyPriceUsd}`).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(
-      screen.getByText(`$${BILLING_PLAN_CATALOG.team.monthlyPriceUsd}`),
-    ).toBeInTheDocument();
+      screen.getAllByText(`$${BILLING_PLAN_CATALOG.team.monthlyPriceUsd}`).length,
+    ).toBeGreaterThanOrEqual(1);
 
     // Config-sourced quotas in plan cards + comparison matrix
     expect(
-      screen.getAllByText(`Up to ${FREE_PROJECT_LIMIT} projects`).length,
-    ).toBeGreaterThanOrEqual(2);
+      screen.getByText(
+        `Up to ${FREE_PROJECT_LIMIT} active projects (1 published, 10 total retained)`,
+      ),
+    ).toBeInTheDocument();
     expect(
-      screen.getByText(`${FREE_MONTHLY_EXPORT_LIMIT}/mo (watermarked)`),
+      screen.getByText(`Up to ${FREE_PROJECT_LIMIT} active (1 live, 10 retained)`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`${FREE_MONTHLY_EXPORT_LIMIT}/mo · 1x (1,440 px, branded)`),
     ).toBeInTheDocument();
 
     // Paddle price config summary wired cleanly
@@ -73,15 +78,51 @@ describe("PricingPageClient (C-1002 · Figma 2:8841)", () => {
     );
 
     // Switch to Yearly interval
-    await user.click(screen.getByRole("button", { name: /Yearly/i }));
+    await user.click(screen.getAllByRole("button", { name: /^Yearly/i })[0]!);
     expect(
-      screen.getByText(
+      screen.getAllByText(
         `$${BILLING_PLAN_CATALOG.pro.yearlyMonthlyEquivalentUsd}`,
-      ),
-    ).toBeInTheDocument();
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByRole("link", { name: "Upgrade to Pro" }),
     ).toHaveAttribute("href", "/sign-up?plan=pro&interval=yearly");
+  });
+
+  it("computes Teams Seat Calculator math client-side for 1..25 seats and 26+ capacity review with zero network calls", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const user = userEvent.setup();
+
+    render(
+      <PricingPageClient
+        isAuthenticated={false}
+        currentTier={null}
+        activeOrgId={null}
+        paddlePriceMap={MOCK_PADDLE_PRICE_MAP}
+      />,
+    );
+
+    // Default calculator state: 3 seats monthly = $54/mo ($18 × 3)
+    expect(screen.getByTestId("teams-calc-seat-count")).toHaveTextContent("3");
+    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$54");
+    expect(screen.getByTestId("teams-calc-disclaimer")).toHaveTextContent(
+      "Before tax; this calculator saves nothing and charges nothing.",
+    );
+
+    // Select 5 seats preset -> $90/mo ($900/yr — save $180/yr)
+    await user.click(screen.getByTestId("teams-calc-preset-5"));
+    expect(screen.getByTestId("teams-calc-seat-count")).toHaveTextContent("5");
+    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$90");
+    expect(screen.getByTestId("teams-calc-billing-detail")).toHaveTextContent("$900/yr");
+
+    // Select 26+ seats -> capacity review state
+    await user.click(screen.getByTestId("teams-calc-preset-26"));
+    expect(screen.getByTestId("teams-calc-capacity-review")).toHaveTextContent(
+      "Capacity review required above 25 seats",
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   it("opens the Paddle checkout modal directly for authenticated users", async () => {

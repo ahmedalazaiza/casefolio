@@ -1,7 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { and, count, eq, sql, type PlanTier, type UserRole } from "@casefolio/db";
+import { createHash, randomUUID } from "node:crypto";
+import { count, eq, type PlanTier, type UserRole } from "@casefolio/db";
+import { evaluateQuotaUsage } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
-import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
+import { resolveWorkspaceEntitlementState } from "@/lib/entitlements/server";
 import { buildAssetCdnBaseUrl } from "@/lib/storage/cloudflare-images";
 import {
   completeUploadInputSchema,
@@ -11,6 +12,7 @@ import {
   isAllowedUploadMimeType,
   presignUploadInputSchema,
   updateAssetCropInputSchema,
+  validateImagePixelBounds,
   type AllowedUploadMimeType,
   type CompleteUploadInput,
   type PresignUploadInput,
@@ -24,6 +26,18 @@ import {
   verifyStorageToken,
 } from "@/lib/storage/r2";
 import { validateTemplateDocument, type CropRect } from "@/lib/template/schema";
+import {
+  commitWorkspaceReservation,
+  getWorkspaceMonthlyMeterUsage,
+  recordAndCheckWorkspaceBandwidth,
+  releaseWorkspaceReservation,
+  reserveWorkspaceMeter,
+} from "@/lib/usage/meter";
+import {
+  authorizeProjectAccess,
+  ensureProjectWorkspaceAndSpace,
+} from "@/lib/workspaces/acl";
+import { getWorkspaceStorageUsageBytes } from "@/lib/workspaces/service";
 
 export interface StorageActor {
   id: string;
@@ -35,6 +49,7 @@ export interface UploadCompletionTokenPayload {
   kind: "upload-complete";
   assetId: string;
   projectId: string;
+  workspaceId: string;
   userId: string;
   slot: string;
   r2Key: string;
@@ -53,6 +68,7 @@ export type PresignUploadErrorCode =
   | "INVALID_SLOT"
   | "FILE_TOO_LARGE"
   | "STORAGE_QUOTA_EXCEEDED"
+  | "MONTHLY_UPLOADS_EXCEEDED"
   | "PROJECT_ASSET_LIMIT_REACHED";
 
 export type PresignUploadResult =
@@ -103,7 +119,8 @@ export type CompleteUploadResult =
         | "FORBIDDEN"
         | "UPLOAD_MISSING"
         | "FILE_TOO_LARGE"
-        | "STORAGE_QUOTA_EXCEEDED";
+        | "STORAGE_QUOTA_EXCEEDED"
+        | "MONTHLY_UPLOADS_EXCEEDED";
       error: string;
     };
 
@@ -123,90 +140,6 @@ export function buildPrivateOrPublicAssetPath(
   return buildAssetCdnBaseUrl(assetId, width, height);
 }
 
-async function canActorEditProject(
-  project: { ownerId: string; orgId: string | null },
-  actor: StorageActor,
-): Promise<boolean> {
-  if (
-    project.ownerId === actor.id ||
-    actor.role === "admin" ||
-    actor.role === "superadmin"
-  ) {
-    return true;
-  }
-
-  if (project.orgId) {
-    const [membership] = await db
-      .select({ role: dbSchema.memberships.role })
-      .from(dbSchema.memberships)
-      .where(
-        and(
-          eq(dbSchema.memberships.orgId, project.orgId),
-          eq(dbSchema.memberships.userId, actor.id),
-        ),
-      )
-      .limit(1);
-
-    if (membership && (membership.role === "owner" || membership.role === "editor")) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-async function canActorViewUnpublishedProject(
-  project: { ownerId: string; orgId: string | null },
-  actor: StorageActor | null,
-): Promise<boolean> {
-  if (!actor) {
-    return false;
-  }
-
-  if (
-    project.ownerId === actor.id ||
-    actor.role === "admin" ||
-    actor.role === "superadmin"
-  ) {
-    return true;
-  }
-
-  if (project.orgId) {
-    const [membership] = await db
-      .select({ role: dbSchema.memberships.role })
-      .from(dbSchema.memberships)
-      .where(
-        and(
-          eq(dbSchema.memberships.orgId, project.orgId),
-          eq(dbSchema.memberships.userId, actor.id),
-        ),
-      )
-      .limit(1);
-
-    if (membership) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-async function getOwnerAuthoritativePlan(ownerId: string): Promise<PlanTier> {
-  return resolveEffectivePlanForUser(ownerId);
-}
-
-async function getOwnerStorageUsageBytes(ownerId: string): Promise<number> {
-  const [row] = await db
-    .select({
-      totalBytes: sql<string>`coalesce(sum(${dbSchema.assets.bytes}), 0)`,
-    })
-    .from(dbSchema.assets)
-    .innerJoin(dbSchema.projects, eq(dbSchema.assets.projectId, dbSchema.projects.id))
-    .where(eq(dbSchema.projects.ownerId, ownerId));
-
-  return Number(row?.totalBytes ?? 0);
-}
-
 async function getProjectAssetCount(projectId: string): Promise<number> {
   const [row] = await db
     .select({ totalCount: count() })
@@ -220,11 +153,7 @@ export async function createPresignedUpload(
   rawInput: PresignUploadInput,
   actor: StorageActor,
 ): Promise<PresignUploadResult> {
-  // Check MIME first so unsupported file extensions/types get a clear Figma-aligned message
-  if (
-    typeof rawInput?.mimeType === "string" &&
-    !isAllowedUploadMimeType(rawInput.mimeType)
-  ) {
+  if (typeof rawInput?.mimeType === "string" && !isAllowedUploadMimeType(rawInput.mimeType)) {
     const displayName =
       typeof rawInput.fileName === "string" && rawInput.fileName.trim().length > 0
         ? rawInput.fileName.trim()
@@ -253,71 +182,96 @@ export async function createPresignedUpload(
       error: `"${valid.fileName}" isn't a supported file type. Upload a PNG, JPG, or WebP image.`,
     };
   }
-  const normalizedMime: AllowedUploadMimeType = valid.mimeType.toLowerCase().trim() as AllowedUploadMimeType;
 
-  const [projectRow] = await db
-    .select({
-      project: dbSchema.projects,
-      versionData: dbSchema.templateVersions.data,
-    })
-    .from(dbSchema.projects)
-    .innerJoin(
-      dbSchema.templateVersions,
-      eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
-    )
-    .where(eq(dbSchema.projects.id, valid.projectId))
+  const pixelCheck = validateImagePixelBounds(valid.width, valid.height);
+  if (!pixelCheck.ok) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      error: pixelCheck.error,
+    };
+  }
+
+  const normalizedMime: AllowedUploadMimeType =
+    valid.mimeType.toLowerCase().trim() as AllowedUploadMimeType;
+
+  // Enforce Workspace + Space ACL (`404` on unauthorized IDs; `Spec §9 & §10.1`)
+  const auth = await authorizeProjectAccess(valid.projectId, actor.id, "upload_asset");
+  if (!auth.ok) {
+    return {
+      ok: false,
+      code: auth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+      error: auth.status === 404 ? "Project not found." : auth.error,
+    };
+  }
+
+  const [versionRow] = await db
+    .select({ versionData: dbSchema.templateVersions.data })
+    .from(dbSchema.templateVersions)
+    .where(eq(dbSchema.templateVersions.id, auth.project.templateVersionId))
     .limit(1);
 
-  if (!projectRow) {
-    return {
-      ok: false,
-      code: "NOT_FOUND",
-      error: "Project not found.",
-    };
-  }
-
-  const allowed = await canActorEditProject(projectRow.project, actor);
-  if (!allowed) {
-    return {
-      ok: false,
-      code: "FORBIDDEN",
-      error: "You do not have permission to upload assets to this project.",
-    };
-  }
-
-  const tplCheck = validateTemplateDocument(projectRow.versionData);
-  if (tplCheck.ok) {
-    const definedSlots = tplCheck.data.template.slots;
-    if (!(valid.slot in definedSlots)) {
-      return {
-        ok: false,
-        code: "INVALID_SLOT",
-        error: `Slot "${valid.slot}" does not exist on this template.`,
-      };
+  if (versionRow) {
+    const tplCheck = validateTemplateDocument(versionRow.versionData);
+    if (tplCheck.ok) {
+      const definedSlots = tplCheck.data.template.slots;
+      if (!(valid.slot in definedSlots)) {
+        return {
+          ok: false,
+          code: "INVALID_SLOT",
+          error: `Slot "${valid.slot}" does not exist on this template.`,
+        };
+      }
     }
   }
 
-  const ownerPlan = await getOwnerAuthoritativePlan(projectRow.project.ownerId);
-  const quota = getUploadQuotaForPlan(ownerPlan);
+  const quota = getUploadQuotaForPlan(auth.entitlement.plan, auth.entitlement.paidSeats);
 
   if (valid.bytes > quota.maxFileBytes) {
     return {
       ok: false,
       code: "FILE_TOO_LARGE",
-      error: `"${valid.fileName}" exceeds your ${ownerPlan.toUpperCase()} plan limit of ${formatBytesHuman(quota.maxFileBytes)} per image.`,
+      error: `"${valid.fileName}" exceeds your ${auth.entitlement.plan.toUpperCase()} plan limit of ${formatBytesHuman(quota.maxFileBytes)} per image.`,
     };
   }
 
-  const [usedBytes, assetCount] = await Promise.all([
-    getOwnerStorageUsageBytes(projectRow.project.ownerId),
-    getProjectAssetCount(projectRow.project.id),
+  const [usedBytes, monthlyUploads, assetCount] = await Promise.all([
+    getWorkspaceStorageUsageBytes(auth.workspace.id),
+    getWorkspaceMonthlyMeterUsage(auth.workspace.id, "uploads_bytes"),
+    getProjectAssetCount(auth.project.id),
   ]);
 
-  if (usedBytes + valid.bytes > quota.maxTotalBytes) {
+  const storageEval = evaluateQuotaUsage({
+    used: usedBytes,
+    adding: valid.bytes,
+    limit: quota.maxTotalBytes,
+    isPaid: auth.entitlement.plan !== "free",
+    graceUsedAt: auth.entitlement.graceUsedAt,
+    graceExpiresAt: auth.entitlement.graceExpiresAt,
+  });
+
+  if (!storageEval.allowed) {
     return {
       ok: false,
       code: "STORAGE_QUOTA_EXCEEDED",
-      error: `Storage quota exceeded (${formatBytesHuman(quota.maxTotalBytes)} total on the ${ownerPlan.toUpperCase()} plan). Remove unused images or upgrade your plan.`,
+      error: `Storage quota exceeded (${formatBytesHuman(quota.maxTotalBytes)} total on the ${auth.entitlement.plan.toUpperCase()} plan). Remove unused images or upgrade your plan.`,
+    };
+  }
+
+  const monthlyUploadEval = evaluateQuotaUsage({
+    used: monthlyUploads.total,
+    adding: valid.bytes,
+    limit: quota.monthlyUploadsBytes,
+    isPaid: auth.entitlement.plan !== "free",
+    graceUsedAt: auth.entitlement.graceUsedAt,
+    graceExpiresAt: auth.entitlement.graceExpiresAt,
+  });
+
+  if (!monthlyUploadEval.allowed) {
+    return {
+      ok: false,
+      code: "MONTHLY_UPLOADS_EXCEEDED",
+      error: `Monthly upload quota exceeded (${formatBytesHuman(quota.monthlyUploadsBytes)}/month). Resets on the 1st of next month (Europe/Istanbul).`,
     };
   }
 
@@ -325,26 +279,29 @@ export async function createPresignedUpload(
     return {
       ok: false,
       code: "PROJECT_ASSET_LIMIT_REACHED",
-      error: `This project has reached the maximum of ${quota.maxAssetsPerProject} uploaded images for the ${ownerPlan.toUpperCase()} plan.`,
+      error: `This project has reached the maximum of ${quota.maxAssetsPerProject} uploaded images for the ${auth.entitlement.plan.toUpperCase()} plan.`,
     };
   }
 
   const assetId = randomUUID();
   const ext = extensionForMimeType(normalizedMime);
   const safeSlot = sanitizeSlotKeySegment(valid.slot) || "slot";
-  const r2Key = `projects/${projectRow.project.id}/slots/${safeSlot}/${assetId}.${ext}`;
+  const r2Key = `workspaces/${auth.workspace.id}/projects/${auth.project.id}/slots/${safeSlot}/${assetId}.${ext}`;
 
+  // `Spec §10.2`: Presigned URLs last at most 60 seconds
   const putTarget = await createPresignedPutTarget({
     r2Key,
     mimeType: normalizedMime,
     bytes: valid.bytes,
     maxFileBytes: quota.maxFileBytes,
+    expiresInSeconds: 60,
   });
 
   const completeToken = signStorageToken<UploadCompletionTokenPayload>({
     kind: "upload-complete",
     assetId,
-    projectId: projectRow.project.id,
+    projectId: auth.project.id,
+    workspaceId: auth.workspace.id,
     userId: actor.id,
     slot: valid.slot,
     r2Key,
@@ -352,7 +309,7 @@ export async function createPresignedUpload(
     declaredBytes: valid.bytes,
     width: valid.width,
     height: valid.height,
-    exp: Date.now() + 10 * 60 * 1000,
+    exp: Date.now() + 5 * 60 * 1000,
   });
 
   return {
@@ -397,31 +354,16 @@ export async function completePresignedUpload(
     };
   }
 
-  const [project] = await db
-    .select()
-    .from(dbSchema.projects)
-    .where(eq(dbSchema.projects.id, tokenPayload.projectId))
-    .limit(1);
-
-  if (!project) {
+  const auth = await authorizeProjectAccess(tokenPayload.projectId, actor.id, "upload_asset");
+  if (!auth.ok) {
     return {
       ok: false,
-      code: "NOT_FOUND",
-      error: "Project not found.",
+      code: auth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+      error: auth.status === 404 ? "Project not found." : auth.error,
     };
   }
 
-  const allowed = await canActorEditProject(project, actor);
-  if (!allowed) {
-    return {
-      ok: false,
-      code: "FORBIDDEN",
-      error: "You do not have permission to edit this project.",
-    };
-  }
-
-  const ownerPlan = await getOwnerAuthoritativePlan(project.ownerId);
-  const quota = getUploadQuotaForPlan(ownerPlan);
+  const quota = getUploadQuotaForPlan(auth.entitlement.plan, auth.entitlement.paidSeats);
 
   const storedInfo = await headStoredObject(tokenPayload.r2Key);
   if (!storedInfo.exists || storedInfo.bytes <= 0) {
@@ -437,64 +379,107 @@ export async function completePresignedUpload(
     return {
       ok: false,
       code: "FILE_TOO_LARGE",
-      error: `Uploaded file exceeds your ${ownerPlan.toUpperCase()} plan limit of ${formatBytesHuman(quota.maxFileBytes)}.`,
+      error: `Uploaded file exceeds your ${auth.entitlement.plan.toUpperCase()} plan limit of ${formatBytesHuman(quota.maxFileBytes)}.`,
     };
   }
 
-  const usedBytes = await getOwnerStorageUsageBytes(project.ownerId);
-  if (usedBytes + storedInfo.bytes > quota.maxTotalBytes) {
+  const usedBytes = await getWorkspaceStorageUsageBytes(auth.workspace.id);
+  const storageEval = evaluateQuotaUsage({
+    used: usedBytes,
+    adding: storedInfo.bytes,
+    limit: quota.maxTotalBytes,
+    isPaid: auth.entitlement.plan !== "free",
+    graceUsedAt: auth.entitlement.graceUsedAt,
+    graceExpiresAt: auth.entitlement.graceExpiresAt,
+  });
+
+  if (!storageEval.allowed) {
     await deleteStoredObject(tokenPayload.r2Key);
     return {
       ok: false,
       code: "STORAGE_QUOTA_EXCEEDED",
-      error: `Storage quota exceeded (${formatBytesHuman(quota.maxTotalBytes)} total on the ${ownerPlan.toUpperCase()} plan).`,
+      error: `Storage quota exceeded (${formatBytesHuman(quota.maxTotalBytes)} total on the ${auth.entitlement.plan.toUpperCase()} plan).`,
     };
   }
 
-  const normalizedCrop = parsed.data.crop ?? null;
+  // Reserve + commit monthly upload bytes atomically (`Spec §5.3`)
+  const uploadJobId = `upload:${tokenPayload.assetId}`;
+  const meterRes = await reserveWorkspaceMeter({
+    workspaceId: auth.workspace.id,
+    meter: "uploads_bytes",
+    amount: storedInfo.bytes,
+    limit: quota.monthlyUploadsBytes,
+    jobId: uploadJobId,
+    isPaid: auth.entitlement.plan !== "free",
+    graceUsedAt: auth.entitlement.graceUsedAt,
+    graceExpiresAt: auth.entitlement.graceExpiresAt,
+  });
 
-  const [inserted] = await db
-    .insert(dbSchema.assets)
-    .values({
-      id: tokenPayload.assetId,
-      projectId: project.id,
-      r2Key: tokenPayload.r2Key,
-      slot: tokenPayload.slot,
-      crop: normalizedCrop,
-      width: tokenPayload.width,
-      height: tokenPayload.height,
-      bytes: storedInfo.bytes,
-      mimeType: tokenPayload.mimeType,
-    })
-    .returning();
-
-  if (!inserted) {
+  if (!meterRes.ok) {
+    await deleteStoredObject(tokenPayload.r2Key);
     return {
       ok: false,
-      code: "VALIDATION_ERROR",
-      error: "Failed to record uploaded asset.",
+      code: "MONTHLY_UPLOADS_EXCEEDED",
+      error: `Monthly upload quota exceeded (${formatBytesHuman(quota.monthlyUploadsBytes)}/month).`,
     };
   }
 
-  return {
-    ok: true,
-    asset: {
-      id: inserted.id,
-      projectId: inserted.projectId,
-      r2Key: inserted.r2Key,
-      slot: inserted.slot,
-      crop: inserted.crop ?? null,
-      width: inserted.width,
-      height: inserted.height,
-      bytes: inserted.bytes,
-      mimeType: inserted.mimeType,
-      deliveryUrl: buildPrivateOrPublicAssetPath(
-        inserted.id,
-        inserted.width,
-        inserted.height,
-      ),
-    },
-  };
+  const rawBytes = await readStoredObjectBytes(tokenPayload.r2Key);
+  const sha256 = rawBytes ? createHash("sha256").update(rawBytes).digest("hex") : null;
+  const normalizedCrop = parsed.data.crop ?? null;
+
+  try {
+    const [inserted] = await db
+      .insert(dbSchema.assets)
+      .values({
+        id: tokenPayload.assetId,
+        projectId: auth.project.id,
+        workspaceId: auth.workspace.id,
+        r2Key: tokenPayload.r2Key,
+        slot: tokenPayload.slot,
+        crop: normalizedCrop,
+        width: tokenPayload.width,
+        height: tokenPayload.height,
+        bytes: storedInfo.bytes,
+        mimeType: tokenPayload.mimeType,
+        sha256,
+      })
+      .returning();
+
+    if (!inserted) {
+      await releaseWorkspaceReservation(uploadJobId);
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        error: "Failed to record uploaded asset.",
+      };
+    }
+
+    await commitWorkspaceReservation(uploadJobId);
+
+    return {
+      ok: true,
+      asset: {
+        id: inserted.id,
+        projectId: inserted.projectId,
+        r2Key: inserted.r2Key,
+        slot: inserted.slot,
+        crop: inserted.crop ?? null,
+        width: inserted.width,
+        height: inserted.height,
+        bytes: inserted.bytes,
+        mimeType: inserted.mimeType,
+        deliveryUrl: buildPrivateOrPublicAssetPath(
+          inserted.id,
+          inserted.width,
+          inserted.height,
+        ),
+      },
+    };
+  } catch (err) {
+    await releaseWorkspaceReservation(uploadJobId);
+    throw err;
+  }
 }
 
 export type ReadAssetAccessResult =
@@ -504,17 +489,19 @@ export type ReadAssetAccessResult =
       status: "ok";
       asset: typeof dbSchema.assets.$inferSelect;
       isPublished: boolean;
+      aclVersion: number;
       bytes: Uint8Array;
       contentType: string;
       cacheControl: string;
     };
 
 /**
- * Enforces C-501 "Files private until published":
- * - When the parent project is private or unpublished (`publishedAt === null`),
- *   only the project owner, org members, or platform admins can read the asset (`Cache-Control: private, no-store`).
- * - Once the project is published (`visibility` in `public` | `unlisted` AND `publishedAt !== null`),
- *   public visitors can read the asset (`Cache-Control: public, max-age=31536000, immutable`).
+ * Enforces strict private-first asset isolation (`Spec §10.1-10.3 & §15`):
+ * - Public delivery is permitted ONLY when the parent project is published (`public` | `unlisted`),
+ *   not archived/suspended/departed, within workspace bandwidth, AND (when a `published_snapshots`
+ *   row exists) the `assetId` was explicitly included in `publishedAssetIds`!
+ * - Draft/private assets authorize via `authorizeProjectAccess("read")` and return `not_found` (`404`)
+ *   for strangers, cross-tenant users, and Team Owners/Admins probing another member's private space!
  */
 export async function authorizeAndReadAsset(
   assetId: string,
@@ -530,13 +517,7 @@ export async function authorizeAndReadAsset(
   const [row] = await db
     .select({
       asset: dbSchema.assets,
-      project: {
-        id: dbSchema.projects.id,
-        ownerId: dbSchema.projects.ownerId,
-        orgId: dbSchema.projects.orgId,
-        visibility: dbSchema.projects.visibility,
-        publishedAt: dbSchema.projects.publishedAt,
-      },
+      project: dbSchema.projects,
     })
     .from(dbSchema.assets)
     .innerJoin(dbSchema.projects, eq(dbSchema.assets.projectId, dbSchema.projects.id))
@@ -547,18 +528,67 @@ export async function authorizeAndReadAsset(
     return { status: "not_found" };
   }
 
-  const isPublished =
-    (row.project.visibility === "public" || row.project.visibility === "unlisted") &&
-    row.project.publishedAt !== null;
+  const ensured = await ensureProjectWorkspaceAndSpace(row.project);
+  const aclVersion = ensured.space.aclVersion;
 
-  if (!isPublished) {
+  const projectIsPublished =
+    ensured.project.archivedAt === null &&
+    ensured.space.recoveryState !== "frozen_member_departed" &&
+    (ensured.project.visibility === "public" || ensured.project.visibility === "unlisted") &&
+    ensured.project.publishedAt !== null;
+
+  let canDeliverPublicly = false;
+  if (projectIsPublished) {
+    const [snapshot] = await db
+      .select({
+        publishedAssetIds: dbSchema.publishedSnapshots.publishedAssetIds,
+        suspendedReason: dbSchema.publishedSnapshots.suspendedReason,
+      })
+      .from(dbSchema.publishedSnapshots)
+      .where(eq(dbSchema.publishedSnapshots.projectId, ensured.project.id))
+      .limit(1);
+
+    if (snapshot) {
+      canDeliverPublicly =
+        !snapshot.suspendedReason &&
+        snapshot.publishedAssetIds.includes(assetId.toLowerCase());
+    } else {
+      // Backward-compatible fallback for direct-DB test rows without `published_snapshots`
+      canDeliverPublicly = true;
+    }
+  }
+
+  if (canDeliverPublicly) {
+    const ent = await resolveWorkspaceEntitlementState(ensured.workspace.id);
+    if (ent && (ent.lifecycle.isPastDueReadOnly || ent.frozenReason === "fraud_suspended")) {
+      canDeliverPublicly = false;
+    } else if (ent) {
+      const bwCheck = await recordAndCheckWorkspaceBandwidth({
+        workspaceId: ensured.workspace.id,
+        bytes: row.asset.bytes,
+        limit: ent.quotas.monthlyBandwidthBytesLimit,
+        isPaid: ent.plan !== "free",
+        graceUsedAt: ent.graceUsedAt,
+        graceExpiresAt: ent.graceExpiresAt,
+      });
+      if (!bwCheck.allowed) {
+        canDeliverPublicly = false;
+      }
+    }
+  }
+
+  if (!canDeliverPublicly) {
     const allowedViaExportToken =
       Boolean(options?.authorizedExportProjectId) &&
-      options?.authorizedExportProjectId === row.project.id;
+      options?.authorizedExportProjectId === ensured.project.id;
+
     if (!allowedViaExportToken) {
-      const canViewPrivate = await canActorViewUnpublishedProject(row.project, requester);
-      if (!canViewPrivate) {
-        return { status: "forbidden" };
+      if (!requester) {
+        return { status: "not_found" };
+      }
+      const auth = await authorizeProjectAccess(ensured.project.id, requester.id, "read");
+      if (!auth.ok) {
+        return { status: "not_found" };
       }
     }
   }
@@ -571,10 +601,11 @@ export async function authorizeAndReadAsset(
   return {
     status: "ok",
     asset: row.asset,
-    isPublished,
+    isPublished: canDeliverPublicly,
+    aclVersion,
     bytes,
     contentType: row.asset.mimeType || "application/octet-stream",
-    cacheControl: isPublished
+    cacheControl: canDeliverPublicly
       ? "public, max-age=31536000, immutable"
       : "private, no-store, max-age=0",
   };
@@ -606,13 +637,8 @@ export async function updateAssetCropForUser(
   const [row] = await db
     .select({
       asset: dbSchema.assets,
-      project: {
-        ownerId: dbSchema.projects.ownerId,
-        orgId: dbSchema.projects.orgId,
-      },
     })
     .from(dbSchema.assets)
-    .innerJoin(dbSchema.projects, eq(dbSchema.assets.projectId, dbSchema.projects.id))
     .where(eq(dbSchema.assets.id, assetId))
     .limit(1);
 
@@ -620,12 +646,12 @@ export async function updateAssetCropForUser(
     return { ok: false, code: "NOT_FOUND", error: "Asset not found." };
   }
 
-  const allowed = await canActorEditProject(row.project, actor);
-  if (!allowed) {
+  const auth = await authorizeProjectAccess(row.asset.projectId, actor.id, "upload_asset");
+  if (!auth.ok) {
     return {
       ok: false,
-      code: "FORBIDDEN",
-      error: "You do not have permission to update this asset.",
+      code: auth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+      error: auth.status === 404 ? "Asset not found." : auth.error,
     };
   }
 
@@ -645,10 +671,7 @@ export async function updateAssetCropForUser(
 export async function deleteAssetForUser(
   assetId: string,
   actor: StorageActor,
-): Promise<
-  | { ok: true }
-  | { ok: false; code: "NOT_FOUND" | "FORBIDDEN"; error: string }
-> {
+): Promise<{ ok: true } | { ok: false; code: "NOT_FOUND" | "FORBIDDEN"; error: string }> {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(assetId)) {
@@ -658,13 +681,8 @@ export async function deleteAssetForUser(
   const [row] = await db
     .select({
       asset: dbSchema.assets,
-      project: {
-        ownerId: dbSchema.projects.ownerId,
-        orgId: dbSchema.projects.orgId,
-      },
     })
     .from(dbSchema.assets)
-    .innerJoin(dbSchema.projects, eq(dbSchema.assets.projectId, dbSchema.projects.id))
     .where(eq(dbSchema.assets.id, assetId))
     .limit(1);
 
@@ -672,12 +690,12 @@ export async function deleteAssetForUser(
     return { ok: false, code: "NOT_FOUND", error: "Asset not found." };
   }
 
-  const allowed = await canActorEditProject(row.project, actor);
-  if (!allowed) {
+  const auth = await authorizeProjectAccess(row.asset.projectId, actor.id, "upload_asset");
+  if (!auth.ok) {
     return {
       ok: false,
-      code: "FORBIDDEN",
-      error: "You do not have permission to delete this asset.",
+      code: auth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+      error: auth.status === 404 ? "Asset not found." : auth.error,
     };
   }
 

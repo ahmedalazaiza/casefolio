@@ -10,6 +10,7 @@ function statusForPresignError(code: PresignUploadErrorCode): number {
       return 415;
     case "FILE_TOO_LARGE":
     case "STORAGE_QUOTA_EXCEEDED":
+    case "MONTHLY_UPLOADS_EXCEEDED":
     case "PROJECT_ASSET_LIMIT_REACHED":
       return 413;
     case "FORBIDDEN":

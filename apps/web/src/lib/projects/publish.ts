@@ -1,9 +1,20 @@
-import { and, eq, ne, type PlanTier, type UserRole } from "@casefolio/db";
+import {
+  and,
+  eq,
+  ne,
+  type PlanTier,
+  type SpaceVisibility,
+  type UserRole,
+  type WorkspaceKind,
+} from "@casefolio/db";
 import { z } from "zod";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { db, dbSchema } from "@/lib/db";
+import {
+  resolveEffectivePlanForUser,
+  resolveWorkspaceEntitlementState,
+} from "@/lib/entitlements/server";
 import { notifyProjectPublished } from "@/lib/notifications/service";
-import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { slugifyProjectName } from "@/lib/projects/types";
 import {
   puckDocumentSchema,
@@ -15,6 +26,9 @@ import {
   type TemplateTheme,
 } from "@/lib/template/schema";
 import { extractRichTextParagraphs } from "@/lib/template/theme-vars";
+import { recordAndCheckWorkspaceBandwidth } from "@/lib/usage/meter";
+import { authorizeProjectAccess, ensureProjectWorkspaceAndSpace } from "@/lib/workspaces/acl";
+import { getWorkspaceProjectCounts } from "@/lib/workspaces/service";
 
 export const RESERVED_PROJECT_SLUGS = new Set([
   "admin",
@@ -38,6 +52,7 @@ export const RESERVED_PROJECT_SLUGS = new Set([
   "pricing",
   "projects",
   "published",
+  "recovery",
   "reset",
   "settings",
   "sign-in",
@@ -82,6 +97,8 @@ export const publishProjectInputSchema = z.object({
   projectId: z.string().uuid("Invalid project ID."),
   slug: projectSlugSchema,
   visibility: z.enum(["public", "unlisted"]),
+  acknowledgePublicExposure: z.boolean().optional(),
+  brandingRemoved: z.boolean().optional(),
 });
 
 export type PublishProjectInput = z.input<typeof publishProjectInputSchema>;
@@ -96,7 +113,9 @@ export type PublishProjectErrorCode =
   | "NOT_FOUND"
   | "VALIDATION_ERROR"
   | "SLUG_RESERVED"
-  | "SLUG_TAKEN";
+  | "SLUG_TAKEN"
+  | "PUBLISH_LIMIT_REACHED"
+  | "PUBLIC_ACK_REQUIRED";
 
 export type PublishProjectResult =
   | {
@@ -104,6 +123,7 @@ export type PublishProjectResult =
       projectId: string;
       slug: string;
       visibility: "public" | "unlisted";
+      brandingRemoved: boolean;
       publishedAtIso: string;
       publicPath: string;
       publicUrl: string;
@@ -147,6 +167,15 @@ export interface ProjectShareSettingsPayload {
   publishedAtIso: string | null;
   updatedAtIso: string;
   ownerPlan: PlanTier;
+  workspaceKind: WorkspaceKind;
+  spaceVisibility: SpaceVisibility;
+  requiresTeamPrivatePublicAck: boolean;
+  publicAcknowledged: boolean;
+  canPublish: boolean;
+  brandingRemoved: boolean;
+  canRemoveBranding: boolean;
+  publishedCount: number;
+  maxPublishedProjects: number;
   appBaseUrl: string;
   preview: CaseStudyPreviewSummary;
   theme: TemplateTheme;
@@ -164,6 +193,7 @@ export interface PublishedCaseStudyPayload {
     slug: string;
     type: TemplateProjectType;
     visibility: "public" | "unlisted";
+    brandingRemoved: boolean;
     publishedAtIso: string;
     updatedAtIso: string;
   };
@@ -191,6 +221,9 @@ export interface PublishedCaseStudyPayload {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const EMBEDDED_UUID_REGEX =
+  /[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+
 export function resolvePublicAppBaseUrl(): string {
   const raw =
     process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL || "http://localhost:3000";
@@ -210,6 +243,12 @@ export function buildSuggestedProjectSlug(projectName: string, projectId: string
     candidate = `${candidate}-${shortSuffix}`;
   }
   return candidate.slice(0, 80).replace(/-+$/g, "");
+}
+
+function collectReferencedAssetIds(puckData: unknown): string[] {
+  const serialized = JSON.stringify(puckData ?? {});
+  const matches = serialized.match(EMBEDDED_UUID_REGEX) ?? [];
+  return Array.from(new Set(matches.map((m) => m.toLowerCase())));
 }
 
 function extractCaseStudyMetaFromPuck(
@@ -249,34 +288,6 @@ function extractCaseStudyMetaFromPuck(
     title: title.slice(0, 140),
     description: description.slice(0, 240),
   };
-}
-
-async function canActorEditProjectRow(
-  project: { ownerId: string; orgId: string | null },
-  actor: { id: string; role: UserRole },
-): Promise<boolean> {
-  if (project.ownerId === actor.id || actor.role === "admin" || actor.role === "superadmin") {
-    return true;
-  }
-
-  if (project.orgId) {
-    const [membership] = await db
-      .select({ role: dbSchema.memberships.role })
-      .from(dbSchema.memberships)
-      .where(
-        and(
-          eq(dbSchema.memberships.orgId, project.orgId),
-          eq(dbSchema.memberships.userId, actor.id),
-        ),
-      )
-      .limit(1);
-
-    if (membership && (membership.role === "owner" || membership.role === "editor")) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 export async function checkProjectSlugAvailability(
@@ -350,30 +361,24 @@ export async function getProjectShareSettingsForUser(
     return { status: "not_found" };
   }
 
+  // Enforce `404` on unauthorized IDs (`Spec §9 & §10.1`)
+  const readAuth = await authorizeProjectAccess(projectId, user.id, "read");
+  if (!readAuth.ok) {
+    return { status: "not_found" };
+  }
+
   const [row] = await db
     .select({
-      project: dbSchema.projects,
       version: dbSchema.templateVersions,
       template: dbSchema.templates,
-      ownerPlan: dbSchema.users.plan,
     })
-    .from(dbSchema.projects)
-    .innerJoin(
-      dbSchema.templateVersions,
-      eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
-    )
+    .from(dbSchema.templateVersions)
     .innerJoin(dbSchema.templates, eq(dbSchema.templateVersions.templateId, dbSchema.templates.id))
-    .innerJoin(dbSchema.users, eq(dbSchema.projects.ownerId, dbSchema.users.id))
-    .where(eq(dbSchema.projects.id, projectId))
+    .where(eq(dbSchema.templateVersions.id, readAuth.project.templateVersionId))
     .limit(1);
 
   if (!row) {
     return { status: "not_found" };
-  }
-
-  const canEdit = await canActorEditProjectRow(row.project, user);
-  if (!canEdit) {
-    return { status: "forbidden" };
   }
 
   const tplDocCheck = validateTemplateDocument(row.version.data);
@@ -381,42 +386,59 @@ export async function getProjectShareSettingsForUser(
     return { status: "not_found" };
   }
 
-  const puckCheck = puckDocumentSchema.safeParse(row.project.puckData);
-  const themeCheck = templateThemeSchema.safeParse(row.project.theme);
+  const puckCheck = puckDocumentSchema.safeParse(readAuth.project.puckData);
+  const themeCheck = templateThemeSchema.safeParse(readAuth.project.theme);
   const resolvedPuck = puckCheck.success ? puckCheck.data : tplDocCheck.data.puck;
   const resolvedTheme = themeCheck.success ? themeCheck.data : tplDocCheck.data.template.theme;
 
-  let suggestedSlug = row.project.slug ?? buildSuggestedProjectSlug(row.project.name, row.project.id);
-  if (!row.project.slug) {
-    const availability = await checkProjectSlugAvailability(suggestedSlug, row.project.id);
+  let suggestedSlug =
+    readAuth.project.slug ??
+    buildSuggestedProjectSlug(readAuth.project.name, readAuth.project.id);
+  if (!readAuth.project.slug) {
+    const availability = await checkProjectSlugAvailability(suggestedSlug, readAuth.project.id);
     if (!availability.available) {
-      const suffix = row.project.id.replace(/-/g, "").slice(0, 6).toLowerCase();
+      const suffix = readAuth.project.id.replace(/-/g, "").slice(0, 6).toLowerCase();
       suggestedSlug = `${suggestedSlug.slice(0, 70)}-${suffix}`;
     }
   }
 
-  const meta = extractCaseStudyMetaFromPuck(row.project.name, resolvedPuck);
+  const publishAuth = await authorizeProjectAccess(projectId, user.id, "publish");
+  const counts = await getWorkspaceProjectCounts(readAuth.workspace.id);
+  const meta = extractCaseStudyMetaFromPuck(readAuth.project.name, resolvedPuck);
   const isPublished =
-    (row.project.visibility === "public" || row.project.visibility === "unlisted") &&
-    row.project.publishedAt !== null &&
-    Boolean(row.project.slug);
+    (readAuth.project.visibility === "public" || readAuth.project.visibility === "unlisted") &&
+    readAuth.project.publishedAt !== null &&
+    Boolean(readAuth.project.slug);
 
-  const effectiveOwnerPlan = await resolveEffectivePlanForUser(row.project.ownerId);
+  const requiresTeamPrivatePublicAck =
+    readAuth.workspace.kind === "team" && readAuth.space.visibility === "private";
 
   return {
     status: "ok",
     settings: {
-      projectId: row.project.id,
-      projectName: row.project.name,
-      projectType: row.project.type,
+      projectId: readAuth.project.id,
+      projectName: readAuth.project.name,
+      projectType: readAuth.project.type,
       templateName: row.template.name,
-      slug: row.project.slug,
+      slug: readAuth.project.slug,
       suggestedSlug,
-      visibility: row.project.visibility,
+      visibility: readAuth.project.visibility,
       isPublished,
-      publishedAtIso: row.project.publishedAt ? row.project.publishedAt.toISOString() : null,
-      updatedAtIso: row.project.updatedAt.toISOString(),
-      ownerPlan: effectiveOwnerPlan,
+      publishedAtIso: readAuth.project.publishedAt
+        ? readAuth.project.publishedAt.toISOString()
+        : null,
+      updatedAtIso: readAuth.project.updatedAt.toISOString(),
+      ownerPlan: readAuth.entitlement.plan,
+      workspaceKind: readAuth.workspace.kind,
+      spaceVisibility: readAuth.space.visibility,
+      requiresTeamPrivatePublicAck,
+      publicAcknowledged: Boolean(readAuth.project.publicAcknowledgedAt),
+      canPublish: publishAuth.ok,
+      brandingRemoved:
+        readAuth.project.brandingRemoved && readAuth.entitlement.quotas.brandingRemovable,
+      canRemoveBranding: readAuth.entitlement.quotas.brandingRemovable,
+      publishedCount: counts.publishedProjects,
+      maxPublishedProjects: readAuth.entitlement.quotas.publishedProjectsLimit,
       appBaseUrl: resolvePublicAppBaseUrl(),
       preview: {
         eyebrow: meta.eyebrow,
@@ -465,28 +487,49 @@ export async function publishProjectForUser(
   }
 
   const valid = parsed.data;
+  const now = new Date();
 
-  const [existing] = await db
-    .select()
-    .from(dbSchema.projects)
-    .where(eq(dbSchema.projects.id, valid.projectId))
-    .limit(1);
-
-  if (!existing) {
+  const auth = await authorizeProjectAccess(valid.projectId, user.id, "publish", now);
+  if (!auth.ok) {
     return {
       ok: false,
-      code: "NOT_FOUND",
-      error: "Project not found.",
+      code: auth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+      error: auth.status === 404 ? "Project not found." : auth.error,
     };
   }
 
-  const canEdit = await canActorEditProjectRow(existing, user);
-  if (!canEdit) {
+  const existing = auth.project;
+
+  // `Spec §9 line 314-316 & 332`: Publishing from one's own private space inside a Team workspace
+  // requires explicit acknowledgment that the published snapshot & selected images will be online.
+  const isTeamPrivateSpace =
+    auth.workspace.kind === "team" && auth.space.visibility === "private";
+  if (
+    isTeamPrivateSpace &&
+    !valid.acknowledgePublicExposure &&
+    existing.publicAcknowledgedAt === null
+  ) {
     return {
       ok: false,
-      code: "FORBIDDEN",
-      error: "You do not have permission to publish this project.",
+      code: "PUBLIC_ACK_REQUIRED",
+      error:
+        "Acknowledge that publishing from your private team space puts this published snapshot and its selected images online (visible to anyone with the URL, including teammates), while your private space drafts remain hidden.",
     };
+  }
+
+  const currentlyPublished =
+    (existing.visibility === "public" || existing.visibility === "unlisted") &&
+    existing.publishedAt !== null;
+
+  if (!currentlyPublished) {
+    const counts = await getWorkspaceProjectCounts(auth.workspace.id);
+    if (counts.publishedProjects >= auth.entitlement.quotas.publishedProjectsLimit) {
+      return {
+        ok: false,
+        code: "PUBLISH_LIMIT_REACHED",
+        error: `This workspace has reached its simultaneous published case-study limit (${auth.entitlement.quotas.publishedProjectsLimit}). Unpublish another case study or upgrade your plan.`,
+      };
+    }
   }
 
   const availability = await checkProjectSlugAvailability(valid.slug, existing.id);
@@ -499,8 +542,23 @@ export async function publishProjectForUser(
     };
   }
 
-  const now = new Date();
   const publishedAt = existing.publishedAt ?? now;
+  const publicAcknowledgedAt =
+    existing.publicAcknowledgedAt ??
+    (valid.acknowledgePublicExposure || !isTeamPrivateSpace ? now : null);
+  const effectiveBrandingRemoved = auth.entitlement.quotas.brandingRemovable
+    ? (valid.brandingRemoved ?? true)
+    : false;
+
+  const projectAssets = await db
+    .select({ id: dbSchema.assets.id })
+    .from(dbSchema.assets)
+    .where(eq(dbSchema.assets.projectId, existing.id));
+
+  const referencedIds = collectReferencedAssetIds(existing.puckData);
+  const publishedAssetIds = Array.from(
+    new Set([...projectAssets.map((a) => a.id.toLowerCase()), ...referencedIds]),
+  );
 
   try {
     const [updated] = await db
@@ -508,6 +566,8 @@ export async function publishProjectForUser(
       .set({
         slug: availability.normalizedSlug,
         visibility: valid.visibility,
+        brandingRemoved: effectiveBrandingRemoved,
+        publicAcknowledgedAt,
         publishedAt,
         updatedAt: now,
       })
@@ -521,6 +581,42 @@ export async function publishProjectForUser(
         error: "Failed to publish project.",
       };
     }
+
+    // Isolate public rendering to `published_snapshots` (`Spec §10.3`)
+    await db
+      .insert(dbSchema.publishedSnapshots)
+      .values({
+        projectId: updated.id,
+        workspaceId: auth.workspace.id,
+        spaceId: auth.space.id,
+        revision: updated.revision,
+        puckData: structuredClone(updated.puckData),
+        theme: structuredClone(updated.theme),
+        publishedAssetIds,
+        brandingRemoved: effectiveBrandingRemoved,
+        suspendedReason: null,
+        publishedByUserId: user.id,
+        publicAcknowledgedAt,
+        publishedAt: updated.publishedAt,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: dbSchema.publishedSnapshots.projectId,
+        set: {
+          workspaceId: auth.workspace.id,
+          spaceId: auth.space.id,
+          revision: updated.revision,
+          puckData: structuredClone(updated.puckData),
+          theme: structuredClone(updated.theme),
+          publishedAssetIds,
+          brandingRemoved: effectiveBrandingRemoved,
+          suspendedReason: null,
+          publishedByUserId: user.id,
+          publicAcknowledgedAt,
+          publishedAt: updated.publishedAt,
+          updatedAt: now,
+        },
+      });
 
     const isFirstPublish = existing.publishedAt === null;
 
@@ -548,6 +644,7 @@ export async function publishProjectForUser(
       projectId: updated.id,
       slug: updated.slug,
       visibility: valid.visibility,
+      brandingRemoved: effectiveBrandingRemoved,
       publishedAtIso: updated.publishedAt.toISOString(),
       publicPath: `/p/${updated.slug}`,
       publicUrl: buildPublicCaseStudyUrl(updated.slug),
@@ -579,26 +676,12 @@ export async function unpublishProjectForUser(
     };
   }
 
-  const [existing] = await db
-    .select()
-    .from(dbSchema.projects)
-    .where(eq(dbSchema.projects.id, parsed.data.projectId))
-    .limit(1);
-
-  if (!existing) {
+  const auth = await authorizeProjectAccess(parsed.data.projectId, user.id, "unpublish");
+  if (!auth.ok) {
     return {
       ok: false,
-      code: "NOT_FOUND",
-      error: "Project not found.",
-    };
-  }
-
-  const canEdit = await canActorEditProjectRow(existing, user);
-  if (!canEdit) {
-    return {
-      ok: false,
-      code: "FORBIDDEN",
-      error: "You do not have permission to unpublish this project.",
+      code: auth.status === 404 ? "NOT_FOUND" : "FORBIDDEN",
+      error: auth.status === 404 ? "Project not found." : auth.error,
     };
   }
 
@@ -610,8 +693,12 @@ export async function unpublishProjectForUser(
       publishedAt: null,
       updatedAt: now,
     })
-    .where(eq(dbSchema.projects.id, existing.id))
+    .where(eq(dbSchema.projects.id, auth.project.id))
     .returning();
+
+  await db
+    .delete(dbSchema.publishedSnapshots)
+    .where(eq(dbSchema.publishedSnapshots.projectId, auth.project.id));
 
   if (!updated) {
     return {
@@ -666,10 +753,31 @@ export async function getPublishedProjectBySlug(
 
   if (
     row.owner.suspended ||
+    row.project.archivedAt !== null ||
     row.project.publishedAt === null ||
     !row.project.slug ||
     (row.project.visibility !== "public" && row.project.visibility !== "unlisted")
   ) {
+    return null;
+  }
+
+  const ensured = await ensureProjectWorkspaceAndSpace(row.project);
+  if (ensured.space.recoveryState === "frozen_member_departed") {
+    return null;
+  }
+
+  const ent = await resolveWorkspaceEntitlementState(ensured.workspace.id);
+  if (ent && (ent.lifecycle.isPastDueReadOnly || ent.frozenReason === "fraud_suspended")) {
+    return null;
+  }
+
+  const [snapshot] = await db
+    .select()
+    .from(dbSchema.publishedSnapshots)
+    .where(eq(dbSchema.publishedSnapshots.projectId, row.project.id))
+    .limit(1);
+
+  if (snapshot?.suspendedReason) {
     return null;
   }
 
@@ -679,15 +787,38 @@ export async function getPublishedProjectBySlug(
   }
 
   const tplDoc = tplDocCheck.data;
-  const puckCheck = puckDocumentSchema.safeParse(row.project.puckData);
-  const themeCheck = templateThemeSchema.safeParse(row.project.theme);
+  const sourcePuck = snapshot ? snapshot.puckData : row.project.puckData;
+  const sourceTheme = snapshot ? snapshot.theme : row.project.theme;
+
+  const puckCheck = puckDocumentSchema.safeParse(sourcePuck);
+  const themeCheck = templateThemeSchema.safeParse(sourceTheme);
   const resolvedPuck = puckCheck.success ? puckCheck.data : structuredClone(tplDoc.puck);
   const resolvedTheme = themeCheck.success
     ? themeCheck.data
     : structuredClone(tplDoc.template.theme);
 
+  // Check workspace monthly bandwidth cap (`Spec §5.7`: stops public delivery when exhausted)
+  if (ent) {
+    const htmlEstimatedBytes = Buffer.byteLength(JSON.stringify(resolvedPuck), "utf8");
+    const bwCheck = await recordAndCheckWorkspaceBandwidth({
+      workspaceId: ensured.workspace.id,
+      bytes: htmlEstimatedBytes,
+      limit: ent.quotas.monthlyBandwidthBytesLimit,
+      isPaid: ent.plan !== "free",
+      graceUsedAt: ent.graceUsedAt,
+      graceExpiresAt: ent.graceExpiresAt,
+    });
+    if (!bwCheck.allowed) {
+      return null;
+    }
+  }
+
   const meta = extractCaseStudyMetaFromPuck(row.project.name, resolvedPuck);
-  const effectiveOwnerPlan = await resolveEffectivePlanForUser(row.owner.id);
+  const effectivePlan = ent ? ent.plan : await resolveEffectivePlanForUser(row.owner.id);
+  const brandingRemoved = Boolean(
+    (snapshot ? snapshot.brandingRemoved : row.project.brandingRemoved) &&
+      ent?.quotas.brandingRemovable,
+  );
 
   return {
     project: {
@@ -696,8 +827,9 @@ export async function getPublishedProjectBySlug(
       slug: row.project.slug,
       type: row.project.type,
       visibility: row.project.visibility,
-      publishedAtIso: row.project.publishedAt.toISOString(),
-      updatedAtIso: row.project.updatedAt.toISOString(),
+      brandingRemoved,
+      publishedAtIso: (snapshot?.publishedAt ?? row.project.publishedAt).toISOString(),
+      updatedAtIso: (snapshot?.updatedAt ?? row.project.updatedAt).toISOString(),
     },
     template: {
       id: row.template.id,
@@ -711,9 +843,8 @@ export async function getPublishedProjectBySlug(
     owner: {
       id: row.owner.id,
       name: row.owner.name,
-      plan: effectiveOwnerPlan,
+      plan: effectivePlan,
     },
     meta,
   };
 }
-

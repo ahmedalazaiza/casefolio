@@ -89,6 +89,7 @@ export async function POST(request: Request): Promise<Response> {
       VALIDATION_ERROR: 400,
       PLAN_UPGRADE_REQUIRED: 403,
       EXPORT_LIMIT_REACHED: 403,
+      PAST_DUE_READ_ONLY: 403,
       RATE_LIMITED: 429,
     } as const;
 

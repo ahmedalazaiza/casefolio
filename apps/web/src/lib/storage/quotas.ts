@@ -1,5 +1,11 @@
 import type { PlanTier } from "@casefolio/db";
 import { z } from "zod";
+import {
+  DECIMAL_GB,
+  DECIMAL_KB,
+  DECIMAL_MB,
+  getWorkspaceQuotas,
+} from "@/lib/billing/plans";
 import { cropRectSchema } from "@/lib/template/schema";
 
 export const ALLOWED_UPLOAD_MIME_TYPES = [
@@ -10,39 +16,55 @@ export const ALLOWED_UPLOAD_MIME_TYPES = [
 
 export type AllowedUploadMimeType = (typeof ALLOWED_UPLOAD_MIME_TYPES)[number];
 
+export const MAX_IMAGE_DIMENSION_PX = 16_384;
+export const MAX_IMAGE_MEGAPIXELS = 64;
+
 export interface PlanUploadQuota {
   maxFileBytes: number;
   maxTotalBytes: number;
+  monthlyUploadsBytes: number;
   maxAssetsPerProject: number;
 }
 
-const MB = 1024 * 1024;
-const GB = 1024 * MB;
-
 export const PLAN_UPLOAD_QUOTAS: Record<PlanTier, PlanUploadQuota> = {
   free: {
-    maxFileBytes: 5 * MB,
-    maxTotalBytes: 50 * MB,
-    maxAssetsPerProject: 25,
+    maxFileBytes: 10 * DECIMAL_MB,
+    maxTotalBytes: 250 * DECIMAL_MB,
+    monthlyUploadsBytes: 500 * DECIMAL_MB,
+    maxAssetsPerProject: 50,
   },
   pro: {
-    maxFileBytes: 15 * MB,
-    maxTotalBytes: 2 * GB,
-    maxAssetsPerProject: 150,
+    maxFileBytes: 25 * DECIMAL_MB,
+    maxTotalBytes: 5 * DECIMAL_GB,
+    monthlyUploadsBytes: 10 * DECIMAL_GB,
+    maxAssetsPerProject: 200,
   },
   team: {
-    maxFileBytes: 25 * MB,
-    maxTotalBytes: 10 * GB,
+    maxFileBytes: 25 * DECIMAL_MB,
+    maxTotalBytes: 10 * DECIMAL_GB,
+    monthlyUploadsBytes: 20 * DECIMAL_GB,
     maxAssetsPerProject: 300,
   },
 };
 
-export function getUploadQuotaForPlan(plan: PlanTier): PlanUploadQuota {
-  return PLAN_UPLOAD_QUOTAS[plan] ?? PLAN_UPLOAD_QUOTAS.free;
+export function getUploadQuotaForPlan(
+  plan: PlanTier,
+  paidSeats = 1,
+): PlanUploadQuota {
+  const wsQuotas = getWorkspaceQuotas(plan, paidSeats);
+  return {
+    maxFileBytes: wsQuotas.maxFileBytes,
+    maxTotalBytes: wsQuotas.storageBytesLimit,
+    monthlyUploadsBytes: wsQuotas.monthlyUploadsBytesLimit,
+    maxAssetsPerProject:
+      plan === "team" ? 300 : plan === "pro" ? 200 : 50,
+  };
 }
 
 export function isAllowedUploadMimeType(mime: string): mime is AllowedUploadMimeType {
-  return (ALLOWED_UPLOAD_MIME_TYPES as readonly string[]).includes(mime.toLowerCase().trim());
+  return (ALLOWED_UPLOAD_MIME_TYPES as readonly string[]).includes(
+    mime.toLowerCase().trim(),
+  );
 }
 
 export function extensionForMimeType(mime: AllowedUploadMimeType): "png" | "jpg" | "webp" {
@@ -57,18 +79,46 @@ export function extensionForMimeType(mime: AllowedUploadMimeType): "png" | "jpg"
 }
 
 export function formatBytesHuman(bytes: number): string {
-  if (bytes >= GB) {
-    const gb = bytes / GB;
+  if (bytes >= DECIMAL_GB) {
+    const gb = bytes / DECIMAL_GB;
     return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
   }
-  if (bytes >= MB) {
-    const mb = bytes / MB;
+  if (bytes >= DECIMAL_MB) {
+    const mb = bytes / DECIMAL_MB;
     return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
   }
-  if (bytes >= 1024) {
-    return `${Math.round(bytes / 1024)} KB`;
+  if (bytes >= DECIMAL_KB) {
+    return `${Math.round(bytes / DECIMAL_KB)} KB`;
   }
   return `${bytes} B`;
+}
+
+export function validateImagePixelBounds(
+  width: number,
+  height: number,
+): { ok: true } | { ok: false; error: string } {
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width <= 0 ||
+    height <= 0 ||
+    width > MAX_IMAGE_DIMENSION_PX ||
+    height > MAX_IMAGE_DIMENSION_PX
+  ) {
+    return {
+      ok: false,
+      error: `Image dimensions must be between 1×1 and ${MAX_IMAGE_DIMENSION_PX}×${MAX_IMAGE_DIMENSION_PX} pixels.`,
+    };
+  }
+
+  if (width * height > MAX_IMAGE_MEGAPIXELS * 1_000_000) {
+    return {
+      ok: false,
+      error: `Image exceeds the ${MAX_IMAGE_MEGAPIXELS} MP safety limit.`,
+    };
+  }
+
+  return { ok: true };
 }
 
 /**
@@ -124,8 +174,8 @@ export const presignUploadInputSchema = z.object({
   fileName: z.string().trim().min(1, "File name is required.").max(255),
   mimeType: z.string().trim().min(1, "MIME type is required."),
   bytes: z.number().int().positive("File size must be greater than 0 bytes."),
-  width: z.number().int().positive("Image width must be positive.").max(16384),
-  height: z.number().int().positive("Image height must be positive.").max(16384),
+  width: z.number().int().positive("Image width must be positive.").max(MAX_IMAGE_DIMENSION_PX),
+  height: z.number().int().positive("Image height must be positive.").max(MAX_IMAGE_DIMENSION_PX),
 });
 
 export type PresignUploadInput = z.infer<typeof presignUploadInputSchema>;
@@ -140,4 +190,3 @@ export type CompleteUploadInput = z.infer<typeof completeUploadInputSchema>;
 export const updateAssetCropInputSchema = z.object({
   crop: cropRectSchema.nullable(),
 });
-

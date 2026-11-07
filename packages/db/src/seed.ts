@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eq } from "drizzle-orm";
+import { backfillBusinessTenancy } from "./backfill";
 import { createDbConnection, type Database } from "./client";
 import {
   categories,
@@ -351,6 +352,107 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
         }
       }
     }
+
+    // Seed 3rd approved Starter (Free) template ("Atlas" — Bilingual Product Story, Spec §4 & §14.1)
+    const [productStoryCategory] = await db
+      .insert(categories)
+      .values({
+        name: "Product Story",
+        slug: "product-story",
+        sort: 4,
+      })
+      .onConflictDoUpdate({
+        target: categories.slug,
+        set: {
+          name: "Product Story",
+          sort: 4,
+        },
+      })
+      .returning({ id: categories.id });
+
+    if (productStoryCategory) {
+      const atlasPayload = structuredClone(orbitPayload) as unknown as Record<string, unknown> & {
+        template: Record<string, unknown>;
+        puck: {
+          root: { props: Record<string, unknown> };
+          content: Array<{ type: string; props: Record<string, unknown> }>;
+        };
+      };
+      atlasPayload.template.id = "tpl_atlas_bilingual_v1";
+      atlasPayload.template.slug = "atlas";
+      atlasPayload.template.name = "Atlas";
+      atlasPayload.template.type = "both";
+      atlasPayload.template.version = "1.0.0";
+      atlasPayload.template.status = "published";
+      atlasPayload.template.category = "Product Story";
+      atlasPayload.template.tier = "free";
+      atlasPayload.template.cover = {
+        src: "/landing/orbit-plan.svg",
+        ratio: "4:3",
+      };
+      atlasPayload.puck.root.props.title = "Atlas — Bilingual Product Story";
+      const atlasHero = atlasPayload.puck.content.find((item) => item.type === "Hero");
+      if (atlasHero) {
+        atlasHero.props.eyebrow = "Case Study · Bilingual Web + Mobile";
+        atlasHero.props.title = "Atlas — Cross-border marketplace in Arabic & English";
+        atlasHero.props.subtitle =
+          "Designing bidirectional RTL/LTR checkout and seller flows without layout friction.";
+      }
+
+      const [atlasTpl] = await db
+        .insert(templates)
+        .values({
+          slug: "atlas",
+          name: "Atlas",
+          type: "both",
+          categoryId: productStoryCategory.id,
+          tier: "free",
+          status: "published",
+          coverUrl: "/landing/orbit-plan.svg",
+        })
+        .onConflictDoUpdate({
+          target: templates.slug,
+          set: {
+            name: "Atlas",
+            type: "both",
+            categoryId: productStoryCategory.id,
+            tier: "free",
+            status: "published",
+            coverUrl: "/landing/orbit-plan.svg",
+            updatedAt: new Date(),
+          },
+        })
+        .returning({ id: templates.id });
+
+      if (atlasTpl) {
+        const [atlasVersion] = await db
+          .insert(templateVersions)
+          .values({
+            templateId: atlasTpl.id,
+            version: "1.0.0",
+            data: atlasPayload,
+            changelog: "Initial Atlas bilingual product story starter template",
+            publishedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: [templateVersions.templateId, templateVersions.version],
+            set: {
+              data: atlasPayload,
+              publishedAt: new Date(),
+            },
+          })
+          .returning({ id: templateVersions.id });
+
+        if (atlasVersion) {
+          await db
+            .update(templates)
+            .set({ currentVersionId: atlasVersion.id, updatedAt: new Date() })
+            .where(eq(templates.id, atlasTpl.id));
+        }
+      }
+    }
+
+    await backfillBusinessTenancy(db);
 
     return {
       adminUserId: admin.id,

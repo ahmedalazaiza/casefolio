@@ -7,7 +7,10 @@ import {
   CreditCard,
   ExternalLink,
   Loader2,
+  Minus,
+  Plus,
   RotateCcw,
+  Users,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -31,6 +34,7 @@ import {
   BILLING_PLAN_CATALOG,
   formatPlanAmountSummary,
   formatPlanHeadingLabel,
+  TEAMS_MAX_SELF_SERVE_SEATS,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
@@ -45,6 +49,16 @@ const CANCEL_REASONS = [
 ] as const;
 
 type CancelReasonValue = (typeof CANCEL_REASONS)[number]["value"];
+
+interface SeatIncreasePreviewState {
+  operationId: string;
+  currentSeats: number;
+  targetSeats: number;
+  addedSeats: number;
+  immediateChargeUsd: number;
+  renewalChargeUsd: number;
+  interval: BillingInterval;
+}
 
 export interface BillingSettingsPanelProps {
   overview: UserBillingOverview;
@@ -76,13 +90,16 @@ export function BillingSettingsPanel({
   const currentAmountSummary = formatPlanAmountSummary(effectivePlan, currentInterval);
   const periodEndFormatted = formatDateLabel(sub?.currentPeriodEndIso);
   const planTitle =
-    effectivePlan === "team" ? "Team" : effectivePlan === "pro" ? "Pro" : "Free";
+    effectivePlan === "team" ? "Teams" : effectivePlan === "pro" ? "Pro" : "Free";
+  const teamBilling = overview.teamBilling ?? null;
+  const personalPublished = overview.personalPublishedProjects ?? [];
 
   // Modals state
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<PaidPlanTier>("pro");
   const [checkoutInterval, setCheckoutInterval] =
     useState<BillingInterval>(currentInterval);
+  const [checkoutOrgId, setCheckoutOrgId] = useState<string | null>(null);
 
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [pickerInterval, setPickerInterval] =
@@ -97,8 +114,18 @@ export function BillingSettingsPanel({
   const [cancelReason, setCancelReason] = useState<CancelReasonValue>("finished_portfolio");
   const [cancelFeedback, setCancelFeedback] = useState("");
   const [cancelAcknowledged, setCancelAcknowledged] = useState(false);
+  const [keepPublicProjectId, setKeepPublicProjectId] = useState<string>(
+    overview.keepPublicProjectId ?? personalPublished[0]?.id ?? "",
+  );
 
   const [updatePaymentOpen, setUpdatePaymentOpen] = useState(false);
+
+  // Team seat management state
+  const [targetSeatCount, setTargetSeatCount] = useState<number>(
+    teamBilling && teamBilling.paidSeats > 0 ? teamBilling.paidSeats + 1 : 3,
+  );
+  const [seatPreview, setSeatPreview] = useState<SeatIncreasePreviewState | null>(null);
+  const [seatError, setSeatError] = useState<string | null>(null);
 
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -108,6 +135,12 @@ export function BillingSettingsPanel({
       setCancelStep(1);
     }
   }, [initialPortalAction, effectivePlan]);
+
+  useEffect(() => {
+    if (teamBilling && teamBilling.paidSeats > 0) {
+      setTargetSeatCount(teamBilling.paidSeats);
+    }
+  }, [teamBilling]);
 
   async function handleOpenCustomerPortal() {
     setBusyAction("portal");
@@ -130,11 +163,33 @@ export function BillingSettingsPanel({
         return;
       }
 
-      // Sandbox fallback: open inline subscription management / cancellation flow
       setCancelAcknowledged(false);
       setCancelStep(1);
     } catch {
       toast.error("Network error while opening billing portal.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleSaveKeepPublicChoice(projectId: string) {
+    setKeepPublicProjectId(projectId);
+    setBusyAction("keep-public");
+    try {
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "keep_public_project",
+          projectId: projectId || null,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Saved public project preference for Free plan.");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Could not save public project preference.");
     } finally {
       setBusyAction(null);
     }
@@ -151,6 +206,7 @@ export function BillingSettingsPanel({
           reason,
           feedback,
           immediate: false,
+          keepPublicProjectId: keepPublicProjectId || null,
         }),
       });
       const json = (await response.json()) as
@@ -199,6 +255,165 @@ export function BillingSettingsPanel({
     }
   }
 
+  async function handlePreviewOrScheduleSeats() {
+    if (!teamBilling) return;
+    setSeatError(null);
+
+    if (targetSeatCount === teamBilling.paidSeats) {
+      return;
+    }
+
+    if (targetSeatCount > TEAMS_MAX_SELF_SERVE_SEATS) {
+      setSeatError(
+        `Self-service Teams supports 1–${TEAMS_MAX_SELF_SERVE_SEATS} paid seats. Contact support for a capacity review above ${TEAMS_MAX_SELF_SERVE_SEATS} seats.`,
+      );
+      return;
+    }
+
+    if (targetSeatCount > teamBilling.paidSeats) {
+      setBusyAction("seat-preview");
+      try {
+        const res = await fetch("/api/paddle/seats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "preview_increase",
+            organizationId: teamBilling.organizationId,
+            targetSeats: targetSeatCount,
+          }),
+        });
+        const json = (await res.json()) as
+          | ({ ok: true } & SeatIncreasePreviewState)
+          | { ok: false; error?: string };
+
+        if (!res.ok || !json.ok) {
+          setSeatError(
+            ("error" in json && json.error) || "Could not preview seat increase.",
+          );
+          return;
+        }
+
+        setSeatPreview({
+          operationId: json.operationId,
+          currentSeats: json.currentSeats,
+          targetSeats: json.targetSeats,
+          addedSeats: json.addedSeats,
+          immediateChargeUsd: json.immediateChargeUsd,
+          renewalChargeUsd: json.renewalChargeUsd,
+          interval: json.interval,
+        });
+      } catch {
+        setSeatError("Network error while previewing seat increase.");
+      } finally {
+        setBusyAction(null);
+      }
+      return;
+    }
+
+    // Schedule seat decrease at renewal
+    setBusyAction("seat-decrease");
+    try {
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "schedule_decrease",
+          organizationId: teamBilling.organizationId,
+          targetSeats: targetSeatCount,
+        }),
+      });
+      const json = (await res.json()) as
+        | { ok: true; renewalSeats: number }
+        | { ok: false; error?: string };
+
+      if (!res.ok || !json.ok) {
+        setSeatError(
+          ("error" in json && json.error) || "Could not schedule seat decrease.",
+        );
+        return;
+      }
+
+      toast.success(
+        `Scheduled renewal seat count to ${json.renewalSeats}. Current capacity (${teamBilling.paidSeats}) stays active until renewal.`,
+      );
+      router.refresh();
+    } catch {
+      setSeatError("Network error while scheduling seat decrease.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleConfirmSeatIncrease() {
+    if (!teamBilling || !seatPreview) return;
+    setBusyAction("seat-confirm");
+    setSeatError(null);
+    try {
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "confirm_increase",
+          organizationId: teamBilling.organizationId,
+          operationId: seatPreview.operationId,
+        }),
+      });
+      const json = (await res.json()) as
+        | { ok: true; paidSeats: number; chargedUsd: number }
+        | { ok: false; error?: string };
+
+      if (!res.ok || !json.ok) {
+        setSeatError(
+          ("error" in json && json.error) || "Payment failed; seats were not added.",
+        );
+        return;
+      }
+
+      toast.success(
+        `Added seats — your workspace now has ${json.paidSeats} paid seats.`,
+      );
+      setSeatPreview(null);
+      router.refresh();
+    } catch {
+      setSeatError("Network error while confirming seat increase.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleCancelPendingSeatDecrease() {
+    if (!teamBilling) return;
+    setBusyAction("seat-cancel-decrease");
+    setSeatError(null);
+    try {
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "cancel_decrease",
+          organizationId: teamBilling.organizationId,
+        }),
+      });
+      const json = (await res.json()) as
+        | { ok: true }
+        | { ok: false; error?: string };
+
+      if (!res.ok || !json.ok) {
+        setSeatError(
+          ("error" in json && json.error) || "Could not cancel pending decrease.",
+        );
+        return;
+      }
+
+      toast.success("Cancelled pending seat decrease.");
+      router.refresh();
+    } catch {
+      setSeatError("Network error while cancelling pending decrease.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   function handleConfirmPickerSelection() {
     if (pickerTier === "free") {
       if (effectivePlan === "free") {
@@ -214,6 +429,7 @@ export function BillingSettingsPanel({
     setChangePlanOpen(false);
     setCheckoutPlan(pickerTier);
     setCheckoutInterval(pickerInterval);
+    setCheckoutOrgId(pickerTier === "team" ? (teamBilling?.organizationId ?? null) : null);
     setCheckoutOpen(true);
   }
 
@@ -240,7 +456,7 @@ export function BillingSettingsPanel({
 
   return (
     <div className="flex flex-col gap-6" data-testid="billing-settings-panel">
-      {/* Conditional Alert Banner: Payment Failed (Figma 2:11343) */}
+      {/* Conditional Alert Banner: Payment Failed */}
       {isPastDue && sub && (
         <div
           role="alert"
@@ -255,8 +471,8 @@ export function BillingSettingsPanel({
               <span className="text-foreground type-body-s-strong">Payment failed</span>
               <p className="text-muted-foreground type-body-s max-w-xl">
                 We couldn&apos;t charge {sub.paymentBrand} ••{sub.paymentLast4}. Paddle
-                will retry automatically — update your payment method to keep {planTitle}{" "}
-                features active.
+                will retry automatically during your 7-day grace window — update your
+                payment method to keep {planTitle} features active.
               </p>
             </div>
           </div>
@@ -271,7 +487,7 @@ export function BillingSettingsPanel({
         </div>
       )}
 
-      {/* Conditional Alert Banner: Subscription Cancelled (Figma 2:11509) */}
+      {/* Conditional Alert Banner: Subscription Cancelled */}
       {isCancelScheduled && sub && (
         <div
           role="status"
@@ -287,9 +503,9 @@ export function BillingSettingsPanel({
                 Subscription cancelled
               </span>
               <p className="text-muted-foreground type-body-s max-w-xl">
-                {planTitle} stays active until {periodEndFormatted}, then your account
-                moves to Free. Public pages revert to the Free watermark and Pro templates
-                lock for new drafts.
+                {planTitle} stays active until {periodEndFormatted}, then your personal
+                workspace moves to Free (1 published project kept live, branded 1x PNG
+                exports).
               </p>
             </div>
           </div>
@@ -316,7 +532,7 @@ export function BillingSettingsPanel({
         </div>
       )}
 
-      {/* Top Row: Current plan + Payment method (Figma 2:11191) */}
+      {/* Top Row: Current Personal Plan + Payment method */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Current plan card */}
         <section
@@ -326,7 +542,7 @@ export function BillingSettingsPanel({
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground type-body-s-strong">
-                Current plan
+                Personal workspace plan
               </span>
               {statusBadge}
             </div>
@@ -343,11 +559,33 @@ export function BillingSettingsPanel({
 
             <p className="text-muted-foreground type-body-s">
               {!hasPaidAccess
-                ? "$0/mo · Up to 2 projects & watermarked PNG exports"
+                ? "$0/mo · Up to 2 active projects (1 published) & 5 branded PNG exports/mo"
                 : isCancelScheduled
                   ? `${currentAmountSummary} · access ends ${periodEndFormatted}`
                   : `${currentAmountSummary} · next charge ${periodEndFormatted}`}
             </p>
+
+            {personalPublished.length > 1 && (
+              <div className="border-border/70 bg-surface/80 flex flex-col gap-1.5 rounded-2xl border p-3">
+                <Label htmlFor="keep-public-select" className="type-caption text-foreground">
+                  Keep 1 public page live if downgraded to Free:
+                </Label>
+                <select
+                  id="keep-public-select"
+                  data-testid="keep-public-project-select"
+                  value={keepPublicProjectId}
+                  disabled={busyAction === "keep-public"}
+                  onChange={(e) => handleSaveKeepPublicChoice(e.target.value)}
+                  className="border-border bg-elevated text-foreground type-caption h-9 rounded-xl border px-2.5"
+                >
+                  {personalPublished.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.name} {proj.slug ? `(/p/${proj.slug})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
@@ -361,6 +599,7 @@ export function BillingSettingsPanel({
                   onClick={() => {
                     setCheckoutPlan("pro");
                     setCheckoutInterval("monthly");
+                    setCheckoutOrgId(null);
                     setCheckoutOpen(true);
                   }}
                 >
@@ -495,7 +734,196 @@ export function BillingSettingsPanel({
         </section>
       </div>
 
-      {/* Billing details card (Figma 2:11230) */}
+      {/* Team Workspace Seat & Subscription Card (Spec §8 & §14) */}
+      {teamBilling && (
+        <section
+          data-testid="team-billing-seat-card"
+          className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Users className="text-primary size-4" />
+                <h3 className="text-foreground type-heading-m">
+                  Team workspace · {teamBilling.organizationName}
+                </h3>
+                <Badge tone={teamBilling.plan === "team" ? "published" : "neutral"}>
+                  {teamBilling.plan === "team" ? "Teams Active" : "Unfunded"}
+                </Badge>
+                <Badge tone="accent">{teamBilling.role}</Badge>
+              </div>
+              <p className="text-muted-foreground type-body-s">
+                Separate from your personal workspace. Every Owner, Admin, and Member
+                occupies 1 paid seat.
+              </p>
+            </div>
+
+            {teamBilling.isOwner && teamBilling.plan !== "team" && (
+              <Button
+                type="button"
+                size="sm"
+                data-testid="activate-team-subscription-btn"
+                onClick={() => {
+                  setCheckoutPlan("team");
+                  setCheckoutInterval("monthly");
+                  setCheckoutOrgId(teamBilling.organizationId);
+                  setCheckoutOpen(true);
+                }}
+              >
+                <CreditCard className="size-3.5" />
+                Activate Casefolio Teams
+              </Button>
+            )}
+          </div>
+
+          {/* 5 separate, unambiguous seat counters */}
+          <dl className="border-border bg-surface grid grid-cols-2 gap-3 rounded-2xl border p-4 sm:grid-cols-5">
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-muted-foreground type-caption">Paid seats (S)</dt>
+              <dd
+                data-testid="seat-counter-paid"
+                className="text-foreground type-heading-s tabular-nums"
+              >
+                {teamBilling.paidSeats}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-muted-foreground type-caption">Active members</dt>
+              <dd
+                data-testid="seat-counter-members"
+                className="text-foreground type-heading-s tabular-nums"
+              >
+                {teamBilling.activeMembers}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-muted-foreground type-caption">Reserved invites</dt>
+              <dd
+                data-testid="seat-counter-reserved"
+                className="text-foreground type-heading-s tabular-nums"
+              >
+                {teamBilling.reservedInvites}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-muted-foreground type-caption">Available seats</dt>
+              <dd
+                data-testid="seat-counter-available"
+                className="text-foreground type-heading-s tabular-nums"
+              >
+                {teamBilling.availableSeats}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-muted-foreground type-caption">Renewal target</dt>
+              <dd
+                data-testid="seat-counter-renewal"
+                className="text-foreground type-heading-s tabular-nums"
+              >
+                {teamBilling.renewalSeats ?? teamBilling.paidSeats}
+              </dd>
+            </div>
+          </dl>
+
+          {teamBilling.renewalSeats !== null && (
+            <div
+              data-testid="pending-seat-decrease-banner"
+              className="border-warning/30 bg-warning-soft flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+            >
+              <p className="text-foreground type-body-s">
+                Scheduled to renew at{" "}
+                <strong>{teamBilling.renewalSeats} seats</strong> on{" "}
+                {formatDateLabel(teamBilling.currentPeriodEndIso)}. Current paid
+                capacity ({teamBilling.paidSeats}) stays active until renewal.
+              </p>
+              {teamBilling.isOwner && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  data-testid="cancel-pending-decrease-btn"
+                  disabled={busyAction === "seat-cancel-decrease"}
+                  onClick={handleCancelPendingSeatDecrease}
+                >
+                  Cancel pending decrease
+                </Button>
+              )}
+            </div>
+          )}
+
+          {teamBilling.isOwner && teamBilling.plan === "team" && (
+            <div className="border-border flex flex-col gap-3 border-t pt-4">
+              {teamBilling.isLockedForQuantityChange && teamBilling.lockReason && (
+                <p className="text-warning type-caption">{teamBilling.lockReason}</p>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-foreground type-body-s-strong">
+                    Adjust paid seats:
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Decrease target seats"
+                    disabled={
+                      targetSeatCount <= Math.max(1, teamBilling.occupiedSeats) ||
+                      teamBilling.isLockedForQuantityChange
+                    }
+                    onClick={() => setTargetSeatCount((v) => Math.max(1, v - 1))}
+                    className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
+                  >
+                    <Minus className="size-3.5" />
+                  </button>
+                  <span
+                    data-testid="target-seat-count-value"
+                    className="text-foreground type-body-m-strong min-w-8 text-center tabular-nums"
+                  >
+                    {targetSeatCount}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Increase target seats"
+                    disabled={
+                      targetSeatCount >= 26 || teamBilling.isLockedForQuantityChange
+                    }
+                    onClick={() => setTargetSeatCount((v) => Math.min(26, v + 1))}
+                    className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
+                  >
+                    <Plus className="size-3.5" />
+                  </button>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  data-testid="apply-seat-change-btn"
+                  disabled={
+                    targetSeatCount === teamBilling.paidSeats ||
+                    teamBilling.isLockedForQuantityChange ||
+                    busyAction === "seat-preview" ||
+                    busyAction === "seat-decrease"
+                  }
+                  onClick={handlePreviewOrScheduleSeats}
+                >
+                  {targetSeatCount > teamBilling.paidSeats
+                    ? "Preview prorated seat increase"
+                    : targetSeatCount < teamBilling.paidSeats
+                      ? "Schedule renewal decrease"
+                      : "Select new seat count"}
+                </Button>
+              </div>
+
+              {seatError && (
+                <p role="alert" className="text-destructive type-caption">
+                  {seatError}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Billing details card */}
       <section
         data-testid="billing-details-card"
         className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
@@ -533,7 +961,76 @@ export function BillingSettingsPanel({
         </div>
       </section>
 
-      {/* Modal / Change plan (Figma 2:11733) */}
+      {/* Seat Increase Proration Preview Modal */}
+      {seatPreview && (
+        <Dialog open onOpenChange={(open) => !open && setSeatPreview(null)}>
+          <DialogContent className="max-w-md" data-testid="seat-increase-preview-dialog">
+            <DialogHeader>
+              <DialogTitle>
+                Confirm seat increase ({seatPreview.currentSeats} → {seatPreview.targetSeats})
+              </DialogTitle>
+              <DialogDescription>
+                Adding {seatPreview.addedSeats} paid{" "}
+                {seatPreview.addedSeats === 1 ? "seat" : "seats"} expands pooled workspace
+                quotas immediately after payment succeeds.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="border-border bg-surface flex flex-col gap-2.5 rounded-2xl border p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground type-caption">
+                  Prorated charge due today
+                </span>
+                <span className="text-foreground type-heading-s font-mono tabular-nums">
+                  ${seatPreview.immediateChargeUsd.toFixed(2)} USD
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground type-caption">
+                  Next {seatPreview.interval} renewal ({seatPreview.targetSeats} seats)
+                </span>
+                <span className="text-foreground type-body-s-strong font-mono tabular-nums">
+                  ${seatPreview.renewalChargeUsd.toFixed(2)} USD
+                </span>
+              </div>
+            </div>
+
+            {seatError && (
+              <p role="alert" className="text-destructive type-caption">
+                {seatError}
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setSeatPreview(null)}
+                disabled={busyAction === "seat-confirm"}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                data-testid="confirm-seat-increase-btn"
+                disabled={busyAction === "seat-confirm"}
+                onClick={handleConfirmSeatIncrease}
+              >
+                {busyAction === "seat-confirm" ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Charging...
+                  </>
+                ) : (
+                  `Confirm & pay $${seatPreview.immediateChargeUsd.toFixed(2)}`
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Modal / Change plan */}
       {changePlanOpen && (
         <Dialog open={changePlanOpen} onOpenChange={setChangePlanOpen}>
           <DialogContent className="max-w-4xl" data-testid="change-plan-dialog">
@@ -546,7 +1043,6 @@ export function BillingSettingsPanel({
             </DialogHeader>
 
             <div className="flex flex-col gap-5">
-              {/* Billing period segment */}
               <div
                 className="border-border/70 bg-sunken/80 inline-flex self-start rounded-full border p-1"
                 role="group"
@@ -574,11 +1070,10 @@ export function BillingSettingsPanel({
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Yearly · Save 17%
+                  Yearly · Save {BILLING_PLAN_CATALOG.pro.yearlySavingsPercent}%
                 </button>
               </div>
 
-              {/* 3 Plan Cards */}
               <div
                 role="radiogroup"
                 aria-label="Choose plan tier"
@@ -623,13 +1118,13 @@ export function BillingSettingsPanel({
                         </div>
 
                         <div className="flex items-baseline gap-1">
-                          <span className="text-foreground type-heading-l font-mono">
+                          <span className="text-foreground type-heading-l font-mono tabular-nums">
                             ${unitPrice}
                           </span>
                           <span className="text-muted-foreground type-caption">
-                            /mo
+                            {tier === "team" ? "/seat/mo" : "/mo"}
                             {tier !== "free" && pickerInterval === "yearly"
-                              ? ` ($${def.yearlyTotalUsd}/yr)`
+                              ? ` ($${def.yearlyTotalUsd}${tier === "team" ? "/seat/yr" : "/yr"})`
                               : ""}
                           </span>
                         </div>
@@ -688,7 +1183,7 @@ export function BillingSettingsPanel({
         </Dialog>
       )}
 
-      {/* Modal / Downgrade to Free? (Figma 2:12014) */}
+      {/* Modal / Downgrade to Free? */}
       {downgradeConfirmOpen && (
         <Dialog open={downgradeConfirmOpen} onOpenChange={setDowngradeConfirmOpen}>
           <DialogContent className="max-w-md" data-testid="downgrade-confirm-dialog">
@@ -703,18 +1198,22 @@ export function BillingSettingsPanel({
               <li className="text-foreground type-body-s flex items-start gap-2.5">
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                 <span>
-                  Projects beyond the 2-project Free limit cannot create new drafts
+                  1 chosen published project stays live; extra published pages unpublish
+                  safely without deleting your work
                 </span>
               </li>
               <li className="text-foreground type-body-s flex items-start gap-2.5">
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
-                <span>Pro templates lock for new case studies</span>
+                <span>
+                  Active projects above 2 cannot create new drafts until archived within
+                  Free limits
+                </span>
               </li>
               <li className="text-foreground type-body-s flex items-start gap-2.5">
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                 <span>
-                  &ldquo;Made with Casefolio&rdquo; badge returns; PDF &amp; Behance
-                  exports lock
+                  &ldquo;Made with Casefolio&rdquo; badge returns; 2x PNG, PDF &amp;
+                  Behance exports lock
                 </span>
               </li>
             </ul>
@@ -760,7 +1259,7 @@ export function BillingSettingsPanel({
         </Dialog>
       )}
 
-      {/* Modal / Cancel Step 1 (reason) (Figma 2:12201) */}
+      {/* Modal / Cancel Step 1 (reason) */}
       {cancelStep === 1 && (
         <Dialog open onOpenChange={(open) => !open && setCancelStep(0)}>
           <DialogContent className="max-w-md" data-testid="cancel-step1-dialog">
@@ -839,7 +1338,7 @@ export function BillingSettingsPanel({
         </Dialog>
       )}
 
-      {/* Modal / Cancel Step 2 (confirm) (Figma 2:12399) */}
+      {/* Modal / Cancel Step 2 (confirm) */}
       {cancelStep === 2 && (
         <Dialog open onOpenChange={(open) => !open && setCancelStep(0)}>
           <DialogContent className="max-w-md" data-testid="cancel-step2-dialog">
@@ -869,7 +1368,7 @@ export function BillingSettingsPanel({
                 </li>
                 <li className="text-foreground type-body-s flex items-start gap-2.5">
                   <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
-                  <span>Unlimited PDF &amp; Behance exports end</span>
+                  <span>2x PNG, PDF &amp; Behance exports end</span>
                 </li>
               </ul>
 
@@ -926,7 +1425,7 @@ export function BillingSettingsPanel({
         </Dialog>
       )}
 
-      {/* Modal / Update payment method (Figma 2:12591) */}
+      {/* Modal / Update payment method */}
       {updatePaymentOpen && (
         <Dialog open={updatePaymentOpen} onOpenChange={setUpdatePaymentOpen}>
           <DialogContent className="max-w-md" data-testid="update-payment-dialog">
@@ -967,6 +1466,7 @@ export function BillingSettingsPanel({
                     } else {
                       setCheckoutPlan(effectivePlan === "team" ? "team" : "pro");
                       setCheckoutInterval(currentInterval);
+                      setCheckoutOrgId(null);
                       setCheckoutOpen(true);
                     }
                   }}
@@ -988,6 +1488,7 @@ export function BillingSettingsPanel({
           onOpenChange={setCheckoutOpen}
           initialPlan={checkoutPlan}
           initialInterval={checkoutInterval}
+          orgId={checkoutOrgId}
         />
       )}
     </div>

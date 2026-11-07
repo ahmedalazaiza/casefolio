@@ -1,4 +1,3 @@
-import { count, eq } from "@casefolio/db";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -6,10 +5,9 @@ import {
   type WizardStepKey,
 } from "@/app/new/create-project-wizard";
 import { requireSession } from "@/lib/auth/session";
-import { db, dbSchema } from "@/lib/db";
-import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { createProjectAction } from "@/lib/projects/actions";
 import { listPublishedLibraryTemplates } from "@/lib/template/service";
+import { listWorkspaceSwitcherState } from "@/lib/workspaces/service";
 
 export const metadata: Metadata = {
   title: "New Case Study — Casefolio",
@@ -34,34 +32,33 @@ export default async function NewProjectWizardPage({
   searchParams,
 }: {
   params: Promise<{ step?: string[] }>;
-  searchParams: Promise<{ template?: string }>;
+  searchParams: Promise<{ template?: string; spaceId?: string }>;
 }) {
-  const [{ step }, { template }] = await Promise.all([params, searchParams]);
+  const [{ step }, { template, spaceId }] = await Promise.all([params, searchParams]);
   const initialStep = resolveInitialStep(step);
 
   const callbackPath = template ? `/new?template=${encodeURIComponent(template)}` : "/new";
-  const { user } = await requireSession(callbackPath);
+  const { user, session } = await requireSession(callbackPath);
 
   if (user.role === "user" && !user.onboardingCompletedAt) {
     redirect("/onboarding");
   }
 
-  const [templates, projectTotalRows, effectivePlan] = await Promise.all([
+  const [templates, workspaceContext] = await Promise.all([
     listPublishedLibraryTemplates(),
-    db
-      .select({ total: count() })
-      .from(dbSchema.projects)
-      .where(eq(dbSchema.projects.ownerId, user.id)),
-    resolveEffectivePlanForUser(user.id),
+    listWorkspaceSwitcherState(user.id, session.activeOrganizationId ?? null),
   ]);
-
-  const existingProjectCount = projectTotalRows[0]?.total ?? 0;
 
   return (
     <CreateProjectWizard
       templates={templates}
-      userPlan={effectivePlan}
-      existingProjectCount={existingProjectCount}
+      userPlan={workspaceContext.activeWorkspace.plan}
+      existingProjectCount={workspaceContext.activeWorkspace.usage.activeProjects}
+      activeProjectsLimit={workspaceContext.activeWorkspace.quotas.activeProjectsLimit}
+      spaces={workspaceContext.spaces}
+      workspaceName={workspaceContext.activeWorkspace.name}
+      workspaceKind={workspaceContext.activeWorkspace.kind}
+      initialSpaceId={spaceId}
       initialStep={initialStep}
       initialTemplateSlug={template}
       initialDesignFocus={user.designFocus}

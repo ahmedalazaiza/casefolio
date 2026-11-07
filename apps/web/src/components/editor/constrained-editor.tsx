@@ -225,6 +225,7 @@ export function ConstrainedEditor({
       puckData: initialPayload.project.puckData,
       theme: initialPayload.project.theme,
       updatedAtIso: initialPayload.project.updatedAtIso,
+      revision: initialPayload.project.revision,
     }),
   );
 
@@ -250,7 +251,93 @@ export function ConstrainedEditor({
   const [insertPickerOpen, setInsertPickerOpen] = useState(false);
   const [sectionSearchQuery, setSectionSearchQuery] = useState("");
   const [slotFilter, setSlotFilter] = useState<SlotFilterMode>("all");
-  const allowSectionMutations = initialPayload.template.allowSectionMutations !== false;
+  const [leaseReadOnly, setLeaseReadOnly] = useState<boolean>(() =>
+    Boolean(initialPayload.isReadOnly || initialPayload.lease?.readOnly),
+  );
+  const [leaseBannerMessage, setLeaseBannerMessage] = useState<string | null>(() => {
+    if (initialPayload.readOnlyReason) return initialPayload.readOnlyReason;
+    if (initialPayload.lease?.readOnly && initialPayload.lease?.holderName) {
+      return `${initialPayload.lease.holderName} is currently editing this Shared Space project (120s single-writer lease).`;
+    }
+    if (initialPayload.isReadOnly) {
+      return "This project is currently in read-only mode.";
+    }
+    return null;
+  });
+  const leaseTokenRef = useRef<string | null>(initialPayload.lease?.leaseToken ?? null);
+  const allowSectionMutations =
+    initialPayload.template.allowSectionMutations !== false && !leaseReadOnly;
+
+  const refreshSharedEditLease = useCallback(async () => {
+    if (initialPayload.isReadOnly || initialPayload.project.spaceVisibility !== "shared") {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/projects/${initialPayload.project.id}/lease`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leaseToken: leaseTokenRef.current ?? undefined,
+        }),
+      });
+      const json = (await response.json()) as {
+        ok: boolean;
+        error?: string;
+        lease?: {
+          leaseToken: string | null;
+          readOnly: boolean;
+          holderName: string | null;
+        } | null;
+      };
+      if (response.ok && json.ok && json.lease) {
+        leaseTokenRef.current = json.lease.leaseToken;
+        setLeaseReadOnly(false);
+        setLeaseBannerMessage(null);
+      } else if (response.status === 409) {
+        setLeaseReadOnly(true);
+        setLeaseBannerMessage(
+          json.error ??
+            (json.lease?.holderName
+              ? `${json.lease.holderName} is currently editing this Shared Space project.`
+              : "Another teammate holds the active edit lease on this project."),
+        );
+      }
+    } catch {
+      // Ignore transient network errors during background heartbeat
+    }
+  }, [initialPayload.isReadOnly, initialPayload.project.id, initialPayload.project.spaceVisibility]);
+
+  useEffect(() => {
+    if (initialPayload.project.spaceVisibility !== "shared" || initialPayload.isReadOnly) {
+      return;
+    }
+    const interval = setInterval(() => {
+      void refreshSharedEditLease();
+    }, 30_000);
+
+    const releaseOnExit = () => {
+      const token = leaseTokenRef.current;
+      if (!token) return;
+      void fetch(`/api/projects/${initialPayload.project.id}/lease`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leaseToken: token }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+
+    window.addEventListener("pagehide", releaseOnExit);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("pagehide", releaseOnExit);
+      releaseOnExit();
+    };
+  }, [
+    initialPayload.isReadOnly,
+    initialPayload.project.id,
+    initialPayload.project.spaceVisibility,
+    refreshSharedEditLease,
+  ]);
 
   const canvasZoomRef = useRef(canvasZoom);
   canvasZoomRef.current = canvasZoom;
@@ -291,7 +378,7 @@ export function ConstrainedEditor({
   }, []);
 
   const performAutosave = useCallback(async () => {
-    if (!onSaveProject || inFlightSaveRef.current) {
+    if (!onSaveProject || inFlightSaveRef.current || leaseReadOnly) {
       return;
     }
 
@@ -303,7 +390,10 @@ export function ConstrainedEditor({
 
     if (snapshotToSave === lastSavedSnapshotRef.current) {
       if (currentState.saveStatus === "unsaved") {
-        currentState.markSaved(currentState.expectedUpdatedAtIso);
+        currentState.markSaved(
+          currentState.expectedUpdatedAtIso,
+          currentState.expectedRevision,
+        );
       }
       return;
     }
@@ -321,13 +411,17 @@ export function ConstrainedEditor({
       const result = await onSaveProject({
         projectId: initialPayload.project.id,
         expectedUpdatedAtIso: currentState.expectedUpdatedAtIso,
+        ...(typeof currentState.expectedRevision === "number"
+          ? { expectedRevision: currentState.expectedRevision }
+          : {}),
+        ...(leaseTokenRef.current ? { leaseToken: leaseTokenRef.current } : {}),
         puckData: puckValidation.data,
         theme: themeValidation.data,
       });
 
       if (result.ok) {
         lastSavedSnapshotRef.current = snapshotToSave;
-        editorStore.getState().markSaved(result.updatedAtIso);
+        editorStore.getState().markSaved(result.updatedAtIso, result.revision);
 
         // If user edited again while save was in-flight, mark unsaved so next debounce fires
         const latestSnapshot = serializeEditorSnapshot({
@@ -338,7 +432,13 @@ export function ConstrainedEditor({
           editorStore.getState().markUnsaved();
         }
       } else if (result.code === "CONFLICT") {
-        editorStore.getState().markConflict(result.error, result.serverUpdatedAtIso);
+        editorStore
+          .getState()
+          .markConflict(result.error, result.serverUpdatedAtIso, result.serverRevision);
+      } else if (result.code === "LEASE_HELD") {
+        setLeaseReadOnly(true);
+        setLeaseBannerMessage(result.error);
+        editorStore.getState().markConflict(result.error);
       } else {
         editorStore.getState().markError(result.error || "Couldn't save your last change.");
       }
@@ -347,7 +447,7 @@ export function ConstrainedEditor({
     } finally {
       inFlightSaveRef.current = false;
     }
-  }, [editorStore, initialPayload.project.id, onSaveProject]);
+  }, [editorStore, initialPayload.project.id, leaseReadOnly, onSaveProject]);
 
   const currentSnapshotJson = useMemo(
     () => serializeEditorSnapshot({ puckData, theme }),
@@ -1073,6 +1173,33 @@ export function ConstrainedEditor({
             </div>
           </header>
 
+          {leaseReadOnly && (
+            <div
+              role="status"
+              data-testid="editor-readonly-banner"
+              className="border-warning/40 bg-warning-soft text-foreground flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-2"
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="text-warning size-4 shrink-0" />
+                <span className="type-caption font-medium">
+                  {leaseBannerMessage ?? "Read-only mode — changes are not saved."}
+                </span>
+              </div>
+              {initialPayload.project.spaceVisibility === "shared" &&
+                !initialPayload.isReadOnly && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void refreshSharedEditLease()}
+                    className="h-7 px-2.5"
+                  >
+                    Retry edit lock
+                  </Button>
+                )}
+            </div>
+          )}
+
           {/* 3-Panel Studio Workspace */}
           <div className="flex min-h-0 flex-1 overflow-hidden">
             {/* LEFT PANEL: Sections / Style / Content */}
@@ -1535,11 +1662,12 @@ export function ConstrainedEditor({
                 <button
                   type="button"
                   data-testid="zoom-reset-button"
+                  aria-label={`${zoomPercent}% — Reset zoom (0)`}
                   title="Reset zoom (0)"
                   onClick={handleZoomReset}
                   className="text-foreground hover:bg-surface min-w-14 rounded-full px-2.5 py-1 text-center font-mono text-xs font-medium transition-colors"
                 >
-                  {zoomPercent}%<span className="sr-only"> reset zoom</span>
+                  {zoomPercent}%
                 </button>
 
                 <button

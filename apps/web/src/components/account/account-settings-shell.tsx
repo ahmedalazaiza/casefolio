@@ -3,7 +3,13 @@ import type { ReactNode } from "react";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { cn } from "@/lib/utils";
 
-export type AccountSettingsTab = "profile" | "security" | "billing" | "invoices" | "team";
+export type AccountSettingsTab =
+  | "profile"
+  | "security"
+  | "billing"
+  | "invoices"
+  | "team"
+  | "recovery";
 
 const ACCOUNT_TABS: ReadonlyArray<{
   key: AccountSettingsTab;
@@ -15,6 +21,7 @@ const ACCOUNT_TABS: ReadonlyArray<{
   { key: "billing", label: "Billing & plan", href: "/account/billing" },
   { key: "invoices", label: "Invoices", href: "/account/invoices" },
   { key: "team", label: "Team & invites", href: "/account/team" },
+  { key: "recovery", label: "Recovery portal", href: "/account/recovery" },
 ];
 
 export interface AccountSettingsShellProps {
