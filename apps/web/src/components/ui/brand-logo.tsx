@@ -25,7 +25,7 @@ export function BrandLogo({ href = "/", subtitle, className }: BrandLogoProps) {
       <span className="text-foreground type-heading-s tracking-tight">casefolio</span>
       {subtitle && (
         <>
-          <span aria-hidden="true" className="bg-border h-4 w-px" />
+          <span aria-hidden="true" className="bg-border hidden h-4 w-px sm:block" />
           <span className="text-muted-foreground type-overline hidden sm:inline">
             {subtitle}
           </span>

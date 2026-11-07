@@ -425,7 +425,9 @@ export function ProblemSection({
               className="border-border/25 flex flex-col gap-2.5 rounded-xl border p-6"
             >
               <span
-                style={{ color: tokenColorVar("primary", "--primary") }}
+                style={{
+                  color: `color-mix(in oklab, ${tokenColorVar("primary", "--primary")} 68%, ${tokenColorVar("text", "--foreground")})`,
+                }}
                 className="type-overline font-mono"
               >
                 {String(idx + 1).padStart(2, "0")}
@@ -563,7 +565,9 @@ export function ProcessSection({
                 >
                   <div className="flex flex-col gap-2">
                     <span
-                      style={{ color: tokenColorVar(accent, "--primary") }}
+                      style={{
+                        color: `color-mix(in oklab, ${tokenColorVar(accent, "--primary")} 68%, ${tokenColorVar("text", "--foreground")})`,
+                      }}
                       className="type-overline font-mono"
                     >
                       {step.number}
@@ -1247,9 +1251,9 @@ export function CustomSection({
         data-section-type="Custom"
         data-custom-layout="design-system"
         style={buildSectionSurfaceStyle(background)}
-        className="px-6 py-14 sm:px-10 lg:px-16"
+        className="px-5 py-14 sm:px-10 lg:px-16"
       >
-        <div className="mx-auto flex max-w-6xl flex-col gap-10">
+        <div className="mx-auto flex min-w-0 max-w-6xl flex-col gap-10">
           <div className="flex max-w-3xl flex-col gap-3">
             <SectionEyebrow text={eyebrow} accent={accent} />
             <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
@@ -1263,12 +1267,12 @@ export function CustomSection({
             />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-12">
+          <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-12">
             <div
               style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-              className="border-border/25 flex flex-col justify-between gap-6 rounded-2xl border p-6 sm:p-8 lg:col-span-5"
+              className="border-border/25 flex min-w-0 flex-col justify-between gap-6 rounded-2xl border p-5 sm:p-8 lg:col-span-5"
             >
-              <div className="flex items-baseline justify-between gap-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <span
                   style={{
                     ...HEADING_FONT_STYLE,
@@ -1283,11 +1287,11 @@ export function CustomSection({
                 </span>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <span style={HEADING_FONT_STYLE} className="type-heading-m">
+              <div className="flex min-w-0 flex-col gap-2">
+                <span style={HEADING_FONT_STYLE} className="type-heading-m break-words">
                   {headingFamily}
                 </span>
-                <span style={MUTED_TEXT_STYLE} className="type-body-s">
+                <span style={MUTED_TEXT_STYLE} className="type-body-s break-words">
                   Body: {bodyFamily} · Aa Bb Cc Dd Ee Ff Gg 0123456789
                 </span>
               </div>
@@ -1295,30 +1299,30 @@ export function CustomSection({
 
             <div
               style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-              className="border-border/25 flex flex-col justify-between gap-4 rounded-2xl border p-6 sm:p-8 lg:col-span-7"
+              className="border-border/25 flex min-w-0 flex-col justify-between gap-4 rounded-2xl border p-5 sm:p-8 lg:col-span-7"
             >
               <span style={MUTED_TEXT_STYLE} className="type-overline">
                 Type hierarchy
               </span>
-              <div className="flex flex-col gap-3">
-                <div className="border-border/20 flex items-baseline justify-between gap-4 border-b pb-2.5">
-                  <span style={HEADING_FONT_STYLE} className="type-heading-l truncate">
+              <div className="flex min-w-0 flex-col gap-3">
+                <div className="border-border/20 flex min-w-0 flex-col gap-1 border-b pb-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                  <span style={HEADING_FONT_STYLE} className="type-heading-m sm:type-heading-l min-w-0 break-words">
                     Display Headline
                   </span>
                   <span style={MUTED_TEXT_STYLE} className="type-caption shrink-0 font-mono">
                     Heading · Bold
                   </span>
                 </div>
-                <div className="border-border/20 flex items-baseline justify-between gap-4 border-b pb-2.5">
-                  <span style={HEADING_FONT_STYLE} className="type-heading-s truncate">
+                <div className="border-border/20 flex min-w-0 flex-col gap-1 border-b pb-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                  <span style={HEADING_FONT_STYLE} className="type-heading-s min-w-0 break-words">
                     Section Title &amp; Card Header
                   </span>
                   <span style={MUTED_TEXT_STYLE} className="type-caption shrink-0 font-mono">
                     Subhead · Semibold
                   </span>
                 </div>
-                <div className="flex items-baseline justify-between gap-4">
-                  <span className="type-body-m truncate">
+                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                  <span className="type-body-m min-w-0 break-words">
                     Body copy designed for high-contrast dark &amp; light legibility.
                   </span>
                   <span style={MUTED_TEXT_STYLE} className="type-caption shrink-0 font-mono">

@@ -40,8 +40,8 @@ export function Reveal({
   as: Tag = "div",
   stagger = false,
   delay = 0,
-  y = 32,
-  start = "top 90%",
+  y = 22,
+  start = "top 92%",
 }: RevealProps) {
   const ref = useRef<HTMLElement>(null);
 
@@ -54,16 +54,15 @@ export function Reveal({
       const targets = stagger ? Array.from(el.children) : [el];
       if (targets.length === 0) return;
 
-      gsap.set(targets, { opacity: 0, y, filter: "blur(10px)" });
+      gsap.set(targets, { opacity: 0, y });
       gsap.to(targets, {
         opacity: 1,
         y: 0,
-        filter: "blur(0px)",
-        duration: 1,
+        duration: 0.65,
         delay,
         ease: EASE_OUT,
-        stagger: stagger ? 0.12 : 0,
-        clearProps: "filter,transform,opacity",
+        stagger: stagger ? 0.08 : 0,
+        clearProps: "transform,opacity",
         scrollTrigger: { trigger: el, start, once: true },
       });
     },
@@ -104,14 +103,15 @@ export function WordReveal({
       ensureGsapPluginsRegistered();
 
       const targets = el.querySelectorAll<HTMLElement>("[data-word]");
-      const travel = (targets[0]?.offsetHeight ?? 80) * 1.2;
+      const travel = (targets[0]?.offsetHeight ?? 80) * 1.15;
       gsap.set(targets, { y: travel });
       gsap.to(targets, {
         y: 0,
-        duration: 1.1,
+        duration: 1.05,
         delay,
         ease: "expo.out",
-        stagger: 0.07,
+        stagger: 0.06,
+        clearProps: "transform",
         ...(onScroll
           ? { scrollTrigger: { trigger: el, start: "top 88%", once: true } }
           : {}),
@@ -126,8 +126,7 @@ export function WordReveal({
         <span key={`${word}-${index}`}>
           <span
             aria-hidden="true"
-            className="inline-block overflow-hidden pb-[0.14em] align-bottom"
-            style={{ marginBottom: "-0.14em" }}
+            className="inline-block overflow-hidden pb-[0.08em] align-bottom"
           >
             <span data-word="" className="inline-block will-change-transform">
               {word}
@@ -159,9 +158,9 @@ export function ScrollWords({ text, className }: ScrollWordsProps) {
       const targets = el.querySelectorAll("[data-scroll-word]");
       gsap.fromTo(
         targets,
-        { opacity: 0.16 },
+        { color: "var(--muted-foreground)" },
         {
-          opacity: 1,
+          color: "var(--foreground)",
           ease: "none",
           stagger: 0.12,
           scrollTrigger: {
@@ -177,9 +176,9 @@ export function ScrollWords({ text, className }: ScrollWordsProps) {
   );
 
   return (
-    <p ref={ref} aria-label={text} className={className}>
+    <p ref={ref} className={className}>
       {words.map((word, index) => (
-        <span key={`${word}-${index}`} aria-hidden="true" data-scroll-word="">
+        <span key={`${word}-${index}`} data-scroll-word="">
           {word}
           {index < words.length - 1 ? " " : null}
         </span>

@@ -26,17 +26,19 @@ export function AccountSettingsShell({ activeTab, children }: AccountSettingsShe
   return (
     <div
       data-testid="account-settings-shell"
-      className="mx-auto flex w-full max-w-5xl flex-col gap-8"
+      className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 sm:gap-8"
     >
       <header className="flex flex-col gap-2">
         <Eyebrow className="w-fit">Settings</Eyebrow>
-        <h1 className="text-foreground type-display-m">Account settings</h1>
+        <h1 className="text-foreground type-heading-l sm:type-display-m">
+          Account settings
+        </h1>
       </header>
 
-      <div className="grid gap-6 md:grid-cols-[210px_minmax(0,1fr)] md:gap-10">
+      <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-[210px_minmax(0,1fr)] md:gap-10">
         <nav
           aria-label="Account sections"
-          className="flex flex-wrap gap-1.5 self-start md:flex-col md:gap-1"
+          className="flex min-w-0 flex-wrap gap-1.5 self-start md:flex-col md:gap-1"
         >
           {ACCOUNT_TABS.map((tab) => {
             const isActive = tab.key === activeTab;

@@ -60,8 +60,8 @@ export function MarketingShell({ children }: { children: ReactNode }) {
     };
   }, [pathname]);
 
-  const glass = cn(
-    "border-border/60 bg-elevated/75 border backdrop-blur-xl transition-shadow duration-500",
+  const navBarChrome = cn(
+    "border-border/80 bg-elevated/98 border backdrop-blur-xl transition-all duration-300",
     isScrolled ? "shadow-float" : "shadow-xs",
   );
 
@@ -83,16 +83,23 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         <header
           data-slot="marketing-navbar"
           data-scrolled={isScrolled ? "true" : "false"}
-          className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4"
+          className={cn(
+            "fixed inset-x-0 top-0 z-50 px-3 pt-2.5 sm:px-5 sm:pt-3.5",
+            isScrolled &&
+              "before:from-background before:via-background/90 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-20 before:bg-gradient-to-b before:from-55% before:to-transparent",
+          )}
         >
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-            <div className={cn("rounded-full py-1.5 pr-4 pl-2", glass)}>
-              <BrandLogo href="/" />
-            </div>
+          <div
+            className={cn(
+              "mx-auto flex max-w-6xl items-center justify-between gap-2 rounded-full px-3 py-1.5 sm:px-4",
+              navBarChrome,
+            )}
+          >
+            <BrandLogo href="/" className="shrink-0 pl-1" />
 
             <nav
               aria-label="Marketing navigation"
-              className={cn("hidden items-center gap-1 rounded-full p-1.5 lg:flex", glass)}
+              className="hidden items-center gap-0.5 lg:flex"
             >
               {MARKETING_NAV_ITEMS.map((item) => {
                 const isActive = pathname === item.href;
@@ -102,7 +109,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "type-body-s focus-visible:ring-ring/40 rounded-full px-4 py-2 transition-all duration-300 outline-none focus-visible:ring-2",
+                      "type-body-s focus-visible:ring-ring/40 rounded-full px-3.5 py-2 transition-all duration-200 outline-none focus-visible:ring-2",
                       isActive
                         ? "bg-surface text-foreground type-body-s-strong"
                         : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -114,43 +121,43 @@ export function MarketingShell({ children }: { children: ReactNode }) {
               })}
             </nav>
 
-            <div className="flex items-center gap-2">
-              <div
-                className={cn(
-                  "flex items-center gap-1 rounded-full p-1.5",
-                  glass,
-                )}
-              >
-                <div className="hidden lg:block">
-                  <ThemeToggle />
-                </div>
-
-                <Button variant="ghost" asChild className="hidden lg:inline-flex">
-                  <Link href="/sign-in">Log in</Link>
-                </Button>
-
-                <Button variant="default" asChild>
-                  <Link href="/sign-up">
-                    <span>Start free</span>
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                </Button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <div className="hidden lg:block">
+                <ThemeToggle />
               </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="hidden lg:inline-flex"
+              >
+                <Link href="/sign-in">Log in</Link>
+              </Button>
+
+              <Button
+                variant="default"
+                size="sm"
+                asChild
+                className="sm:h-10 sm:px-4"
+              >
+                <Link href="/sign-up">
+                  <span>Start free</span>
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </Button>
 
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
                   <button
                     type="button"
                     aria-label="Open navigation menu"
-                    className={cn(
-                      "text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-10 items-center justify-center rounded-full outline-none focus-visible:ring-2 lg:hidden",
-                      glass,
-                    )}
+                    className="text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-2 lg:hidden"
                   >
                     <Menu className="size-4" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80 p-6">
+                <SheetContent side="right" className="w-[min(20rem,88vw)] p-6">
                   <SheetHeader className="p-0 text-left">
                     <SheetTitle>Casefolio menu</SheetTitle>
                     <SheetDescription>
@@ -181,7 +188,13 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                       );
                     })}
                   </nav>
-                  <div className="border-border mt-auto flex flex-col gap-2.5 border-t pt-5">
+                  <div className="border-border mt-auto flex flex-col gap-3 border-t pt-5">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-muted-foreground type-body-s">
+                        Appearance
+                      </span>
+                      <ThemeToggle />
+                    </div>
                     <Button
                       variant="secondary"
                       asChild
@@ -205,35 +218,35 @@ export function MarketingShell({ children }: { children: ReactNode }) {
 
         <main
           id="main-content"
-          className="relative w-full max-w-full min-w-0 flex-1 pt-24 lg:pt-28"
+          className="relative w-full max-w-full min-w-0 flex-1 pt-20 sm:pt-24 lg:pt-28"
         >
           {children}
         </main>
 
         <footer className="px-3 pb-3 sm:px-5 sm:pb-5">
-          <div className="bg-wash-footer relative overflow-hidden rounded-[2.5rem] px-6 pt-20 sm:px-10 lg:pt-28">
-            <div className="mx-auto flex max-w-4xl flex-col items-center gap-10">
+          <div className="bg-wash-footer relative overflow-hidden rounded-3xl px-5 pt-14 sm:rounded-[2.5rem] sm:px-10 sm:pt-20 lg:pt-28">
+            <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 sm:gap-10">
               <BrandLogo href="/" />
               <nav
                 aria-label="Footer navigation"
-                className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3"
+                className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 sm:gap-x-8 sm:gap-y-3"
               >
                 {FOOTER_LINKS.map((link) => (
                   <Link
                     key={link.label}
                     href={link.href}
-                    className="text-foreground/80 hover:text-foreground type-body-m focus-visible:ring-ring/40 rounded-full transition-colors outline-none focus-visible:ring-2"
+                    className="text-foreground/80 hover:text-foreground type-body-s sm:type-body-m focus-visible:ring-ring/40 rounded-full transition-colors outline-none focus-visible:ring-2"
                   >
                     {link.label}
                   </Link>
                 ))}
               </nav>
-              <p className="text-muted-foreground type-caption">
+              <p className="text-muted-foreground type-caption text-center">
                 © 2026 Casefolio · Made for designers
               </p>
             </div>
 
-            <div className="mt-16 lg:mt-24">
+            <div className="mt-12 sm:mt-16 lg:mt-24">
               <FooterWordmark />
             </div>
           </div>

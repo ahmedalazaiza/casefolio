@@ -49,7 +49,7 @@ function SectionIntro({
   description?: string;
 }) {
   return (
-    <div className="mx-auto mb-20 flex max-w-3xl flex-col items-center gap-6 text-center lg:mb-28">
+    <div className="mx-auto mb-12 flex max-w-3xl flex-col items-center gap-4 text-center sm:mb-16 sm:gap-6 lg:mb-28">
       <Reveal>
         <Eyebrow icon={icon}>{eyebrow}</Eyebrow>
       </Reveal>
@@ -87,7 +87,7 @@ function StatusPill({
   return (
     <span
       className={cn(
-        "type-caption inline-flex shrink-0 items-center rounded-full px-3 py-1",
+        "type-caption inline-flex w-fit shrink-0 items-center self-start rounded-full px-3 py-1",
         styles,
       )}
     >
@@ -133,9 +133,9 @@ export function LandingExperience({
   ] as const;
 
   return (
-    <div className="relative flex flex-col">
+    <div className="relative flex flex-col overflow-x-clip">
       {/* 1. Hero */}
-      <section className="relative px-4 pt-6 pb-24 sm:px-6 lg:px-8 lg:pt-12 lg:pb-40">
+      <section className="relative px-4 pt-4 pb-16 sm:px-6 sm:pt-6 sm:pb-24 lg:px-8 lg:pt-12 lg:pb-40">
         <LandingHeroMotion
           visual={
             <HeroDevice snapshot={snapshot}>
@@ -161,7 +161,7 @@ export function LandingExperience({
             live URL or export PNG &amp; PDF in minutes.
           </p>
 
-          <div className="flex w-full flex-col items-stretch justify-center gap-3 pt-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="flex w-full flex-col items-stretch justify-center gap-3 pt-1 sm:w-auto sm:flex-row sm:items-center sm:pt-2">
             <Button size="lg" asChild>
               <Link href="/sign-up">
                 <span>Start free</span>
@@ -187,12 +187,12 @@ export function LandingExperience({
       >
         <Reveal
           stagger
-          className="grid grid-cols-2 gap-x-6 gap-y-14 lg:grid-cols-4"
+          className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 sm:gap-y-14 lg:grid-cols-4"
         >
           {metrics.map((metric) => (
             <div
               key={metric.label}
-              className="flex flex-col items-center gap-2 text-center"
+              className="flex flex-col items-center gap-1.5 text-center sm:gap-2"
             >
               <span className="type-section text-foreground">
                 <CountUp value={metric.value} />
@@ -255,7 +255,7 @@ export function LandingExperience({
             description={`${snapshot.publishedTemplatesCount} curated templates with ${snapshot.totalTemplateSections} pre-built sections and ${snapshot.totalTemplateSlots} ratio-locked slots, ready to open today.`}
           />
         </div>
-        <Reveal className="container-page flex flex-col items-center gap-14">
+        <Reveal className="container-page flex w-full flex-col items-center gap-10 sm:gap-14">
           <TemplateStack templates={snapshot.templates} />
           <Button variant="secondary" size="lg" asChild>
             <Link href="/templates">
@@ -279,8 +279,8 @@ export function LandingExperience({
         />
 
         <Reveal stagger className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <article className="bg-surface border-border/60 flex flex-col justify-between gap-10 rounded-3xl border p-8 sm:p-10">
-            <div className="flex flex-col gap-4">
+          <article className="bg-surface border-border/60 flex min-w-0 flex-col justify-between gap-7 rounded-3xl border p-6 sm:gap-10 sm:p-10">
+            <div className="flex flex-col gap-3.5 sm:gap-4">
               <StatusPill tone={simulatedPublished ? "success" : "warning"}>
                 {simulatedPublished ? "Published · Live" : "Draft preview"}
               </StatusPill>
@@ -293,32 +293,30 @@ export function LandingExperience({
               </p>
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-4">
               <div className="bg-elevated border-border/60 overflow-hidden rounded-2xl border shadow-xs">
-                <div className="border-border/60 flex items-center gap-3 border-b px-4 py-3">
-                  <span className="flex gap-1.5" aria-hidden="true">
+                <div className="border-border/60 flex items-center gap-2 border-b px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+                  <span className="hidden gap-1.5 sm:flex" aria-hidden="true">
                     <span className="bg-border-strong size-2 rounded-full" />
                     <span className="bg-border-strong size-2 rounded-full" />
                     <span className="bg-border-strong size-2 rounded-full" />
                   </span>
-                  <span className="text-foreground type-caption flex min-w-0 flex-1 items-center gap-2 font-mono">
+                  <span className="text-foreground type-caption flex min-w-0 flex-1 items-center gap-1.5 font-mono sm:gap-2">
                     <Globe className="text-primary size-3.5 shrink-0" />
-                    <span className="truncate">casefolio.app/p/cinema-booking</span>
+                    <span className="truncate">casefolio.app/p/cinema</span>
                   </span>
                   <StatusPill tone={simulatedPublished ? "success" : "neutral"}>
                     {simulatedPublished ? "Live 200 OK" : "Staged"}
                   </StatusPill>
                 </div>
-                <div
-                  className={cn(
-                    "bg-inverse transition-opacity duration-700",
-                    simulatedPublished ? "opacity-100" : "opacity-45",
-                  )}
-                >
+                <div className="bg-inverse relative overflow-hidden">
                   <img
                     src={snapshot.templates[0]?.coverSrc ?? "/templates/cinema/cover.svg"}
                     alt="Published Cinema case study page"
-                    className="aspect-16/8 w-full object-cover"
+                    className={cn(
+                      "aspect-16/9 w-full object-cover transition-all duration-500",
+                      simulatedPublished ? "scale-[1.01] opacity-100" : "opacity-92",
+                    )}
                   />
                 </div>
               </div>
@@ -326,16 +324,16 @@ export function LandingExperience({
                 type="button"
                 onClick={() => setSimulatedPublished((prev) => !prev)}
                 className={cn(
-                  "type-body-s-strong focus-visible:ring-ring/40 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full transition-all duration-300 outline-none focus-visible:ring-2 active:scale-[0.99]",
+                  "type-body-s-strong focus-visible:ring-ring/40 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-center transition-all duration-300 outline-none focus-visible:ring-2 active:scale-[0.99]",
                   simulatedPublished
                     ? "bg-success-soft text-foreground"
                     : "bg-inverse text-inverse-foreground hover:bg-inverse/85",
                 )}
               >
                 {simulatedPublished ? (
-                  <CheckCircle2 className="size-4" />
+                  <CheckCircle2 className="size-4 shrink-0" />
                 ) : (
-                  <Rocket className="size-4" />
+                  <Rocket className="size-4 shrink-0" />
                 )}
                 <span>
                   {simulatedPublished
@@ -346,8 +344,8 @@ export function LandingExperience({
             </div>
           </article>
 
-          <article className="bg-surface border-border/60 flex flex-col justify-between gap-10 rounded-3xl border p-8 sm:p-10">
-            <div className="flex flex-col gap-4">
+          <article className="bg-surface border-border/60 flex min-w-0 flex-col justify-between gap-7 rounded-3xl border p-6 sm:gap-10 sm:p-10">
+            <div className="flex flex-col gap-3.5 sm:gap-4">
               <StatusPill tone="accent">
                 {snapshot.exportFormatsCount} export formats
               </StatusPill>
@@ -372,14 +370,14 @@ export function LandingExperience({
 
         <Reveal
           stagger
-          className="border-border/60 mx-auto mt-24 grid max-w-3xl grid-cols-3 gap-6 border-t pt-14 text-center"
+          className="border-border/60 mx-auto mt-16 grid max-w-3xl grid-cols-3 gap-3 border-t pt-10 text-center sm:mt-24 sm:gap-6 sm:pt-14"
         >
           {liveCounts.map((item) => (
-            <div key={item.label} className="flex flex-col items-center gap-1.5">
-              <span className="type-heading-l text-foreground">
+            <div key={item.label} className="flex flex-col items-center gap-1 sm:gap-1.5">
+              <span className="type-heading-m sm:type-heading-l text-foreground">
                 <CountUp value={item.value} />
               </span>
-              <span className="text-muted-foreground type-caption">
+              <span className="text-muted-foreground type-caption text-balance">
                 {item.label}
               </span>
             </div>
@@ -422,18 +420,15 @@ export function LandingExperience({
       </section>
 
       {/* 10. Final CTA */}
-      <section className="px-4 pb-10 sm:px-6 lg:px-8">
+      <section className="px-4 pb-8 sm:px-6 sm:pb-10 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <CtaStage snapshot={snapshot}>
-            <span className="bg-primary text-primary-foreground shadow-float type-heading-m inline-flex size-16 items-center justify-center rounded-2xl">
+            <span className="bg-primary text-primary-foreground shadow-float type-heading-m inline-flex size-14 items-center justify-center rounded-2xl sm:size-16">
               C
             </span>
-            <WordReveal
-              as="h2"
-              text="Your next case study is one template away"
-              onScroll
-              className="type-section text-foreground text-balance"
-            />
+            <h2 className="type-section text-foreground text-balance">
+              Your next case study is one template away
+            </h2>
             <p className="text-muted-foreground type-lead max-w-md">
               Start free with {snapshot.freeProjectsIncluded} full case studies
               — pick Cinema, Orbit, or Meridian and publish today.

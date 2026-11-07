@@ -81,7 +81,7 @@
   --wash-accent-deep: color-mix(in oklab, var(--accent-primary) 34%, var(--bg-canvas));
 
   /* Layout rhythm — generous white space */
-  --section-space: clamp(5.5rem, 11vw, 10rem);
+  --section-space: clamp(4rem, 10vw, 10rem);
   --container-page: 72rem;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 

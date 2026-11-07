@@ -76,11 +76,11 @@ export function HeroFloaters({
   return (
     <>
       <Parallax
-        distance={-90}
-        rotate={-4}
-        className="pointer-events-none absolute -bottom-6 -left-4 z-20 hidden w-64 lg:block xl:-left-14"
+        distance={-36}
+        rotate={-3}
+        className="pointer-events-none absolute -bottom-5 -left-4 z-20 hidden w-60 lg:block xl:-left-10"
       >
-        <Float amplitude={8}>
+        <Float amplitude={6}>
           <FloatCard>
             <CardLabel>
               <ShieldCheck className="text-success size-3.5" />
@@ -95,11 +95,11 @@ export function HeroFloaters({
       </Parallax>
 
       <Parallax
-        distance={-130}
-        rotate={5}
-        className="pointer-events-none absolute -top-10 -right-4 z-20 hidden w-64 lg:block xl:-right-14"
+        distance={-32}
+        rotate={3}
+        className="pointer-events-none absolute top-14 -right-4 z-20 hidden w-60 lg:block xl:-right-10"
       >
-        <Float amplitude={10} duration={4.2}>
+        <Float amplitude={7} duration={4.2}>
           <FloatCard>
             <CardLabel>
               <Globe className="text-primary size-3.5" />
@@ -260,9 +260,9 @@ export function HowItWorksStage({
       {/* 02 — Template */}
       <div
         data-fan-card=""
-        className={cn("md:absolute", FAN_CARDS[0]?.className)}
+        className={cn("order-2 md:order-none md:absolute", FAN_CARDS[0]?.className)}
       >
-        <FloatCard style={{ rotate: `${FAN_CARDS[0]?.tilt ?? 0}deg` }} className="p-3">
+        <FloatCard className="p-3 md:-rotate-3">
           <div className="bg-inverse overflow-hidden rounded-xl">
             <img
               src={cinema?.coverSrc ?? "/templates/cinema/cover.svg"}
@@ -270,14 +270,14 @@ export function HowItWorksStage({
               className="aspect-16/10 w-full object-cover"
             />
           </div>
-          <div className="flex items-center justify-between px-1 pt-3">
-            <div>
+          <div className="flex items-center justify-between gap-2 px-1 pt-3">
+            <div className="min-w-0">
               <CardLabel>02 · Pick a template</CardLabel>
-              <p className="text-foreground type-body-s-strong mt-0.5">
+              <p className="text-foreground type-body-s-strong mt-0.5 truncate">
                 {cinema?.name ?? "Cinema"} · v{cinema?.version ?? "1.0.0"}
               </p>
             </div>
-            <span className="bg-sunken text-muted-foreground type-caption rounded-full px-2.5 py-0.5">
+            <span className="bg-sunken text-muted-foreground type-caption shrink-0 rounded-full px-2.5 py-0.5">
               {cinema?.sectionCount ?? 14} sections
             </span>
           </div>
@@ -287,9 +287,9 @@ export function HowItWorksStage({
       {/* 01 — Type */}
       <div
         data-fan-card=""
-        className={cn("md:absolute", FAN_CARDS[1]?.className)}
+        className={cn("order-1 md:order-none md:absolute", FAN_CARDS[1]?.className)}
       >
-        <FloatCard style={{ rotate: `${FAN_CARDS[1]?.tilt ?? 0}deg` }}>
+        <FloatCard className="md:rotate-3">
           <CardLabel>01 · Pick a type</CardLabel>
           <ul className="mt-3 flex flex-col gap-1.5">
             {typeRows.map((row, index) => (
@@ -316,25 +316,28 @@ export function HowItWorksStage({
       {/* Slot check — centre stat */}
       <div
         data-fan-card=""
-        className={cn("md:absolute", FAN_CARDS[2]?.className)}
+        className={cn(
+          "order-3 sm:col-span-2 md:order-none md:col-span-1 md:absolute",
+          FAN_CARDS[2]?.className,
+        )}
       >
         <FloatCard className="p-5">
           <CardLabel>
             <Check className="text-success size-3.5" />
             Ratio-locked slots
           </CardLabel>
-          <p className="type-display-m text-foreground mt-6">
+          <p className="type-display-m text-foreground mt-4 sm:mt-6">
             {snapshot.totalTemplateSlots}
           </p>
           <p className="text-muted-foreground type-body-s mt-1">
             screenshot slots across {snapshot.publishedTemplatesCount} live
             templates
           </p>
-          <div className="mt-6 flex items-end gap-3">
-            <div className="bg-primary flex h-24 flex-1 items-end justify-center rounded-t-2xl pb-2">
+          <div className="mt-5 flex items-end gap-3 sm:mt-6">
+            <div className="bg-primary flex h-20 flex-1 items-end justify-center rounded-t-2xl pb-2 sm:h-24">
               <span className="bg-primary-foreground/80 h-1 w-10 rounded-full" />
             </div>
-            <div className="bg-inverse flex h-32 flex-1 items-end justify-center rounded-t-2xl pb-2">
+            <div className="bg-inverse flex h-28 flex-1 items-end justify-center rounded-t-2xl pb-2 sm:h-32">
               <span className="bg-inverse-foreground/80 h-1 w-10 rounded-full" />
             </div>
           </div>
@@ -344,9 +347,9 @@ export function HowItWorksStage({
       {/* 03 — Customize */}
       <div
         data-fan-card=""
-        className={cn("md:absolute", FAN_CARDS[3]?.className)}
+        className={cn("order-4 md:order-none md:absolute", FAN_CARDS[3]?.className)}
       >
-        <FloatCard style={{ rotate: `${FAN_CARDS[3]?.tilt ?? 0}deg` }}>
+        <FloatCard className="md:rotate-3">
           <CardLabel>03 · Customize</CardLabel>
           <div className="mt-3 flex items-center gap-2">
             <span className="size-7 rounded-full bg-[var(--tmpl-secondary)]" />
@@ -375,16 +378,16 @@ export function HowItWorksStage({
       {/* 04 — Publish */}
       <div
         data-fan-card=""
-        className={cn("md:absolute", FAN_CARDS[4]?.className)}
+        className={cn("order-5 md:order-none md:absolute", FAN_CARDS[4]?.className)}
       >
-        <FloatCard style={{ rotate: `${FAN_CARDS[4]?.tilt ?? 0}deg` }}>
+        <FloatCard className="md:-rotate-3">
           <CardLabel>04 · Publish or export</CardLabel>
-          <div className="bg-surface text-foreground type-caption mt-3 flex items-center justify-between rounded-xl px-3 py-2">
-            <span className="flex items-center gap-2 font-mono">
-              <Globe className="text-primary size-3.5" />
-              casefolio.app/p/you
+          <div className="bg-surface text-foreground type-caption mt-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2">
+            <span className="flex min-w-0 items-center gap-2 truncate font-mono">
+              <Globe className="text-primary size-3.5 shrink-0" />
+              <span className="truncate">casefolio.app/p/you</span>
             </span>
-            <span className="bg-success-soft text-foreground rounded-full px-2 py-0.5">
+            <span className="bg-success-soft text-foreground shrink-0 rounded-full px-2 py-0.5">
               Live
             </span>
           </div>
@@ -493,7 +496,7 @@ export function FeatureColumns({
           description={`${snapshot.curatedPalettesCount} curated palettes and ${snapshot.curatedFontPairsCount} font pairs, always contrast-checked.`}
         />
         <Panel>
-          <FloatCard className="absolute top-10 left-1/2 w-64 -translate-x-1/2 rotate-3">
+          <FloatCard className="absolute top-10 left-1/2 w-[min(16rem,calc(100%-2rem))] -translate-x-1/2 rotate-3">
             <CardLabel>Theme tokens</CardLabel>
             <ul className="mt-3 flex flex-col gap-2">
               {[
@@ -525,7 +528,7 @@ export function FeatureColumns({
           description={`${snapshot.sectionPresetsCount} narrative presets. Reorder, duplicate, or hide what you do not need.`}
         />
         <Panel>
-          <FloatCard className="absolute top-8 left-1/2 w-64 -translate-x-1/2 -rotate-2 p-3">
+          <FloatCard className="absolute top-8 left-1/2 w-[min(16rem,calc(100%-2rem))] -translate-x-1/2 -rotate-2 p-3">
             <ul className="flex flex-col gap-1.5">
               {SECTION_ROWS.map((row) => (
                 <li
@@ -605,9 +608,20 @@ export function TemplateStack({
 }) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(1280);
   const stageRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
   const firstRun = useRef(true);
   const count = templates.length;
+
+  useEffect(() => {
+    const syncViewport = () => {
+      setViewportWidth(window.innerWidth);
+    };
+    syncViewport();
+    window.addEventListener("resize", syncViewport, { passive: true });
+    return () => window.removeEventListener("resize", syncViewport);
+  }, []);
 
   useEffect(() => {
     if (paused || count < 2 || prefersReducedMotion()) return;
@@ -623,7 +637,12 @@ export function TemplateStack({
       if (!stage || count === 0) return;
       ensureGsapPluginsRegistered();
 
-      const offset = window.innerWidth < 768 ? 150 : 310;
+      const isCompact = viewportWidth < 640;
+      const offset = isCompact ? 18 : viewportWidth < 1024 ? 170 : 310;
+      const sideScale = isCompact ? 0.94 : 0.88;
+      const sideOpacity = isCompact ? 0.32 : 0.85;
+      const sideRotate = isCompact ? 2.5 : 6;
+      const sideY = isCompact ? 14 : 28;
       const instant = firstRun.current || prefersReducedMotion();
       firstRun.current = false;
 
@@ -634,9 +653,23 @@ export function TemplateStack({
           rel === 0
             ? { x: 0, y: 0, rotate: 0, scale: 1, opacity: 1, zIndex: 30 }
             : rel === 1
-              ? { x: offset, y: 28, rotate: 6, scale: 0.88, opacity: 0.85, zIndex: 20 }
+              ? {
+                  x: offset,
+                  y: sideY,
+                  rotate: sideRotate,
+                  scale: sideScale,
+                  opacity: sideOpacity,
+                  zIndex: 20,
+                }
               : rel === count - 1
-                ? { x: -offset, y: 28, rotate: -6, scale: 0.88, opacity: 0.85, zIndex: 20 }
+                ? {
+                    x: -offset,
+                    y: sideY,
+                    rotate: -sideRotate,
+                    scale: sideScale,
+                    opacity: sideOpacity,
+                    zIndex: 20,
+                  }
                 : { x: 0, y: 48, rotate: 0, scale: 0.7, opacity: 0, zIndex: 10 };
 
         gsap.to(card, {
@@ -648,20 +681,37 @@ export function TemplateStack({
         });
       });
     },
-    { scope: stageRef, dependencies: [active, count] },
+    { scope: stageRef, dependencies: [active, count, viewportWidth] },
   );
 
   if (count === 0) return null;
 
   return (
     <div
-      className="flex flex-col items-center gap-10"
+      className="flex w-full flex-col items-center gap-8 sm:gap-10"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onTouchStart={(event) => {
+        touchStartX.current = event.touches[0]?.clientX ?? null;
+        setPaused(true);
+      }}
+      onTouchEnd={(event) => {
+        const startX = touchStartX.current;
+        const endX = event.changedTouches[0]?.clientX ?? null;
+        touchStartX.current = null;
+        setPaused(false);
+        if (startX === null || endX === null || count < 2) return;
+        const deltaX = endX - startX;
+        if (Math.abs(deltaX) > 40) {
+          setActive((current) =>
+            deltaX < 0 ? (current + 1) % count : (current - 1 + count) % count,
+          );
+        }
+      }}
     >
       <div
         ref={stageRef}
-        className="relative h-[27rem] w-full max-w-5xl overflow-hidden sm:h-[30rem] md:overflow-visible"
+        className="relative h-[29.5rem] w-full max-w-5xl overflow-x-clip sm:h-[31rem] md:overflow-visible"
       >
         {templates.map((template, index) => {
           const isActive = index === active;
@@ -672,7 +722,7 @@ export function TemplateStack({
               onClick={() => setActive(index)}
               aria-hidden={isActive ? undefined : true}
               className={cn(
-                "border-border/60 bg-elevated shadow-float absolute top-2 left-1/2 w-[min(21rem,78vw)] rounded-3xl border p-3 will-change-transform",
+                "border-border/60 bg-elevated shadow-float absolute top-2 left-1/2 w-[min(21.5rem,calc(100%-1rem))] rounded-3xl border p-3 will-change-transform sm:w-[22rem]",
                 !isActive && "cursor-pointer",
               )}
             >
@@ -685,12 +735,12 @@ export function TemplateStack({
               </div>
               <div className="flex flex-col gap-3 px-2 pt-4 pb-2">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="type-heading-m text-foreground">
+                  <h3 className="type-heading-m text-foreground truncate">
                     {template.name}
                   </h3>
                   <span
                     className={cn(
-                      "type-caption rounded-full px-2.5 py-0.5",
+                      "type-caption shrink-0 rounded-full px-2.5 py-0.5",
                       template.tier === "free"
                         ? "bg-success-soft text-foreground"
                         : "bg-accent text-accent-foreground",
@@ -702,15 +752,15 @@ export function TemplateStack({
                 <p className="text-muted-foreground type-body-s line-clamp-2">
                   {template.summary}
                 </p>
-                <div className="border-border/60 flex items-center justify-between border-t pt-3">
-                  <span className="text-tertiary type-caption font-mono">
+                <div className="border-border/60 flex items-center justify-between gap-2 border-t pt-3">
+                  <span className="text-tertiary type-caption min-w-0 truncate font-mono">
                     {template.categoryName} · {template.sectionCount} sections ·{" "}
                     {template.slotCount} slots
                   </span>
                   <Link
                     href={`/new?template=${template.slug}`}
                     tabIndex={isActive ? 0 : -1}
-                    className="text-foreground type-caption inline-flex items-center gap-1 font-semibold"
+                    className="text-foreground type-caption inline-flex shrink-0 items-center gap-1 font-semibold"
                   >
                     <span>Use</span>
                     <ArrowUpRight className="size-3.5" />
@@ -785,7 +835,7 @@ export function CtaStage({
   return (
     <div
       ref={stageRef}
-      className="bg-wash-panel relative overflow-hidden rounded-[2.5rem] px-6 py-28 text-center sm:px-12 lg:py-40"
+      className="bg-wash-panel relative overflow-hidden rounded-3xl px-5 py-16 text-center sm:rounded-[2.5rem] sm:px-12 sm:py-28 lg:py-40"
     >
       <Parallax
         distance={-70}
@@ -895,9 +945,15 @@ export function HeroDevice({
       const device = wrap.querySelector<HTMLElement>("[data-device]");
       if (!device) return;
 
+      const isMobile = window.innerWidth < 768;
       gsap.fromTo(
         device,
-        { rotateX: 16, scale: 0.9, y: 40, transformOrigin: "50% 0%" },
+        {
+          rotateX: isMobile ? 6 : 14,
+          scale: isMobile ? 0.97 : 0.92,
+          y: isMobile ? 16 : 36,
+          transformOrigin: "50% 0%",
+        },
         {
           rotateX: 0,
           scale: 1,
@@ -922,12 +978,12 @@ export function HeroDevice({
     >
       <div
         data-device=""
-        className="bg-inverse shadow-overlay rounded-[2rem] p-2.5 will-change-transform sm:p-3"
+        className="bg-inverse shadow-overlay rounded-2xl p-1.5 will-change-transform sm:rounded-[1.75rem] sm:p-2.5 lg:rounded-[2rem] lg:p-3"
       >
-        <div className="bg-card relative overflow-hidden rounded-3xl">
+        <div className="bg-card relative overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl">
           <span
             aria-hidden="true"
-            className="bg-border-strong absolute top-2 left-1/2 z-10 size-1.5 -translate-x-1/2 rounded-full"
+            className="bg-border-strong absolute top-2 left-1/2 z-10 hidden size-1.5 -translate-x-1/2 rounded-full sm:block"
           />
           {children}
         </div>

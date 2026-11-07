@@ -66,7 +66,7 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
   }
 
   return (
-    <Card className="flex flex-col gap-6 p-6 sm:p-8" data-testid="profile-settings-card">
+    <Card className="flex min-w-0 flex-col gap-6 p-5 sm:p-8" data-testid="profile-settings-card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-0.5">
           <h2 className="text-foreground type-heading-s">Public profile</h2>
@@ -117,7 +117,7 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-5">
         {editingAvatarUrl && (
           <InputField
             label="Avatar image URL"
@@ -128,7 +128,7 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
           />
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
           <InputField
             label="Full name"
             value={name}
@@ -144,8 +144,8 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="profile-design-focus">Design focus</Label>
             <select
               id="profile-design-focus"
@@ -153,7 +153,7 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
               onChange={(event) =>
                 setDesignFocus(event.target.value as "mobile" | "web" | "both")
               }
-              className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 type-body-m h-11 rounded-2xl border px-3.5 outline-none focus-visible:ring-2"
+              className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 type-body-m h-11 w-full min-w-0 rounded-2xl border px-3.5 outline-none focus-visible:ring-2"
             >
               <option value="mobile">Mobile app</option>
               <option value="web">Website</option>
@@ -161,10 +161,10 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label>Account email</Label>
-            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex h-11 items-center justify-between rounded-2xl border px-3.5">
-              <span className="truncate">{initialProfile.email}</span>
+            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex h-11 min-w-0 items-center justify-between gap-2 rounded-2xl border px-3.5">
+              <span className="min-w-0 flex-1 truncate">{initialProfile.email}</span>
               <span className="text-success type-caption inline-flex shrink-0 items-center gap-1">
                 {initialProfile.emailVerified ? (
                   <>

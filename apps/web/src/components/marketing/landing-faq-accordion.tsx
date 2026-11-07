@@ -62,7 +62,7 @@ export function LandingFaqAccordion({
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 onClick={() => setOpenIndex(isOpen ? null : idx)}
-                className="text-foreground type-heading-s focus-visible:ring-ring/40 flex w-full items-center justify-between gap-6 px-7 py-6 text-left transition-colors outline-none focus-visible:ring-2"
+                className="text-foreground type-heading-s focus-visible:ring-ring/40 flex w-full items-center justify-between gap-4 px-5 py-5 text-left transition-colors outline-none focus-visible:ring-2 sm:gap-6 sm:px-7 sm:py-6"
               >
                 <span>{item.question}</span>
                 <span
@@ -82,7 +82,7 @@ export function LandingFaqAccordion({
                 id={panelId}
                 role="region"
                 aria-labelledby={triggerId}
-                className="text-muted-foreground type-body-m animate-in fade-in slide-in-from-top-1 max-w-2xl px-7 pt-0 pb-7 duration-500"
+                className="text-muted-foreground type-body-m max-w-2xl px-5 pt-0 pb-5 sm:px-7 sm:pb-7"
               >
                 {item.answer}
               </div>

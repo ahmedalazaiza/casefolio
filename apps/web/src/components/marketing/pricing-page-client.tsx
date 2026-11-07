@@ -218,9 +218,9 @@ export function PricingPageClient({
             </h2>
           </div>
 
-          <div className="border-border bg-card relative w-full max-w-full overflow-x-auto rounded-3xl border">
-            <table className="w-full min-w-160 border-collapse text-left">
-              <thead>
+          <div className="md:border-border md:bg-card relative w-full max-w-full md:overflow-x-auto md:rounded-3xl md:border">
+            <table className="block w-full border-collapse text-left md:table md:min-w-160">
+              <thead className="hidden md:table-header-group">
                 <tr className="border-border bg-surface border-b">
                   <th className="text-foreground type-body-s-strong px-5 py-4">Capability</th>
                   <th className="text-foreground type-body-s-strong px-5 py-4">
@@ -243,16 +243,34 @@ export function PricingPageClient({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-border divide-y">
+              <tbody className="md:divide-border flex flex-col gap-3 md:table-row-group md:divide-y">
                 {COMPARISON_ROWS.map((row) => (
-                  <tr key={row.feature} className="hover:bg-surface/60">
-                    <td className="px-5 py-3.5">
+                  <tr
+                    key={row.feature}
+                    className="border-border bg-card md:hover:bg-surface/60 flex flex-col rounded-2xl border p-4 md:table-row md:rounded-none md:border-0 md:bg-transparent md:p-0"
+                  >
+                    <td className="border-border/70 border-b pb-3 md:border-0 md:px-5 md:py-3.5">
                       <p className="text-foreground type-body-s-strong">{row.feature}</p>
                       <p className="text-muted-foreground type-caption">{row.category}</p>
                     </td>
-                    <td className="px-5 py-3.5">{renderCellValue(row.free)}</td>
-                    <td className="px-5 py-3.5">{renderCellValue(row.pro)}</td>
-                    <td className="px-5 py-3.5">{renderCellValue(row.team)}</td>
+                    <td
+                      data-label={BILLING_PLAN_CATALOG.free.name}
+                      className="before:text-muted-foreground flex items-center justify-between gap-3 pt-2.5 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:px-5 md:py-3.5 md:before:content-none"
+                    >
+                      {renderCellValue(row.free)}
+                    </td>
+                    <td
+                      data-label={BILLING_PLAN_CATALOG.pro.name}
+                      className="before:text-accent-foreground flex items-center justify-between gap-3 pt-2 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:px-5 md:py-3.5 md:before:content-none"
+                    >
+                      {renderCellValue(row.pro)}
+                    </td>
+                    <td
+                      data-label={BILLING_PLAN_CATALOG.team.name}
+                      className="before:text-muted-foreground flex items-center justify-between gap-3 pt-2 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:px-5 md:py-3.5 md:before:content-none"
+                    >
+                      {renderCellValue(row.team)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

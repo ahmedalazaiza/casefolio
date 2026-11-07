@@ -799,6 +799,42 @@ export function ConstrainedEditor({
   const slotProgressPercent =
     slotItems.length > 0 ? Math.round((filledSlotCount / slotItems.length) * 100) : 100;
 
+  // Ensure Puck's internal icon-only ArrayField buttons always carry accessible names (WCAG 4.1.2)
+  useEffect(() => {
+    const root = document.querySelector('[data-testid="constrained-editor-root"]');
+    if (!root) return;
+
+    const patchPuckButtons = () => {
+      const addButtons = root.querySelectorAll<HTMLButtonElement>(
+        'button[class*="_ArrayField-addButton_"]:not([aria-label])',
+      );
+      addButtons.forEach((btn) => {
+        if (!btn.textContent?.trim()) {
+          btn.setAttribute("aria-label", "Add item");
+        }
+      });
+    };
+
+    patchPuckButtons();
+    const observer = new MutationObserver(patchPuckButtons);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [selectedSectionIndex, rightTab]);
+
+  const editorDocumentTitle = `${puckData.root.props.title || initialPayload.project.name || "Untitled"} — Casefolio Editor`;
+
+  useEffect(() => {
+    const syncTitle = () => {
+      if (!document.title.trim()) {
+        document.title = editorDocumentTitle;
+      }
+    };
+    document.title = editorDocumentTitle;
+    const headObserver = new MutationObserver(syncTitle);
+    headObserver.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => headObserver.disconnect();
+  }, [editorDocumentTitle]);
+
   return (
     <div
       data-testid="constrained-editor-root"
@@ -808,6 +844,7 @@ export function ConstrainedEditor({
       <Puck
         config={puckConfig as unknown as Config}
         data={puckData as unknown as Data}
+        headerTitle={editorDocumentTitle}
         onAction={handlePuckAction}
         permissions={CONSTRAINED_PUCK_PERMISSIONS}
         height="100%"
@@ -956,7 +993,7 @@ export function ConstrainedEditor({
 
             {/* Right Actions */}
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 xl:justify-self-end">
-              <div className="border-border/75 bg-surface inline-flex items-center rounded-full border p-0.5">
+              <div className="border-border/75 bg-surface hidden items-center rounded-full border p-0.5 sm:inline-flex">
                 <button
                   type="button"
                   aria-label="Undo"
@@ -1498,11 +1535,11 @@ export function ConstrainedEditor({
                 <button
                   type="button"
                   data-testid="zoom-reset-button"
-                  aria-label="Reset zoom"
+                  title="Reset zoom (0)"
                   onClick={handleZoomReset}
                   className="text-foreground hover:bg-surface min-w-14 rounded-full px-2.5 py-1 text-center font-mono text-xs font-medium transition-colors"
                 >
-                  {zoomPercent}%
+                  {zoomPercent}%<span className="sr-only"> reset zoom</span>
                 </button>
 
                 <button

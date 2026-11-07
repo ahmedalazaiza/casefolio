@@ -72,27 +72,19 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     expect(screen.getAllByText("Meridian").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("supports interactive editor preview, template carousel pager, and public URL state toggle", async () => {
+  it("renders crisp light and dark hero editor images, template carousel pager, and public URL state toggle", async () => {
     const user = userEvent.setup();
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
 
-    // Switch live template tab in hero editor
-    await user.click(screen.getByRole("tab", { name: /Orbit · Mobile App/i }));
-    expect(
-      screen.getByText(/Orbit — Calm debt & wallet planner/i),
-    ).toBeInTheDocument();
-
-    // Switch color token palette
-    await user.click(screen.getByRole("button", { name: /Emerald Signal/i }));
-
-    // Snap missing screenshot into slot
-    await user.click(
-      screen.getByRole("button", { name: /Snap screen into slot/i }),
-    );
-    expect(
-      screen.getByText(/Pre-publish check passed/i),
-    ).toBeInTheDocument();
+    // Hero frame renders crisp high-resolution editor images instead of an HTML form mockup
+    const heroFigure = screen.getByRole("figure", {
+      name: /Casefolio editor preview/i,
+    });
+    const heroImages = heroFigure.querySelectorAll("img");
+    expect(heroImages.length).toBe(2);
+    expect(heroImages[0]).toHaveAttribute("src", "/landing/hero-editor-light.png");
+    expect(heroImages[1]).toHaveAttribute("src", "/landing/hero-editor-dark.png");
 
     // Browse the stacked template carousel via its pager dots
     const orbitDot = screen.getByRole("tab", { name: "Show Orbit" });
