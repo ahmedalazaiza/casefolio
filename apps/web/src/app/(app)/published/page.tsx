@@ -1,11 +1,13 @@
 import { and, desc, eq, isNotNull } from "@casefolio/db";
 import { BarChart3, ExternalLink, Globe, Settings2 } from "lucide-react";
 import Link from "next/link";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { requireSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
+import { resolveProjectOrTemplateThumbnailUrl } from "@/lib/template/cover-url";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +15,18 @@ export default async function WorkspacePublishedPagesList() {
   const { user } = await requireSession("/published");
 
   const rows = await db
-    .select()
+    .select({
+      project: dbSchema.projects,
+      templateName: dbSchema.templates.name,
+      templateSlug: dbSchema.templates.slug,
+      templateCoverUrl: dbSchema.templates.coverUrl,
+    })
     .from(dbSchema.projects)
+    .innerJoin(
+      dbSchema.templateVersions,
+      eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
+    )
+    .innerJoin(dbSchema.templates, eq(dbSchema.templateVersions.templateId, dbSchema.templates.id))
     .where(
       and(
         eq(dbSchema.projects.ownerId, user.id),
@@ -25,7 +37,7 @@ export default async function WorkspacePublishedPagesList() {
     .limit(50);
 
   const liveProjects = rows.filter(
-    (p) => (p.visibility === "public" || p.visibility === "unlisted") && Boolean(p.slug),
+    (r) => (r.project.visibility === "public" || r.project.visibility === "unlisted") && Boolean(r.project.slug),
   );
 
   return (
@@ -61,43 +73,61 @@ export default async function WorkspacePublishedPagesList() {
         </div>
       ) : (
         <div className="border-border/80 bg-elevated shadow-card divide-border/70 divide-y rounded-3xl border p-6 sm:p-8">
-          {liveProjects.map((project) => (
-            <div
-              key={project.id}
-              className="flex flex-wrap items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
-            >
-              <div className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="text-foreground type-heading-s">{project.name}</span>
-                  <Badge tone="published">
-                    {project.visibility === "unlisted" ? "Unlisted" : "Public"}
-                  </Badge>
+          {liveProjects.map(({ project, templateName, templateSlug, templateCoverUrl }) => {
+            const thumb = resolveProjectOrTemplateThumbnailUrl(
+              project.puckData,
+              templateCoverUrl,
+              templateSlug,
+            );
+            return (
+              <div
+                key={project.id}
+                className="flex flex-wrap items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+              >
+                <div className="flex items-center gap-4">
+                  <TemplateThumbnail
+                    coverUrl={thumb ?? templateCoverUrl}
+                    slug={templateSlug}
+                    name={project.name}
+                    hideFallbackLabel
+                    className="border-border/80 aspect-[4/3] w-20 shrink-0 rounded-xl border p-2 shadow-2xs"
+                  />
+                  <div className="flex flex-col gap-1">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="text-foreground type-heading-s">{project.name}</span>
+                      <Badge tone="published">
+                        {project.visibility === "unlisted" ? "Unlisted" : "Public"}
+                      </Badge>
+                    </div>
+                    <span className="text-tertiary type-caption font-mono">
+                      /p/{project.slug} · {templateName}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-tertiary type-caption font-mono">/p/{project.slug}</span>
-              </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button asChild variant="secondary" size="sm">
-                  <Link href={`/projects/${project.id}/analytics`}>
-                    <BarChart3 className="size-3.5" />
-                    <span>Analytics</span>
-                  </Link>
-                </Button>
-                <Button asChild variant="secondary" size="sm">
-                  <Link href={`/projects/${project.id}/share`}>
-                    <Settings2 className="size-3.5" />
-                    <span>Share Settings</span>
-                  </Link>
-                </Button>
-                <Button asChild size="sm">
-                  <Link href={`/p/${project.slug}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="size-3.5" />
-                    <span>Open Live</span>
-                  </Link>
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button asChild variant="secondary" size="sm">
+                    <Link href={`/projects/${project.id}/analytics`}>
+                      <BarChart3 className="size-3.5" />
+                      <span>Analytics</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="secondary" size="sm">
+                    <Link href={`/projects/${project.id}/share`}>
+                      <Settings2 className="size-3.5" />
+                      <span>Share Settings</span>
+                    </Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href={`/p/${project.slug}`} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="size-3.5" />
+                      <span>Open Live</span>
+                    </Link>
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

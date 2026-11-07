@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type ChangeEvent } from "react";
+import { TemplateCoverUploader } from "@/components/admin/template-cover-uploader";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,11 +21,13 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { StepIndicator, type StepState } from "@/components/ui/step-indicator";
 import {
+  normalizeRawTemplateJsonCoverIfMissing,
   parseAndValidateTemplateJson,
   type ParseTemplateJsonResult,
   type SaveTemplateDraftResult,
   type WizardMetadataInput,
 } from "@/lib/template/parse";
+import type { PutBinaryTransport } from "@/lib/storage/client-upload";
 import type {
   TemplateProjectType,
   TemplateTier,
@@ -69,9 +72,14 @@ export interface UploadTemplateWizardProps {
     rawJson: string;
     metadata: WizardMetadataInput;
   }) => Promise<SaveTemplateDraftResult>;
+  coverPutTransport?: PutBinaryTransport;
 }
 
-export function UploadTemplateWizard({ categories, saveDraftAction }: UploadTemplateWizardProps) {
+export function UploadTemplateWizard({
+  categories,
+  saveDraftAction,
+  coverPutTransport,
+}: UploadTemplateWizardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -86,13 +94,20 @@ export function UploadTemplateWizard({ categories, saveDraftAction }: UploadTemp
   const [category, setCategory] = useState("");
   const [tier, setTier] = useState<TemplateTier>("free");
   const [coverUrl, setCoverUrl] = useState("");
+  const [hasCustomCover, setHasCustomCover] = useState(false);
   const [coverRatio, setCoverRatio] = useState("4:3");
   const [changelog, setChangelog] = useState("Initial draft import (v1.0.0)");
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [serverIssues, setServerIssues] = useState<TemplateValidationIssue[]>([]);
 
-  function populateMetadataFromJson(result: ParseTemplateJsonResult) {
+  function handleCoverUrlChange(nextUrl: string) {
+    setCoverUrl(nextUrl);
+    setHasCustomCover(nextUrl.trim().length > 0);
+    setServerError(null);
+  }
+
+  function populateMetadataFromJson(result: ParseTemplateJsonResult, coverWasMissing: boolean) {
     if (!result.ok) return;
     const tpl = result.data.template;
     setName(tpl.name);
@@ -100,7 +115,9 @@ export function UploadTemplateWizard({ categories, saveDraftAction }: UploadTemp
     setProjectType(tpl.type);
     setCategory(tpl.category);
     setTier(tpl.tier);
-    setCoverUrl(tpl.cover.src);
+    if (!hasCustomCover) {
+      setCoverUrl(coverWasMissing ? "" : tpl.cover.src);
+    }
     setCoverRatio(tpl.cover.ratio);
   }
 
@@ -115,12 +132,13 @@ export function UploadTemplateWizard({ categories, saveDraftAction }: UploadTemp
   }
 
   function handleValidateAndAdvance() {
-    const parsed = parseAndValidateTemplateJson(rawJson);
+    const { normalizedJson, coverWasMissing } = normalizeRawTemplateJsonCoverIfMissing(rawJson);
+    const parsed = parseAndValidateTemplateJson(normalizedJson);
     setValidationResult(parsed);
     setServerError(null);
     setServerIssues([]);
     if (parsed.ok) {
-      populateMetadataFromJson(parsed);
+      populateMetadataFromJson(parsed, coverWasMissing);
     }
     setCurrentStep(2);
   }
@@ -136,13 +154,28 @@ export function UploadTemplateWizard({ categories, saveDraftAction }: UploadTemp
         type: projectType,
         category: category || validationResult.data.template.category,
         tier,
+        cover: {
+          src: coverUrl.trim() || validationResult.data.template.cover.src,
+          ratio: coverRatio || validationResult.data.template.cover.ratio,
+        },
       },
     };
-  }, [validationResult, name, slug, projectType, category, tier]);
+  }, [validationResult, name, slug, projectType, category, tier, coverUrl, coverRatio]);
 
   function handleSaveDraft() {
     setServerError(null);
     setServerIssues([]);
+
+    if (!coverUrl.trim()) {
+      setServerError("A cover / thumbnail image is required when adding a template.");
+      setServerIssues([
+        {
+          path: "metadata.coverUrl",
+          message: "Upload a PNG, JPG, or WebP cover image (or enter a valid cover URL) before saving.",
+        },
+      ]);
+      return;
+    }
 
     startTransition(async () => {
       const result = await saveDraftAction({
@@ -153,7 +186,7 @@ export function UploadTemplateWizard({ categories, saveDraftAction }: UploadTemp
           type: projectType,
           category,
           tier,
-          coverUrl,
+          coverUrl: coverUrl.trim(),
           coverRatio,
           changelog,
         },
@@ -247,13 +280,24 @@ export function UploadTemplateWizard({ categories, saveDraftAction }: UploadTemp
             <textarea
               id="template-json-textarea"
               aria-label="Template JSON"
-              rows={12}
+              rows={10}
               value={rawJson}
               onChange={(event) => setRawJson(event.target.value)}
               placeholder='{ "template": { ... }, "puck": { ... }, "warnings": [] }'
               className="border-border/80 bg-surface/40 text-foreground type-body-s focus-visible:ring-ring/40 w-full rounded-2xl border p-4 font-mono outline-none focus-visible:ring-2"
             />
           </div>
+
+          <TemplateCoverUploader
+            coverUrl={coverUrl}
+            onCoverUrlChange={handleCoverUrlChange}
+            coverRatio={coverRatio}
+            onCoverRatioChange={setCoverRatio}
+            templateName={name || "New template"}
+            templateSlug={slug || undefined}
+            required
+            putTransport={coverPutTransport}
+          />
 
           <div className="border-border/70 flex items-center justify-end gap-3 border-t pt-5">
             <Button type="button" onClick={handleValidateAndAdvance}>
@@ -617,30 +661,17 @@ export function UploadTemplateWizard({ categories, saveDraftAction }: UploadTemp
               <div className="flex flex-col gap-4">
                 <h2 className="text-foreground type-heading-s">Cover & thumbnail</h2>
 
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="tpl-cover-url" className="text-foreground type-body-s-strong">
-                    Cover image URL *
-                  </label>
-                  <Input
-                    id="tpl-cover-url"
-                    type="url"
-                    value={coverUrl}
-                    onChange={(event) => setCoverUrl(event.target.value)}
-                    placeholder="https://cdn.casefolio.app/templates/orbit/cover.png"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="tpl-cover-ratio" className="text-foreground type-body-s-strong">
-                    Cover aspect ratio *
-                  </label>
-                  <Input
-                    id="tpl-cover-ratio"
-                    value={coverRatio}
-                    onChange={(event) => setCoverRatio(event.target.value)}
-                    placeholder="4:3"
-                  />
-                </div>
+                <TemplateCoverUploader
+                  coverUrl={coverUrl}
+                  onCoverUrlChange={handleCoverUrlChange}
+                  coverRatio={coverRatio}
+                  onCoverRatioChange={setCoverRatio}
+                  templateName={name || "New template"}
+                  templateSlug={slug || undefined}
+                  required
+                  compact
+                  putTransport={coverPutTransport}
+                />
               </div>
 
               <div className="border-border/70 bg-wash-panel flex flex-col gap-2 rounded-2xl border p-4">

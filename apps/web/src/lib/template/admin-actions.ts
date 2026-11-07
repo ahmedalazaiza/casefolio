@@ -11,11 +11,13 @@ import {
   publishTemplateVersion,
   saveTemplateDraftFromWizard,
   unarchiveTemplateToDraft,
+  updateTemplateCover,
   wizardMetadataInputSchema,
   type CreateTemplateVersionResult,
   type DeleteTemplateActionResult,
   type SaveTemplateDraftResult,
   type TemplateLifecycleActionResult,
+  type UpdateTemplateCoverActionResult,
 } from "@/lib/template/service";
 
 const createDraftActionPayloadSchema = z.object({
@@ -45,10 +47,21 @@ const deleteTemplatePayloadSchema = z.object({
   confirmName: z.string().trim().min(1, "Confirmation name is required."),
 });
 
+const updateTemplateCoverPayloadSchema = z.object({
+  templateId: z.string().uuid("Invalid template ID."),
+  coverUrl: z.string().trim().min(1, "A cover / thumbnail image is required."),
+  coverRatio: z.string().trim().default("4:3"),
+});
+
 function revalidateTemplatePaths(templateId: string) {
+  revalidatePath("/");
+  revalidatePath("/templates");
+  revalidatePath("/new");
+  revalidatePath("/dashboard");
+  revalidatePath("/published");
+  revalidatePath("/admin");
   revalidatePath("/admin/templates");
   revalidatePath(`/admin/templates/${templateId}`);
-  revalidatePath("/templates");
 }
 
 export async function createTemplateDraftAction(
@@ -200,8 +213,40 @@ export async function deleteTemplateAction(
   });
 
   if (result.ok) {
-    revalidatePath("/admin/templates");
+    revalidatePath("/");
     revalidatePath("/templates");
+    revalidatePath("/new");
+    revalidatePath("/dashboard");
+    revalidatePath("/published");
+    revalidatePath("/admin");
+    revalidatePath("/admin/templates");
+  }
+
+  return result;
+}
+
+export async function updateTemplateCoverAction(
+  payload: z.input<typeof updateTemplateCoverPayloadSchema>,
+): Promise<UpdateTemplateCoverActionResult> {
+  const { user } = await requireAdmin("/admin/templates");
+
+  const parsed = updateTemplateCoverPayloadSchema.safeParse(payload);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid cover update payload.",
+    };
+  }
+
+  const result = await updateTemplateCover({
+    actorId: user.id,
+    templateId: parsed.data.templateId,
+    coverUrl: parsed.data.coverUrl,
+    coverRatio: parsed.data.coverRatio,
+  });
+
+  if (result.ok) {
+    revalidateTemplatePaths(parsed.data.templateId);
   }
 
   return result;

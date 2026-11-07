@@ -2,6 +2,7 @@ import { and, count, desc, eq, or, type PlanTier, type UserRole } from "@casefol
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { db, dbSchema } from "@/lib/db";
 import { can, evaluateEntitlement } from "@/lib/entitlements";
+import { resolveProjectOrTemplateThumbnailUrl } from "@/lib/template/cover-url";
 import {
   deleteProjectInputSchema,
   duplicateProjectInputSchema,
@@ -97,6 +98,8 @@ export async function listDashboardProjectsForUser(
       project: dbSchema.projects,
       templateName: dbSchema.templates.name,
       templateTier: dbSchema.templates.tier,
+      templateSlug: dbSchema.templates.slug,
+      templateCoverUrl: dbSchema.templates.coverUrl,
     })
     .from(dbSchema.projects)
     .innerJoin(
@@ -118,6 +121,13 @@ export async function listDashboardProjectsForUser(
     updatedAtIso: row.project.updatedAt.toISOString(),
     templateName: row.templateName,
     templateTier: row.templateTier,
+    templateSlug: row.templateSlug,
+    templateCoverUrl: row.templateCoverUrl,
+    thumbnailUrl: resolveProjectOrTemplateThumbnailUrl(
+      row.project.puckData,
+      row.templateCoverUrl,
+      row.templateSlug,
+    ),
   }));
 }
 
@@ -208,6 +218,8 @@ export async function duplicateProjectForUser(
       project: dbSchema.projects,
       templateName: dbSchema.templates.name,
       templateTier: dbSchema.templates.tier,
+      templateSlug: dbSchema.templates.slug,
+      templateCoverUrl: dbSchema.templates.coverUrl,
     })
     .from(dbSchema.projects)
     .innerJoin(
@@ -316,6 +328,13 @@ export async function duplicateProjectForUser(
       updatedAtIso: created.updatedAt.toISOString(),
       templateName: row.templateName,
       templateTier: row.templateTier,
+      templateSlug: row.templateSlug,
+      templateCoverUrl: row.templateCoverUrl,
+      thumbnailUrl: resolveProjectOrTemplateThumbnailUrl(
+        created.puckData,
+        row.templateCoverUrl,
+        row.templateSlug,
+      ),
     },
   };
 }

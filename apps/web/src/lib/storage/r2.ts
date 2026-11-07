@@ -188,12 +188,14 @@ export interface LocalPutTokenPayload {
   r2Key: string;
   mimeType: AllowedUploadMimeType;
   maxBytes: number;
+  cacheControl?: string;
   exp: number;
 }
 
 export interface PresignedPutTarget {
   mode: "r2" | "local";
   uploadUrl: string;
+  fallbackUploadUrl?: string;
   uploadMethod: "PUT";
   uploadHeaders: Record<string, string>;
   expiresInSeconds: number;
@@ -202,17 +204,34 @@ export interface PresignedPutTarget {
 /**
  * Generates a presigned PUT URL against Cloudflare R2 (`@aws-sdk/s3-request-presigner`)
  * when real R2 credentials are configured, or a short-lived HMAC-signed PUT URL in local dev.
+ * Also attaches a signed server-side `fallbackUploadUrl` so browsers on restricted networks
+ * or preview domains can seamlessly fall back if direct-to-R2 PUT is blocked.
  */
 export async function createPresignedPutTarget(params: {
   r2Key: string;
   mimeType: AllowedUploadMimeType;
   bytes: number;
   maxFileBytes: number;
+  cacheControl?: string;
   expiresInSeconds?: number;
   config?: StorageEnvConfig;
 }): Promise<PresignedPutTarget> {
   const config = params.config ?? readStorageEnvConfig();
   const expiresInSeconds = params.expiresInSeconds ?? 300;
+  const cacheControl = params.cacheControl ?? "private, max-age=31536000, immutable";
+
+  const putToken = signStorageToken<LocalPutTokenPayload>(
+    {
+      kind: "local-put",
+      r2Key: params.r2Key,
+      mimeType: params.mimeType,
+      maxBytes: Math.min(params.bytes, params.maxFileBytes),
+      cacheControl,
+      exp: Date.now() + expiresInSeconds * 1000,
+    },
+    config.signingSecret,
+  );
+  const localPutUrl = `/api/uploads/local-put?token=${encodeURIComponent(putToken)}`;
 
   if (isRealR2Configured(config)) {
     const s3 = getR2S3Client(config);
@@ -221,7 +240,7 @@ export async function createPresignedPutTarget(params: {
       Key: params.r2Key,
       ContentType: params.mimeType,
       ContentLength: params.bytes,
-      CacheControl: "private, max-age=31536000, immutable",
+      CacheControl: cacheControl,
     });
 
     const uploadUrl = await getSignedUrl(s3, command, {
@@ -231,6 +250,7 @@ export async function createPresignedPutTarget(params: {
     return {
       mode: "r2",
       uploadUrl,
+      fallbackUploadUrl: localPutUrl,
       uploadMethod: "PUT",
       uploadHeaders: {
         "Content-Type": params.mimeType,
@@ -239,20 +259,9 @@ export async function createPresignedPutTarget(params: {
     };
   }
 
-  const putToken = signStorageToken<LocalPutTokenPayload>(
-    {
-      kind: "local-put",
-      r2Key: params.r2Key,
-      mimeType: params.mimeType,
-      maxBytes: Math.min(params.bytes, params.maxFileBytes),
-      exp: Date.now() + expiresInSeconds * 1000,
-    },
-    config.signingSecret,
-  );
-
   return {
     mode: "local",
-    uploadUrl: `/api/uploads/local-put?token=${encodeURIComponent(putToken)}`,
+    uploadUrl: localPutUrl,
     uploadMethod: "PUT",
     uploadHeaders: {
       "Content-Type": params.mimeType,
@@ -265,6 +274,34 @@ export async function writeLocalStoredObject(r2Key: string, bytes: Uint8Array): 
   const targetPath = resolveSafeLocalFilePath(r2Key);
   await mkdir(dirname(targetPath), { recursive: true });
   await writeFile(targetPath, bytes);
+}
+
+export async function writeStoredObject(
+  r2Key: string,
+  bytes: Uint8Array,
+  options?: {
+    contentType?: string;
+    cacheControl?: string;
+    config?: StorageEnvConfig;
+  },
+): Promise<void> {
+  const config = options?.config ?? readStorageEnvConfig();
+  if (isRealR2Configured(config)) {
+    const s3 = getR2S3Client(config);
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: config.bucket,
+        Key: r2Key,
+        Body: bytes,
+        ContentLength: bytes.byteLength,
+        ContentType: options?.contentType ?? "application/octet-stream",
+        CacheControl: options?.cacheControl ?? "private, max-age=31536000, immutable",
+      }),
+    );
+    return;
+  }
+
+  await writeLocalStoredObject(r2Key, bytes);
 }
 
 export async function headStoredObject(

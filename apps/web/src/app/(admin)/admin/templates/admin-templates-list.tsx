@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -423,17 +424,33 @@ export function AdminTemplatesList({
                 filtered.map((item) => (
                   <tr key={item.id} className="hover:bg-surface/60 transition-colors">
                     <td className="px-5 py-4">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-3.5">
                         <Link
                           href={`/admin/templates/${item.id}`}
-                          className="text-foreground hover:text-primary type-body-s-strong transition-colors"
+                          aria-label={`View ${item.name} details`}
+                          className="shrink-0"
                         >
-                          {item.name}
+                          <TemplateThumbnail
+                            testId={`admin-template-row-thumb-${item.slug}`}
+                            coverUrl={item.coverUrl}
+                            slug={item.slug}
+                            name={item.name}
+                            hideFallbackLabel
+                            className="border-border/80 aspect-[4/3] w-16 rounded-xl border p-2 shadow-2xs"
+                          />
                         </Link>
-                        {item.tier === "pro" && <ProBadge />}
-                        {item.categoryName && (
-                          <span className="text-tertiary type-caption">· {item.categoryName}</span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/admin/templates/${item.id}`}
+                            className="text-foreground hover:text-primary type-body-s-strong transition-colors"
+                          >
+                            {item.name}
+                          </Link>
+                          {item.tier === "pro" && <ProBadge />}
+                          {item.categoryName && (
+                            <span className="text-tertiary type-caption">· {item.categoryName}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="text-muted-foreground type-body-s px-4 py-4">

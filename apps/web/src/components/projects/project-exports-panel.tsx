@@ -24,6 +24,7 @@ import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { can } from "@/lib/entitlements";
+import { runBrowserAssistedExport } from "@/lib/exports/client-renderer";
 import {
   EXPORT_PRESETS,
   type EnqueueExportResult,
@@ -138,6 +139,27 @@ export function ProjectExportsPanel({
 
     return () => clearInterval(timer);
   }, [hasActiveJobs, overview.projectId, pollOverview]);
+
+  const newestQueuedWithRenderUrl = useMemo(
+    () => overview.exports.find((item) => item.status === "queued" && Boolean(item.renderUrl)) ?? null,
+    [overview.exports],
+  );
+
+  useEffect(() => {
+    if (!newestQueuedWithRenderUrl) return;
+
+    const fallbackTimer = setTimeout(async () => {
+      const completed = await runBrowserAssistedExport(newestQueuedWithRenderUrl);
+      if (completed) {
+        setOverview((prev) => ({
+          ...prev,
+          exports: prev.exports.map((item) => (item.id === completed.id ? completed : item)),
+        }));
+      }
+    }, 2200);
+
+    return () => clearTimeout(fallbackTimer);
+  }, [newestQueuedWithRenderUrl]);
 
   const handleQuickExport = useCallback(async () => {
     setErrorMessage(null);

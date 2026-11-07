@@ -63,6 +63,7 @@ export interface ExportHistoryItem {
   error: string | null;
   createdAtIso: string;
   downloadUrl: string | null;
+  renderUrl?: string | null;
 }
 
 export interface ProjectExportsOverviewPayload {

@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { trackClientProductEvent } from "@/components/analytics/posthog-provider";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
@@ -317,23 +318,23 @@ export function TemplateLibraryClient({
                 className="border-border bg-card shadow-card hover:border-border-strong flex flex-col justify-between gap-4 rounded-xl border p-4 transition-colors"
               >
                 <div className="flex flex-col gap-3.5">
-                  <div
-                    style={{
-                      backgroundColor: item.document.template.theme.colors.background,
-                      color: item.document.template.theme.colors.text,
-                    }}
-                    className="border-border/30 relative flex aspect-[4/3] w-full flex-col justify-between overflow-hidden rounded-lg border p-5"
-                  >
-                    {item.coverUrl && item.coverUrl.startsWith("/") && (
-                      <img
-                        src={item.coverUrl}
-                        alt=""
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 size-full object-cover opacity-75"
-                      />
-                    )}
-                    <div className="relative z-10 flex items-center justify-between gap-2">
-                      <span className="bg-background/85 text-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 backdrop-blur-xs">
+                  <div className="border-border/60 group relative aspect-[4/3] w-full overflow-hidden rounded-2xl border">
+                    <TemplateThumbnail
+                      testId={`library-template-thumb-${item.slug}`}
+                      coverUrl={item.coverUrl}
+                      slug={item.slug}
+                      name={item.name}
+                      theme={{
+                        bg: item.document.template.theme.colors.background,
+                        fg: item.document.template.theme.colors.text,
+                        accent: item.document.template.theme.colors.primary,
+                      }}
+                      className="size-full"
+                      imageClassName="group-hover:scale-[1.03]"
+                    />
+
+                    <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-center justify-between gap-2">
+                      <span className="bg-background/90 text-foreground border-border/60 type-caption inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 shadow-2xs backdrop-blur-xs">
                         <TypeIcon type={item.type} />
                         {formatTypeLabel(item.type)}
                       </span>
@@ -347,19 +348,10 @@ export function TemplateLibraryClient({
                       </div>
                     </div>
 
-                    <div className="relative z-10 flex flex-col gap-1">
-                      <span className="type-overline opacity-75">
-                        {item.categoryName ?? "Case Study"} · v{item.version}
-                      </span>
-                      <span className="type-heading-m line-clamp-2">
-                        {item.document.puck.root.props.title}
-                      </span>
-                    </div>
-
                     {isLocked && (
                       <div
                         data-testid={`pro-lock-badge-${item.slug}`}
-                        className="bg-inverse/90 text-inverse-foreground type-caption absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1"
+                        className="bg-inverse/90 text-inverse-foreground type-caption absolute right-3 bottom-3 z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1"
                       >
                         <Lock className="size-3" />
                         <span>Locked on Free</span>
@@ -375,7 +367,7 @@ export function TemplateLibraryClient({
                       </span>
                     </div>
                     <p className="text-muted-foreground type-body-s">
-                      {item.categoryName ?? "General"} · {formatTypeLabel(item.type)}
+                      {item.categoryName ?? "General"} · v{item.version} · {formatTypeLabel(item.type)}
                     </p>
                   </div>
                 </div>

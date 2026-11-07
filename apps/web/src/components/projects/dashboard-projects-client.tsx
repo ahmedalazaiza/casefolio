@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -560,24 +561,35 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                   aria-label={`Open ${project.name} in editor`}
                   className="focus-visible:ring-ring/40 block overflow-hidden rounded-2xl outline-none focus-visible:ring-2"
                 >
-                  <div
-                    className={`relative h-48 w-full overflow-hidden rounded-2xl ${palette.surface}`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`type-heading-l absolute top-5 left-5 select-none ${palette.glyph}`}
+                  {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
+                    <TemplateThumbnail
+                      testId={`dashboard-project-thumb-${project.id}`}
+                      coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
+                      slug={project.templateSlug}
+                      name={project.name}
+                      className="h-48 w-full rounded-2xl"
+                      imageClassName="group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <div
+                      className={`relative h-48 w-full overflow-hidden rounded-2xl ${palette.surface}`}
                     >
-                      Aa
-                    </span>
-                    <div
-                      aria-hidden="true"
-                      className={`absolute right-34 bottom-0 h-32 w-24 rounded-t-xl transition-transform duration-300 group-hover:-translate-y-1 ${palette.leftBar}`}
-                    />
-                    <div
-                      aria-hidden="true"
-                      className="bg-elevated shadow-card border-border/60 absolute right-5 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
-                    />
-                  </div>
+                      <span
+                        aria-hidden="true"
+                        className={`type-heading-l absolute top-5 left-5 select-none ${palette.glyph}`}
+                      >
+                        Aa
+                      </span>
+                      <div
+                        aria-hidden="true"
+                        className={`absolute right-34 bottom-0 h-32 w-24 rounded-t-xl transition-transform duration-300 group-hover:-translate-y-1 ${palette.leftBar}`}
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="bg-elevated shadow-card border-border/60 absolute right-5 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
+                      />
+                    </div>
+                  )}
                 </Link>
 
                 <div className="flex min-w-0 flex-col gap-1 px-1.5 pb-1.5">

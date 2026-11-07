@@ -8,6 +8,7 @@ import {
   CURATED_COLOR_PRESETS,
   CURATED_FONT_PAIRS,
 } from "@/lib/template/curated-themes";
+import { resolveTemplateCoverUrl } from "@/lib/template/cover-url";
 import type { PublishedTemplateItem } from "@/lib/template/types";
 
 export interface LandingTemplateShowcaseItem {
@@ -96,13 +97,12 @@ function mapPublishedItemToShowcase(
   item: PublishedTemplateItem,
 ): LandingTemplateShowcaseItem {
   const known = DEFAULT_LANDING_TEMPLATES.find((d) => d.slug === item.slug);
-  const localCover =
-    item.coverUrl && item.coverUrl.startsWith("/")
-      ? item.coverUrl
-      : known?.coverSrc ??
-        (item.type === "web"
-          ? "/landing/meridian-dashboard.svg"
-          : "/landing/orbit-home.svg");
+  const resolvedCover =
+    resolveTemplateCoverUrl(item.coverUrl, item.slug) ??
+    known?.coverSrc ??
+    (item.type === "web"
+      ? "/landing/meridian-dashboard.svg"
+      : "/landing/orbit-home.svg");
 
   return {
     slug: item.slug,
@@ -113,7 +113,7 @@ function mapPublishedItemToShowcase(
     version: item.version,
     sectionCount: item.sectionCount,
     slotCount: item.slotCount,
-    coverSrc: localCover,
+    coverSrc: resolvedCover,
     previewSecondarySrc: known?.previewSecondarySrc,
     headline:
       item.document.puck.root?.props?.title ||

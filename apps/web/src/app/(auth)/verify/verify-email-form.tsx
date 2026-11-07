@@ -200,20 +200,33 @@ export function VerifyEmailForm({
         </Button>
       </form>
 
-      <p className="text-muted-foreground type-caption">
-        No code?{" "}
-        <button
-          type="button"
-          onClick={handleResend}
-          className="text-primary font-medium hover:underline"
-        >
-          Resend
-        </button>{" "}
-        ·{" "}
-        <Link href="/sign-up" className="text-primary font-medium hover:underline">
-          Change email
-        </Link>
-      </p>
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground type-caption">
+          No code?{" "}
+          <button
+            type="button"
+            onClick={handleResend}
+            className="text-primary font-medium hover:underline"
+          >
+            Resend
+          </button>{" "}
+          ·{" "}
+          <Link href="/sign-up" className="text-primary font-medium hover:underline">
+            Change email
+          </Link>
+        </p>
+
+        <p className="text-tertiary type-caption">
+          Email taking a moment?{" "}
+          <Link
+            href="/onboarding"
+            data-testid="skip-verify-for-now"
+            className="text-foreground font-medium underline underline-offset-4 hover:opacity-80"
+          >
+            Continue to workspace for now
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

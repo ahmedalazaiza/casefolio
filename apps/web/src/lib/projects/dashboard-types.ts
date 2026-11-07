@@ -37,6 +37,9 @@ export interface DashboardProjectItem {
   updatedAtIso: string;
   templateName: string;
   templateTier: TemplateTier;
+  templateSlug?: string;
+  templateCoverUrl?: string | null;
+  thumbnailUrl?: string | null;
 }
 
 export type DashboardProjectMutationCode =

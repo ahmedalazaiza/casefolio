@@ -5,6 +5,7 @@ import {
   type ExportQueueJobPayload,
   type ExportWorkerConsumerHandle,
 } from "@casefolio/worker";
+import { signExportRenderToken } from "@casefolio/worker/token";
 import { PgBoss } from "pg-boss";
 import { env } from "@/env";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
@@ -22,7 +23,7 @@ import {
 import { resolvePublicAppBaseUrl } from "@/lib/projects/publish";
 import { notifyExportFinished } from "@/lib/notifications/service";
 import { slugifyProjectName } from "@/lib/projects/types";
-import { readStoredObjectBytes } from "@/lib/storage/r2";
+import { readStoredObjectBytes, writeStoredObject } from "@/lib/storage/r2";
 import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
 import { sanitizeErrorForLogging } from "@/lib/security/redact";
 
@@ -131,6 +132,19 @@ export async function shutdownExportQueueForTests(): Promise<void> {
 }
 
 function serializeExportRow(row: typeof dbSchema.exportsTable.$inferSelect): ExportHistoryItem {
+  let renderUrl: string | null = null;
+  if (row.status === "queued") {
+    const token = signExportRenderToken(
+      {
+        exportId: row.id,
+        projectId: row.projectId,
+        ttlMs: 10 * 60 * 1000,
+      },
+      env.EXPORT_SIGNING_SECRET,
+    );
+    renderUrl = `/export/${encodeURIComponent(row.id)}?token=${encodeURIComponent(token)}`;
+  }
+
   return {
     id: row.id,
     projectId: row.projectId,
@@ -140,6 +154,7 @@ function serializeExportRow(row: typeof dbSchema.exportsTable.$inferSelect): Exp
     error: row.error ?? null,
     createdAtIso: row.createdAt.toISOString(),
     downloadUrl: row.status === "completed" && row.r2Key ? `/api/exports/${row.id}/download` : null,
+    renderUrl,
   };
 }
 
@@ -522,5 +537,135 @@ export async function authorizeAndReadExportFile(
     bytes,
     contentType,
     fileName: `${safeProjectSlug}-${suffix}.${ext}`,
+  };
+}
+
+const MAX_CLIENT_EXPORT_BYTES = 35 * 1024 * 1024; // 35 MiB
+
+function hasValidExportBinaryHeader(format: ExportFormatOption, bytes: Uint8Array): boolean {
+  if (bytes.byteLength < 8) return false;
+  if (format === "png_long") {
+    return (
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47 &&
+      bytes[4] === 0x0d &&
+      bytes[5] === 0x0a &&
+      bytes[6] === 0x1a &&
+      bytes[7] === 0x0a
+    );
+  }
+  if (format === "pdf") {
+    return (
+      bytes[0] === 0x25 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x44 &&
+      bytes[3] === 0x46 &&
+      bytes[4] === 0x2d
+    );
+  }
+  if (format === "behance") {
+    return bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
+  }
+  return false;
+}
+
+export async function completeQueuedExportFromClient(
+  exportId: string,
+  bytes: Uint8Array,
+  actor: ExportActor,
+): Promise<
+  | { status: "not_found" }
+  | { status: "forbidden" }
+  | { status: "invalid_payload"; error: string }
+  | { status: "ok"; exportJob: ExportHistoryItem }
+> {
+  if (!UUID_REGEX.test(exportId)) {
+    return { status: "not_found" };
+  }
+
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_CLIENT_EXPORT_BYTES) {
+    return {
+      status: "invalid_payload",
+      error: "Rendered export payload size is invalid.",
+    };
+  }
+
+  const [row] = await db
+    .select({
+      exportJob: dbSchema.exportsTable,
+      project: {
+        id: dbSchema.projects.id,
+        ownerId: dbSchema.projects.ownerId,
+        orgId: dbSchema.projects.orgId,
+      },
+    })
+    .from(dbSchema.exportsTable)
+    .innerJoin(dbSchema.projects, eq(dbSchema.exportsTable.projectId, dbSchema.projects.id))
+    .where(eq(dbSchema.exportsTable.id, exportId))
+    .limit(1);
+
+  if (!row) {
+    return { status: "not_found" };
+  }
+
+  const allowed = await canActorAccessProjectExports(row.project, actor, true);
+  if (!allowed) {
+    return { status: "forbidden" };
+  }
+
+  if (row.exportJob.status === "completed" && row.exportJob.r2Key) {
+    return {
+      status: "ok",
+      exportJob: serializeExportRow(row.exportJob),
+    };
+  }
+
+  const format = row.exportJob.format;
+  if (!hasValidExportBinaryHeader(format, bytes)) {
+    return {
+      status: "invalid_payload",
+      error: `Binary payload header does not match expected ${format} format.`,
+    };
+  }
+
+  const ext = format === "pdf" ? "pdf" : format === "behance" ? "zip" : "png";
+  const contentType =
+    format === "pdf" ? "application/pdf" : format === "behance" ? "application/zip" : "image/png";
+  const r2Key = `exports/${row.project.id}/${row.exportJob.id}.${ext}`;
+
+  await writeStoredObject(r2Key, bytes, {
+    contentType,
+    cacheControl: "private, max-age=31536000, immutable",
+  });
+
+  const [updated] = await db
+    .update(dbSchema.exportsTable)
+    .set({
+      status: "completed",
+      r2Key,
+      error: null,
+    })
+    .where(eq(dbSchema.exportsTable.id, exportId))
+    .returning();
+
+  const finalRow = updated ?? {
+    ...row.exportJob,
+    status: "completed" as const,
+    r2Key,
+    error: null,
+  };
+
+  await notifyExportFinished({
+    exportId: finalRow.id,
+    projectId: finalRow.projectId,
+    format: finalRow.format,
+    status: "completed",
+  }).catch(() => undefined);
+
+  return {
+    status: "ok",
+    exportJob: serializeExportRow(finalRow),
   };
 }

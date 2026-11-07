@@ -18,6 +18,7 @@ import { useMemo, useState, useTransition } from "react";
 import { trackClientProductEvent } from "@/components/analytics/posthog-provider";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -515,7 +516,6 @@ export function CreateProjectWizard({
                   {compatibleTemplates.map((item) => {
                     const isLocked = item.tier === "pro" && !canUseProTemplates;
                     const isSelected = selectedTemplateId === item.id;
-                    const tplThemeStyle = buildTemplateThemeStyle(item.document.template.theme);
 
                     return (
                       <article
@@ -549,60 +549,36 @@ export function CreateProjectWizard({
                           }}
                           className="focus-visible:ring-ring/40 flex flex-col gap-3.5 text-left outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
                         >
-                          <div
-                            style={{
-                              ...tplThemeStyle,
-                              backgroundColor: "var(--tpl-color-background)",
-                              color: "var(--tpl-color-text)",
-                            }}
-                            className="border-border/30 relative flex aspect-[4/3] w-full flex-col justify-between overflow-hidden rounded-2xl border p-5"
-                          >
-                            {item.coverUrl && item.coverUrl.startsWith("/") && (
-                              <img
-                                src={item.coverUrl}
-                                alt=""
-                                aria-hidden="true"
-                                className="pointer-events-none absolute inset-0 size-full object-cover opacity-80"
-                              />
-                            )}
-                            <div className="relative z-10 flex items-center justify-between gap-2">
-                              <span
-                                style={{ color: "var(--tpl-color-primary)" }}
-                                className="type-heading-m select-none"
-                              >
-                                Aa
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                {item.tier === "pro" ? (
-                                  <ProBadge />
-                                ) : (
-                                  <Badge tone="published">Free</Badge>
-                                )}
-                                {isSelected && (
-                                  <span className="bg-primary text-primary-foreground inline-flex size-6 items-center justify-center rounded-full">
-                                    <Check className="size-3.5" />
-                                  </span>
-                                )}
-                              </div>
+                          <div className="border-border/60 group relative aspect-[4/3] w-full overflow-hidden rounded-2xl border">
+                            <TemplateThumbnail
+                              testId={`wizard-template-thumb-${item.slug}`}
+                              coverUrl={item.coverUrl}
+                              slug={item.slug}
+                              name={item.name}
+                              theme={{
+                                bg: item.document.template.theme.colors.background,
+                                fg: item.document.template.theme.colors.text,
+                                accent: item.document.template.theme.colors.primary,
+                              }}
+                              className="size-full"
+                              imageClassName="group-hover:scale-[1.03]"
+                            />
+
+                            <div className="pointer-events-none absolute top-3 right-3 z-10 flex items-center gap-1.5">
+                              {item.tier === "pro" ? (
+                                <ProBadge />
+                              ) : (
+                                <Badge tone="published">Free</Badge>
+                              )}
+                              {isSelected && (
+                                <span className="bg-primary text-primary-foreground inline-flex size-6 items-center justify-center rounded-full shadow-xs">
+                                  <Check className="size-3.5" />
+                                </span>
+                              )}
                             </div>
 
-                            {!item.coverUrl?.startsWith("/") && (
-                              <div className="flex items-end justify-end gap-3 pt-4">
-                                <div
-                                  aria-hidden="true"
-                                  style={{ backgroundColor: "var(--tpl-color-primary)" }}
-                                  className="h-24 w-16 rounded-t-lg opacity-90"
-                                />
-                                <div
-                                  aria-hidden="true"
-                                  style={{ backgroundColor: "var(--tpl-color-surface)" }}
-                                  className="h-28 w-16 rounded-t-lg"
-                                />
-                              </div>
-                            )}
-
                             {isLocked && (
-                              <div className="bg-inverse/90 text-inverse-foreground type-caption absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1">
+                              <div className="bg-inverse/90 text-inverse-foreground type-caption absolute right-3 bottom-3 z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1">
                                 <Lock className="size-3" />
                                 <span>Pro required</span>
                               </div>
@@ -841,20 +817,31 @@ export function CreateProjectWizard({
                   </div>
                 </div>
 
-                <div className="bg-sunken text-muted-foreground type-caption flex items-center justify-between gap-3 rounded-lg px-3.5 py-2.5">
-                  <span>
-                    Template:{" "}
-                    <strong className="text-foreground">
-                      {selectedTemplate
-                        ? `${selectedTemplate.name} (v${selectedTemplate.version})`
-                        : "None selected"}
-                    </strong>{" "}
-                    · {formatProjectTypeLabel(selectedType)}
-                  </span>
+                <div className="bg-sunken text-muted-foreground type-caption flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5">
+                  <div className="flex items-center gap-3">
+                    {selectedTemplate && (
+                      <TemplateThumbnail
+                        coverUrl={selectedTemplate.coverUrl}
+                        slug={selectedTemplate.slug}
+                        name={selectedTemplate.name}
+                        hideFallbackLabel
+                        className="border-border/70 aspect-[4/3] w-12 shrink-0 rounded-lg border p-1.5"
+                      />
+                    )}
+                    <span>
+                      Template:{" "}
+                      <strong className="text-foreground">
+                        {selectedTemplate
+                          ? `${selectedTemplate.name} (v${selectedTemplate.version})`
+                          : "None selected"}
+                      </strong>{" "}
+                      · {formatProjectTypeLabel(selectedType)}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setStep("template")}
-                    className="text-primary hover:underline"
+                    className="text-primary shrink-0 hover:underline"
                   >
                     Change
                   </button>
@@ -914,10 +901,25 @@ export function CreateProjectWizard({
                   {[client.trim() || "Client", role.trim() || "Lead product designer"].join(" · ")}
                 </p>
 
-                <div
-                  style={{ backgroundColor: "var(--tpl-color-primary, var(--color-primary))" }}
-                  className="mt-2 h-44 w-full rounded-xl opacity-95"
-                />
+                {selectedTemplate ? (
+                  <TemplateThumbnail
+                    testId="wizard-step3-cover-preview"
+                    coverUrl={selectedTemplate.coverUrl}
+                    slug={selectedTemplate.slug}
+                    name={selectedTemplate.name}
+                    theme={{
+                      bg: selectedTemplate.document.template.theme.colors.background,
+                      fg: selectedTemplate.document.template.theme.colors.text,
+                      accent: selectedTemplate.document.template.theme.colors.primary,
+                    }}
+                    className="border-border/30 mt-2 aspect-[4/3] w-full rounded-xl border"
+                  />
+                ) : (
+                  <div
+                    style={{ backgroundColor: "var(--tpl-color-primary, var(--color-primary))" }}
+                    className="mt-2 h-44 w-full rounded-xl opacity-95"
+                  />
+                )}
               </div>
 
               <p className="text-tertiary type-caption truncate">

@@ -54,6 +54,10 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
   try {
     const rawOrbit = readFileSync(ORBIT_TEMPLATE_JSON_PATH, "utf-8");
     const orbitPayload = JSON.parse(rawOrbit) as OrbitSeedJson & Record<string, unknown>;
+    orbitPayload.template.cover = {
+      src: "/landing/orbit-home.svg",
+      ratio: orbitPayload.template.cover.ratio || "4:3",
+    };
 
     const [admin] = await db
       .insert(users)
@@ -197,7 +201,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
       meridianPayload.template.category = "SaaS";
       meridianPayload.template.tier = "pro";
       meridianPayload.template.cover = {
-        src: "https://cdn.casefolio.app/templates/meridian-pro/cover.png",
+        src: "/landing/meridian-dashboard.svg",
         ratio: "4:3",
       };
       meridianPayload.template.slots = {
@@ -225,7 +229,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
           categoryId: saasCategory.id,
           tier: "pro",
           status: "published",
-          coverUrl: "https://cdn.casefolio.app/templates/meridian-pro/cover.png",
+          coverUrl: "/landing/meridian-dashboard.svg",
         })
         .onConflictDoUpdate({
           target: templates.slug,
@@ -235,7 +239,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
             categoryId: saasCategory.id,
             tier: "pro",
             status: "published",
-            coverUrl: "https://cdn.casefolio.app/templates/meridian-pro/cover.png",
+            coverUrl: "/landing/meridian-dashboard.svg",
             updatedAt: new Date(),
           },
         })

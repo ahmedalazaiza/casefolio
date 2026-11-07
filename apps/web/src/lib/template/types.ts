@@ -132,6 +132,17 @@ export type DeleteTemplateActionResult =
       error: string;
     };
 
+export type UpdateTemplateCoverActionResult =
+  | {
+      ok: true;
+      coverUrl: string;
+      coverRatio: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
 export interface PublishedTemplateItem {
   id: string;
   versionId: string;

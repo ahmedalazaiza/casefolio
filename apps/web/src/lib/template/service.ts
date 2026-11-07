@@ -11,12 +11,18 @@ import {
 import { db, dbSchema } from "@/lib/db";
 import { notifyTemplateVersionPublished } from "@/lib/notifications/service";
 import {
+  normalizeRawTemplateJsonCoverIfMissing,
   parseAndValidateTemplateJson,
   wizardMetadataInputSchema,
   type SaveTemplateDraftResult,
   type WizardMetadataInput,
 } from "@/lib/template/parse";
-import { semverSchema, validateTemplateDocument, type TemplateDocument } from "@/lib/template/schema";
+import {
+  aspectRatioSchema,
+  semverSchema,
+  validateTemplateDocument,
+  type TemplateDocument,
+} from "@/lib/template/schema";
 import { compareSemver } from "@/lib/template/semver";
 import type {
   AdminTemplateDetail,
@@ -26,6 +32,7 @@ import type {
   DeleteTemplateActionResult,
   PublishedTemplateItem,
   TemplateLifecycleActionResult,
+  UpdateTemplateCoverActionResult,
 } from "@/lib/template/types";
 
 export { wizardMetadataInputSchema, type SaveTemplateDraftResult, type WizardMetadataInput };
@@ -37,6 +44,7 @@ export type {
   DeleteTemplateActionResult,
   PublishedTemplateItem,
   TemplateLifecycleActionResult,
+  UpdateTemplateCoverActionResult,
 };
 
 export interface SaveTemplateDraftInput {
@@ -118,7 +126,16 @@ export async function saveTemplateDraftFromWizard({
   rawJson,
   metadata,
 }: SaveTemplateDraftInput): Promise<SaveTemplateDraftResult> {
-  const parsedJson = parseAndValidateTemplateJson(rawJson);
+  const candidateJson =
+    metadata?.coverUrl && metadata.coverUrl.trim().length > 0
+      ? normalizeRawTemplateJsonCoverIfMissing(
+          rawJson,
+          metadata.coverUrl.trim(),
+          metadata.coverRatio?.trim() || "4:3",
+        ).normalizedJson
+      : rawJson;
+
+  const parsedJson = parseAndValidateTemplateJson(candidateJson);
   if (!parsedJson.ok) {
     return {
       ok: false,
@@ -784,6 +801,103 @@ export async function unarchiveTemplateToDraft({
     ok: true,
     status: "draft",
     currentVersionId: tpl.currentVersionId,
+  };
+}
+
+export async function updateTemplateCover({
+  actorId,
+  templateId,
+  coverUrl,
+  coverRatio = "4:3",
+}: {
+  actorId: string | null;
+  templateId: string;
+  coverUrl: string;
+  coverRatio?: string;
+}): Promise<UpdateTemplateCoverActionResult> {
+  const cleanCoverUrl = coverUrl.trim();
+  if (!cleanCoverUrl) {
+    return {
+      ok: false,
+      error: "A cover / thumbnail image is required.",
+    };
+  }
+
+  const ratioCheck = aspectRatioSchema.safeParse(coverRatio.trim() || "4:3");
+  if (!ratioCheck.success) {
+    return {
+      ok: false,
+      error: ratioCheck.error.issues[0]?.message ?? "Invalid cover aspect ratio.",
+    };
+  }
+  const cleanRatio = ratioCheck.data;
+
+  const [tpl] = await db
+    .select()
+    .from(dbSchema.templates)
+    .where(eq(dbSchema.templates.id, templateId))
+    .limit(1);
+
+  if (!tpl) {
+    return { ok: false, error: "Template not found." };
+  }
+
+  const now = new Date();
+  await db
+    .update(dbSchema.templates)
+    .set({
+      coverUrl: cleanCoverUrl,
+      updatedAt: now,
+    })
+    .where(eq(dbSchema.templates.id, templateId));
+
+  const targetVersionRows = tpl.currentVersionId
+    ? await db
+        .select()
+        .from(dbSchema.templateVersions)
+        .where(eq(dbSchema.templateVersions.id, tpl.currentVersionId))
+        .limit(1)
+    : await db
+        .select()
+        .from(dbSchema.templateVersions)
+        .where(eq(dbSchema.templateVersions.templateId, templateId))
+        .orderBy(desc(dbSchema.templateVersions.createdAt))
+        .limit(1);
+
+  const versionRow = targetVersionRows[0];
+  if (versionRow) {
+    const parsedDoc = validateTemplateDocument(versionRow.data);
+    if (parsedDoc.ok) {
+      const updatedDoc: TemplateDocument = {
+        ...parsedDoc.data,
+        template: {
+          ...parsedDoc.data.template,
+          cover: {
+            src: cleanCoverUrl,
+            ratio: cleanRatio,
+          },
+        },
+      };
+      await db
+        .update(dbSchema.templateVersions)
+        .set({
+          data: updatedDoc as unknown as Record<string, unknown>,
+        })
+        .where(eq(dbSchema.templateVersions.id, versionRow.id));
+    }
+  }
+
+  await recordAdminAuditLog(actorId, "template.cover_updated", {
+    templateId,
+    slug: tpl.slug,
+    coverUrl: cleanCoverUrl,
+    coverRatio: cleanRatio,
+  });
+
+  return {
+    ok: true,
+    coverUrl: cleanCoverUrl,
+    coverRatio: cleanRatio,
   };
 }
 

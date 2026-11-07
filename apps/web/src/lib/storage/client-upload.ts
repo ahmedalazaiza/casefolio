@@ -126,6 +126,41 @@ function inferMimeFromExtension(fileName: string): string {
   return "application/octet-stream";
 }
 
+export async function putBinaryWithFallback(params: {
+  uploadUrl: string;
+  fallbackUploadUrl?: string;
+  headers: Record<string, string>;
+  body: Uint8Array;
+  onProgress?: (percent: number) => void;
+  putTransport?: PutBinaryTransport;
+}): Promise<void> {
+  const transport = params.putTransport ?? defaultPutBinaryTransport;
+  try {
+    await transport({
+      url: params.uploadUrl,
+      headers: params.headers,
+      body: params.body,
+      onProgress: params.onProgress,
+    });
+  } catch (err) {
+    if (
+      err instanceof UploadClientError &&
+      err.code === "NETWORK_ERROR" &&
+      params.fallbackUploadUrl &&
+      params.fallbackUploadUrl !== params.uploadUrl
+    ) {
+      await transport({
+        url: params.fallbackUploadUrl,
+        headers: params.headers,
+        body: params.body,
+        onProgress: params.onProgress,
+      });
+      return;
+    }
+    throw err;
+  }
+}
+
 export interface UploadSlotImageOptions {
   projectId: string;
   slot: string;
@@ -231,10 +266,12 @@ export async function uploadSlotImageClient({
 
   onProgress?.(15);
 
-  await putTransport({
-    url: presignJson.uploadUrl,
+  await putBinaryWithFallback({
+    uploadUrl: presignJson.uploadUrl,
+    fallbackUploadUrl: presignJson.fallbackUploadUrl,
     headers: presignJson.uploadHeaders,
     body: sanitizedBytes,
+    putTransport,
     onProgress: (putPct) => {
       const scaled = Math.round(15 + putPct * 0.75);
       onProgress?.(Math.min(92, scaled));

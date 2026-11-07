@@ -153,4 +153,34 @@ describe("TemplateLibraryClient (C-305)", () => {
     expect(novaProCard).toHaveAttribute("data-locked", "false");
     expect(within(novaProCard).getByRole("link", { name: /Use template/i })).toBeInTheDocument();
   });
+
+  it("renders uploaded /cdn/covers/* and external https:// cover thumbnails on template cards", () => {
+    const fixtures = buildFixtures().map((item) =>
+      item.slug === "nova"
+        ? { ...item, coverUrl: "/cdn/covers/22222222-2222-4222-8222-222222222222.png" }
+        : item.slug === "atlas"
+          ? { ...item, coverUrl: "https://images.unsplash.com/photo-cover.webp" }
+          : item,
+    );
+
+    render(
+      <TemplateLibraryClient
+        templates={fixtures}
+        categories={CATEGORIES}
+        userPlan="pro"
+        isAuthenticated
+      />,
+    );
+
+    const orbitImg = screen.getByAltText("Orbit cover thumbnail") as HTMLImageElement;
+    expect(orbitImg.getAttribute("src")).toBe("/landing/orbit-home.svg");
+
+    const novaImg = screen.getByAltText("Nova cover thumbnail") as HTMLImageElement;
+    expect(novaImg.getAttribute("src")).toBe(
+      "/cdn/covers/22222222-2222-4222-8222-222222222222.png",
+    );
+
+    const atlasImg = screen.getByAltText("Atlas cover thumbnail") as HTMLImageElement;
+    expect(atlasImg.getAttribute("src")).toBe("https://images.unsplash.com/photo-cover.webp");
+  });
 });

@@ -7,13 +7,16 @@ import {
   CheckCircle2,
   GitBranchPlus,
   Globe,
+  ImagePlus,
   RotateCcw,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { TemplateCoverUploader } from "@/components/admin/template-cover-uploader";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,6 +37,7 @@ import type {
   CreateTemplateVersionResult,
   DeleteTemplateActionResult,
   TemplateLifecycleActionResult,
+  UpdateTemplateCoverActionResult,
 } from "@/lib/template/types";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +76,11 @@ export interface TemplateDetailClientProps {
     templateId: string;
     confirmName: string;
   }) => Promise<DeleteTemplateActionResult>;
+  updateCoverAction?: (payload: {
+    templateId: string;
+    coverUrl: string;
+    coverRatio: string;
+  }) => Promise<UpdateTemplateCoverActionResult>;
 }
 
 export function TemplateDetailClient({
@@ -81,6 +90,7 @@ export function TemplateDetailClient({
   unarchiveAction,
   createVersionAction,
   deleteAction,
+  updateCoverAction,
 }: TemplateDetailClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -102,6 +112,13 @@ export function TemplateDetailClient({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [coverDialogOpen, setCoverDialogOpen] = useState(false);
+  const [draftCoverUrl, setDraftCoverUrl] = useState(detail.coverUrl ?? "");
+  const [draftCoverRatio, setDraftCoverRatio] = useState(
+    detail.versions[0]?.document?.template.cover.ratio ?? "4:3",
+  );
+  const [coverModalError, setCoverModalError] = useState<string | null>(null);
 
   const selectedVersion = useMemo(
     () => detail.versions.find((v) => v.id === selectedVersionId) ?? detail.versions[0] ?? null,
@@ -208,6 +225,30 @@ export function TemplateDetailClient({
         setFeedbackSuccess("Template retired and archived; existing projects remain intact.");
         router.refresh();
       }
+    });
+  }
+
+  function handleSaveCover() {
+    if (!updateCoverAction) return;
+    setCoverModalError(null);
+    if (!draftCoverUrl.trim()) {
+      setCoverModalError("A cover / thumbnail image is required.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await updateCoverAction({
+        templateId: detail.id,
+        coverUrl: draftCoverUrl.trim(),
+        coverRatio: draftCoverRatio,
+      });
+      if (!res.ok) {
+        setCoverModalError(res.error);
+        return;
+      }
+      setCoverDialogOpen(false);
+      setFeedbackSuccess("Template cover / thumbnail updated across the website.");
+      router.refresh();
     });
   }
 
@@ -664,9 +705,104 @@ export function TemplateDetailClient({
           )}
         </Card>
 
-        <Card className="min-w-0 justify-between gap-5 p-6 lg:col-span-4">
-          <div className="flex flex-col gap-4">
-            <h2 className="text-foreground type-heading-s">Version history</h2>
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-4">
+          <Card className="min-w-0 gap-4 p-6">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-foreground type-heading-s">Cover & thumbnail</h2>
+              {updateCoverAction && (
+                <Dialog
+                  open={coverDialogOpen}
+                  onOpenChange={(nextOpen) => {
+                    setCoverDialogOpen(nextOpen);
+                    if (nextOpen) {
+                      setDraftCoverUrl(detail.coverUrl ?? "");
+                      setCoverModalError(null);
+                    }
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      data-testid="open-change-cover-dialog"
+                    >
+                      <ImagePlus className="size-3.5" />
+                      <span>Change cover</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                      <DialogTitle>Update template cover</DialogTitle>
+                      <DialogDescription>
+                        Upload a PNG, JPG, or WebP thumbnail. This cover is displayed across the
+                        Landing page, Template Library, Create Project wizard, Dashboard, and Admin.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    {coverModalError && (
+                      <div
+                        role="alert"
+                        className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-xl border p-3"
+                      >
+                        {coverModalError}
+                      </div>
+                    )}
+
+                    <TemplateCoverUploader
+                      coverUrl={draftCoverUrl}
+                      onCoverUrlChange={setDraftCoverUrl}
+                      coverRatio={draftCoverRatio}
+                      onCoverRatioChange={setDraftCoverRatio}
+                      templateName={detail.name}
+                      templateSlug={detail.slug}
+                      required
+                      compact
+                    />
+
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setCoverDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={isPending}
+                        data-testid="save-updated-cover-button"
+                        onClick={handleSaveCover}
+                      >
+                        {isPending ? "Saving..." : "Save cover"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+
+            <TemplateThumbnail
+              testId="admin-detail-cover-thumbnail"
+              coverUrl={detail.coverUrl}
+              slug={detail.slug}
+              name={detail.name}
+              theme={
+                doc
+                  ? {
+                      bg: doc.template.theme.colors.background,
+                      fg: doc.template.theme.colors.text,
+                      accent: doc.template.theme.colors.primary,
+                    }
+                  : null
+              }
+              className="border-border/80 aspect-[4/3] w-full rounded-2xl border shadow-2xs"
+            />
+          </Card>
+
+          <Card className="min-w-0 justify-between gap-5 p-6">
+            <div className="flex flex-col gap-4">
+              <h2 className="text-foreground type-heading-s">Version history</h2>
 
             <ul className="flex flex-col gap-3">
               {detail.versions.map((ver) => {
@@ -741,7 +877,8 @@ export function TemplateDetailClient({
             Projects keep the version they started with; publishing a new version does not alter
             existing projects.
           </p>
-        </Card>
+          </Card>
+        </div>
       </div>
 
       {/* Delete confirm modal */}

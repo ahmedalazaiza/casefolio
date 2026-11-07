@@ -3,7 +3,7 @@ import { stripImageExifAndMetadata } from "@/lib/storage/exif";
 import { detectImageMimeFromMagicBytes, formatBytesHuman } from "@/lib/storage/quotas";
 import {
   verifyStorageToken,
-  writeLocalStoredObject,
+  writeStoredObject,
   type LocalPutTokenPayload,
 } from "@/lib/storage/r2";
 
@@ -59,7 +59,10 @@ export async function PUT(request: Request): Promise<NextResponse> {
   }
 
   const sanitizedBytes = stripImageExifAndMetadata(rawBytes, detectedMime);
-  await writeLocalStoredObject(payload.r2Key, sanitizedBytes);
+  await writeStoredObject(payload.r2Key, sanitizedBytes, {
+    contentType: detectedMime,
+    cacheControl: payload.cacheControl ?? "private, max-age=31536000, immutable",
+  });
 
   return NextResponse.json(
     {

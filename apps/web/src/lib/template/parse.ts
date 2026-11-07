@@ -131,3 +131,53 @@ export function parseAndValidateTemplateJson(rawJsonText: string): ParseTemplate
     },
   };
 }
+
+/**
+ * Allows admins to upload converter JSON files that omit `template.cover` in Step 1,
+ * so they can attach the mandatory cover thumbnail directly in the Upload Wizard.
+ */
+export function normalizeRawTemplateJsonCoverIfMissing(
+  rawJsonText: string,
+  fallbackCoverSrc = "/templates/pending-cover.png",
+  fallbackCoverRatio = "4:3",
+): { normalizedJson: string; coverWasMissing: boolean } {
+  try {
+    const parsed = JSON.parse(rawJsonText) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { normalizedJson: rawJsonText, coverWasMissing: false };
+    }
+    const tpl = parsed.template as Record<string, unknown> | undefined;
+    if (!tpl || typeof tpl !== "object" || Array.isArray(tpl)) {
+      return { normalizedJson: rawJsonText, coverWasMissing: false };
+    }
+
+    const existingCover = tpl.cover as { src?: unknown; ratio?: unknown } | undefined;
+    const existingSrc =
+      typeof existingCover?.src === "string" ? existingCover.src.trim() : "";
+    if (existingSrc.length > 0) {
+      return { normalizedJson: rawJsonText, coverWasMissing: false };
+    }
+
+    const ratio =
+      typeof existingCover?.ratio === "string" && existingCover.ratio.trim().length > 0
+        ? existingCover.ratio.trim()
+        : fallbackCoverRatio;
+
+    const cloned = {
+      ...parsed,
+      template: {
+        ...tpl,
+        cover: {
+          src: fallbackCoverSrc,
+          ratio,
+        },
+      },
+    };
+    return {
+      normalizedJson: JSON.stringify(cloned, null, 2),
+      coverWasMissing: true,
+    };
+  } catch {
+    return { normalizedJson: rawJsonText, coverWasMissing: false };
+  }
+}

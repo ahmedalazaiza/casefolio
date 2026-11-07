@@ -26,6 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { can } from "@/lib/entitlements";
+import { runBrowserAssistedExport } from "@/lib/exports/client-renderer";
 import {
   EXPORT_PRESETS,
   type EnqueueExportResult,
@@ -105,6 +106,24 @@ export function ExportCaseStudyDialog({
     }, 800);
 
     return () => clearInterval(interval);
+  }, [activeJob, onExportCompleted]);
+
+  useEffect(() => {
+    if (!activeJob || activeJob.status !== "queued" || !activeJob.renderUrl) {
+      return;
+    }
+
+    const fallbackTimer = setTimeout(async () => {
+      const completed = await runBrowserAssistedExport(activeJob);
+      if (completed) {
+        setActiveJob(completed);
+        if (completed.status === "completed") {
+          onExportCompleted?.(completed);
+        }
+      }
+    }, 2200);
+
+    return () => clearTimeout(fallbackTimer);
   }, [activeJob, onExportCompleted]);
 
   const handleStartExport = useCallback(async () => {

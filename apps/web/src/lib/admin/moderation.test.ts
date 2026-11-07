@@ -62,7 +62,18 @@ describe("Admin moderation service (C-905)", () => {
     }
     createdUserIds.push(adminUser.id, authorUser.id);
 
-    const [tplVer] = await db.select().from(dbSchema.templateVersions).limit(1);
+    const [orbitTpl] = await db
+      .select({ id: dbSchema.templates.id })
+      .from(dbSchema.templates)
+      .where(eq(dbSchema.templates.slug, "orbit"))
+      .limit(1);
+    const [tplVer] = orbitTpl
+      ? await db
+          .select()
+          .from(dbSchema.templateVersions)
+          .where(eq(dbSchema.templateVersions.templateId, orbitTpl.id))
+          .limit(1)
+      : await db.select().from(dbSchema.templateVersions).limit(1);
     if (!tplVer) {
       throw new Error("Expected at least one seeded template_version");
     }

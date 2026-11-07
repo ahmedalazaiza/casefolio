@@ -63,6 +63,7 @@ export type PresignUploadResult =
       slot: string;
       mode: "r2" | "local";
       uploadUrl: string;
+      fallbackUploadUrl?: string;
       uploadMethod: "PUT";
       uploadHeaders: Record<string, string>;
       completeToken: string;
@@ -361,6 +362,7 @@ export async function createPresignedUpload(
     slot: valid.slot,
     mode: putTarget.mode,
     uploadUrl: putTarget.uploadUrl,
+    fallbackUploadUrl: putTarget.fallbackUploadUrl,
     uploadMethod: putTarget.uploadMethod,
     uploadHeaders: putTarget.uploadHeaders,
     completeToken,

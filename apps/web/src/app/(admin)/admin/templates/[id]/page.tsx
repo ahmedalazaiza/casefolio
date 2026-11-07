@@ -8,6 +8,7 @@ import {
   deleteTemplateAction,
   publishTemplateVersionAction,
   unarchiveTemplateAction,
+  updateTemplateCoverAction,
 } from "@/lib/template/admin-actions";
 import { getAdminTemplateDetail } from "@/lib/template/service";
 
@@ -36,6 +37,7 @@ export default async function AdminTemplateDetailPage({
       unarchiveAction={unarchiveTemplateAction}
       createVersionAction={createTemplateVersionAction}
       deleteAction={deleteTemplateAction}
+      updateCoverAction={updateTemplateCoverAction}
     />
   );
 }

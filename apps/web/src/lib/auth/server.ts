@@ -16,19 +16,24 @@ import {
 } from "@/lib/auth/email";
 import { organizationAccessControl, organizationRoles } from "@/lib/auth/permissions";
 import { db, dbSchema } from "@/lib/db";
+import { sanitizeErrorForLogging } from "@/lib/security/redact";
 
 export const auth = betterAuth({
   appName: "Casefolio",
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: Array.from(
-    new Set([
-      env.BETTER_AUTH_URL,
-      env.NEXT_PUBLIC_APP_URL,
-      ...(process.env.NODE_ENV !== "production"
-        ? ["http://127.0.0.1:3000", "http://localhost:3000"]
-        : []),
-    ]),
+    new Set(
+      [
+        env.BETTER_AUTH_URL,
+        env.NEXT_PUBLIC_APP_URL,
+        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
+        process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : "",
+        ...(process.env.NODE_ENV !== "production"
+          ? ["http://127.0.0.1:3000", "http://localhost:3000"]
+          : []),
+      ].filter(Boolean),
+    ),
   ),
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -195,7 +200,15 @@ export const auth = betterAuth({
       expiresIn: 600,
       sendVerificationOnSignUp: true,
       async sendVerificationOTP({ email, otp, type }) {
-        await sendVerificationOtpEmail({ email, otp, type });
+        try {
+          await sendVerificationOtpEmail({ email, otp, type });
+        } catch (err) {
+          const safe = sanitizeErrorForLogging(err);
+          console.warn("[auth] verification OTP email warning:", safe.message);
+          if (type !== "email-verification") {
+            throw err;
+          }
+        }
       },
     }),
     organization({
