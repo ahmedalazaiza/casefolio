@@ -6,22 +6,34 @@ import { describe, expect, it } from "vitest";
 import { casefolioPuckConfig, TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { validateTemplateDocument, type TemplateDocument } from "@/lib/template/schema";
 
-function resolveOrbitPath(): string {
+function resolveReferencePath(fileName: string): string {
   for (const candidate of [
-    resolve(process.cwd(), "reference/template.example.json"),
-    resolve(process.cwd(), "../../reference/template.example.json"),
+    resolve(process.cwd(), `reference/${fileName}`),
+    resolve(process.cwd(), `../../reference/${fileName}`),
   ]) {
     if (existsSync(candidate)) {
       return candidate;
     }
   }
-  return resolve(process.cwd(), "reference/template.example.json");
+  return resolve(process.cwd(), `reference/${fileName}`);
 }
 
 function loadOrbitDocument(): TemplateDocument {
-  const parsed = validateTemplateDocument(JSON.parse(readFileSync(resolveOrbitPath(), "utf-8")));
+  const parsed = validateTemplateDocument(
+    JSON.parse(readFileSync(resolveReferencePath("template.example.json"), "utf-8")),
+  );
   if (!parsed.ok) {
     throw new Error(`Orbit fixture failed validation: ${JSON.stringify(parsed.issues)}`);
+  }
+  return parsed.data;
+}
+
+function loadCinemaDocument(): TemplateDocument {
+  const parsed = validateTemplateDocument(
+    JSON.parse(readFileSync(resolveReferencePath("template.cinema.json"), "utf-8")),
+  );
+  if (!parsed.ok) {
+    throw new Error(`Cinema fixture failed validation: ${JSON.stringify(parsed.issues)}`);
   }
   return parsed.data;
 }
@@ -162,5 +174,34 @@ describe("Puck section components & TemplatePuckRenderer (C-302)", () => {
     const heroEl = container.querySelector('[data-section-type="Hero"]');
     expect(heroEl?.getAttribute("data-variant")).toBe("web");
     expect(container.querySelectorAll('[data-device-frame="web"]').length).toBe(1);
+  });
+
+  it("renders reference/template.cinema.json (.Cinema) with angled iPhone Pro, plain wireframes, design-system swatches, and MacBook/Tablet overrides", () => {
+    const cinema = loadCinemaDocument();
+    const { container } = render(<TemplatePuckRenderer document={cinema} />);
+
+    expect(screen.getByRole("heading", { level: 1, name: ".Cinema" })).toBeInTheDocument();
+    expect(screen.getByText("We fixed it.")).toBeInTheDocument();
+    expect(screen.getByText("How cinema apps compare")).toBeInTheDocument();
+    expect(screen.getByText("Eight-step ticket booking journey")).toBeInTheDocument();
+    expect(screen.getByText("Interactive auditorium seat map")).toBeInTheDocument();
+    expect(screen.getByText("+47%")).toBeInTheDocument();
+    // Design system section reads live hex values from theme.colors
+    expect(screen.getByText("#E50914")).toBeInTheDocument();
+    expect(screen.getByText("#0A0A0C")).toBeInTheDocument();
+
+    // 1 Hero iPhone + 10 Final UI iPhones + 1 Feature Spotlight iPhone = 12 iPhone Pro models
+    expect(container.querySelectorAll('[data-device-model="iphone"]').length).toBe(12);
+    // 1 Hero logo + 5 Wireframe screens = 6 plain frames
+    expect(container.querySelectorAll('[data-device-model="plain"]').length).toBe(6);
+
+    // Per-slot device override to macbook & tablet renders corresponding hardware frames
+    const hybridCinema = structuredClone(cinema);
+    const hero = hybridCinema.puck.content[0];
+    if (hero?.type === "Hero" && hero.props.mockup) {
+      hero.props.mockup.device = "macbook";
+    }
+    const { container: hybridContainer } = render(<TemplatePuckRenderer document={hybridCinema} />);
+    expect(hybridContainer.querySelectorAll('[data-device-model="macbook"]').length).toBe(1);
   });
 });

@@ -26,7 +26,15 @@ export type TemplateStatus = (typeof TEMPLATE_STATUSES)[number];
 export const EXPORT_PRESETS = ["png-long", "pdf", "behance-1400"] as const;
 export type ExportPreset = (typeof EXPORT_PRESETS)[number];
 
-export const SLOT_DEVICES = ["iphone", "android", "browser", "tablet", "none"] as const;
+export const SLOT_DEVICES = [
+  "iphone",
+  "iphone-notch",
+  "android",
+  "tablet",
+  "macbook",
+  "browser",
+  "none",
+] as const;
 export type SlotDevice = (typeof SLOT_DEVICES)[number];
 
 const HEX_COLOR_REGEX = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
@@ -79,6 +87,7 @@ export const imageSlotValueSchema = z.object({
   alt: z.string(),
   assetId: z.string().uuid().nullish(),
   crop: cropRectSchema.nullable(),
+  device: z.enum(SLOT_DEVICES).optional(),
 });
 
 export type ImageSlotValue = z.infer<typeof imageSlotValueSchema>;
@@ -170,6 +179,7 @@ export const templateMetadataSchema = z.object({
   canvas: z.object({
     width: z.number().int().min(320).max(3840).default(1440),
     exportPresets: z.array(z.enum(EXPORT_PRESETS)).min(1),
+    allowSectionMutations: z.boolean().optional(),
   }),
   figmaSource: z
     .object({
@@ -189,6 +199,31 @@ const baseSectionProps = {
   background: z.string().trim().min(1, "Section background color token is required."),
 };
 
+export const HERO_LAYOUTS = ["split-right", "split-left", "centered"] as const;
+export type HeroLayout = (typeof HERO_LAYOUTS)[number];
+
+export const MOCKUP_STYLES = ["straight", "tilt-left", "tilt-right"] as const;
+export type MockupStyle = (typeof MOCKUP_STYLES)[number];
+
+export const PROCESS_LAYOUTS = ["cards", "timeline", "grid-3"] as const;
+export type ProcessLayout = (typeof PROCESS_LAYOUTS)[number];
+
+export const GALLERY_SHOWCASE_LAYOUTS = ["grid", "staggered"] as const;
+export type GalleryShowcaseLayout = (typeof GALLERY_SHOWCASE_LAYOUTS)[number];
+
+export const GALLERY_DEVICE_FRAMES = ["auto", ...SLOT_DEVICES] as const;
+export type GalleryDeviceFrame = (typeof GALLERY_DEVICE_FRAMES)[number];
+
+export const CUSTOM_SECTION_LAYOUTS = [
+  "stacked",
+  "split-right",
+  "split-left",
+  "persona",
+  "comparison",
+  "design-system",
+] as const;
+export type CustomSectionLayout = (typeof CUSTOM_SECTION_LAYOUTS)[number];
+
 export const heroSectionSchema = z.object({
   type: z.literal("Hero"),
   props: z.object({
@@ -196,6 +231,17 @@ export const heroSectionSchema = z.object({
     eyebrow: z.string().optional(),
     title: z.string().min(1, "Hero title is required."),
     subtitle: z.string().optional(),
+    tags: z
+      .array(
+        z.object({
+          label: z.string().min(1),
+        }),
+      )
+      .max(6)
+      .optional(),
+    layout: z.enum(HERO_LAYOUTS).optional(),
+    mockupStyle: z.enum(MOCKUP_STYLES).optional(),
+    glow: z.boolean().optional(),
     logo: imageSlotValueSchema.optional(),
     mockup: imageSlotValueSchema.optional(),
     accent: z.string().trim().min(1).optional(),
@@ -206,7 +252,9 @@ export const overviewSectionSchema = z.object({
   type: z.literal("Overview"),
   props: z.object({
     ...baseSectionProps,
+    eyebrow: z.string().optional(),
     heading: z.string().min(1),
+    highlight: z.string().optional(),
     summary: richTextValueSchema,
     meta: z
       .array(
@@ -218,6 +266,7 @@ export const overviewSectionSchema = z.object({
       .max(8)
       .default([]),
     banner: imageSlotValueSchema.optional(),
+    accent: z.string().trim().min(1).optional(),
   }),
 });
 
@@ -225,8 +274,10 @@ export const problemSectionSchema = z.object({
   type: z.literal("Problem"),
   props: z.object({
     ...baseSectionProps,
+    eyebrow: z.string().optional(),
     heading: z.string().min(1),
     statement: z.string().min(1),
+    columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(),
     painPoints: z
       .array(
         z.object({
@@ -235,7 +286,7 @@ export const problemSectionSchema = z.object({
         }),
       )
       .min(1)
-      .max(6),
+      .max(8),
   }),
 });
 
@@ -243,7 +294,11 @@ export const processSectionSchema = z.object({
   type: z.literal("Process"),
   props: z.object({
     ...baseSectionProps,
+    eyebrow: z.string().optional(),
     heading: z.string().min(1),
+    subtitle: z.string().optional(),
+    layout: z.enum(PROCESS_LAYOUTS).optional(),
+    accent: z.string().trim().min(1).optional(),
     steps: z
       .array(
         z.object({
@@ -254,7 +309,7 @@ export const processSectionSchema = z.object({
         }),
       )
       .min(1)
-      .max(8),
+      .max(10),
   }),
 });
 
@@ -262,8 +317,12 @@ export const screensGallerySectionSchema = z.object({
   type: z.literal("ScreensGallery"),
   props: z.object({
     ...baseSectionProps,
+    eyebrow: z.string().optional(),
     heading: z.string().min(1),
-    columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(3),
+    subtitle: z.string().optional(),
+    columns: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).default(3),
+    showcaseLayout: z.enum(GALLERY_SHOWCASE_LAYOUTS).optional(),
+    deviceFrame: z.enum(GALLERY_DEVICE_FRAMES).optional(),
     screens: z
       .array(
         z.object({
@@ -272,7 +331,7 @@ export const screensGallerySectionSchema = z.object({
         }),
       )
       .min(1)
-      .max(12),
+      .max(16),
   }),
 });
 
@@ -280,7 +339,11 @@ export const resultsSectionSchema = z.object({
   type: z.literal("Results"),
   props: z.object({
     ...baseSectionProps,
+    eyebrow: z.string().optional(),
     heading: z.string().min(1),
+    subtitle: z.string().optional(),
+    columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(),
+    accent: z.string().trim().min(1).optional(),
     metrics: z
       .array(
         z.object({
@@ -290,6 +353,15 @@ export const resultsSectionSchema = z.object({
       )
       .min(1)
       .max(6),
+    takeaways: z
+      .array(
+        z.object({
+          title: z.string().min(1),
+          body: z.string().min(1),
+        }),
+      )
+      .max(4)
+      .optional(),
     closing: z.string().optional(),
   }),
 });
@@ -323,8 +395,41 @@ export const customSectionSchema = z.object({
   type: z.literal("Custom"),
   props: z.object({
     ...baseSectionProps,
+    eyebrow: z.string().optional(),
     heading: z.string().min(1),
     body: richTextValueSchema,
+    layout: z.enum(CUSTOM_SECTION_LAYOUTS).optional(),
+    mockupStyle: z.enum(MOCKUP_STYLES).optional(),
+    accent: z.string().trim().min(1).optional(),
+    bullets: z
+      .array(
+        z.object({
+          text: z.string().min(1),
+        }),
+      )
+      .max(8)
+      .optional(),
+    cards: z
+      .array(
+        z.object({
+          title: z.string().min(1),
+          subtitle: z.string().optional(),
+          body: z.string().min(1),
+          highlighted: z.boolean().optional(),
+        }),
+      )
+      .max(8)
+      .optional(),
+    swatches: z
+      .array(
+        z.object({
+          label: z.string().min(1),
+          token: z.string().min(1),
+          role: z.string().optional(),
+        }),
+      )
+      .max(12)
+      .optional(),
     image: imageSlotValueSchema.optional(),
   }),
 });
@@ -481,6 +586,22 @@ export const templateDocumentSchema = z
             message: `Accent color token '${accentToken}' is not defined in template.theme.colors.`,
           });
         }
+      }
+
+      if (section.type === "Custom" && Array.isArray(section.props.swatches)) {
+        section.props.swatches.forEach((swatch, swatchIdx) => {
+          if (
+            !HEX_COLOR_REGEX.test(swatch.token) &&
+            !RAW_COLOR_FUNCTION_REGEX.test(swatch.token) &&
+            !(swatch.token in colorTokens)
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [...sectionPath, "swatches", swatchIdx, "token"],
+              message: `Swatch color token '${swatch.token}' is not defined in template.theme.colors.`,
+            });
+          }
+        });
       }
     });
   });

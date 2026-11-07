@@ -309,7 +309,15 @@ export function TemplateLibraryClient({
                     }}
                     className="border-border/30 relative flex aspect-[4/3] w-full flex-col justify-between overflow-hidden rounded-lg border p-5"
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    {item.coverUrl && item.coverUrl.startsWith("/") && (
+                      <img
+                        src={item.coverUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 size-full object-cover opacity-75"
+                      />
+                    )}
+                    <div className="relative z-10 flex items-center justify-between gap-2">
                       <span className="bg-background/85 text-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 backdrop-blur-xs">
                         <TypeIcon type={item.type} />
                         {formatTypeLabel(item.type)}
@@ -324,7 +332,7 @@ export function TemplateLibraryClient({
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1">
+                    <div className="relative z-10 flex flex-col gap-1">
                       <span className="type-overline opacity-75">
                         {item.categoryName ?? "Case Study"} · v{item.version}
                       </span>

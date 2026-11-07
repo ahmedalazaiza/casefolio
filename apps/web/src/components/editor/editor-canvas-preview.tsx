@@ -1,7 +1,7 @@
 "use client";
 
 import type { PuckContext } from "@puckeditor/core";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   CtaSection,
   CustomSection,
@@ -13,7 +13,7 @@ import {
   ResultsSection,
   ScreensGallerySection,
 } from "@/components/sections";
-import { formatSectionTypeLabel } from "@/lib/projects/types";
+import { formatSectionSummaryLabel, formatSectionTypeLabel } from "@/lib/projects/types";
 import { ensureThemeFontsLoaded } from "@/lib/template/curated-themes";
 import type {
   PuckDocument,
@@ -80,8 +80,27 @@ export function EditorCanvasPreview({
     metadata: {
       projectType: effectiveProjectType,
       slots,
+      theme,
     },
   };
+
+  const typeCounts = useMemo(() => {
+    const counts = new Map<PuckSectionItem["type"], number>();
+    for (const item of puckData.content) {
+      counts.set(item.type, (counts.get(item.type) ?? 0) + 1);
+    }
+    return counts;
+  }, [puckData.content]);
+
+  const firstVisibleIndexByType = useMemo(() => {
+    const map = new Map<PuckSectionItem["type"], number>();
+    puckData.content.forEach((item, idx) => {
+      if (!item.props.hidden && !map.has(item.type)) {
+        map.set(item.type, idx);
+      }
+    });
+    return map;
+  }, [puckData.content]);
 
   useEffect(() => {
     ensureThemeFontsLoaded(theme);
@@ -106,7 +125,14 @@ export function EditorCanvasPreview({
         }
 
         const isSelected = selectedSectionIndex === index;
-        const label = formatSectionTypeLabel(section.type);
+        const typeLabel = formatSectionTypeLabel(section.type);
+        const summaryLabel = formatSectionSummaryLabel(section);
+        const hasMultipleOfSameType = (typeCounts.get(section.type) ?? 0) > 1;
+        const pillText = hasMultipleOfSameType ? summaryLabel : typeLabel;
+        const ariaLabel =
+          firstVisibleIndexByType.get(section.type) === index
+            ? `Edit ${typeLabel} section`
+            : `Edit ${summaryLabel} section`;
 
         return (
           <div
@@ -127,20 +153,20 @@ export function EditorCanvasPreview({
           >
             <button
               type="button"
-              aria-label={`Edit ${label} section`}
+              aria-label={ariaLabel}
               aria-pressed={isSelected}
               onClick={(event) => {
                 event.stopPropagation();
                 onSelectSection(index);
               }}
               className={cn(
-                "type-caption focus-visible:ring-ring/40 absolute top-3 left-3 z-20 rounded-full px-2.5 py-0.5 transition-colors outline-none focus-visible:ring-2",
+                "type-caption focus-visible:ring-ring/40 absolute top-3 left-3 z-20 max-w-56 truncate rounded-full px-2.5 py-0.5 transition-colors outline-none focus-visible:ring-2",
                 isSelected
                   ? "bg-primary text-primary-foreground"
                   : "bg-inverse text-inverse-foreground",
               )}
             >
-              {label}
+              {pillText}
             </button>
             {renderSectionBlock(section, puckCtx)}
           </div>

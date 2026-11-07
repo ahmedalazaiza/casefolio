@@ -11,19 +11,20 @@ import {
   type TemplateTier,
 } from "./schema";
 
-function resolveOrbitTemplateJsonPath(): string {
+function resolveReferenceJsonPath(fileName: string): string {
   for (const candidate of [
-    resolve(process.cwd(), "reference/template.example.json"),
-    resolve(process.cwd(), "../../reference/template.example.json"),
+    resolve(process.cwd(), `reference/${fileName}`),
+    resolve(process.cwd(), `../../reference/${fileName}`),
   ]) {
     if (existsSync(candidate)) {
       return candidate;
     }
   }
-  return resolve(process.cwd(), "reference/template.example.json");
+  return resolve(process.cwd(), `reference/${fileName}`);
 }
 
-const ORBIT_TEMPLATE_JSON_PATH = resolveOrbitTemplateJsonPath();
+const ORBIT_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.example.json");
+const CINEMA_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.cinema.json");
 
 interface OrbitSeedJson {
   template: {
@@ -264,6 +265,85 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
             .update(templates)
             .set({ currentVersionId: proVersion.id, updatedAt: new Date() })
             .where(eq(templates.id, proTpl.id));
+        }
+      }
+    }
+
+    // Seed published Free template ("Cinema") from reference/template.cinema.json
+    if (existsSync(CINEMA_TEMPLATE_JSON_PATH)) {
+      const rawCinema = readFileSync(CINEMA_TEMPLATE_JSON_PATH, "utf-8");
+      const cinemaPayload = JSON.parse(rawCinema) as OrbitSeedJson & Record<string, unknown>;
+      const cinemaCategorySlug = cinemaPayload.template.category
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+
+      const [entertainmentCategory] = await db
+        .insert(categories)
+        .values({
+          name: cinemaPayload.template.category,
+          slug: cinemaCategorySlug,
+          sort: 3,
+        })
+        .onConflictDoUpdate({
+          target: categories.slug,
+          set: {
+            name: cinemaPayload.template.category,
+            sort: 3,
+          },
+        })
+        .returning({ id: categories.id });
+
+      if (entertainmentCategory) {
+        const [cinemaTpl] = await db
+          .insert(templates)
+          .values({
+            slug: cinemaPayload.template.slug,
+            name: cinemaPayload.template.name,
+            type: cinemaPayload.template.type,
+            categoryId: entertainmentCategory.id,
+            tier: cinemaPayload.template.tier,
+            status: "published",
+            coverUrl: cinemaPayload.template.cover.src,
+          })
+          .onConflictDoUpdate({
+            target: templates.slug,
+            set: {
+              name: cinemaPayload.template.name,
+              type: cinemaPayload.template.type,
+              categoryId: entertainmentCategory.id,
+              tier: cinemaPayload.template.tier,
+              status: "published",
+              coverUrl: cinemaPayload.template.cover.src,
+              updatedAt: new Date(),
+            },
+          })
+          .returning({ id: templates.id });
+
+        if (cinemaTpl) {
+          const [cinemaVersion] = await db
+            .insert(templateVersions)
+            .values({
+              templateId: cinemaTpl.id,
+              version: cinemaPayload.template.version,
+              data: cinemaPayload,
+              changelog: "Initial .Cinema entertainment case study template",
+              publishedAt: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: [templateVersions.templateId, templateVersions.version],
+              set: {
+                data: cinemaPayload,
+                publishedAt: new Date(),
+              },
+            })
+            .returning({ id: templateVersions.id });
+
+          if (cinemaVersion) {
+            await db
+              .update(templates)
+              .set({ currentVersionId: cinemaVersion.id, updatedAt: new Date() })
+              .where(eq(templates.id, cinemaTpl.id));
+          }
         }
       }
     }

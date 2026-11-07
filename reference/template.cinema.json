@@ -1,0 +1,582 @@
+{
+  "template": {
+    "id": "tpl_cinema_entertainment_v1",
+    "slug": "cinema",
+    "name": "Cinema",
+    "type": "both",
+    "version": "1.0.0",
+    "status": "published",
+    "category": "Entertainment",
+    "tier": "free",
+    "cover": {
+      "src": "/templates/cinema/cover.svg",
+      "ratio": "4:3"
+    },
+    "canvas": {
+      "width": 1440,
+      "exportPresets": ["png-long", "pdf", "behance-1400"],
+      "allowSectionMutations": true
+    },
+    "figmaSource": {
+      "fileKey": "u2Xhj1OfRX3b5z8QpK1NSf",
+      "nodeId": "0:1"
+    },
+    "theme": {
+      "colors": {
+        "primary": "#E50914",
+        "secondary": "#272730",
+        "background": "#0A0A0C",
+        "surface": "#141418",
+        "text": "#FAFAFC",
+        "textMuted": "#9E9EA8",
+        "accent": "#FF7A00",
+        "success": "#22C55E",
+        "danger": "#EF4444",
+        "warning": "#F97316",
+        "info": "#0EA5E9"
+      },
+      "fonts": {
+        "heading": {
+          "family": "Plus Jakarta Sans",
+          "weights": [600, 700, 800]
+        },
+        "body": {
+          "family": "Inter",
+          "weights": [400, 500, 600]
+        }
+      },
+      "typography": {
+        "display": { "font": "heading", "size": 72, "weight": 800, "lineHeight": 1.06 },
+        "h2": { "font": "heading", "size": 40, "weight": 700, "lineHeight": 1.18 },
+        "body": { "font": "body", "size": 18, "weight": 400, "lineHeight": 1.6 },
+        "caption": { "font": "body", "size": 14, "weight": 500, "lineHeight": 1.4 }
+      }
+    },
+    "slots": {
+      "hero.logo": { "ratio": "1:1", "minWidth": 120, "device": "none" },
+      "hero.mockup": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" },
+      "overview.banner": { "ratio": "16:9", "minWidth": 1200, "device": "macbook" },
+      "process.step.image": { "ratio": "4:3", "minWidth": 600, "device": "none" },
+      "wireframe.screen": { "ratio": "9:19.5", "minWidth": 390, "device": "none" },
+      "gallery.screen": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" },
+      "spotlight.mockup": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" },
+      "custom.image": { "ratio": "16:10", "minWidth": 1000, "device": "macbook" }
+    }
+  },
+  "puck": {
+    "root": {
+      "props": {
+        "title": ".Cinema — Movie Ticket Booking Experience",
+        "themeRef": "template.theme"
+      }
+    },
+    "content": [
+      {
+        "type": "Hero",
+        "props": {
+          "id": "Hero-1",
+          "eyebrow": "UX/UI CASE STUDY · MOBILE APP",
+          "title": ".Cinema",
+          "subtitle": "Reimagining movie discovery, real-time auditorium seat selection, and frictionless cinema checkout for dark-room environments.",
+          "tags": [
+            { "label": "UI/UX Design" },
+            { "label": "Mobile App" },
+            { "label": "iOS & Android" },
+            { "label": "Design System" }
+          ],
+          "layout": "split-right",
+          "mockupStyle": "tilt-right",
+          "glow": true,
+          "logo": {
+            "slot": "hero.logo",
+            "src": "/templates/cinema/logo.svg",
+            "alt": ".Cinema brand emblem",
+            "crop": null
+          },
+          "mockup": {
+            "slot": "hero.mockup",
+            "src": "/templates/cinema/hero-splash.svg",
+            "alt": ".Cinema splash screen",
+            "crop": null,
+            "device": "iphone"
+          },
+          "background": "background",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Overview",
+        "props": {
+          "id": "Overview-1",
+          "eyebrow": "01 · OVERVIEW",
+          "heading": "Cinema booking is broken.",
+          "highlight": "We fixed it.",
+          "summary": "Most cinema apps bury showtimes behind pop-up ads, force mandatory account registration before revealing available seats, and surprise moviegoers with convenience fees at payment. .Cinema streamlines the entire booking ritual — from watching IMAX trailers to scanning a live QR pass — into an effortless 2-minute dark-mode experience.",
+          "meta": [
+            { "label": "Role", "value": "Lead Product Designer" },
+            { "label": "Timeline", "value": "8 Weeks" },
+            { "label": "Platform", "value": "iOS & Android" },
+            { "label": "Deliverables", "value": "Research, Flows, UI Kit" },
+            { "label": "Screens", "value": "35+ Hi-Fi Screens" },
+            { "label": "Tools", "value": "Figma, Maze, Principle" }
+          ],
+          "background": "background",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Problem",
+        "props": {
+          "id": "Problem-1",
+          "eyebrow": "02 · USER RESEARCH",
+          "heading": "What moviegoers struggled with",
+          "statement": "We interviewed 16 frequent cinema visitors and observed live mobile bookings to uncover why 61% abandoned mobile checkout in favor of buying at the counter.",
+          "columns": 3,
+          "painPoints": [
+            {
+              "title": "Unreadable micro seat maps",
+              "body": "Pinch-zooming 200+ tiny seat squares caused frequent mis-taps on adjacent rows."
+            },
+            {
+              "title": "Forced sign-up walls",
+              "body": "Users had to create a password and verify SMS before even seeing if two seats together were free."
+            },
+            {
+              "title": "Surprise checkout fees",
+              "body": "Booking fees and 3D glasses surcharges appeared only on the final payment step."
+            },
+            {
+              "title": "Fragmented format filters",
+              "body": "Switching between IMAX, Dolby Atmos, and VIP required restarting the movie search."
+            },
+            {
+              "title": "Harsh white screens in halls",
+              "body": "Opening email PDFs inside dark auditoriums blinded nearby viewers and failed scanner brightness."
+            },
+            {
+              "title": "Clunky group coordination",
+              "body": "Sharing seat numbers and splitting snack combos with friends required manual screenshots."
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "Problem",
+        "props": {
+          "id": "Problem-2",
+          "eyebrow": "03 · FRICTION AUDIT",
+          "heading": "Eight core booking pain points",
+          "statement": "Mapping heuristic violations across legacy cinema apps gave us eight measurable UX targets.",
+          "columns": 4,
+          "painPoints": [
+            {
+              "title": "Too many taps",
+              "body": "Average legacy flow took 11 screens from launch to confirmed ticket."
+            },
+            {
+              "title": "Zero acoustic guidance",
+              "body": "First-time visitors had no hint which rows offered optimal screen angle and sound."
+            },
+            {
+              "title": "Slow snack upsells",
+              "body": "Mandatory multi-page concession menus interrupted urgent last-minute bookings."
+            },
+            {
+              "title": "Manual card entry",
+              "body": "Missing one-tap Apple Pay and Google Pay caused 34% payment drop-off."
+            },
+            {
+              "title": "Lost PDF tickets",
+              "body": "Users hunted through inbox attachments at the turnstile queue."
+            },
+            {
+              "title": "Stale seat locks",
+              "body": "Seats appeared open until checkout failed with an expired session error."
+            },
+            {
+              "title": "Weak trailer context",
+              "body": "Users bounced to YouTube and IMDb to check ratings before returning to book."
+            },
+            {
+              "title": "Rigid cancellations",
+              "body": "Swapping showtimes required calling customer support instead of one-tap self-service."
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-comparison",
+          "eyebrow": "04 · COMPETITIVE ANALYSIS",
+          "heading": "How cinema apps compare",
+          "layout": "comparison",
+          "accent": "primary",
+          "body": "Benchmarking regional and global cinema apps revealed an opportunity for a speed-first, dark-native booking flow.",
+          "cards": [
+            {
+              "title": "VOX Cinemas",
+              "subtitle": "3.8 ★ · 9 checkout steps",
+              "body": "• Rich F&B menu\n• Forced login before payment\n• Dense seat map on small phones\n• Multi-step promo validation",
+              "highlighted": false
+            },
+            {
+              "title": "Muvi Cinemas",
+              "subtitle": "4.1 ★ · 8 checkout steps",
+              "body": "• Fast city selector\n• Separate format listings\n• Limited seat view preview\n• Static email barcode",
+              "highlighted": false
+            },
+            {
+              "title": "AMC Theatres",
+              "subtitle": "4.4 ★ · 7 checkout steps",
+              "body": "• Strong loyalty pass\n• Heavy promotional clutter\n• Extra fees revealed late\n• Complex navigation tabs",
+              "highlighted": false
+            },
+            {
+              "title": ".Cinema",
+              "subtitle": "4.9 ★ · 4 core steps",
+              "body": "• Guest-friendly live seat map\n• Acoustic sweet-spot indicator\n• Upfront all-in pricing\n• One-tap Apple Pay & live QR",
+              "highlighted": true
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-persona",
+          "eyebrow": "05 · TARGET AUDIENCE",
+          "heading": "Who we designed for",
+          "layout": "persona",
+          "accent": "primary",
+          "body": "Tariq Al-Harbi · 25 · Product Analyst in Riyadh. Organizes Friday night IMAX outings for 3–5 friends and books on mobile while in transit.",
+          "cards": [
+            {
+              "title": "Goals",
+              "subtitle": "Speed & certainty",
+              "body": "• Lock center-row VIP seats in under 2 minutes\n• Compare IMAX vs Dolby showtimes on one screen\n• Send instant wallet passes to friends"
+            },
+            {
+              "title": "Frustrations",
+              "subtitle": "Friction triggers",
+              "body": "• Discovering seats are split only after signing in\n• Typing 16-digit card numbers in a moving car\n• Digging through emails at the theater gate"
+            },
+            {
+              "title": "Cinema Habits",
+              "subtitle": "Behavioral context",
+              "body": "• Watches trailers in dark mode after 9 PM\n• Pre-orders caramel popcorn combos to skip queues\n• Pays 100% with Apple Pay"
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Process",
+        "props": {
+          "id": "Process-flow",
+          "eyebrow": "06 · USER FLOW",
+          "heading": "Eight-step ticket booking journey",
+          "subtitle": "Every screen advances forward with persistent context and zero dead-end modals.",
+          "layout": "timeline",
+          "accent": "primary",
+          "steps": [
+            { "number": "01", "title": "Launch", "body": "Instant location-aware now-showing feed with zero login gate." },
+            { "number": "02", "title": "Browse", "body": "Filter by Tonight, IMAX, Dolby Atmos, or IMDb score." },
+            { "number": "03", "title": "Movie Hub", "body": "Inline trailer, verified ratings, runtime, and cast." },
+            { "number": "04", "title": "Showtime", "body": "Unified date strip and hall format chips on a single sheet." },
+            { "number": "05", "title": "Seat Map", "body": "Smart auto-zoom auditorium grid with acoustic sweet-spot guide." },
+            { "number": "06", "title": "Snacks", "body": "One-tap combo add-ons with instant Skip option." },
+            { "number": "07", "title": "Checkout", "body": "Transparent total and biometric Apple / Google Pay." },
+            { "number": "08", "title": "Live QR", "body": "Perforated dark-mode pass synced to Wallet with hall countdown." }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "Process",
+        "props": {
+          "id": "Process-pillars",
+          "eyebrow": "07 · UX ARCHITECTURE",
+          "heading": "Six product pillars",
+          "subtitle": "Design principles translating user research directly into interface mechanics.",
+          "layout": "grid-3",
+          "accent": "primary",
+          "steps": [
+            { "number": "01", "title": "Seats Before Sign-In", "body": "Let moviegoers inspect real-time auditorium availability before asking for identity." },
+            { "number": "02", "title": "Dark-Room Ergonomics", "body": "True obsidian surfaces with calibrated crimson accents protect night vision inside halls." },
+            { "number": "03", "title": "Thumb-Zone Controls", "body": "Date pills, seat confirmation, and Pay CTAs sit comfortably within one-handed reach." },
+            { "number": "04", "title": "Honest All-In Pricing", "body": "Running ticket + combo totals update live on every tap with zero hidden checkout fees." },
+            { "number": "05", "title": "Smart Pair Selection", "body": "Selecting 2 guests highlights contiguous center pairs automatically." },
+            { "number": "06", "title": "Gate-Ready Pass", "body": "High-contrast QR code auto-boosts only inside the QR square for instant turnstile scans." }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "ScreensGallery",
+        "props": {
+          "id": "ScreensGallery-wireframes",
+          "eyebrow": "08 · WIREFRAMES",
+          "heading": "Structure before style",
+          "subtitle": "Low-fidelity architecture validated tap targets, information density, and flow speed with 8 test users before applying visual polish.",
+          "columns": 5,
+          "showcaseLayout": "grid",
+          "deviceFrame": "none",
+          "screens": [
+            {
+              "caption": "01 · Welcome & Guest Entry",
+              "image": {
+                "slot": "wireframe.screen",
+                "src": "/templates/cinema/wireframe-1.svg",
+                "alt": "Onboarding wireframe",
+                "crop": null
+              }
+            },
+            {
+              "caption": "02 · Now Showing Discovery",
+              "image": {
+                "slot": "wireframe.screen",
+                "src": "/templates/cinema/wireframe-2.svg",
+                "alt": "Browse movies wireframe",
+                "crop": null
+              }
+            },
+            {
+              "caption": "03 · Movie Detail & Trailer",
+              "image": {
+                "slot": "wireframe.screen",
+                "src": "/templates/cinema/wireframe-3.svg",
+                "alt": "Movie detail wireframe",
+                "crop": null
+              }
+            },
+            {
+              "caption": "04 · Auditorium Seat Matrix",
+              "image": {
+                "slot": "wireframe.screen",
+                "src": "/templates/cinema/wireframe-4.svg",
+                "alt": "Seat map wireframe",
+                "crop": null
+              }
+            },
+            {
+              "caption": "05 · Perforated QR E-Ticket",
+              "image": {
+                "slot": "wireframe.screen",
+                "src": "/templates/cinema/wireframe-5.svg",
+                "alt": "Digital ticket wireframe",
+                "crop": null
+              }
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-design-system",
+          "eyebrow": "09 · DESIGN SYSTEM",
+          "heading": "Typography & color tokens",
+          "layout": "design-system",
+          "accent": "primary",
+          "body": "Built around geometric Plus Jakarta Sans display headlines, ultra-legible Inter UI labels, and a high-contrast cinema crimson + obsidian dark token scale.",
+          "swatches": [
+            { "label": "Cinema Crimson", "token": "primary", "role": "Primary CTAs & selected seats" },
+            { "label": "Obsidian Canvas", "token": "background", "role": "Core dark-room background" },
+            { "label": "Theater Charcoal", "token": "surface", "role": "Elevated cards & sheets" },
+            { "label": "Screen White", "token": "text", "role": "Primary headlines & open seats" },
+            { "label": "Silver Muted", "token": "textMuted", "role": "Secondary metadata & labels" },
+            { "label": "Premiere Amber", "token": "accent", "role": "IMDb ratings & VIP badges" },
+            { "label": "Verified Green", "token": "success", "role": "Sweet-spot & booking success" },
+            { "label": "Alert Coral", "token": "danger", "role": "Sold-out & error states" },
+            { "label": "Seat Hold Orange", "token": "warning", "role": "Countdown timer & low stock" },
+            { "label": "Wallet Sky", "token": "info", "role": "Live pass & sync notifications" }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "ScreensGallery",
+        "props": {
+          "id": "ScreensGallery-final",
+          "eyebrow": "10 · FINAL UI DESIGN",
+          "heading": "Crafted for dark-room clarity",
+          "subtitle": "Ten core screens spanning onboarding, discovery, showtime filtering, interactive seat selection, snack combos, Apple Pay checkout, and live QR pass.",
+          "columns": 5,
+          "showcaseLayout": "staggered",
+          "deviceFrame": "iphone",
+          "screens": [
+            {
+              "caption": "01 · Brand Splash",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/hero-splash.svg",
+                "alt": "Cinema crimson splash screen",
+                "crop": null
+              }
+            },
+            {
+              "caption": "02 · Premiere Onboarding",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-onboarding.svg",
+                "alt": "Premiere onboarding screen",
+                "crop": null
+              }
+            },
+            {
+              "caption": "03 · Fast Sign-In",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-auth.svg",
+                "alt": "Quick sign in screen",
+                "crop": null
+              }
+            },
+            {
+              "caption": "04 · Now Showing Feed",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-home.svg",
+                "alt": "Home movie discovery feed",
+                "crop": null
+              }
+            },
+            {
+              "caption": "05 · Movie Detail & Cast",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-movie.svg",
+                "alt": "Movie trailer and details",
+                "crop": null
+              }
+            },
+            {
+              "caption": "06 · Date & Hall Picker",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-showtimes.svg",
+                "alt": "Showtimes and IMAX hall selector",
+                "crop": null
+              }
+            },
+            {
+              "caption": "07 · Live Seat Matrix",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-seats.svg",
+                "alt": "Interactive auditorium seat map",
+                "crop": null
+              }
+            },
+            {
+              "caption": "08 · Snack Combos",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-snacks.svg",
+                "alt": "Concessions and popcorn combo selector",
+                "crop": null
+              }
+            },
+            {
+              "caption": "09 · Transparent Checkout",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-checkout.svg",
+                "alt": "Apple Pay transparent checkout",
+                "crop": null
+              }
+            },
+            {
+              "caption": "10 · Perforated QR Pass",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/cinema/screen-ticket.svg",
+                "alt": "Mobile QR cinema ticket pass",
+                "crop": null
+              }
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-spotlight",
+          "eyebrow": "11 · FEATURE SPOTLIGHT",
+          "heading": "Interactive auditorium seat map",
+          "layout": "split-right",
+          "mockupStyle": "straight",
+          "accent": "primary",
+          "body": "The seat picker was redesigned from the ground up as a tactile, zero-pinch canvas that guides moviegoers to the best acoustic view in seconds.",
+          "bullets": [
+            { "text": "Curved laser screen arc establishes immediate spatial orientation" },
+            { "text": "Three-state high-contrast seat tokens: White open, Crimson selected, Charcoal reserved" },
+            { "text": "Center acoustic sweet-spot indicator boosts VIP conversion without dark patterns" },
+            { "text": "Sticky bottom summary updates row, seat numbers, and exact total on every tap" }
+          ],
+          "image": {
+            "slot": "spotlight.mockup",
+            "src": "/templates/cinema/screen-seats.svg",
+            "alt": "Interactive cinema seat selection spotlight",
+            "crop": null,
+            "device": "iphone"
+          },
+          "background": "background"
+        }
+      },
+      {
+        "type": "Results",
+        "props": {
+          "id": "Results-1",
+          "eyebrow": "12 · IMPACT & LEARNINGS",
+          "heading": "Measurable booking impact",
+          "subtitle": "Moderated usability testing across 12 participants comparing the legacy cinema flow against the .Cinema prototype.",
+          "columns": 2,
+          "accent": "primary",
+          "metrics": [
+            { "value": "+47%", "label": "Faster seat-selection completion vs. legacy pinch-zoom grids" },
+            { "value": "2m 10s", "label": "Median end-to-end time from app launch to confirmed QR pass" },
+            { "value": "4.9★", "label": "Post-test usability satisfaction score across 12 testers" },
+            { "value": "-38%", "label": "Reduction in checkout drop-off after removing upfront login walls" }
+          ],
+          "takeaways": [
+            {
+              "title": "01 · Context beats decoration",
+              "body": "Designing specifically for dim theater lighting made contrast hierarchy and thumb reach far more impactful than heavy visual chrome."
+            },
+            {
+              "title": "02 · Defer authentication",
+              "body": "Letting users explore live seats first built immediate commitment before biometric checkout."
+            },
+            {
+              "title": "03 · Systemize early",
+              "body": "Defining semantic status tokens upfront kept seat states, snack badges, and wallet passes unmistakably consistent."
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "CTA",
+        "props": {
+          "id": "CTA-1",
+          "heading": "Thank you for watching — explore the prototype",
+          "subheading": "Want to walk through the interactive Figma flows, design tokens, or motion specs?",
+          "primaryLabel": "Explore Prototype",
+          "primaryHref": "https://casefolio-gamma.vercel.app/templates",
+          "secondaryLabel": "Get in Touch",
+          "secondaryHref": "mailto:hello@casefolio.app",
+          "background": "background",
+          "accent": "primary"
+        }
+      }
+    ],
+    "zones": {}
+  }
+}

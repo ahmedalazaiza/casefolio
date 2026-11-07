@@ -201,4 +201,48 @@ describe("ConstrainedEditor (C-402)", () => {
     const canvasFrame = screen.getByTestId("editor-canvas-preview");
     expect(canvasFrame.className).toContain("shrink-0");
   });
+
+  it("supports structured section insertion, duplication, reordering, removal, and per-slot device mockup switching", async () => {
+    const payload = buildEditorPayload();
+    const { container } = render(<ConstrainedEditor initialPayload={payload} />);
+
+    // Initially Hero uses iPhone Pro frame on mobile project
+    expect(container.querySelector('[data-device-model="iphone"]')).not.toBeNull();
+
+    // Switch Hero mockup slot to MacBook Pro in the right inspector
+    const heroDeviceSelect = await screen.findByTestId("slot-device-select-hero.mockup");
+    fireEvent.change(heroDeviceSelect, { target: { value: "macbook" } });
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-device-model="macbook"]')).not.toBeNull();
+    });
+
+    // Insert a structured Design System section preset from the Sections panel
+    fireEvent.click(screen.getByTestId("open-insert-section-menu"));
+    expect(screen.getByTestId("insert-section-preset-picker")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("insert-preset-design-system"));
+
+    const canvasFrame = screen.getByTestId("editor-canvas-preview");
+
+    await waitFor(() => {
+      expect(
+        within(canvasFrame).getByRole("heading", { name: "Typography & color tokens" }),
+      ).toBeInTheDocument();
+    });
+
+    // Duplicate Overview section and then remove the duplicate
+    fireEvent.click(screen.getByTestId("duplicate-section-Overview"));
+    await waitFor(() => {
+      expect(within(canvasFrame).getAllByRole("heading", { name: "Overview" }).length).toBe(2);
+    });
+
+    const duplicateRemoveBtn = container.querySelector('[data-testid^="remove-section-Overview-"]');
+    expect(duplicateRemoveBtn).not.toBeNull();
+    if (duplicateRemoveBtn) {
+      fireEvent.click(duplicateRemoveBtn);
+    }
+    await waitFor(() => {
+      expect(within(canvasFrame).getAllByRole("heading", { name: "Overview" }).length).toBe(1);
+    });
+  });
 });

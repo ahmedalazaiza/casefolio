@@ -49,6 +49,7 @@ import {
   parseAspectRatio,
   type CropRect,
   type ImageSlotValue,
+  type SlotDevice,
   type TemplateSlotDefinition,
 } from "@/lib/template/schema";
 import { cn } from "@/lib/utils";
@@ -88,8 +89,9 @@ export function ImageSlotField({
       alt: value?.alt ?? "",
       assetId: value?.assetId ?? null,
       crop: value?.crop ?? null,
+      ...(value?.device ? { device: value.device } : {}),
     }),
-    [effectiveSlotKey, value?.alt, value?.assetId, value?.crop, value?.src],
+    [effectiveSlotKey, value?.alt, value?.assetId, value?.crop, value?.device, value?.src],
   );
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -215,6 +217,7 @@ export function ImageSlotField({
           alt: currentValue.alt || label,
           assetId: uploaded.asset.id,
           crop: uploaded.initialCrop,
+          ...(currentValue.device ? { device: currentValue.device } : {}),
         };
 
         setLoadedNaturalDims({
@@ -245,6 +248,7 @@ export function ImageSlotField({
     },
     [
       currentValue.alt,
+      currentValue.device,
       effectiveSlotKey,
       label,
       onChange,
@@ -355,10 +359,14 @@ export function ImageSlotField({
       alt: currentValue.alt,
       assetId: null,
       crop: null,
+      ...(currentValue.device ? { device: currentValue.device } : {}),
     });
-  }, [currentValue.alt, effectiveSlotKey, onChange, readOnly]);
+  }, [currentValue.alt, currentValue.device, effectiveSlotKey, onChange, readOnly]);
 
   const activeCropSrc = cropTargetValue?.src || currentValue.src;
+  const activeDeviceBadge = currentValue.device ?? slotDefinition?.device;
+  const supportsDevicePicker =
+    effectiveSlotKey !== "hero.logo" && effectiveSlotKey !== "quote.avatar";
 
   return (
     <div
@@ -370,7 +378,7 @@ export function ImageSlotField({
       <div className="flex items-center justify-between gap-2">
         <span className="text-foreground type-body-s-strong truncate">{label}</span>
         <Badge tone="neutral" withDot={false}>
-          {slotDefinition?.device ? `${slotDefinition.device} · ${ratioText}` : ratioText}
+          {activeDeviceBadge ? `${activeDeviceBadge} · ${ratioText}` : ratioText}
         </Badge>
       </div>
 
@@ -555,6 +563,44 @@ export function ImageSlotField({
           }
         />
       </div>
+
+      {supportsDevicePicker && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`slot-device-${effectiveSlotKey}`} className="text-tertiary type-caption">
+            Device mockup
+          </Label>
+          <select
+            id={`slot-device-${effectiveSlotKey}`}
+            data-testid={`slot-device-select-${effectiveSlotKey}`}
+            value={currentValue.device ?? ""}
+            disabled={readOnly}
+            onChange={(event) => {
+              const nextDevice = event.target.value as "" | SlotDevice;
+              const nextValue: ImageSlotValue = {
+                slot: effectiveSlotKey,
+                src: currentValue.src,
+                alt: currentValue.alt,
+                assetId: currentValue.assetId ?? null,
+                crop: currentValue.crop ?? null,
+                ...(nextDevice ? { device: nextDevice } : {}),
+              };
+              onChange(nextValue);
+            }}
+            className="border-border bg-background text-foreground type-body-s focus-visible:ring-ring/40 h-9 w-full rounded-lg border px-2.5 outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <option value="">
+              Template default ({slotDefinition?.device ?? "auto"})
+            </option>
+            <option value="iphone">iPhone Pro (Dynamic Island)</option>
+            <option value="iphone-notch">iPhone (Classic Notch)</option>
+            <option value="android">Android Flagship</option>
+            <option value="tablet">iPad Pro Tablet</option>
+            <option value="macbook">MacBook Pro</option>
+            <option value="browser">Browser Window</option>
+            <option value="none">No Frame (Plain)</option>
+          </select>
+        </div>
+      )}
 
       {/* Locked-Ratio Crop Modal (02-RULES.md §4: ratio strictly locked to template.slots[key].ratio) */}
       <Dialog open={cropDialogOpen} onOpenChange={setCropDialogOpen}>

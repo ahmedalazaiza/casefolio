@@ -261,6 +261,7 @@ export async function getProjectEditorAccess(
         slots: tplDoc.template.slots,
         defaultTheme: tplDoc.template.theme,
         defaultPuck: tplDoc.puck,
+        allowSectionMutations: tplDoc.template.canvas.allowSectionMutations,
       },
     },
   };

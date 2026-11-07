@@ -62,7 +62,12 @@ export function CdnResponsiveImage({
   const intrinsicHeight =
     naturalDims?.height ?? Math.max(360, Math.round(fallbackAspectHeight * 100));
 
-  if (src.startsWith("data:") || src.startsWith("blob:")) {
+  if (
+    src.startsWith("data:") ||
+    src.startsWith("blob:") ||
+    src.endsWith(".svg") ||
+    src.includes(".svg?")
+  ) {
     return (
       <img
         src={src}

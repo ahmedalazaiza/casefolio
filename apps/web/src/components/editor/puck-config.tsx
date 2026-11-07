@@ -67,6 +67,16 @@ function buildColorTokenSelectField(label: string, colorKeys: readonly string[])
   };
 }
 
+const MOCKUP_STYLE_FIELD = {
+  type: "select" as const,
+  label: "Mockup presentation",
+  options: [
+    { label: "Straight", value: "straight" },
+    { label: "Angled right", value: "tilt-right" },
+    { label: "Angled left", value: "tilt-left" },
+  ],
+};
+
 export interface CasefolioPuckEditorContext {
   projectId?: string;
   slots?: Record<string, TemplateSlotDefinition>;
@@ -115,6 +125,7 @@ export function createCasefolioPuckConfig(
 ): Config<CasefolioPuckComponentMap> {
   const colorField = buildColorTokenSelectField("Background token", themeColorKeys);
   const accentField = buildColorTokenSelectField("Accent token", themeColorKeys);
+  const swatchTokenField = buildColorTokenSelectField("Theme color token", themeColorKeys);
 
   return {
     root: {
@@ -130,6 +141,32 @@ export function createCasefolioPuckConfig(
           eyebrow: { type: "text", label: "Eyebrow" },
           title: { type: "text", label: "Title" },
           subtitle: { type: "textarea", label: "Subtitle" },
+          tags: {
+            type: "array",
+            label: "Highlight tags",
+            max: 6,
+            arrayFields: {
+              label: { type: "text", label: "Tag" },
+            },
+          },
+          layout: {
+            type: "select",
+            label: "Hero layout",
+            options: [
+              { label: "Split — mockup right", value: "split-right" },
+              { label: "Split — mockup left", value: "split-left" },
+              { label: "Centered showcase", value: "centered" },
+            ],
+          },
+          mockupStyle: MOCKUP_STYLE_FIELD,
+          glow: {
+            type: "radio",
+            label: "Ambient accent glow",
+            options: [
+              { label: "Off", value: false },
+              { label: "On", value: true },
+            ],
+          },
           logo: createImageSlotCustomField("hero.logo", "Logo slot", editorContext),
           mockup: createImageSlotCustomField("hero.mockup", "Hero mockup slot", editorContext),
           background: colorField,
@@ -140,7 +177,9 @@ export function createCasefolioPuckConfig(
       Overview: {
         label: "Overview",
         fields: {
+          eyebrow: { type: "text", label: "Eyebrow" },
           heading: { type: "text", label: "Heading" },
+          highlight: { type: "text", label: "Accent headline line" },
           summary: createRichTextCustomField("Summary"),
           meta: {
             type: "array",
@@ -153,19 +192,30 @@ export function createCasefolioPuckConfig(
           },
           banner: createImageSlotCustomField("overview.banner", "Banner slot", editorContext),
           background: colorField,
+          accent: accentField,
         },
         render: ({ id, puck, ...props }) => <OverviewSection id={id} puck={puck} {...props} />,
       },
       Problem: {
         label: "Problem",
         fields: {
+          eyebrow: { type: "text", label: "Eyebrow" },
           heading: { type: "text", label: "Heading" },
           statement: { type: "textarea", label: "Problem statement" },
+          columns: {
+            type: "radio",
+            label: "Columns",
+            options: [
+              { label: "2", value: 2 },
+              { label: "3", value: 3 },
+              { label: "4", value: 4 },
+            ],
+          },
           painPoints: {
             type: "array",
             label: "Pain points",
             min: 1,
-            max: 6,
+            max: 8,
             arrayFields: {
               title: { type: "text", label: "Title" },
               body: { type: "textarea", label: "Description" },
@@ -178,12 +228,23 @@ export function createCasefolioPuckConfig(
       Process: {
         label: "Process",
         fields: {
+          eyebrow: { type: "text", label: "Eyebrow" },
           heading: { type: "text", label: "Heading" },
+          subtitle: { type: "textarea", label: "Subtitle" },
+          layout: {
+            type: "select",
+            label: "Layout style",
+            options: [
+              { label: "2-column cards", value: "cards" },
+              { label: "Connected user flow timeline", value: "timeline" },
+              { label: "3-column UX pillars", value: "grid-3" },
+            ],
+          },
           steps: {
             type: "array",
             label: "Process steps",
             min: 1,
-            max: 8,
+            max: 10,
             arrayFields: {
               number: { type: "text", label: "Step number" },
               title: { type: "text", label: "Step title" },
@@ -196,13 +257,16 @@ export function createCasefolioPuckConfig(
             },
           },
           background: colorField,
+          accent: accentField,
         },
         render: ({ id, puck, ...props }) => <ProcessSection id={id} puck={puck} {...props} />,
       },
       ScreensGallery: {
         label: "Screens Gallery",
         fields: {
+          eyebrow: { type: "text", label: "Eyebrow" },
           heading: { type: "text", label: "Heading" },
+          subtitle: { type: "textarea", label: "Subtitle" },
           columns: {
             type: "radio",
             label: "Columns",
@@ -210,13 +274,36 @@ export function createCasefolioPuckConfig(
               { label: "2", value: 2 },
               { label: "3", value: 3 },
               { label: "4", value: 4 },
+              { label: "5", value: 5 },
+            ],
+          },
+          showcaseLayout: {
+            type: "radio",
+            label: "Gallery arrangement",
+            options: [
+              { label: "Aligned grid", value: "grid" },
+              { label: "Staggered", value: "staggered" },
+            ],
+          },
+          deviceFrame: {
+            type: "select",
+            label: "Gallery device frame",
+            options: [
+              { label: "Auto (per slot / template)", value: "auto" },
+              { label: "iPhone Pro (Dynamic Island)", value: "iphone" },
+              { label: "iPhone (Classic Notch)", value: "iphone-notch" },
+              { label: "Android Flagship", value: "android" },
+              { label: "iPad Pro Tablet", value: "tablet" },
+              { label: "MacBook Pro", value: "macbook" },
+              { label: "Browser Window", value: "browser" },
+              { label: "No Frame (Wireframes / Plain)", value: "none" },
             ],
           },
           screens: {
             type: "array",
             label: "Screens",
             min: 1,
-            max: 12,
+            max: 16,
             arrayFields: {
               caption: { type: "text", label: "Caption" },
               image: createImageSlotCustomField(
@@ -235,7 +322,18 @@ export function createCasefolioPuckConfig(
       Results: {
         label: "Results",
         fields: {
+          eyebrow: { type: "text", label: "Eyebrow" },
           heading: { type: "text", label: "Heading" },
+          subtitle: { type: "textarea", label: "Subtitle" },
+          columns: {
+            type: "radio",
+            label: "Metric columns",
+            options: [
+              { label: "2", value: 2 },
+              { label: "3", value: 3 },
+              { label: "4", value: 4 },
+            ],
+          },
           metrics: {
             type: "array",
             label: "Metrics",
@@ -246,8 +344,18 @@ export function createCasefolioPuckConfig(
               label: { type: "text", label: "Metric label" },
             },
           },
+          takeaways: {
+            type: "array",
+            label: "Key takeaways",
+            max: 4,
+            arrayFields: {
+              title: { type: "text", label: "Takeaway title" },
+              body: { type: "textarea", label: "Takeaway details" },
+            },
+          },
           closing: { type: "textarea", label: "Closing note" },
           background: colorField,
+          accent: accentField,
         },
         render: ({ id, ...props }) => <ResultsSection id={id} {...props} />,
       },
@@ -279,10 +387,61 @@ export function createCasefolioPuckConfig(
       Custom: {
         label: "Custom Section",
         fields: {
+          eyebrow: { type: "text", label: "Eyebrow" },
           heading: { type: "text", label: "Heading" },
+          layout: {
+            type: "select",
+            label: "Section layout",
+            options: [
+              { label: "Stacked narrative", value: "stacked" },
+              { label: "Feature spotlight — mockup right", value: "split-right" },
+              { label: "Feature spotlight — mockup left", value: "split-left" },
+              { label: "Competitive comparison matrix", value: "comparison" },
+              { label: "User persona profile", value: "persona" },
+              { label: "Design system (Typography & Colors)", value: "design-system" },
+            ],
+          },
           body: createRichTextCustomField("Body"),
-          image: createImageSlotCustomField("custom.image", "Image", editorContext),
+          bullets: {
+            type: "array",
+            label: "Feature highlights (Spotlight)",
+            max: 8,
+            arrayFields: {
+              text: { type: "text", label: "Highlight bullet" },
+            },
+          },
+          cards: {
+            type: "array",
+            label: "Comparison / Persona cards",
+            max: 8,
+            arrayFields: {
+              title: { type: "text", label: "Card title" },
+              subtitle: { type: "text", label: "Subtitle / score" },
+              body: { type: "textarea", label: "Details" },
+              highlighted: {
+                type: "radio",
+                label: "Highlight card",
+                options: [
+                  { label: "No", value: false },
+                  { label: "Yes", value: true },
+                ],
+              },
+            },
+          },
+          swatches: {
+            type: "array",
+            label: "Color swatches (Design system)",
+            max: 12,
+            arrayFields: {
+              label: { type: "text", label: "Swatch name" },
+              token: swatchTokenField,
+              role: { type: "text", label: "Usage role" },
+            },
+          },
+          mockupStyle: MOCKUP_STYLE_FIELD,
+          image: createImageSlotCustomField("custom.image", "Image / Mockup slot", editorContext),
           background: colorField,
+          accent: accentField,
         },
         render: ({ id, puck, ...props }) => <CustomSection id={id} puck={puck} {...props} />,
       },
@@ -342,6 +501,7 @@ export function TemplatePuckRenderer({
         metadata={{
           projectType: resolvedType,
           slots: resolvedSlots,
+          theme: resolvedTheme,
         }}
       />
     </div>

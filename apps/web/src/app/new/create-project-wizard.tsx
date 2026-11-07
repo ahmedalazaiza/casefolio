@@ -556,7 +556,15 @@ export function CreateProjectWizard({
                             }}
                             className="border-border/30 relative flex aspect-[4/3] w-full flex-col justify-between overflow-hidden rounded-lg border p-5"
                           >
-                            <div className="flex items-center justify-between gap-2">
+                            {item.coverUrl && item.coverUrl.startsWith("/") && (
+                              <img
+                                src={item.coverUrl}
+                                alt=""
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-0 size-full object-cover opacity-80"
+                              />
+                            )}
+                            <div className="relative z-10 flex items-center justify-between gap-2">
                               <span
                                 style={{ color: "var(--tpl-color-primary)" }}
                                 className="type-heading-m select-none"
@@ -577,18 +585,20 @@ export function CreateProjectWizard({
                               </div>
                             </div>
 
-                            <div className="flex items-end justify-end gap-3 pt-4">
-                              <div
-                                aria-hidden="true"
-                                style={{ backgroundColor: "var(--tpl-color-primary)" }}
-                                className="h-24 w-16 rounded-t-lg opacity-90"
-                              />
-                              <div
-                                aria-hidden="true"
-                                style={{ backgroundColor: "var(--tpl-color-surface)" }}
-                                className="h-28 w-16 rounded-t-lg"
-                              />
-                            </div>
+                            {!item.coverUrl?.startsWith("/") && (
+                              <div className="flex items-end justify-end gap-3 pt-4">
+                                <div
+                                  aria-hidden="true"
+                                  style={{ backgroundColor: "var(--tpl-color-primary)" }}
+                                  className="h-24 w-16 rounded-t-lg opacity-90"
+                                />
+                                <div
+                                  aria-hidden="true"
+                                  style={{ backgroundColor: "var(--tpl-color-surface)" }}
+                                  className="h-28 w-16 rounded-t-lg"
+                                />
+                              </div>
+                            )}
 
                             {isLocked && (
                               <div className="bg-inverse/90 text-inverse-foreground type-caption absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1">

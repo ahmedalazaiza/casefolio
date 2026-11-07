@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" fill="none">
+  <rect width="390" height="844" fill="#0A0A0C"/>
+  
+  <g opacity="0.88">
+    <text x="34" y="28" fill="#FAFAFC" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="700">9:41</text>
+    <rect x="318" y="18" width="18" height="10" rx="2.5" stroke="#FAFAFC" stroke-width="1.4" fill="none"/>
+    <rect x="320" y="20" width="13" height="6" rx="1.2" fill="#FAFAFC"/>
+    <circle cx="306" cy="23" r="2.2" fill="#FAFAFC"/>
+    <circle cx="298" cy="23" r="2.2" fill="#FAFAFC" opacity="0.7"/>
+  </g>
+  <circle cx="195" cy="300" r="56" fill="#22C55E" fill-opacity="0.16"/>
+  <circle cx="195" cy="300" r="38" fill="#22C55E"/>
+  <path d="M178 300L190 312L214 288" stroke="#0A0A0C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="195" y="396" text-anchor="middle" fill="#FAFAFC" font-family="system-ui,-apple-system,sans-serif" font-size="24" font-weight="800">Booking Confirmed!</text>
+  <text x="195" y="426" text-anchor="middle" fill="#9E9EA8" font-family="system-ui,-apple-system,sans-serif" font-size="14">Your seats F7 &amp; F8 and snack pickup</text>
+  <text x="195" y="446" text-anchor="middle" fill="#9E9EA8" font-family="system-ui,-apple-system,sans-serif" font-size="14">are ready in your Wallet pass.</text>
+  <rect x="32" y="688" width="326" height="54" rx="16" fill="#E50914"/>
+  <text x="195" y="721" text-anchor="middle" fill="#FAFAFC" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="700">Open Live QR Pass</text>
+</svg>

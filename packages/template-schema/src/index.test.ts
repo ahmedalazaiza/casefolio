@@ -8,10 +8,10 @@ import {
   validateTemplateDocument,
 } from "./index";
 
-function loadOrbitExample(): Record<string, unknown> {
+function loadReferenceJson(fileName: string): Record<string, unknown> {
   for (const candidate of [
-    resolve(process.cwd(), "reference/template.example.json"),
-    resolve(process.cwd(), "../../reference/template.example.json"),
+    resolve(process.cwd(), `reference/${fileName}`),
+    resolve(process.cwd(), `../../reference/${fileName}`),
   ]) {
     try {
       return JSON.parse(readFileSync(candidate, "utf-8")) as Record<string, unknown>;
@@ -19,7 +19,11 @@ function loadOrbitExample(): Record<string, unknown> {
       // try next path
     }
   }
-  throw new Error("Could not locate reference/template.example.json");
+  throw new Error(`Could not locate reference/${fileName}`);
+}
+
+function loadOrbitExample(): Record<string, unknown> {
+  return loadReferenceJson("template.example.json");
 }
 
 describe("Template JSON Zod schema (C-301)", () => {
@@ -154,6 +158,40 @@ describe("Template JSON Zod schema (C-301)", () => {
         "puck.content.0.props.mockup.slot: Image slot 'hero.nonexistent' is not defined",
       );
       expect(messages).toContain("puck.content.2.props.id: Duplicate section id 'Hero-1'");
+    }
+  });
+
+  it("validates reference/template.cinema.json (.Cinema) with multi-device slots, 5-col galleries, timeline, and design-system swatches", () => {
+    const cinema = loadReferenceJson("template.cinema.json");
+    const res = validateTemplateDocument(cinema);
+
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.data.template.slug).toBe("cinema");
+      expect(res.data.template.type).toBe("both");
+      expect(res.data.puck.content).toHaveLength(14);
+      expect(res.data.template.slots["custom.image"]?.device).toBe("macbook");
+    }
+
+    const brokenCinema = structuredClone(cinema) as {
+      puck: { content: Array<{ type: string; props: Record<string, unknown> }> };
+    };
+    const dsSection = brokenCinema.puck.content.find(
+      (s) => s.type === "Custom" && s.props.layout === "design-system",
+    );
+    expect(dsSection).toBeDefined();
+    if (dsSection) {
+      dsSection.props.swatches = [{ label: "Unknown", token: "nonExistentToken" }];
+    }
+
+    const brokenRes = validateTemplateDocument(brokenCinema);
+    expect(brokenRes.ok).toBe(false);
+    if (!brokenRes.ok) {
+      expect(
+        brokenRes.issues.some((i) =>
+          i.message.includes("Swatch color token 'nonExistentToken' is not defined"),
+        ),
+      ).toBe(true);
     }
   });
 });

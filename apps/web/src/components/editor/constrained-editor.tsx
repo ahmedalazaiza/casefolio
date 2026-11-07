@@ -12,9 +12,12 @@ import {
 import {
   AlertCircle,
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   Check,
   Cloud,
+  Copy,
   Download,
   Eye,
   EyeOff,
@@ -23,9 +26,11 @@ import {
   Loader2,
   Monitor,
   Palette,
+  Plus,
   Redo2,
   SlidersHorizontal,
   Smartphone,
+  Trash2,
   Undo2,
 } from "lucide-react";
 import Link from "next/link";
@@ -67,12 +72,19 @@ import {
 import {
   collectProjectSlotStatus,
   CONSTRAINED_PUCK_PERMISSIONS,
+  duplicateSectionInDocument,
+  formatSectionSummaryLabel,
   formatSectionTypeLabel,
+  insertSectionPresetIntoDocument,
   isSectionRequired,
+  moveSectionInDocument,
+  removeSectionFromDocument,
+  SECTION_PRESET_OPTIONS,
   toggleSectionVisibility,
   type ProjectEditorPayload,
   type SaveProjectEditorInput,
   type SaveProjectEditorResult,
+  type SectionPresetKey,
 } from "@/lib/projects/types";
 import {
   puckDocumentSchema,
@@ -191,6 +203,8 @@ export function ConstrainedEditor({
   const [mobileSheetTab, setMobileSheetTab] = useState<MobileSheetTab | null>(null);
   const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(0);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [insertPickerOpen, setInsertPickerOpen] = useState(false);
+  const allowSectionMutations = initialPayload.template.allowSectionMutations !== false;
 
   const lastPuckEmittedJsonRef = useRef<string>(
     serializePuckDocument(initialPayload.project.puckData),
@@ -426,6 +440,94 @@ export function ConstrainedEditor({
     [selectedSectionIndex, setPuckData],
   );
 
+  const handleMoveSection = useCallback(
+    (index: number, direction: "up" | "down") => {
+      if (!allowSectionMutations) return;
+      setPuckData((prev) => {
+        const { puckData: next, nextIndex } = moveSectionInDocument(prev, index, direction);
+        if (next === prev) return prev;
+        if (selectedSectionIndex === index) {
+          setSelectedSectionIndex(nextIndex);
+        } else if (selectedSectionIndex === nextIndex) {
+          setSelectedSectionIndex(index);
+        }
+        return next;
+      });
+    },
+    [allowSectionMutations, selectedSectionIndex, setPuckData],
+  );
+
+  const handleDuplicateSection = useCallback(
+    (index: number) => {
+      if (!allowSectionMutations) return;
+      let targetIdx = index;
+      setPuckData((prev) => {
+        const { puckData: next, insertedIndex } = duplicateSectionInDocument(prev, index);
+        targetIdx = insertedIndex;
+        return next;
+      });
+      setSelectedSectionIndex(targetIdx);
+      setRightTab("fields");
+      requestAnimationFrame(() => {
+        const target = canvasScrollRef.current?.querySelector<HTMLElement>(
+          `[data-editor-section-index="${targetIdx}"]`,
+        );
+        target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      });
+    },
+    [allowSectionMutations, setPuckData],
+  );
+
+  const handleRemoveSection = useCallback(
+    (index: number) => {
+      if (!allowSectionMutations) return;
+      setPuckData((prev) => {
+        const { puckData: next, nextSelectedIndex } = removeSectionFromDocument(prev, index);
+        if (next === prev) return prev;
+        setSelectedSectionIndex(nextSelectedIndex);
+        return next;
+      });
+    },
+    [allowSectionMutations, setPuckData],
+  );
+
+  const handleInsertSectionPreset = useCallback(
+    (presetKey: SectionPresetKey) => {
+      if (!allowSectionMutations) return;
+      let targetIdx = 1;
+      setPuckData((prev) => {
+        const { puckData: next, insertedIndex } = insertSectionPresetIntoDocument(
+          prev,
+          presetKey,
+          initialPayload.template.slots,
+          selectedSectionIndex,
+        );
+        targetIdx = insertedIndex;
+        return next;
+      });
+      setInsertPickerOpen(false);
+      setSelectedSectionIndex(targetIdx);
+      setRightTab("fields");
+      requestAnimationFrame(() => {
+        const target = canvasScrollRef.current?.querySelector<HTMLElement>(
+          `[data-editor-section-index="${targetIdx}"]`,
+        );
+        target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      });
+    },
+    [allowSectionMutations, initialPayload.template.slots, selectedSectionIndex, setPuckData],
+  );
+
+  const firstIndexByType = useMemo(() => {
+    const map = new Map<string, number>();
+    puckData.content.forEach((item, idx) => {
+      if (!map.has(item.type)) {
+        map.set(item.type, idx);
+      }
+    });
+    return map;
+  }, [puckData.content]);
+
   const handleResetThemeToDefaults = useCallback(() => {
     setTheme(structuredClone(initialPayload.template.defaultTheme));
   }, [initialPayload.template.defaultTheme, setTheme]);
@@ -485,6 +587,7 @@ export function ConstrainedEditor({
           projectId: initialPayload.project.id,
           projectType: initialPayload.project.type,
           slots: initialPayload.template.slots,
+          theme,
         }}
       >
         <PuckStateBridge
@@ -688,82 +791,186 @@ export function ConstrainedEditor({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-5">
-              {/* TAB: SECTIONS (matches Figma 2:4784 — visibility toggles only, no free-canvas add/drag) */}
+              {/* TAB: SECTIONS */}
               {leftTab === "sections" && (
                 <div data-testid="editor-sections-panel" className="flex flex-col gap-4">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h2 className="text-foreground type-heading-s">Sections</h2>
-                    <span className="text-tertiary type-caption">
-                      Template: {initialPayload.template.name}
-                    </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-col gap-0.5">
+                      <h2 className="text-foreground type-heading-s">Sections</h2>
+                      <span className="text-tertiary type-caption">
+                        Template: {initialPayload.template.name}
+                      </span>
+                    </div>
+
+                    {allowSectionMutations && (
+                      <Button
+                        type="button"
+                        variant={insertPickerOpen ? "secondary" : "outline"}
+                        size="sm"
+                        data-testid="open-insert-section-menu"
+                        onClick={() => setInsertPickerOpen((prev) => !prev)}
+                        className="h-8 gap-1.5 px-2.5"
+                      >
+                        <Plus className="size-3.5" />
+                        <span>Insert section</span>
+                      </Button>
+                    )}
                   </div>
 
                   <p className="text-muted-foreground type-caption">
-                    Select any section to edit its fields. Optional sections can be hidden.
+                    Select any section to edit its fields.{" "}
+                    {allowSectionMutations
+                      ? "Reorder, duplicate, hide, or insert structured narrative blocks."
+                      : "Optional sections can be hidden."}
                   </p>
+
+                  {allowSectionMutations && insertPickerOpen && (
+                    <div
+                      data-testid="insert-section-preset-picker"
+                      className="border-primary/35 bg-surface flex flex-col gap-2 rounded-xl border p-3"
+                    >
+                      <span className="text-tertiary type-overline">
+                        Choose structured section preset
+                      </span>
+                      <div className="grid gap-1.5">
+                        {SECTION_PRESET_OPTIONS.map((preset) => (
+                          <button
+                            key={preset.key}
+                            type="button"
+                            data-testid={`insert-preset-${preset.key}`}
+                            onClick={() => handleInsertSectionPreset(preset.key)}
+                            className="border-border bg-card hover:border-primary/60 flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors"
+                          >
+                            <span className="text-foreground type-body-s-strong">
+                              {preset.label}
+                            </span>
+                            <span className="text-tertiary type-caption">
+                              {preset.description}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-2.5">
                     {puckData.content.map((section, idx) => {
                       const required = isSectionRequired(section.type);
                       const hidden = Boolean(section.props.hidden);
                       const isSelected = selectedSectionIndex === idx;
-                      const label = formatSectionTypeLabel(section.type);
+                      const typeLabel = formatSectionTypeLabel(section.type);
+                      const summaryLabel = formatSectionSummaryLabel(section);
+                      const isFirstOfType = firstIndexByType.get(section.type) === idx;
+                      const rowTestKey = isFirstOfType ? section.type : section.props.id;
+                      const canMoveUp = !required && idx > 1;
+                      const canMoveDown = !required && idx < puckData.content.length - 1;
 
                       return (
                         <div
                           key={section.props.id}
-                          data-testid={`section-row-${section.type}`}
+                          data-testid={`section-row-${rowTestKey}`}
                           data-hidden={hidden ? "true" : "false"}
                           className={cn(
-                            "flex items-center justify-between gap-3 rounded-xl border p-3.5 transition-colors",
+                            "flex flex-col gap-2 rounded-xl border p-3.5 transition-colors",
                             isSelected
                               ? "border-primary bg-accent/40"
                               : "border-border bg-card hover:border-border-strong",
                             hidden && "opacity-65",
                           )}
                         >
-                          <button
-                            type="button"
-                            onClick={() => handleSelectSection(idx)}
-                            className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left outline-none"
-                          >
-                            <span className="text-foreground type-body-s-strong truncate">
-                              {label}
-                            </span>
-                            <span className="text-tertiary type-caption">
-                              {required
-                                ? "Required"
-                                : hidden
-                                  ? "Optional · hidden"
-                                  : "Optional"}
-                            </span>
-                          </button>
-
-                          {required ? (
-                            <Badge tone="neutral" withDot={false}>
-                              Locked
-                            </Badge>
-                          ) : (
+                          <div className="flex items-center justify-between gap-3">
                             <button
                               type="button"
-                              role="switch"
-                              aria-checked={!hidden}
-                              aria-label={`Toggle ${label} visibility`}
-                              data-testid={`toggle-section-${section.type}`}
-                              onClick={() => handleToggleSection(idx)}
-                              className={cn(
-                                "focus-visible:ring-ring/40 relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors outline-none focus-visible:ring-2",
-                                !hidden ? "bg-primary" : "bg-border-strong",
-                              )}
+                              onClick={() => handleSelectSection(idx)}
+                              className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left outline-none"
                             >
-                              <span
-                                aria-hidden="true"
-                                className={cn(
-                                  "bg-background inline-block size-4.5 rounded-full shadow-xs transition-transform",
-                                  !hidden ? "translate-x-5.5" : "translate-x-1",
-                                )}
-                              />
+                              <span className="text-foreground type-body-s-strong w-full truncate">
+                                {summaryLabel}
+                              </span>
+                              <span className="text-tertiary type-caption truncate">
+                                {required
+                                  ? `${typeLabel} · Required`
+                                  : hidden
+                                    ? `${typeLabel} · Hidden`
+                                    : typeLabel}
+                              </span>
                             </button>
+
+                            {required ? (
+                              <Badge tone="neutral" withDot={false}>
+                                Locked
+                              </Badge>
+                            ) : (
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={!hidden}
+                                aria-label={`Toggle ${summaryLabel} visibility`}
+                                data-testid={`toggle-section-${rowTestKey}`}
+                                onClick={() => handleToggleSection(idx)}
+                                className={cn(
+                                  "focus-visible:ring-ring/40 relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors outline-none focus-visible:ring-2",
+                                  !hidden ? "bg-primary" : "bg-border-strong",
+                                )}
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className={cn(
+                                    "bg-background inline-block size-4.5 rounded-full shadow-xs transition-transform",
+                                    !hidden ? "translate-x-5.5" : "translate-x-1",
+                                  )}
+                                />
+                              </button>
+                            )}
+                          </div>
+
+                          {!required && allowSectionMutations && (
+                            <div className="border-border/50 flex items-center justify-between gap-1 border-t pt-2">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={!canMoveUp}
+                                  aria-label={`Move ${summaryLabel} up`}
+                                  data-testid={`move-up-section-${rowTestKey}`}
+                                  onClick={() => handleMoveSection(idx, "up")}
+                                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                                >
+                                  <ArrowUp className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={!canMoveDown}
+                                  aria-label={`Move ${summaryLabel} down`}
+                                  data-testid={`move-down-section-${rowTestKey}`}
+                                  onClick={() => handleMoveSection(idx, "down")}
+                                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                                >
+                                  <ArrowDown className="size-3.5" />
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  aria-label={`Duplicate ${summaryLabel}`}
+                                  data-testid={`duplicate-section-${rowTestKey}`}
+                                  onClick={() => handleDuplicateSection(idx)}
+                                  className="text-muted-foreground hover:bg-surface hover:text-foreground type-caption inline-flex h-6 items-center gap-1 rounded-md px-1.5 transition-colors"
+                                >
+                                  <Copy className="size-3" />
+                                  <span>Duplicate</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`Remove ${summaryLabel}`}
+                                  data-testid={`remove-section-${rowTestKey}`}
+                                  onClick={() => handleRemoveSection(idx)}
+                                  className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive inline-flex size-6 items-center justify-center rounded-md transition-colors"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       );
@@ -789,21 +996,21 @@ export function ConstrainedEditor({
                     <div className="flex flex-col gap-1.5">
                       {puckData.content.map((section, idx) => {
                         const hidden = Boolean(section.props.hidden);
-                        const label = formatSectionTypeLabel(section.type);
+                        const label = formatSectionSummaryLabel(section);
                         return (
                           <button
                             key={section.props.id}
                             type="button"
                             onClick={() => handleSelectSection(idx)}
                             className={cn(
-                              "flex items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors",
+                              "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
                               selectedSectionIndex === idx
                                 ? "border-primary bg-accent/40 text-foreground type-body-s-strong"
                                 : "border-border bg-card text-muted-foreground hover:text-foreground type-body-s",
                             )}
                           >
-                            <span>{label}</span>
-                            {hidden && <EyeOff className="text-tertiary size-3.5" />}
+                            <span className="truncate">{label}</span>
+                            {hidden && <EyeOff className="text-tertiary size-3.5 shrink-0" />}
                           </button>
                         );
                       })}
@@ -903,10 +1110,12 @@ export function ConstrainedEditor({
                   {selectedSection ? (
                     <>
                       <div className="border-border flex items-center justify-between gap-2 border-b pb-3">
-                        <div className="flex flex-col">
-                          <span className="text-tertiary type-overline">Editing section</span>
-                          <h2 className="text-foreground type-heading-s">
-                            {formatSectionTypeLabel(selectedSection.type)}
+                        <div className="flex min-w-0 flex-col">
+                          <span className="text-tertiary type-overline">
+                            Editing · {formatSectionTypeLabel(selectedSection.type)}
+                          </span>
+                          <h2 className="text-foreground type-heading-s truncate">
+                            {formatSectionSummaryLabel(selectedSection)}
                           </h2>
                         </div>
                         {Boolean(selectedSection.props.hidden) && (
@@ -1133,7 +1342,7 @@ export function ConstrainedEditor({
                       className="flex items-center gap-1.5 overflow-x-auto pb-1"
                     >
                       {puckData.content.map((section, idx) => {
-                        const label = formatSectionTypeLabel(section.type);
+                        const label = formatSectionSummaryLabel(section);
                         const active = selectedSectionIndex === idx;
                         return (
                           <button
@@ -1142,15 +1351,15 @@ export function ConstrainedEditor({
                             aria-pressed={active}
                             onClick={() => handleSelectSection(idx)}
                             className={cn(
-                              "type-caption inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium transition-colors",
+                              "type-caption inline-flex max-w-44 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium transition-colors",
                               active
                                 ? "border-primary bg-accent text-foreground"
                                 : "border-border bg-card text-muted-foreground hover:text-foreground",
                             )}
                           >
-                            <span>{label}</span>
+                            <span className="truncate">{label}</span>
                             {Boolean(section.props.hidden) && (
-                              <EyeOff className="text-tertiary size-3" />
+                              <EyeOff className="text-tertiary size-3 shrink-0" />
                             )}
                           </button>
                         );
@@ -1169,72 +1378,159 @@ export function ConstrainedEditor({
 
                 {mobileSheetTab === "sections" && (
                   <div data-testid="mobile-sections-drawer" className="flex flex-col gap-3">
-                    <p className="text-muted-foreground type-caption">
-                      Tap a section to edit its fields, or toggle optional sections on and off.
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-muted-foreground type-caption">
+                        Tap a section to edit its fields, or organize optional sections.
+                      </p>
+                      {allowSectionMutations && (
+                        <Button
+                          type="button"
+                          variant={insertPickerOpen ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() => setInsertPickerOpen((prev) => !prev)}
+                          className="h-8 shrink-0 gap-1 px-2.5"
+                        >
+                          <Plus className="size-3.5" />
+                          <span>Insert section</span>
+                        </Button>
+                      )}
+                    </div>
+
+                    {allowSectionMutations && insertPickerOpen && (
+                      <div className="border-primary/35 bg-surface grid gap-1.5 rounded-xl border p-2.5">
+                        {SECTION_PRESET_OPTIONS.map((preset) => (
+                          <button
+                            key={preset.key}
+                            type="button"
+                            onClick={() => {
+                              handleInsertSectionPreset(preset.key);
+                              setMobileSheetTab("fields");
+                            }}
+                            className="border-border bg-card flex flex-col items-start rounded-lg border px-3 py-2 text-left"
+                          >
+                            <span className="text-foreground type-body-s-strong">
+                              {preset.label}
+                            </span>
+                            <span className="text-tertiary type-caption">
+                              {preset.description}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-2">
                       {puckData.content.map((section, idx) => {
                         const required = isSectionRequired(section.type);
                         const hidden = Boolean(section.props.hidden);
                         const isSelected = selectedSectionIndex === idx;
-                        const label = formatSectionTypeLabel(section.type);
+                        const typeLabel = formatSectionTypeLabel(section.type);
+                        const summaryLabel = formatSectionSummaryLabel(section);
+                        const isFirstOfType = firstIndexByType.get(section.type) === idx;
+                        const rowTestKey = isFirstOfType ? section.type : section.props.id;
 
                         return (
                           <div
                             key={section.props.id}
                             className={cn(
-                              "flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors",
+                              "flex flex-col gap-2 rounded-xl border p-3 transition-colors",
                               isSelected
                                 ? "border-primary bg-accent/40"
                                 : "border-border bg-card",
                               hidden && "opacity-65",
                             )}
                           >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleSelectSection(idx);
-                                setMobileSheetTab("fields");
-                              }}
-                              className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left outline-none"
-                            >
-                              <span className="text-foreground type-body-s-strong truncate">
-                                {label}
-                              </span>
-                              <span className="text-tertiary type-caption">
-                                {required
-                                  ? "Required"
-                                  : hidden
-                                    ? "Optional · hidden"
-                                    : "Optional"}
-                              </span>
-                            </button>
-
-                            {required ? (
-                              <Badge tone="neutral" withDot={false}>
-                                Locked
-                              </Badge>
-                            ) : (
+                            <div className="flex items-center justify-between gap-3">
                               <button
                                 type="button"
-                                role="switch"
-                                aria-checked={!hidden}
-                                aria-label={`Toggle ${label} visibility`}
-                                data-testid={`mobile-toggle-section-${section.type}`}
-                                onClick={() => handleToggleSection(idx)}
-                                className={cn(
-                                  "focus-visible:ring-ring/40 relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors outline-none focus-visible:ring-2",
-                                  !hidden ? "bg-primary" : "bg-border-strong",
-                                )}
+                                onClick={() => {
+                                  handleSelectSection(idx);
+                                  setMobileSheetTab("fields");
+                                }}
+                                className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left outline-none"
                               >
-                                <span
-                                  aria-hidden="true"
-                                  className={cn(
-                                    "bg-background inline-block size-4.5 rounded-full shadow-xs transition-transform",
-                                    !hidden ? "translate-x-5.5" : "translate-x-1",
-                                  )}
-                                />
+                                <span className="text-foreground type-body-s-strong w-full truncate">
+                                  {summaryLabel}
+                                </span>
+                                <span className="text-tertiary type-caption truncate">
+                                  {required
+                                    ? `${typeLabel} · Required`
+                                    : hidden
+                                      ? `${typeLabel} · Hidden`
+                                      : typeLabel}
+                                </span>
                               </button>
+
+                              {required ? (
+                                <Badge tone="neutral" withDot={false}>
+                                  Locked
+                                </Badge>
+                              ) : (
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  aria-checked={!hidden}
+                                  aria-label={`Toggle ${summaryLabel} visibility`}
+                                  data-testid={`mobile-toggle-section-${rowTestKey}`}
+                                  onClick={() => handleToggleSection(idx)}
+                                  className={cn(
+                                    "focus-visible:ring-ring/40 relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors outline-none focus-visible:ring-2",
+                                    !hidden ? "bg-primary" : "bg-border-strong",
+                                  )}
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    className={cn(
+                                      "bg-background inline-block size-4.5 rounded-full shadow-xs transition-transform",
+                                      !hidden ? "translate-x-5.5" : "translate-x-1",
+                                    )}
+                                  />
+                                </button>
+                              )}
+                            </div>
+
+                            {!required && allowSectionMutations && (
+                              <div className="border-border/50 flex items-center justify-between gap-1 border-t pt-2">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    disabled={idx <= 1}
+                                    aria-label={`Move ${summaryLabel} up`}
+                                    onClick={() => handleMoveSection(idx, "up")}
+                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-md disabled:opacity-35"
+                                  >
+                                    <ArrowUp className="size-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={idx >= puckData.content.length - 1}
+                                    aria-label={`Move ${summaryLabel} down`}
+                                    onClick={() => handleMoveSection(idx, "down")}
+                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-md disabled:opacity-35"
+                                  >
+                                    <ArrowDown className="size-3.5" />
+                                  </button>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    aria-label={`Duplicate ${summaryLabel}`}
+                                    onClick={() => handleDuplicateSection(idx)}
+                                    className="text-muted-foreground type-caption inline-flex h-6 items-center gap-1 rounded-md px-1.5"
+                                  >
+                                    <Copy className="size-3" />
+                                    <span>Duplicate</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={`Remove ${summaryLabel}`}
+                                    onClick={() => handleRemoveSection(idx)}
+                                    className="text-muted-foreground hover:text-destructive inline-flex size-6 items-center justify-center rounded-md"
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </button>
+                                </div>
+                              </div>
                             )}
                           </div>
                         );
