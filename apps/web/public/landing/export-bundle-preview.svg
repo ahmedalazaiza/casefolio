@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" fill="none">
+  <rect width="960" height="540" rx="24" fill="#0B0C12"/>
+  <circle cx="480" cy="270" r="220" fill="#4F46E5" fill-opacity="0.16"/>
+
+  <!-- Card 1: Behance 1400px Long Slice -->
+  <g transform="translate(56, 56)">
+    <rect width="256" height="428" rx="18" fill="#131520" stroke="#2D3148" stroke-width="1.5"/>
+    <rect x="20" y="20" width="96" height="22" rx="11" fill="#1E1B4B"/>
+    <text x="68" y="35" text-anchor="middle" fill="#A5B4FC" font-family="system-ui,-apple-system,sans-serif" font-size="10" font-weight="700">BEHANCE 1400PX</text>
+    <rect x="20" y="58" width="216" height="118" rx="12" fill="#E50914"/>
+    <text x="36" y="106" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="800">.Cinema</text>
+    <text x="36" y="128" fill="#FFE4E6" font-family="system-ui,-apple-system,sans-serif" font-size="11">14 Sections · Continuous Stitch</text>
+    <rect x="20" y="192" width="102" height="96" rx="10" fill="#1B1E2E"/>
+    <rect x="134" y="192" width="102" height="96" rx="10" fill="#1B1E2E"/>
+    <rect x="20" y="302" width="216" height="54" rx="10" fill="#1B1E2E"/>
+    <text x="36" y="334" fill="#4ADE80" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="700">+47% Seat Picker Speed</text>
+    <text x="20" y="396" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="11">2x Retina PNG · Zero seams</text>
+  </g>
+
+  <!-- Card 2: Paged A4 PDF Portfolio -->
+  <g transform="translate(352, 38)">
+    <rect width="256" height="464" rx="18" fill="#171926" stroke="#4F46E5" stroke-width="2"/>
+    <rect x="20" y="20" width="84" height="22" rx="11" fill="#4F46E5"/>
+    <text x="62" y="35" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="10" font-weight="700">A4 PDF DECK</text>
+    <rect x="20" y="58" width="216" height="148" rx="12" fill="#FFFFFF"/>
+    <text x="36" y="96" fill="#0A0A0A" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="800">01 · Executive Summary</text>
+    <rect x="36" y="112" width="164" height="8" rx="4" fill="#E4E4E7"/>
+    <rect x="36" y="128" width="132" height="8" rx="4" fill="#E4E4E7"/>
+    <rect x="36" y="154" width="84" height="32" rx="8" fill="#EEF2FF"/>
+    <rect x="132" y="154" width="84" height="32" rx="8" fill="#F0FDF4"/>
+
+    <rect x="20" y="222" width="216" height="148" rx="12" fill="#FFFFFF"/>
+    <text x="36" y="260" fill="#0A0A0A" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="800">02 · Interface Architecture</text>
+    <rect x="36" y="278" width="54" height="74" rx="8" fill="#18181B"/>
+    <rect x="101" y="278" width="54" height="74" rx="8" fill="#4F46E5"/>
+    <rect x="166" y="278" width="54" height="74" rx="8" fill="#18181B"/>
+    <text x="20" y="418" fill="#C7D2FE" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="600">Vector text · Recruiter-ready PDF</text>
+  </g>
+
+  <!-- Card 3: Live Public URL + OpenGraph Card -->
+  <g transform="translate(648, 56)">
+    <rect width="256" height="428" rx="18" fill="#131520" stroke="#2D3148" stroke-width="1.5"/>
+    <rect x="20" y="20" width="88" height="22" rx="11" fill="#052E16"/>
+    <text x="64" y="35" text-anchor="middle" fill="#4ADE80" font-family="system-ui,-apple-system,sans-serif" font-size="10" font-weight="700">PUBLIC LINK</text>
+    <rect x="20" y="58" width="216" height="34" rx="10" fill="#0B0C12" stroke="#232634"/>
+    <text x="32" y="79" fill="#E2E8F0" font-family="ui-monospace,monospace" font-size="10">casefolio.app/p/cinema</text>
+    <rect x="20" y="108" width="216" height="176" rx="12" fill="#1B1E2E" stroke="#2D3148"/>
+    <rect x="32" y="120" width="192" height="104" rx="8" fill="#312E81"/>
+    <text x="46" y="178" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="800">OpenGraph Preview</text>
+    <text x="32" y="248" fill="#F8FAFC" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="700">Auto-generated SEO card</text>
+    <text x="32" y="268" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="10">LinkedIn · X · Slack unfurls</text>
+    <rect x="20" y="302" width="216" height="62" rx="12" fill="#052E16" stroke="#16A34A"/>
+    <text x="36" y="330" fill="#4ADE80" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="700">Live Telemetry Active</text>
+    <text x="36" y="348" fill="#BBF7D0" font-family="system-ui,-apple-system,sans-serif" font-size="10">Views · Referrers · Countries</text>
+  </g>
+</svg>
+

@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 import { PostHogProvider } from "@/components/analytics/posthog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";
 import "@/styles/globals.css";
+
+const bricolageGrotesque = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${jetbrainsMono.variable}`}
+      className={`${bricolageGrotesque.variable} ${geistSans.variable} ${jetbrainsMono.variable}`}
     >
       <body>
         <ThemeProvider>

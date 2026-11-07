@@ -1,12 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { LandingExperience } from "@/components/marketing/landing-experience";
 import { BILLING_PLAN_CATALOG } from "@/lib/billing/plans";
-import HomePage from "./page";
+import { buildLandingSnapshot } from "@/lib/marketing/landing-stats";
 
-describe("HomePage (Figma 27:6665)", () => {
-  it("renders all 13 Figma landing sections with CTAs and template showcases", () => {
-    render(<HomePage />);
+describe("HomePage — Gamified Studio Experience & Real Platform Metrics", () => {
+  it("renders all landing sections with real numbers and removes 'Trusted by designers from'", () => {
+    const snapshot = buildLandingSnapshot();
+    render(<LandingExperience snapshot={snapshot} />);
 
     expect(
       screen.getByRole("heading", {
@@ -15,13 +17,16 @@ describe("HomePage (Figma 27:6665)", () => {
       }),
     ).toBeInTheDocument();
 
+    // Verify "Trusted by designers from" section is completely removed
+    expect(screen.queryByText(/Trusted by designers from/i)).toBeNull();
+
     expect(
       screen.getByRole("figure", {
         name: /Casefolio editor preview/i,
       }),
     ).toBeInTheDocument();
 
-    // Core section headings matching Figma 27:6666
+    // Core section headings
     expect(
       screen.getByRole("heading", {
         name: "Case studies take longer than the project",
@@ -77,11 +82,53 @@ describe("HomePage (Figma 27:6665)", () => {
         name: "Your next case study is one template away",
       }),
     ).toBeInTheDocument();
+
+    // Real published template names rendered
+    expect(screen.getAllByText("Cinema").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Orbit").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Meridian").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("awards Studio Quest XP across all 5 interactive missions up to 100/100 XP", async () => {
+    const user = userEvent.setup();
+    const snapshot = buildLandingSnapshot();
+    render(<LandingExperience snapshot={snapshot} />);
+
+    const xpBar = screen.getByRole("progressbar", { name: "Studio Quest XP" });
+    expect(xpBar).toHaveAttribute("aria-valuenow", "0");
+
+    // Mission 1: Switch template/device (+20 XP)
+    await user.click(screen.getByRole("tab", { name: /Orbit · Mobile App/i }));
+    expect(xpBar).toHaveAttribute("aria-valuenow", "20");
+
+    // Mission 2: Tune color token palette (+20 XP)
+    await user.click(screen.getByRole("button", { name: /Emerald Signal/i }));
+    expect(xpBar).toHaveAttribute("aria-valuenow", "40");
+
+    // Mission 3: Snap missing screenshot into slot (+20 XP)
+    await user.click(
+      screen.getByRole("button", { name: /Snap screen into slot/i }),
+    );
+    expect(xpBar).toHaveAttribute("aria-valuenow", "60");
+
+    // Mission 4: Explore 4-step workflow (+20 XP)
+    await user.click(screen.getByRole("button", { name: /02 Pick a template/i }));
+    expect(xpBar).toHaveAttribute("aria-valuenow", "80");
+
+    // Mission 5: Test-launch public URL (+20 XP -> 100/100 Ship-Ready Designer)
+    await user.click(
+      screen.getByRole("button", { name: /Test-launch public URL/i }),
+    );
+    expect(xpBar).toHaveAttribute("aria-valuenow", "100");
+    expect(
+      screen.getAllByText(/Ship-Ready Designer/i).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("toggles pricing between monthly and yearly prices from BILLING_PLAN_CATALOG", async () => {
     const user = userEvent.setup();
-    render(<HomePage />);
+    const snapshot = buildLandingSnapshot();
+    render(<LandingExperience snapshot={snapshot} />);
 
     expect(
       screen.getByText(`$${BILLING_PLAN_CATALOG.pro.monthlyPriceUsd}`),
@@ -106,9 +153,9 @@ describe("HomePage (Figma 27:6665)", () => {
 
   it("expands and collapses FAQ accordion items", async () => {
     const user = userEvent.setup();
-    render(<HomePage />);
+    const snapshot = buildLandingSnapshot();
+    render(<LandingExperience snapshot={snapshot} />);
 
-    // First FAQ item is open by default per Figma 29:6922
     expect(
       screen.getByText(
         /The Casefolio team designs, versions and uploads every template/i,
@@ -122,8 +169,6 @@ describe("HomePage (Figma 27:6665)", () => {
 
     await user.click(secondTrigger);
     expect(secondTrigger).toHaveAttribute("aria-expanded", "true");
-    expect(
-      screen.getByText(/curated theme tokens/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/curated theme tokens/i)).toBeInTheDocument();
   });
 });
