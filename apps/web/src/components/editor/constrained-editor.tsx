@@ -203,6 +203,7 @@ export function ConstrainedEditor({
   );
   const inFlightSaveRef = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canvasScrollRef = useRef<HTMLElement | null>(null);
 
   const colorKeys = useMemo(() => Object.keys(theme.colors), [theme.colors]);
   const puckConfig = useMemo(
@@ -394,6 +395,12 @@ export function ConstrainedEditor({
   const handleSelectSection = useCallback((index: number) => {
     setSelectedSectionIndex(index);
     setRightTab("fields");
+    requestAnimationFrame(() => {
+      const target = canvasScrollRef.current?.querySelector<HTMLElement>(
+        `[data-editor-section-index="${index}"]`,
+      );
+      target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    });
   }, []);
 
   const handleCanvasSelectSection = useCallback((index: number) => {
@@ -461,7 +468,7 @@ export function ConstrainedEditor({
     <div
       data-testid="constrained-editor-root"
       style={PUCK_FONT_VARS}
-      className="bg-surface text-foreground flex h-dvh min-h-dvh flex-col overflow-hidden"
+      className="bg-surface text-foreground flex h-dvh min-h-dvh flex-col overflow-hidden [&>.Puck]:flex [&>.Puck]:h-full [&>.Puck]:min-h-0 [&>.Puck]:flex-1 [&>.Puck]:flex-col [&>.Puck]:overflow-hidden"
     >
       <Puck
         config={puckConfig as unknown as Config}
@@ -493,9 +500,9 @@ export function ConstrainedEditor({
           {/* Top Editor Bar (matches Figma 2:4347, compact at 375px) */}
           <header
             data-slot="editor-topbar"
-            className="border-border bg-background z-30 flex h-15 shrink-0 items-center justify-between gap-2 border-b px-3 sm:h-17 sm:gap-3 sm:px-6"
+            className="border-border bg-background z-30 flex h-15 shrink-0 items-center justify-between gap-2 border-b px-3 sm:h-17 sm:gap-3 sm:px-6 xl:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
           >
-            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <div className="flex max-w-full min-w-0 flex-1 items-center gap-2 sm:gap-3 xl:justify-self-start">
               <Link
                 href="/dashboard"
                 aria-label="Back to projects"
@@ -551,7 +558,7 @@ export function ConstrainedEditor({
             <div
               role="group"
               aria-label="Preview viewport"
-              className="bg-sunken hidden items-center rounded-full p-1 md:inline-flex"
+              className="bg-sunken hidden shrink-0 items-center rounded-full p-1 md:inline-flex xl:justify-self-center"
             >
               <button
                 type="button"
@@ -584,7 +591,7 @@ export function ConstrainedEditor({
             </div>
 
             {/* Right Actions */}
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 xl:justify-self-end">
               <button
                 type="button"
                 aria-label="Undo"
@@ -646,9 +653,9 @@ export function ConstrainedEditor({
           <aside
             aria-label="Template customization and sections"
             data-slot="editor-left-panel"
-            className="border-border bg-background hidden w-85 shrink-0 flex-col border-r lg:flex"
+            className="border-border bg-background hidden min-h-0 w-85 shrink-0 flex-col border-r lg:flex"
           >
-            <div className="border-border border-b p-4">
+            <div className="border-border shrink-0 border-b p-4">
               <div
                 role="tablist"
                 aria-label="Editor sidebar tabs"
@@ -680,7 +687,7 @@ export function ConstrainedEditor({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-5">
               {/* TAB: SECTIONS (matches Figma 2:4784 — visibility toggles only, no free-canvas add/drag) */}
               {leftTab === "sections" && (
                 <div data-testid="editor-sections-panel" className="flex flex-col gap-4">
@@ -818,11 +825,12 @@ export function ConstrainedEditor({
 
           {/* CENTER PANEL: Live Preview Canvas (matches Figma 2:4438) */}
           <main
+            ref={canvasScrollRef}
             id="main-content"
             data-slot="editor-canvas"
-            className="bg-surface flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-8 sm:py-6"
+            className="bg-surface flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-4 sm:px-8 sm:py-6"
           >
-            <div className="mx-auto mb-4 flex flex-wrap items-center justify-center gap-2 text-center sm:mb-5 sm:gap-2.5">
+            <div className="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center gap-2 text-center sm:mb-5 sm:gap-2.5">
               <Badge tone="neutral" withDot={false}>
                 {initialPayload.template.name} · v{initialPayload.template.version}
               </Badge>
@@ -846,9 +854,9 @@ export function ConstrainedEditor({
           <aside
             aria-label="Section fields and screen slots"
             data-slot="editor-right-panel"
-            className="border-border bg-background hidden w-85 shrink-0 flex-col border-l lg:flex"
+            className="border-border bg-background hidden min-h-0 w-85 shrink-0 flex-col border-l lg:flex"
           >
-            <div className="border-border border-b p-4">
+            <div className="border-border shrink-0 border-b p-4">
               <div
                 role="tablist"
                 aria-label="Inspector tabs"
@@ -889,7 +897,7 @@ export function ConstrainedEditor({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-5">
               {rightTab === "fields" && (
                 <div data-testid="editor-fields-inspector" className="flex flex-col gap-4">
                   {selectedSection ? (

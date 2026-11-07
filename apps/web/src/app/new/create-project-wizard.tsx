@@ -242,8 +242,8 @@ export function CreateProjectWizard({
     <div className="bg-surface text-foreground flex min-h-screen flex-col">
       {/* Top Flow Bar (matches Figma 2:3963 / 2:4162) */}
       <header className="border-border bg-background sticky top-0 z-40 border-b">
-        <div className="mx-auto flex h-17 max-w-7xl items-center justify-between gap-3 px-4 sm:px-8">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="mx-auto grid h-17 max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-8 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <div className="flex max-w-full min-w-0 items-center gap-3 justify-self-start">
             <button
               type="button"
               onClick={handleFlowBack}
@@ -252,12 +252,15 @@ export function CreateProjectWizard({
             >
               <ArrowLeft className="size-4" />
             </button>
-            <span className="text-foreground type-body-m-strong truncate">
+            <span className="text-foreground type-body-m-strong min-w-0 truncate">
               {name.trim() || "New project"}
             </span>
           </div>
 
-          <nav aria-label="Create project steps" className="hidden items-center gap-3 md:flex">
+          <nav
+            aria-label="Create project steps"
+            className="hidden shrink-0 items-center gap-3 justify-self-center md:flex"
+          >
             {WIZARD_STEPS.map((item, idx) => {
               const isCompleted = idx < stepIndex;
               const isCurrent = item.key === step;
@@ -308,7 +311,7 @@ export function CreateProjectWizard({
             })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 justify-self-end">
             <Badge tone="neutral" withDot={false} className="md:hidden">
               Step {stepIndex + 1}/3
             </Badge>

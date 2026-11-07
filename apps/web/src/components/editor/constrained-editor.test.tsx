@@ -184,4 +184,21 @@ describe("ConstrainedEditor (C-402)", () => {
       });
     }
   });
+
+  it("keeps the center template preview unshrunk (shrink-0) inside a bounded scrollable canvas container", () => {
+    const payload = buildEditorPayload();
+    const { container } = render(<ConstrainedEditor initialPayload={payload} />);
+
+    const root = screen.getByTestId("constrained-editor-root");
+    expect(root.className).toContain("[&>.Puck]:min-h-0");
+    expect(root.className).toContain("[&>.Puck]:overflow-hidden");
+
+    const canvasMain = container.querySelector('[data-slot="editor-canvas"]');
+    expect(canvasMain).not.toBeNull();
+    expect(canvasMain?.className).toContain("min-h-0");
+    expect(canvasMain?.className).toContain("overflow-y-auto");
+
+    const canvasFrame = screen.getByTestId("editor-canvas-preview");
+    expect(canvasFrame.className).toContain("shrink-0");
+  });
 });

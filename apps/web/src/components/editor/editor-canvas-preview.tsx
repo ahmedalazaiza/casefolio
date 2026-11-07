@@ -94,7 +94,7 @@ export function EditorCanvasPreview({
       data-viewport={viewport}
       style={buildTemplateThemeStyle(theme)}
       className={cn(
-        "shadow-card mx-auto w-full overflow-hidden transition-all duration-200",
+        "shadow-card mx-auto w-full shrink-0 overflow-hidden transition-all duration-200",
         viewport === "mobile"
           ? "border-inverse max-w-sm rounded-3xl border-8"
           : "border-border/50 max-w-4xl rounded-2xl border",

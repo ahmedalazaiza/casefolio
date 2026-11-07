@@ -234,10 +234,15 @@ export function OnboardingWizard({
 
   return (
     <div className="bg-background text-foreground flex min-h-screen flex-col">
-      <header className="flex h-20 items-center justify-between gap-4 px-6 sm:px-10">
-        <BrandLogo href="/dashboard" />
+      <header className="grid h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 sm:px-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <div className="justify-self-start">
+          <BrandLogo href="/dashboard" />
+        </div>
 
-        <nav aria-label="Onboarding steps" className="hidden items-center gap-3 md:flex">
+        <nav
+          aria-label="Onboarding steps"
+          className="hidden shrink-0 items-center gap-3 justify-self-center md:flex"
+        >
           <StepIndicator step={1} label="Your role" state={resolveStepState(1)} />
           <span
             aria-hidden="true"
@@ -255,7 +260,7 @@ export function OnboardingWizard({
           type="button"
           disabled={submitting}
           onClick={handleSkip}
-          className="text-foreground hover:text-primary focus-visible:ring-ring/40 type-body-s-strong rounded-full px-3 py-1.5 transition-colors outline-none focus-visible:ring-2 disabled:opacity-50"
+          className="text-foreground hover:text-primary focus-visible:ring-ring/40 type-body-s-strong justify-self-end rounded-full px-3 py-1.5 transition-colors outline-none focus-visible:ring-2 disabled:opacity-50"
         >
           Skip for now
         </button>

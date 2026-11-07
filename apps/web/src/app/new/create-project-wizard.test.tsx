@@ -147,4 +147,21 @@ describe("CreateProjectWizard (C-401)", () => {
       expect(pushMock).toHaveBeenCalledWith("/editor/99999999-9999-4999-8999-999999999999");
     });
   });
+
+  it("anchors the step progress bar in a symmetric 3-column header grid so long titles never shift it", () => {
+    render(
+      <CreateProjectWizard
+        templates={buildTemplates()}
+        userPlan="free"
+        existingProjectCount={0}
+        onCreateProject={vi.fn()}
+      />,
+    );
+
+    const stepsNav = screen.getByRole("navigation", { name: "Create project steps" });
+    expect(stepsNav.className).toContain("justify-self-center");
+    expect(stepsNav.parentElement?.className).toContain(
+      "md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]",
+    );
+  });
 });
