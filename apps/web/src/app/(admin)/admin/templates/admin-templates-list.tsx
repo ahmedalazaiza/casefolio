@@ -16,6 +16,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   Dialog,
   DialogContent,
@@ -203,9 +204,10 @@ export function AdminTemplatesList({
   if (templates.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-8">
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="text-foreground type-heading-l">Templates</h1>
+        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="flex min-w-0 flex-col gap-2">
+            <Eyebrow className="w-fit">Template Library</Eyebrow>
+            <h1 className="text-foreground type-display-m">Templates</h1>
             <p className="text-muted-foreground type-body-s">
               Templates designed by the Casefolio team.
             </p>
@@ -213,11 +215,10 @@ export function AdminTemplatesList({
         </header>
 
         <Card
-          variant="flat"
           data-testid="admin-templates-empty-state"
           className="items-center justify-center gap-4 px-6 py-20 text-center"
         >
-          <div className="bg-sunken text-muted-foreground flex size-12 items-center justify-center rounded-full">
+          <div className="bg-accent/70 text-primary flex size-14 items-center justify-center rounded-2xl">
             <LayoutTemplate className="size-6" />
           </div>
           <div className="flex max-w-md flex-col gap-1.5">
@@ -239,9 +240,10 @@ export function AdminTemplatesList({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-foreground type-heading-l">Templates</h1>
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Eyebrow className="w-fit">Template Library</Eyebrow>
+          <h1 className="text-foreground type-display-m">Templates</h1>
           <p className="text-muted-foreground type-body-s">
             Templates designed by the Casefolio team. Users only see Published.
           </p>
@@ -258,27 +260,27 @@ export function AdminTemplatesList({
       {actionError && !deleteTarget && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-4 py-3"
+          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-2xl border px-4 py-3"
         >
           {actionError}
         </div>
       )}
 
       {/* Filters (Figma 31:6973 + C-902 search + status/type/category/tier) */}
-      <section aria-label="Template filters" className="flex flex-col gap-4">
+      <Card aria-label="Template filters" className="p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="flex w-full min-w-0 flex-col gap-1.5 xl:max-w-xs">
             <label htmlFor="admin-template-search" className="text-foreground type-caption">
               Search
             </label>
             <div className="relative">
-              <Search className="text-tertiary pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <Search className="text-tertiary pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
               <Input
                 id="admin-template-search"
                 placeholder="Search name, slug, or category..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="pl-9"
+                className="rounded-full pl-9"
               />
             </div>
           </div>
@@ -289,7 +291,7 @@ export function AdminTemplatesList({
               <div
                 role="group"
                 aria-label="Filter by type"
-                className="border-border bg-elevated inline-flex flex-wrap gap-1 rounded-full border p-1"
+                className="border-border/70 bg-sunken/80 inline-flex flex-wrap gap-1 rounded-full border p-1"
               >
                 {TYPE_FILTER_OPTIONS.map((opt) => {
                   const active = typeFilter === opt.value;
@@ -300,9 +302,9 @@ export function AdminTemplatesList({
                       aria-pressed={active}
                       onClick={() => setTypeFilter(opt.value)}
                       className={cn(
-                        "rounded-full px-3 py-1 transition-colors",
+                        "rounded-full px-3 py-1 transition-all",
                         active
-                          ? "bg-primary text-primary-foreground type-caption"
+                          ? "bg-elevated text-foreground shadow-card type-caption font-medium"
                           : "text-muted-foreground hover:text-foreground type-caption",
                       )}
                     >
@@ -318,7 +320,7 @@ export function AdminTemplatesList({
               <div
                 role="group"
                 aria-label="Filter by status"
-                className="border-border bg-elevated inline-flex flex-wrap gap-1 rounded-full border p-1"
+                className="border-border/70 bg-sunken/80 inline-flex flex-wrap gap-1 rounded-full border p-1"
               >
                 {STATUS_FILTER_OPTIONS.map((opt) => {
                   const active = statusFilter === opt.value;
@@ -329,9 +331,9 @@ export function AdminTemplatesList({
                       aria-pressed={active}
                       onClick={() => setStatusFilter(opt.value)}
                       className={cn(
-                        "rounded-full px-3 py-1 transition-colors",
+                        "rounded-full px-3 py-1 transition-all",
                         active
-                          ? "bg-primary text-primary-foreground type-caption"
+                          ? "bg-elevated text-foreground shadow-card type-caption font-medium"
                           : "text-muted-foreground hover:text-foreground type-caption",
                       )}
                     >
@@ -347,7 +349,7 @@ export function AdminTemplatesList({
               <div
                 role="group"
                 aria-label="Filter by tier"
-                className="border-border bg-elevated inline-flex flex-wrap gap-1 rounded-full border p-1"
+                className="border-border/70 bg-sunken/80 inline-flex flex-wrap gap-1 rounded-full border p-1"
               >
                 {TIER_FILTER_OPTIONS.map((opt) => {
                   const active = tierFilter === opt.value;
@@ -358,9 +360,9 @@ export function AdminTemplatesList({
                       aria-pressed={active}
                       onClick={() => setTierFilter(opt.value)}
                       className={cn(
-                        "rounded-full px-3 py-1 transition-colors",
+                        "rounded-full px-3 py-1 transition-all",
                         active
-                          ? "bg-primary text-primary-foreground type-caption"
+                          ? "bg-elevated text-foreground shadow-card type-caption font-medium"
                           : "text-muted-foreground hover:text-foreground type-caption",
                       )}
                     >
@@ -380,7 +382,7 @@ export function AdminTemplatesList({
                 aria-label="Filter by category"
                 value={categoryFilter}
                 onChange={(event) => setCategoryFilter(event.target.value)}
-                className="border-border bg-elevated text-foreground type-caption focus-visible:ring-ring/40 h-9 rounded-full border px-3.5 outline-none focus-visible:ring-2"
+                className="border-border/80 bg-elevated text-foreground type-caption focus-visible:ring-ring/40 h-9 rounded-full border px-3.5 shadow-xs outline-none focus-visible:ring-2"
               >
                 <option value="all">All categories</option>
                 {categoryOptions.map((cat) => (
@@ -392,25 +394,25 @@ export function AdminTemplatesList({
             </div>
           </div>
         </div>
-      </section>
+      </Card>
 
       {/* Templates table (Figma 31:7003) */}
-      <Card variant="flat" className="min-w-0 overflow-hidden">
+      <Card className="min-w-0 gap-0 overflow-hidden p-0">
         <div className="w-full max-w-full overflow-x-auto">
           <table className="w-full min-w-180 border-collapse text-left">
             <thead>
-              <tr className="border-border bg-surface border-b">
-                <th className="text-tertiary type-overline px-5 py-3">Template</th>
-                <th className="text-tertiary type-overline px-4 py-3">Type</th>
-                <th className="text-tertiary type-overline px-4 py-3">Status</th>
-                <th className="text-tertiary type-overline px-4 py-3">Version</th>
-                <th className="text-tertiary type-overline px-4 py-3">Sections</th>
-                <th className="text-tertiary type-overline px-4 py-3">Slots</th>
-                <th className="text-tertiary type-overline px-4 py-3">Updated</th>
-                <th className="text-tertiary type-overline px-5 py-3 text-right">Actions</th>
+              <tr className="border-border/70 bg-surface/60 border-b">
+                <th className="text-tertiary type-overline px-5 py-3.5">Template</th>
+                <th className="text-tertiary type-overline px-4 py-3.5">Type</th>
+                <th className="text-tertiary type-overline px-4 py-3.5">Status</th>
+                <th className="text-tertiary type-overline px-4 py-3.5">Version</th>
+                <th className="text-tertiary type-overline px-4 py-3.5">Sections</th>
+                <th className="text-tertiary type-overline px-4 py-3.5">Slots</th>
+                <th className="text-tertiary type-overline px-4 py-3.5">Updated</th>
+                <th className="text-tertiary type-overline px-5 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-border divide-y">
+            <tbody className="divide-border/70 divide-y">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-muted-foreground type-body-s px-5 py-10 text-center">

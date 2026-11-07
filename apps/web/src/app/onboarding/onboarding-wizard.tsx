@@ -17,6 +17,7 @@ import { useRef, useState, type ChangeEvent, type ComponentType, type FormEvent 
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { Button } from "@/components/ui/button";
 import { TemplateTypeCard } from "@/components/ui/domain-cards";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { InputField } from "@/components/ui/input";
 import { StepIndicator, type StepState } from "@/components/ui/step-indicator";
 import {
@@ -233,15 +234,15 @@ export function OnboardingWizard({
   const initials = computeInitials(displayName, initialEmail);
 
   return (
-    <div className="bg-background text-foreground flex min-h-screen flex-col">
-      <header className="grid h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 sm:px-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+    <div className="bg-background bg-wash-top text-foreground flex min-h-screen flex-col">
+      <header className="border-border/60 bg-background/80 sticky top-0 z-30 grid h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b px-6 backdrop-blur-xl sm:px-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <div className="justify-self-start">
           <BrandLogo href="/dashboard" />
         </div>
 
         <nav
           aria-label="Onboarding steps"
-          className="hidden shrink-0 items-center gap-3 justify-self-center md:flex"
+          className="border-border/70 bg-elevated/85 shadow-card hidden shrink-0 items-center gap-3 justify-self-center rounded-full border px-4 py-2 backdrop-blur-md md:flex"
         >
           <StepIndicator step={1} label="Your role" state={resolveStepState(1)} />
           <span
@@ -260,24 +261,24 @@ export function OnboardingWizard({
           type="button"
           disabled={submitting}
           onClick={handleSkip}
-          className="text-foreground hover:text-primary focus-visible:ring-ring/40 type-body-s-strong justify-self-end rounded-full px-3 py-1.5 transition-colors outline-none focus-visible:ring-2 disabled:opacity-50"
+          className="border-border/70 bg-elevated/80 text-foreground hover:bg-surface hover:text-primary focus-visible:ring-ring/40 type-body-s-strong justify-self-end rounded-full border px-4 py-1.5 shadow-xs transition-colors outline-none focus-visible:ring-2 disabled:opacity-50"
         >
           Skip for now
         </button>
       </header>
 
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-6 py-10 sm:py-14">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-6 py-12 sm:py-16">
         {step === 1 && (
-          <section aria-labelledby="onboarding-step-1-heading" className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <span className="text-primary type-overline">Step 1 of 3</span>
+          <section aria-labelledby="onboarding-step-1-heading" className="flex flex-col gap-9">
+            <div className="flex flex-col gap-3">
+              <Eyebrow className="w-fit">Step 1 of 3</Eyebrow>
               <h1
                 id="onboarding-step-1-heading"
                 className="type-display-m sm:type-display-l text-foreground"
               >
                 What best describes you?
               </h1>
-              <p className="text-muted-foreground type-body-m">
+              <p className="text-muted-foreground type-body-m max-w-xl">
                 We&apos;ll tailor templates and tips. You can change this later.
               </p>
             </div>
@@ -293,32 +294,32 @@ export function OnboardingWizard({
                     aria-pressed={active}
                     onClick={() => handleSelectRole(option)}
                     className={cn(
-                      "focus-visible:ring-ring/40 flex flex-col gap-5 rounded-xl border p-5 text-left transition-colors outline-none focus-visible:ring-2",
+                      "focus-visible:ring-ring/40 flex flex-col gap-6 rounded-3xl border p-6 text-left transition-all duration-200 outline-none focus-visible:ring-2",
                       active
-                        ? "border-primary bg-card shadow-card border-2"
-                        : "border-border bg-card hover:border-border-strong",
+                        ? "border-primary bg-elevated shadow-float ring-primary/15 ring-4 -translate-y-0.5"
+                        : "border-border/80 bg-elevated/90 shadow-card hover:border-border-strong hover:shadow-float hover:-translate-y-0.5",
                     )}
                   >
                     <div className="flex w-full items-start justify-between">
                       <span
                         aria-hidden="true"
                         className={cn(
-                          "inline-flex size-10 items-center justify-center rounded-md",
+                          "inline-flex size-11 items-center justify-center rounded-2xl transition-colors",
                           active
-                            ? "bg-primary text-primary-foreground"
+                            ? "bg-primary text-primary-foreground shadow-xs"
                             : "bg-accent text-accent-foreground",
                         )}
                       >
-                        <Icon className="size-4" />
+                        <Icon className="size-5" />
                       </span>
 
                       <span
                         aria-hidden="true"
                         className={cn(
-                          "inline-flex size-5 items-center justify-center rounded-xs border",
+                          "inline-flex size-6 items-center justify-center rounded-full border transition-colors",
                           active
                             ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border-strong bg-elevated",
+                            : "border-border-strong bg-surface",
                         )}
                       >
                         {active && <Check className="size-3.5" />}
@@ -327,14 +328,14 @@ export function OnboardingWizard({
 
                     <div className="flex flex-col gap-1">
                       <span className="text-foreground type-heading-s">{option.title}</span>
-                      <span className="text-muted-foreground type-caption">{option.subtitle}</span>
+                      <span className="text-muted-foreground type-body-s">{option.subtitle}</span>
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end pt-2">
               <Button type="button" size="lg" onClick={() => setStep(2)}>
                 Continue
                 <ArrowRight className="size-4" />
@@ -344,26 +345,26 @@ export function OnboardingWizard({
         )}
 
         {step === 2 && (
-          <section aria-labelledby="onboarding-step-2-heading" className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <span className="text-primary type-overline">Step 2 of 3</span>
+          <section aria-labelledby="onboarding-step-2-heading" className="flex flex-col gap-9">
+            <div className="flex flex-col gap-3">
+              <Eyebrow className="w-fit">Step 2 of 3</Eyebrow>
               <h1
                 id="onboarding-step-2-heading"
                 className="type-display-m sm:type-display-l text-foreground"
               >
                 What will you present first?
               </h1>
-              <p className="text-muted-foreground type-body-m">
+              <p className="text-muted-foreground type-body-m max-w-xl">
                 Pick one or more — we&apos;ll show matching templates first.
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-2">
               <button
                 type="button"
                 aria-pressed={mobileSelected}
                 onClick={() => handleToggleFocus("mobile")}
-                className="focus-visible:ring-ring/40 rounded-xl text-left outline-none focus-visible:ring-2"
+                className="focus-visible:ring-ring/40 rounded-3xl text-left outline-none focus-visible:ring-2"
               >
                 <TemplateTypeCard
                   title="Mobile app"
@@ -379,7 +380,7 @@ export function OnboardingWizard({
                 type="button"
                 aria-pressed={webSelected}
                 onClick={() => handleToggleFocus("web")}
-                className="focus-visible:ring-ring/40 rounded-xl text-left outline-none focus-visible:ring-2"
+                className="focus-visible:ring-ring/40 rounded-3xl text-left outline-none focus-visible:ring-2"
               >
                 <TemplateTypeCard
                   title="Website"
@@ -408,7 +409,7 @@ export function OnboardingWizard({
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-2">
               <Button type="button" variant="secondary" size="lg" onClick={() => setStep(1)}>
                 Back
               </Button>
@@ -426,8 +427,8 @@ export function OnboardingWizard({
             onSubmit={handleComplete}
             className="flex flex-col gap-8"
           >
-            <div className="flex flex-col gap-2">
-              <span className="text-primary type-overline">Step 3 of 3</span>
+            <div className="flex flex-col gap-3">
+              <Eyebrow className="w-fit">Step 3 of 3</Eyebrow>
               <h1
                 id="onboarding-step-3-heading"
                 className="type-display-m sm:type-display-l text-foreground"
@@ -437,87 +438,89 @@ export function OnboardingWizard({
               <p className="text-muted-foreground type-body-m">Shown on published case studies.</p>
             </div>
 
-            <div className="flex items-center gap-5">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={displayName || "Profile avatar"}
-                  className="border-border size-20 rounded-full border object-cover"
-                />
-              ) : (
-                <div
-                  aria-hidden="true"
-                  className="bg-inverse text-inverse-foreground inline-flex size-20 shrink-0 items-center justify-center rounded-full type-heading-m"
-                >
-                  {initials}
-                </div>
-              )}
-
-              <div className="flex flex-col items-start gap-1.5">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  aria-label="Upload avatar photo"
-                  onChange={handlePhotoUpload}
-                  className="sr-only"
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
+            <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-6 rounded-3xl border p-6 sm:p-8">
+              <div className="flex items-center gap-5">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName || "Profile avatar"}
+                    className="border-border size-20 rounded-full border object-cover"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="bg-inverse text-inverse-foreground inline-flex size-20 shrink-0 items-center justify-center rounded-full type-heading-m"
                   >
-                    <Plus className="size-4" />
-                    Upload photo
-                  </Button>
-                  {avatarUrl && (
+                    {initials}
+                  </div>
+                )}
+
+                <div className="flex flex-col items-start gap-1.5">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    aria-label="Upload avatar photo"
+                    onChange={handlePhotoUpload}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center gap-2">
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
-                      onClick={() => setAvatarUrl(null)}
+                      onClick={() => fileInputRef.current?.click()}
                     >
-                      Remove
+                      <Plus className="size-4" />
+                      Upload photo
                     </Button>
-                  )}
+                    {avatarUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAvatarUrl(null)}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  <span className="text-tertiary type-caption">PNG or JPG · up to 350 KB</span>
                 </div>
-                <span className="text-tertiary type-caption">PNG or JPG · up to 350 KB</span>
               </div>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <InputField
+                  label="Display name"
+                  value={displayName}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setDisplayName(next);
+                    setPublicHandle(`casefolio.app/${toHandleSlug(next, initialEmail)}`);
+                  }}
+                  placeholder="Ahmed Al-Azaiza"
+                  required
+                />
+
+                <InputField
+                  label="Headline"
+                  value={headline}
+                  onChange={(e) => {
+                    setHeadlineTouched(true);
+                    setHeadline(e.target.value);
+                  }}
+                  placeholder="Product designer"
+                  required
+                />
+              </div>
+
               <InputField
-                label="Display name"
-                value={displayName}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setDisplayName(next);
-                  setPublicHandle(`casefolio.app/${toHandleSlug(next, initialEmail)}`);
-                }}
-                placeholder="Ahmed Al-Azaiza"
-                required
-              />
-
-              <InputField
-                label="Headline"
-                value={headline}
-                onChange={(e) => {
-                  setHeadlineTouched(true);
-                  setHeadline(e.target.value);
-                }}
-                placeholder="Product designer"
-                required
+                label="Public handle"
+                value={publicHandle}
+                onChange={(e) => setPublicHandle(e.target.value)}
+                helperText="Available — shown on your published case studies"
               />
             </div>
-
-            <InputField
-              label="Public handle"
-              value={publicHandle}
-              onChange={(e) => setPublicHandle(e.target.value)}
-              helperText="Available — shown on your published case studies"
-            />
 
             {errorMessage && (
               <p role="alert" className="text-destructive type-body-s">

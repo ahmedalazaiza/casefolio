@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import {
   AUDIT_ACTION_CATEGORIES,
@@ -243,9 +244,10 @@ export function AdminSettingsPanel({
   return (
     <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6">
       {/* Page header (Figma 32:10249) */}
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-foreground type-heading-l">Settings &amp; roles</h1>
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Eyebrow className="w-fit">Governance</Eyebrow>
+          <h1 className="text-foreground type-display-m">Settings &amp; roles</h1>
           <p className="text-muted-foreground type-body-s">
             Admin team, permissions and platform settings.
           </p>
@@ -267,7 +269,7 @@ export function AdminSettingsPanel({
       <div
         role="tablist"
         aria-label="Settings sections"
-        className="bg-sunken inline-flex max-w-full items-center gap-1 self-start overflow-x-auto rounded-full p-1 whitespace-nowrap"
+        className="border-border/70 bg-sunken/80 inline-flex max-w-full items-center gap-1 self-start overflow-x-auto rounded-full border p-1 whitespace-nowrap"
       >
         {tabs.map((tab) => {
           const active = activeTab === tab.key;
@@ -283,9 +285,9 @@ export function AdminSettingsPanel({
                 setFeedback(null);
               }}
               className={cn(
-                "rounded-full px-3.5 py-1.5 transition-colors outline-none type-caption",
+                "rounded-full px-3.5 py-1.5 transition-all outline-none type-caption",
                 active
-                  ? "bg-background text-foreground shadow-xs font-medium"
+                  ? "bg-elevated text-foreground shadow-card font-medium"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -298,7 +300,7 @@ export function AdminSettingsPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="bg-destructive-soft text-destructive rounded-xl px-4 py-3 type-body-s"
+          className="border-destructive/30 bg-destructive-soft text-destructive rounded-2xl border px-4 py-3 type-body-s"
         >
           {errorMessage}
         </div>
@@ -307,7 +309,7 @@ export function AdminSettingsPanel({
       {feedback && (
         <div
           role="status"
-          className="bg-success-soft text-success rounded-xl px-4 py-3 type-body-s"
+          className="border-success/30 bg-success-soft text-success rounded-2xl border px-4 py-3 type-body-s"
         >
           {feedback}
         </div>
@@ -315,11 +317,11 @@ export function AdminSettingsPanel({
 
       {/* Admin team table (Figma 35:8753) */}
       {showTeamSection && (
-        <Card variant="flat" className="min-w-0 gap-0 overflow-hidden p-0">
+        <Card className="min-w-0 gap-0 overflow-hidden p-0">
           <div className="w-full max-w-full overflow-x-auto">
             <table className="w-full min-w-[700px] border-collapse text-left">
               <thead>
-                <tr className="border-border bg-surface text-muted-foreground border-b type-caption">
+                <tr className="border-border/70 bg-surface/60 text-muted-foreground border-b type-caption">
                   <th className="px-6 py-3 font-medium">MEMBER</th>
                   <th className="px-4 py-3 font-medium">ROLE</th>
                   <th className="px-4 py-3 font-medium">LAST ACTIVE</th>
@@ -423,7 +425,6 @@ export function AdminSettingsPanel({
         >
           {showPermissionsSection && (
             <Card
-              variant="flat"
               className={cn(
                 "min-w-0 gap-0 overflow-hidden p-0",
                 showPlatformSection ? "lg:col-span-8" : "",
@@ -432,14 +433,14 @@ export function AdminSettingsPanel({
               <div className="w-full max-w-full overflow-x-auto">
                 <table className="w-full min-w-[540px] border-collapse text-left">
                   <thead>
-                    <tr className="border-border bg-surface text-muted-foreground border-b type-caption">
-                      <th className="px-6 py-3 font-medium">PERMISSION</th>
-                      <th className="px-4 py-3 text-center font-medium">SUPERADMIN</th>
-                      <th className="px-4 py-3 text-center font-medium">ADMIN</th>
-                      <th className="px-6 py-3 text-center font-medium">USER</th>
+                    <tr className="border-border/70 bg-surface/60 text-muted-foreground border-b type-caption">
+                      <th className="px-6 py-3.5 font-medium">PERMISSION</th>
+                      <th className="px-4 py-3.5 text-center font-medium">SUPERADMIN</th>
+                      <th className="px-4 py-3.5 text-center font-medium">ADMIN</th>
+                      <th className="px-6 py-3.5 text-center font-medium">USER</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-border divide-y">
+                  <tbody className="divide-border/70 divide-y">
                     {PERMISSION_MATRIX_ROWS.map((row) => (
                       <tr key={row.permission}>
                         <td className="text-foreground px-6 py-3.5 type-body-s">
@@ -450,14 +451,14 @@ export function AdminSettingsPanel({
                             {allowed ? (
                               <span
                                 aria-label="Allowed"
-                                className="bg-primary text-primary-foreground inline-flex size-5 items-center justify-center rounded-md"
+                                className="bg-primary text-primary-foreground inline-flex size-5 items-center justify-center rounded-full"
                               >
                                 <Check className="size-3.5" />
                               </span>
                             ) : (
                               <span
                                 aria-label="Not allowed"
-                                className="border-border text-muted-foreground inline-flex size-5 items-center justify-center rounded-md border"
+                                className="border-border text-muted-foreground inline-flex size-5 items-center justify-center rounded-full border"
                               >
                                 <Minus className="size-3" />
                               </span>
@@ -474,7 +475,6 @@ export function AdminSettingsPanel({
 
           {showPlatformSection && (
             <Card
-              variant="flat"
               data-testid="platform-settings-card"
               className={cn(
                 "min-w-0 justify-between gap-4 p-6",
@@ -488,7 +488,7 @@ export function AdminSettingsPanel({
                 </p>
               </div>
 
-              <div className="divide-border flex flex-col divide-y">
+              <div className="divide-border/70 flex flex-col divide-y">
                 <PlatformSwitch
                   id="flag-new-signups"
                   label="New sign-ups open"
@@ -528,21 +528,21 @@ export function AdminSettingsPanel({
                 placeholder="Search action, actor, or resource..."
                 value={auditSearch}
                 onChange={(e) => setAuditSearch(e.target.value)}
-                className="pl-9"
+                className="rounded-full pl-9"
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="bg-sunken inline-flex max-w-full flex-wrap items-center gap-1 rounded-full p-1">
+              <div className="border-border/70 bg-sunken/80 inline-flex max-w-full flex-wrap items-center gap-1 rounded-full border p-1">
                 {AUDIT_ACTION_CATEGORIES.map((cat) => (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => setAuditCategory(cat)}
                     className={cn(
-                      "rounded-full px-3 py-1 capitalize transition-colors outline-none type-caption",
+                      "rounded-full px-3 py-1 capitalize transition-all outline-none type-caption",
                       auditCategory === cat
-                        ? "bg-background text-foreground shadow-xs font-medium"
+                        ? "bg-elevated text-foreground shadow-card font-medium"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
@@ -563,11 +563,11 @@ export function AdminSettingsPanel({
             </div>
           </div>
 
-          <Card variant="flat" className="min-w-0 gap-0 overflow-hidden p-0">
+          <Card className="min-w-0 gap-0 overflow-hidden p-0">
             <div className="w-full max-w-full overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse text-left">
                 <thead>
-                  <tr className="border-border bg-surface text-muted-foreground border-b type-caption">
+                  <tr className="border-border/70 bg-surface/60 text-muted-foreground border-b type-caption">
                     <th className="px-6 py-3 font-medium">TIME</th>
                     <th className="px-4 py-3 font-medium">ACTOR</th>
                     <th className="px-4 py-3 font-medium">ACTION</th>

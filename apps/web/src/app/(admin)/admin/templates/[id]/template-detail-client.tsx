@@ -17,6 +17,7 @@ import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   Dialog,
   DialogContent,
@@ -232,10 +233,11 @@ export function TemplateDetailClient({
       </div>
 
       {/* Page header (Figma 32:7992) */}
-      <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-        <div className="flex min-w-0 flex-col gap-1.5">
+      <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Eyebrow className="w-fit">Template Governance</Eyebrow>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-foreground type-heading-l">{detail.name}</h1>
+            <h1 className="text-foreground type-display-m">{detail.name}</h1>
             <Badge
               tone={
                 detail.status === "published"
@@ -400,7 +402,7 @@ export function TemplateDetailClient({
         <div
           role="tablist"
           aria-label="Template detail views"
-          className="border-border bg-elevated inline-flex flex-wrap gap-1 rounded-full border p-1"
+          className="border-border/70 bg-sunken/80 inline-flex flex-wrap gap-1 rounded-full border p-1"
         >
           {DETAIL_TABS.map((tab) => {
             const active = activeTab === tab.id;
@@ -412,9 +414,9 @@ export function TemplateDetailClient({
                 aria-selected={active}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-colors outline-none focus-visible:ring-2",
+                  "focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2",
                   active
-                    ? "bg-primary text-primary-foreground type-caption"
+                    ? "bg-elevated text-foreground shadow-card type-caption font-medium"
                     : "text-muted-foreground hover:text-foreground type-caption",
                 )}
               >
@@ -428,7 +430,7 @@ export function TemplateDetailClient({
       {feedbackError && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft flex items-center gap-2.5 rounded-xl border p-4"
+          className="border-destructive/30 bg-destructive-soft flex items-center gap-2.5 rounded-2xl border p-4"
         >
           <AlertCircle className="text-destructive size-5 shrink-0" />
           <span className="text-destructive type-body-s-strong">{feedbackError}</span>
@@ -438,7 +440,7 @@ export function TemplateDetailClient({
       {feedbackSuccess && (
         <div
           role="status"
-          className="border-success/30 bg-success-soft flex items-center gap-2.5 rounded-xl border p-4"
+          className="border-success/30 bg-success-soft flex items-center gap-2.5 rounded-2xl border p-4"
         >
           <CheckCircle2 className="text-success size-5 shrink-0" />
           <span className="text-foreground type-body-s-strong">{feedbackSuccess}</span>
@@ -447,7 +449,7 @@ export function TemplateDetailClient({
 
       {/* Two-column body (Figma 32:8019) */}
       <div className="grid gap-6 lg:grid-cols-12">
-        <Card variant="flat" className="min-w-0 gap-4 p-5 lg:col-span-8">
+        <Card className="min-w-0 gap-4 p-6 lg:col-span-8">
           {activeTab === "preview" && (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -459,7 +461,7 @@ export function TemplateDetailClient({
                 </span>
               </div>
 
-              <div className="border-border max-h-176 overflow-y-auto rounded-xl border">
+              <div className="border-border/80 max-h-176 overflow-y-auto rounded-2xl border">
                 {doc ? (
                   <TemplatePuckRenderer document={doc} />
                 ) : (
@@ -662,7 +664,7 @@ export function TemplateDetailClient({
           )}
         </Card>
 
-        <Card variant="flat" className="min-w-0 justify-between gap-5 p-6 lg:col-span-4">
+        <Card className="min-w-0 justify-between gap-5 p-6 lg:col-span-4">
           <div className="flex flex-col gap-4">
             <h2 className="text-foreground type-heading-s">Version history</h2>
 
@@ -674,10 +676,10 @@ export function TemplateDetailClient({
                   <li
                     key={ver.id}
                     className={cn(
-                      "flex flex-col gap-2 rounded-lg border p-3.5 transition-colors",
+                      "flex flex-col gap-2 rounded-2xl border p-4 transition-all",
                       isSelected
-                        ? "border-primary bg-surface"
-                        : "border-border bg-background hover:border-border-strong",
+                        ? "border-primary/50 bg-accent/25 shadow-xs"
+                        : "border-border/70 bg-surface/40 hover:border-border-strong",
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">

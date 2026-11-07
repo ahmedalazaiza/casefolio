@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { NotificationRow } from "@/components/notifications/notification-row";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   matchesNotificationFilter,
   type NotificationFilterKey,
@@ -88,12 +89,12 @@ export function NotificationsPageClient({
   return (
     <div
       data-testid="notifications-page"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-2 py-4 sm:px-6 sm:py-6 lg:px-8"
     >
       {/* Page header (Matches Figma 2:9726) */}
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-tertiary type-overline">NOTIFICATIONS</span>
+        <div className="flex flex-col gap-2">
+          <Eyebrow className="w-fit">Inbox</Eyebrow>
           <h1 className="text-foreground type-display-m">Notifications</h1>
         </div>
 
@@ -125,7 +126,7 @@ export function NotificationsPageClient({
           role="group"
           aria-label="Filter notifications"
           data-testid="notifications-filter-bar"
-          className="border-border bg-sunken inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-xl border p-1 sm:gap-1"
+          className="border-border/70 bg-sunken/80 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border p-1"
         >
           {FILTER_TABS.map((tab) => {
             const isActive = activeFilter === tab.key;
@@ -137,7 +138,7 @@ export function NotificationsPageClient({
                 aria-pressed={isActive}
                 onClick={() => setActiveFilter(tab.key)}
                 className={cn(
-                  "focus-visible:ring-ring/40 shrink-0 rounded-lg px-2.5 py-1.5 transition-colors outline-none focus-visible:ring-2 sm:px-3.5",
+                  "focus-visible:ring-ring/40 shrink-0 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2 sm:px-4",
                   isActive
                     ? "bg-elevated text-foreground shadow-card type-body-s-strong"
                     : "text-muted-foreground hover:text-foreground type-body-s",
@@ -154,7 +155,7 @@ export function NotificationsPageClient({
       {visibleItems.length === 0 ? (
         <section
           data-testid="notifications-empty-state"
-          className="border-border bg-elevated flex flex-col items-start gap-4 rounded-2xl border p-8 sm:p-14"
+          className="border-border/80 bg-elevated shadow-card flex flex-col items-start gap-4 rounded-3xl border p-8 sm:p-14"
         >
           <div className="bg-success-soft text-success flex size-14 items-center justify-center rounded-2xl">
             <Check className="size-6" />
@@ -169,7 +170,7 @@ export function NotificationsPageClient({
       ) : (
         <section
           data-testid="notifications-page-list"
-          className="border-border bg-elevated divide-border divide-y overflow-hidden rounded-2xl border"
+          className="border-border/80 bg-elevated shadow-card divide-border/70 divide-y overflow-hidden rounded-3xl border"
         >
           {visibleItems.map((item) => (
             <NotificationRow

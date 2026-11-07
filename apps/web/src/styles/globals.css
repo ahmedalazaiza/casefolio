@@ -244,6 +244,16 @@
     box-shadow: var(--elevation-float);
   }
 
+  .bg-editor-canvas {
+    background-color: var(--surface);
+    background-image:
+      radial-gradient(circle at 50% 0%, var(--wash-accent-strong) 0%, transparent 55%),
+      radial-gradient(var(--border-strong-token) 0.75px, transparent 0.75px);
+    background-size:
+      100% 100%,
+      20px 20px;
+  }
+
   .type-overline {
     font-family: var(--font-ui);
     font-size: var(--size-overline);
@@ -254,15 +264,102 @@
   }
 }
 
-/* Puck-owned inputs inside the constrained editor follow the same radius + border language */
-[data-slot="editor-right-panel"] [class*="Input-input"] {
-  border-radius: var(--radius-md);
-  border-color: var(--border);
-  background-color: var(--bg-elevated);
-  color: var(--text-primary);
-  font-family: var(--font-ui);
+/* Map Puck internal CSS variables to Casefolio semantic Light/Dark tokens */
+[data-testid="constrained-editor-root"] {
+  --puck-color-surface: var(--elevated);
+  --puck-color-surface-muted: var(--surface);
+  --puck-color-surface-subtle: var(--sunken);
+  --puck-color-border: var(--border);
+  --puck-color-border-hover: var(--border-strong-token);
+  --puck-color-border-muted: var(--border);
+  --puck-color-text: var(--foreground);
+  --puck-color-text-secondary: var(--muted-foreground);
+  --puck-color-text-muted: var(--tertiary-foreground);
+  --puck-color-text-subtle: var(--tertiary-foreground);
+  --puck-color-interactive: var(--primary);
+  --puck-color-interactive-hover: var(--brand-primary-hover);
+  --puck-color-interactive-active: var(--brand-primary-hover);
+  --puck-color-interactive-subtle: var(--accent);
+  --puck-color-interactive-soft: var(--brand-primary-soft);
+  --puck-color-interactive-soft-hover: var(--accent);
+  --puck-color-interactive-neutral-hover: var(--sunken);
+  --puck-color-focus-ring: var(--ring);
+  --puck-field-radius: var(--radius-md);
+  --puck-field-color-bg: var(--elevated);
+  --puck-field-color-border: var(--border);
+  --puck-field-color-border-hover: var(--border-strong-token);
+  --puck-field-color-text: var(--foreground);
+  --puck-field-label-color-text: var(--foreground);
+  --puck-field-label-font-size: var(--size-caption);
+  --puck-field-font-size: var(--size-body-s);
 }
 
-[data-slot="editor-right-panel"] [class*="Input-input"]:focus {
+/* Clean vertical rhythm and card polish for Puck-owned inspector fields */
+[data-testid="constrained-editor-root"] [class*="_PuckFields-rows_"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+[data-testid="constrained-editor-root"] [class*="_PuckFields-rows_"] > * {
+  margin-top: 0 !important;
+}
+
+[data-testid="constrained-editor-root"] [class*="_Input-label_"] {
+  padding-bottom: 0.375rem;
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  font-size: var(--size-caption);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+[data-testid="constrained-editor-root"] [class*="_Input-labelIcon_"] {
+  color: var(--tertiary-foreground);
+  opacity: 0.75;
+}
+
+[data-testid="constrained-editor-root"] [class*="Input-input"] {
+  border-radius: var(--radius-md);
+  border-color: var(--border);
+  background-color: var(--elevated);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  font-size: var(--size-body-s);
+  line-height: 1.45;
+  padding: 0.5625rem 0.75rem;
+  box-shadow: 0 1px 2px rgba(12, 14, 24, 0.03);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+[data-testid="constrained-editor-root"] [class*="Input-input"]:focus {
   border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 18%, transparent);
+  outline: none;
+}
+
+[data-testid="constrained-editor-root"] [class*="_ArrayField_"] {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  padding: 0.5rem;
+}
+
+[data-testid="constrained-editor-root"] [class*="_ArrayFieldItem_"] {
+  border-radius: var(--radius-md);
+  border-color: var(--border);
+  background-color: var(--elevated);
+  overflow: hidden;
+}
+
+[data-testid="constrained-editor-root"] [class*="_ArrayField-addButton_"] {
+  border-radius: var(--radius-full);
+  border-color: var(--border);
+  background-color: var(--elevated);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  font-size: var(--size-caption);
+  font-weight: 500;
 }

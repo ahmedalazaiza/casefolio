@@ -3,6 +3,7 @@ import { BarChart3, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { getWorkspaceAnalyticsOverview } from "@/lib/analytics/page-views";
 import { requireSession } from "@/lib/auth/session";
 
@@ -34,8 +35,8 @@ export default async function WorkspaceAnalyticsOverviewPage() {
     >
       {/* Page Header (Matches Figma 2:8707) */}
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-tertiary type-overline">ANALYTICS</span>
+        <div className="flex flex-col gap-2">
+          <Eyebrow className="w-fit">Analytics</Eyebrow>
           <h1 className="text-foreground type-display-m">All published case studies</h1>
         </div>
         <Button asChild variant="secondary" size="sm">
@@ -47,7 +48,7 @@ export default async function WorkspaceAnalyticsOverviewPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <article
           data-testid="overview-kpi-total-views"
-          className="border-border bg-elevated flex flex-col gap-2 rounded-2xl border p-6"
+          className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
         >
           <span className="text-tertiary type-overline">TOTAL VIEWS</span>
           <span
@@ -61,7 +62,7 @@ export default async function WorkspaceAnalyticsOverviewPage() {
 
         <article
           data-testid="overview-kpi-published"
-          className="border-border bg-elevated flex flex-col gap-2 rounded-2xl border p-6"
+          className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
         >
           <span className="text-tertiary type-overline">PUBLISHED</span>
           <span className="text-foreground type-display-m">{overview.publishedCount}</span>
@@ -73,7 +74,7 @@ export default async function WorkspaceAnalyticsOverviewPage() {
 
         <article
           data-testid="overview-kpi-top-page"
-          className="border-border bg-elevated flex min-w-0 flex-col gap-2 rounded-2xl border p-6"
+          className="border-border/80 bg-elevated shadow-card flex min-w-0 flex-col gap-2 rounded-3xl border p-6"
         >
           <span className="text-tertiary type-overline">TOP PAGE</span>
           <span className="text-foreground type-heading-l truncate">
@@ -89,25 +90,29 @@ export default async function WorkspaceAnalyticsOverviewPage() {
 
       {/* Case studies table (Matches Figma 2:8724) */}
       {overview.projects.length === 0 ? (
-        <section className="border-border bg-elevated flex flex-col items-center justify-center gap-3 rounded-2xl border py-16 text-center">
-          <BarChart3 className="text-tertiary size-7" />
-          <h2 className="text-foreground type-heading-s">No case studies yet</h2>
-          <p className="text-muted-foreground type-body-s max-w-md">
-            Create and publish your first case study to track views, unique visitors, and top
-            traffic sources.
-          </p>
-          <Button asChild size="sm">
+        <section className="border-border/80 bg-elevated shadow-card flex flex-col items-center justify-center gap-4 rounded-3xl border px-6 py-20 text-center">
+          <span className="bg-accent text-primary inline-flex size-14 items-center justify-center rounded-2xl">
+            <BarChart3 className="size-6" />
+          </span>
+          <div className="flex flex-col gap-1.5">
+            <h2 className="text-foreground type-heading-m">No case studies yet</h2>
+            <p className="text-muted-foreground type-body-s max-w-md">
+              Create and publish your first case study to track views, unique visitors, and top
+              traffic sources.
+            </p>
+          </div>
+          <Button asChild size="sm" className="mt-1">
             <Link href="/new">New case study</Link>
           </Button>
         </section>
       ) : (
         <section
           data-testid="overview-projects-table"
-          className="border-border bg-elevated w-full max-w-full min-w-0 overflow-x-auto rounded-2xl border"
+          className="border-border/80 bg-elevated shadow-card w-full max-w-full min-w-0 overflow-x-auto rounded-3xl border"
         >
           <table className="w-full min-w-[600px] border-collapse text-left">
             <thead>
-              <tr className="border-border border-b">
+              <tr className="border-border/70 bg-surface/50 border-b">
                 <th className="text-tertiary type-overline px-6 py-4">CASE STUDY</th>
                 <th className="text-tertiary type-overline px-6 py-4">VIEWS</th>
                 <th className="text-tertiary type-overline px-6 py-4">VISITORS</th>

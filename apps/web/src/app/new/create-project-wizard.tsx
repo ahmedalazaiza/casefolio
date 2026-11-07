@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TemplateTypeCard } from "@/components/ui/domain-cards";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { can } from "@/lib/entitlements";
@@ -239,27 +240,27 @@ export function CreateProjectWizard({
   const previewThemeStyle = buildTemplateThemeStyle(selectedTemplate?.document.template.theme);
 
   return (
-    <div className="bg-surface text-foreground flex min-h-screen flex-col">
-      {/* Top Flow Bar (matches Figma 2:3963 / 2:4162) */}
-      <header className="border-border bg-background sticky top-0 z-40 border-b">
+    <div className="bg-wash-top bg-surface text-foreground flex min-h-screen flex-col">
+      {/* Top Flow Bar */}
+      <header className="border-border/70 bg-elevated/88 sticky top-0 z-40 border-b backdrop-blur-xl">
         <div className="mx-auto grid h-17 max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-8 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
           <div className="flex max-w-full min-w-0 items-center gap-3 justify-self-start">
             <button
               type="button"
               onClick={handleFlowBack}
               aria-label="Go back"
-              className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 shrink-0 items-center justify-center rounded-full border shadow-2xs transition-colors outline-none focus-visible:ring-2"
             >
               <ArrowLeft className="size-4" />
             </button>
-            <span className="text-foreground type-body-m-strong min-w-0 truncate">
+            <span className="text-foreground font-display min-w-0 truncate text-base font-medium tracking-tight">
               {name.trim() || "New project"}
             </span>
           </div>
 
           <nav
             aria-label="Create project steps"
-            className="hidden shrink-0 items-center gap-3 justify-self-center md:flex"
+            className="border-border/70 bg-surface/80 hidden shrink-0 items-center gap-2 justify-self-center rounded-full border px-3 py-1 md:flex"
           >
             {WIZARD_STEPS.map((item, idx) => {
               const isCompleted = idx < stepIndex;
@@ -270,16 +271,16 @@ export function CreateProjectWizard({
                 (item.key === "details" && Boolean(selectedTemplate));
 
               return (
-                <div key={item.key} className="flex items-center gap-3">
+                <div key={item.key} className="flex items-center gap-2">
                   <button
                     type="button"
                     disabled={!canJump}
                     onClick={() => canJump && setStep(item.key)}
                     aria-current={isCurrent ? "step" : undefined}
                     className={cn(
-                      "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-full px-2 py-1 transition-colors outline-none focus-visible:ring-2 disabled:cursor-not-allowed",
+                      "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-full px-2.5 py-1 transition-colors outline-none focus-visible:ring-2 disabled:cursor-not-allowed",
                       isCurrent
-                        ? "text-foreground type-body-s-strong"
+                        ? "bg-elevated text-foreground type-body-s-strong shadow-2xs"
                         : isCompleted
                           ? "text-foreground type-body-s"
                           : "text-tertiary type-body-s",
@@ -287,7 +288,7 @@ export function CreateProjectWizard({
                   >
                     <span
                       className={cn(
-                        "inline-flex size-6 items-center justify-center rounded-full text-xs font-semibold",
+                        "inline-flex size-5.5 items-center justify-center rounded-full text-xs font-medium",
                         isCompleted && "bg-success text-success-foreground",
                         isCurrent && "bg-inverse text-inverse-foreground",
                         !isCompleted && !isCurrent && "bg-sunken text-tertiary",
@@ -301,7 +302,7 @@ export function CreateProjectWizard({
                     <span
                       aria-hidden="true"
                       className={cn(
-                        "h-px w-8",
+                        "h-px w-6",
                         idx < stepIndex ? "bg-success" : "bg-border",
                       )}
                     />
@@ -315,7 +316,7 @@ export function CreateProjectWizard({
             <Badge tone="neutral" withDot={false} className="md:hidden">
               Step {stepIndex + 1}/3
             </Badge>
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="secondary" size="sm">
               <Link href="/dashboard">Exit</Link>
             </Button>
           </div>
@@ -328,7 +329,7 @@ export function CreateProjectWizard({
           <div
             role="alert"
             data-testid="plan-limit-banner"
-            className="border-warning/40 bg-warning/10 text-foreground mb-8 flex flex-col justify-between gap-4 rounded-xl border p-4 sm:flex-row sm:items-center"
+            className="border-warning/40 bg-warning-soft text-foreground mb-8 flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center"
           >
             <div className="flex items-start gap-3">
               <AlertCircle className="text-warning mt-0.5 size-5 shrink-0" />
@@ -363,12 +364,12 @@ export function CreateProjectWizard({
         {step === "type" && (
           <div data-testid="wizard-step-type" className="flex flex-1 flex-col justify-between gap-10">
             <div className="flex flex-col gap-8">
-              <div className="flex flex-col gap-2">
-                <span className="text-primary type-overline">Step 1 of 3</span>
+              <div className="flex flex-col items-start gap-3">
+                <Eyebrow>Step 1 of 3</Eyebrow>
                 <h1 className="type-display-m sm:type-display-l text-foreground">
                   What are you presenting?
                 </h1>
-                <p className="text-muted-foreground type-body-m">
+                <p className="text-muted-foreground type-body-l max-w-xl">
                   Pick a type to see the templates available for it.
                 </p>
               </div>
@@ -468,8 +469,8 @@ export function CreateProjectWizard({
             className="flex flex-1 flex-col justify-between gap-10"
           >
             <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <span className="text-primary type-overline">Step 2 of 3</span>
+              <div className="flex flex-col items-start gap-3">
+                <Eyebrow>Step 2 of 3</Eyebrow>
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="type-display-m sm:type-display-l text-foreground">
                     {formatProjectTypeLabel(selectedType)} templates
@@ -478,7 +479,7 @@ export function CreateProjectWizard({
                     From Casefolio library
                   </Badge>
                 </div>
-                <p className="text-muted-foreground type-body-m">
+                <p className="text-muted-foreground type-body-l max-w-xl">
                   Templates are designed by the Casefolio team — you choose, then customise.
                 </p>
               </div>
@@ -524,10 +525,10 @@ export function CreateProjectWizard({
                         data-selected={isSelected ? "true" : "false"}
                         data-locked={isLocked ? "true" : "false"}
                         className={cn(
-                          "bg-card flex flex-col justify-between gap-4 rounded-xl border p-4 transition-all",
+                          "bg-elevated flex flex-col justify-between gap-4 rounded-3xl border p-4 transition-all duration-300",
                           isSelected
-                            ? "border-primary shadow-card border-2"
-                            : "border-border hover:border-border-strong",
+                            ? "border-primary shadow-float border-2"
+                            : "border-border/70 shadow-card hover:border-border-strong hover:-translate-y-0.5",
                         )}
                       >
                         <button
@@ -554,7 +555,7 @@ export function CreateProjectWizard({
                               backgroundColor: "var(--tpl-color-background)",
                               color: "var(--tpl-color-text)",
                             }}
-                            className="border-border/30 relative flex aspect-[4/3] w-full flex-col justify-between overflow-hidden rounded-lg border p-5"
+                            className="border-border/30 relative flex aspect-[4/3] w-full flex-col justify-between overflow-hidden rounded-2xl border p-5"
                           >
                             {item.coverUrl && item.coverUrl.startsWith("/") && (
                               <img
@@ -727,10 +728,10 @@ export function CreateProjectWizard({
             data-testid="wizard-step-details"
             className="grid items-start gap-8 lg:grid-cols-[minmax(0,640px)_minmax(0,400px)] lg:justify-between"
           >
-            <Card className="p-6 sm:p-10">
+            <Card className="rounded-3xl p-6 sm:p-10">
               <form onSubmit={handleSubmitCreate} noValidate className="flex flex-col gap-6">
-                <div className="flex flex-col gap-2">
-                  <span className="text-primary type-overline">Step 3 of 3</span>
+                <div className="flex flex-col items-start gap-3">
+                  <Eyebrow>Step 3 of 3</Eyebrow>
                   <h1 className="type-display-m text-foreground">Name your case study</h1>
                   <p className="text-muted-foreground type-body-m">
                     This is what visitors see first. You can change everything later.
@@ -893,7 +894,7 @@ export function CreateProjectWizard({
                   backgroundColor: "var(--tpl-color-background, var(--color-inverse))",
                   color: "var(--tpl-color-text, var(--color-inverse-foreground))",
                 }}
-                className="shadow-card flex flex-col gap-4 rounded-2xl p-8"
+                className="shadow-float flex flex-col gap-4 rounded-3xl p-8"
               >
                 <span
                   style={{ color: "var(--tpl-color-primary, var(--color-primary))" }}

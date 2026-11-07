@@ -298,11 +298,11 @@ export function TeamWorkspaceClient({
 
           <div className="flex flex-col gap-3">
             <h3 className="text-tertiary type-overline">Members ({currentOrg.members.length})</h3>
-            <div className="divide-border border-border divide-y rounded-lg border">
+            <div className="divide-border/70 border-border/80 bg-surface/40 divide-y rounded-2xl border">
               {currentOrg.members.map((member) => (
                 <div
                   key={member.membershipId}
-                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3.5"
                 >
                   <div className="flex flex-col">
                     <span className="text-foreground type-body-s-strong">{member.name}</span>
@@ -374,7 +374,7 @@ export function TeamWorkspaceClient({
                     id="invite-role-select"
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as "editor" | "viewer")}
-                    className="border-input bg-elevated text-foreground type-body-m h-11 rounded-md border px-3"
+                    className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 type-body-m h-11 rounded-2xl border px-3.5 outline-none focus-visible:ring-2"
                   >
                     <option value="editor">Editor</option>
                     <option value="viewer">Viewer</option>

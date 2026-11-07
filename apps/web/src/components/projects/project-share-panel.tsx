@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { can } from "@/lib/entitlements";
@@ -189,23 +190,24 @@ export function ProjectSharePanel({
   return (
     <div
       data-testid="project-share-panel"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-2 py-4 sm:px-6 sm:py-6 lg:px-8"
     >
       {/* Top header & project sub-navigation */}
       <div className="flex flex-col gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3.5">
             <Link
               href={`/editor/${initialSettings.projectId}`}
               aria-label="Back to case study editor"
-              className="border-border bg-elevated text-foreground hover:bg-surface inline-flex size-9 items-center justify-center rounded-full border transition-colors"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface shadow-xs mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
             >
               <ArrowLeft className="size-4" />
             </Link>
 
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1.5">
+              <Eyebrow className="w-fit">Publish &amp; Share</Eyebrow>
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-foreground type-heading-l">{initialSettings.projectName}</h1>
+                <h1 className="text-foreground type-display-m">{initialSettings.projectName}</h1>
                 {isPublished ? (
                   <Badge data-testid="share-status-badge" tone="published">
                     {visibility === "unlisted" ? "Published · Unlisted" : "Published · Public"}
@@ -216,7 +218,7 @@ export function ProjectSharePanel({
                   </Badge>
                 )}
               </div>
-              <p className="text-tertiary type-caption">
+              <p className="text-muted-foreground type-body-s">
                 Template: {initialSettings.templateName}
                 {publishedAtIso
                   ? ` · Live since ${new Date(publishedAtIso).toLocaleDateString("en-US", {
@@ -229,7 +231,7 @@ export function ProjectSharePanel({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Button asChild variant="secondary" size="sm">
               <Link href={`/editor/${initialSettings.projectId}`}>Back to Editor</Link>
             </Button>
@@ -252,26 +254,26 @@ export function ProjectSharePanel({
         {/* Sub-nav between Publish & Share and Exports */}
         <nav
           aria-label="Project publishing and exports"
-          className="border-border flex items-center gap-2 border-b pb-3"
+          className="border-border/70 bg-sunken/80 inline-flex w-fit max-w-full flex-wrap items-center gap-1 rounded-full border p-1"
         >
           <Link
             href={`/projects/${initialSettings.projectId}/share`}
             aria-current="page"
-            className="bg-inverse text-inverse-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5"
+            className="bg-elevated text-foreground shadow-card type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2"
           >
-            <Globe className="size-3.5" />
+            <Globe className="text-primary size-3.5" />
             <span>Publish &amp; Share</span>
           </Link>
           <Link
             href={`/projects/${initialSettings.projectId}/exports`}
-            className="text-muted-foreground hover:text-foreground hover:bg-sunken type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5 transition-colors"
+            className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors"
           >
             <Download className="size-3.5" />
             <span>Exports (PNG / PDF / Behance)</span>
           </Link>
           <Link
             href={`/projects/${initialSettings.projectId}/analytics`}
-            className="text-muted-foreground hover:text-foreground hover:bg-sunken type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5 transition-colors"
+            className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors"
           >
             <BarChart3 className="size-3.5" />
             <span>Analytics</span>
@@ -287,7 +289,7 @@ export function ProjectSharePanel({
             <div
               role="alert"
               data-testid="publish-error-alert"
-              className="border-destructive/35 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-xl border p-4"
+              className="border-destructive/35 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-2xl border p-4"
             >
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <span className="type-body-s">{errorMessage}</span>
@@ -295,19 +297,19 @@ export function ProjectSharePanel({
           )}
 
           {/* Custom URL Slug Card */}
-          <section className="border-border bg-elevated flex flex-col gap-4 rounded-2xl border p-6">
+          <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-7">
             <div className="flex flex-col gap-1">
-              <h2 className="text-foreground type-heading-s">Public URL Slug</h2>
+              <h2 className="text-foreground type-heading-m">Public URL Slug</h2>
               <p className="text-muted-foreground type-body-s">
                 Customize the shareable web address for your case study.
               </p>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               <Label htmlFor="publish-slug-input">Case study URL</Label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="border-border bg-background focus-within:ring-ring/40 flex flex-1 items-center overflow-hidden rounded-xl border focus-within:ring-2">
-                  <span className="bg-sunken text-tertiary border-border type-caption shrink-0 border-r px-3 py-2.5 select-none">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                <div className="border-border/80 bg-surface/60 focus-within:bg-elevated focus-within:ring-ring/40 flex flex-1 items-center overflow-hidden rounded-2xl border transition-colors focus-within:ring-2">
+                  <span className="bg-sunken/80 text-tertiary border-border/70 type-caption shrink-0 border-r px-3.5 py-2.5 font-mono select-none">
                     {initialSettings.appBaseUrl.replace(/^https?:\/\//, "")}/p/
                   </span>
                   <Input
@@ -360,9 +362,9 @@ export function ProjectSharePanel({
           </section>
 
           {/* Visibility Options Card */}
-          <section className="border-border bg-elevated flex flex-col gap-4 rounded-2xl border p-6">
+          <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-7">
             <div className="flex flex-col gap-1">
-              <h2 className="text-foreground type-heading-s">Access &amp; Discovery</h2>
+              <h2 className="text-foreground type-heading-m">Access &amp; Discovery</h2>
               <p className="text-muted-foreground type-body-s">
                 Control whether search engines can index your published case study.
               </p>
@@ -371,7 +373,7 @@ export function ProjectSharePanel({
             <div
               role="radiogroup"
               aria-label="Case study visibility"
-              className="grid gap-3 sm:grid-cols-2"
+              className="grid gap-3.5 sm:grid-cols-2"
             >
               <button
                 type="button"
@@ -380,10 +382,10 @@ export function ProjectSharePanel({
                 data-testid="visibility-option-public"
                 onClick={() => setVisibility("public")}
                 className={cn(
-                  "flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors",
+                  "flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left transition-all",
                   visibility === "public"
-                    ? "border-primary bg-accent/40"
-                    : "border-border bg-background hover:border-border-strong",
+                    ? "border-primary bg-accent/40 ring-primary/15 ring-2"
+                    : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
                 )}
               >
                 <div className="flex w-full items-center justify-between">
@@ -405,10 +407,10 @@ export function ProjectSharePanel({
                 data-testid="visibility-option-unlisted"
                 onClick={() => setVisibility("unlisted")}
                 className={cn(
-                  "flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors",
+                  "flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left transition-all",
                   visibility === "unlisted"
-                    ? "border-primary bg-accent/40"
-                    : "border-border bg-background hover:border-border-strong",
+                    ? "border-primary bg-accent/40 ring-primary/15 ring-2"
+                    : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
                 )}
               >
                 <div className="flex w-full items-center justify-between">
@@ -424,7 +426,7 @@ export function ProjectSharePanel({
               </button>
             </div>
 
-            <div className="border-border mt-2 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+            <div className="border-border/70 mt-1 flex flex-wrap items-center justify-between gap-3 border-t pt-5">
               {isPublished ? (
                 <Button
                   type="button"
@@ -465,7 +467,7 @@ export function ProjectSharePanel({
 
         {/* Right Column: Social OG Preview + Plan Branding Card */}
         <div className="flex flex-col gap-6 lg:col-span-5">
-          <section className="border-border bg-elevated flex flex-col gap-4 rounded-2xl border p-6">
+          <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-6 sm:p-7">
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-col gap-0.5">
                 <h2 className="text-foreground type-heading-s">Social Share Preview</h2>
@@ -481,7 +483,7 @@ export function ProjectSharePanel({
             <div
               data-testid="og-card-preview"
               style={buildTemplateThemeStyle(initialSettings.theme)}
-              className="border-border overflow-hidden rounded-xl border"
+              className="border-border/80 shadow-xs overflow-hidden rounded-2xl border"
             >
               <div
                 style={{
@@ -531,7 +533,7 @@ export function ProjectSharePanel({
             </div>
           </section>
 
-          <section className="border-border bg-elevated flex flex-col gap-3 rounded-2xl border p-6">
+          <section className="border-border/70 bg-wash-panel shadow-card flex flex-col gap-3 rounded-3xl border p-6 sm:p-7">
             <div className="flex items-center justify-between gap-2">
               <span className="text-foreground type-body-s-strong inline-flex items-center gap-2">
                 <Sparkles className="text-primary size-4" />

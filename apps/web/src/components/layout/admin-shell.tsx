@@ -71,7 +71,7 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="bg-surface text-foreground flex min-h-screen flex-col">
+    <div className="bg-background bg-wash-top text-foreground flex min-h-screen flex-col">
       <a
         href="#main-content"
         className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:px-4 focus:py-2"
@@ -79,7 +79,7 @@ export function AdminShell({
         Skip to main content
       </a>
 
-      <header className="border-border bg-background sticky top-0 z-40 border-b">
+      <header className="border-border/60 bg-background/80 sticky top-0 z-40 border-b backdrop-blur-xl">
         <div className="flex h-17 items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -87,12 +87,12 @@ export function AdminShell({
                 <button
                   type="button"
                   aria-label="Open admin navigation"
-                  className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-md border transition-colors outline-none focus-visible:ring-2 lg:hidden"
+                  className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 shadow-card inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 lg:hidden"
                 >
                   <Menu className="size-4" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-4">
+              <SheetContent side="left" className="w-72 rounded-r-3xl p-5">
                 <SheetHeader className="px-2 pt-1 pb-2 text-left">
                   <div className="flex items-center gap-2">
                     <SheetTitle className="type-overline text-tertiary">
@@ -113,10 +113,10 @@ export function AdminShell({
                         aria-current={active ? "page" : undefined}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
-                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-md border px-3 py-2 transition-colors outline-none focus-visible:ring-2",
+                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-full border px-3.5 py-2 transition-all outline-none focus-visible:ring-2",
                           active
-                            ? "border-border bg-elevated text-foreground type-body-s-strong"
-                            : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s border-transparent",
+                            ? "border-border/80 bg-elevated text-foreground shadow-card type-body-s-strong"
+                            : "text-muted-foreground hover:bg-surface/80 hover:text-foreground type-body-s border-transparent",
                         )}
                       >
                         <Icon
@@ -140,7 +140,7 @@ export function AdminShell({
             <Link
               href="/admin/templates"
               aria-label="Search admin templates"
-              className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 shadow-card inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
             >
               <Search className="size-4" />
             </Link>
@@ -158,7 +158,7 @@ export function AdminShell({
       <div className="flex min-w-0 flex-1">
         <aside
           aria-label="Admin sidebar"
-          className="border-border bg-background hidden w-64 shrink-0 flex-col gap-3 border-r p-4 lg:flex"
+          className="border-border/60 bg-background/60 hidden w-64 shrink-0 flex-col gap-3 border-r p-4 backdrop-blur-md lg:flex"
         >
           <div className="flex items-center gap-2 px-3 pt-1">
             <span className="text-tertiary type-overline">Admin panel</span>
@@ -175,10 +175,10 @@ export function AdminShell({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "focus-visible:ring-ring/40 flex items-center gap-3 rounded-md border px-3 py-2 transition-colors outline-none focus-visible:ring-2",
+                    "focus-visible:ring-ring/40 flex items-center gap-3 rounded-full border px-3.5 py-2 transition-all outline-none focus-visible:ring-2",
                     active
-                      ? "border-border bg-elevated text-foreground type-body-s-strong"
-                      : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s border-transparent",
+                      ? "border-border/80 bg-elevated text-foreground shadow-card type-body-s-strong"
+                      : "text-muted-foreground hover:bg-surface/80 hover:text-foreground type-body-s border-transparent",
                   )}
                 >
                   <Icon
@@ -194,7 +194,10 @@ export function AdminShell({
           </nav>
         </aside>
 
-        <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-10">
+        <main
+          id="main-content"
+          className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10"
+        >
           {children}
         </main>
       </div>

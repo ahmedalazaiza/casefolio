@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   ADMIN_ANALYTICS_RANGES,
   formatCompactCount,
@@ -48,9 +49,10 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
   return (
     <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-8">
       {/* Page header (Figma 32:10001) */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="type-heading-l text-foreground">Analytics</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Eyebrow className="w-fit">Platform Telemetry</Eyebrow>
+          <h1 className="type-display-m text-foreground">Analytics</h1>
           <p className="text-muted-foreground type-body-s">{formatRangeSubtitle(analytics.range)}</p>
         </div>
 
@@ -65,7 +67,7 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
         <div
           role="group"
           aria-label="Analytics range"
-          className="border-border bg-elevated inline-flex flex-wrap items-center gap-1 rounded-full border p-1"
+          className="border-border/70 bg-sunken/80 inline-flex flex-wrap items-center gap-1 rounded-full border p-1"
         >
           {ADMIN_ANALYTICS_RANGES.map((r) => {
             const active = analytics.range === r;
@@ -75,9 +77,9 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
                 href={`/admin/analytics?range=${r}`}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-colors outline-none focus-visible:ring-2",
+                  "focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2",
                   active
-                    ? "bg-primary text-primary-foreground type-caption"
+                    ? "bg-elevated text-foreground shadow-card type-caption font-medium"
                     : "text-muted-foreground hover:text-foreground type-caption",
                 )}
               >
@@ -90,9 +92,9 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
 
       {/* Stats (Figma 35:8635) */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card variant="flat" className="min-w-0 justify-between gap-3 p-5">
+        <Card className="min-w-0 justify-between gap-3 p-5">
           <span className="text-muted-foreground type-caption">Case studies published</span>
-          <span className="text-foreground type-heading-l">
+          <span className="text-foreground type-display-s">
             {analytics.publishedCaseStudies.toLocaleString("en-US")}
           </span>
           <span className="text-success type-caption">
@@ -103,9 +105,9 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
           </span>
         </Card>
 
-        <Card variant="flat" className="min-w-0 justify-between gap-3 p-5">
+        <Card className="min-w-0 justify-between gap-3 p-5">
           <span className="text-muted-foreground type-caption">Public views</span>
-          <span className="text-foreground type-heading-l">
+          <span className="text-foreground type-display-s">
             {formatCompactCount(analytics.publicViews)}
           </span>
           <span className="text-success type-caption">
@@ -115,9 +117,9 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
           </span>
         </Card>
 
-        <Card variant="flat" className="min-w-0 justify-between gap-3 p-5">
+        <Card className="min-w-0 justify-between gap-3 p-5">
           <span className="text-muted-foreground type-caption">PDF / PNG exports</span>
-          <span className="text-foreground type-heading-l">
+          <span className="text-foreground type-display-s">
             {analytics.completedExports.toLocaleString("en-US")}
           </span>
           <span className="text-success type-caption">
@@ -127,9 +129,9 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
           </span>
         </Card>
 
-        <Card variant="flat" className="min-w-0 justify-between gap-3 p-5">
+        <Card className="min-w-0 justify-between gap-3 p-5">
           <span className="text-muted-foreground type-caption">Free → Pro</span>
-          <span className="text-foreground type-heading-l">
+          <span className="text-foreground type-display-s">
             {analytics.freeToProRatePercent.toFixed(1)}%
           </span>
           <span className="text-muted-foreground type-caption">
@@ -141,7 +143,7 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
 
       {/* Charts row (Figma 35:8652) */}
       <div className="grid gap-6 lg:grid-cols-12">
-        <Card variant="flat" className="min-w-0 gap-5 p-6 lg:col-span-7">
+        <Card className="min-w-0 gap-5 p-6 lg:col-span-7">
           <div className="flex items-center justify-between gap-3">
             <h2 className="type-heading-s text-foreground">Published case studies per week</h2>
             <Badge tone="published">
@@ -163,9 +165,9 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
                   className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"
                   title={`${b.label}: ${b.publishes} published`}
                 >
-                  <div className="bg-sunken flex h-full w-full max-w-8 items-end overflow-hidden rounded-t-sm">
+                  <div className="bg-sunken flex h-full w-full max-w-8 items-end overflow-hidden rounded-t-md">
                     <div
-                      className="bg-primary w-full rounded-t-sm transition-all"
+                      className="bg-primary w-full rounded-t-md transition-all"
                       style={{ height: `${heightPct}%` }}
                     />
                   </div>
@@ -178,7 +180,7 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
           </div>
         </Card>
 
-        <Card variant="flat" className="min-w-0 gap-4 p-6 lg:col-span-5">
+        <Card className="min-w-0 gap-4 p-6 lg:col-span-5">
           <h2 className="type-heading-s text-foreground">Template usage</h2>
           <div className="flex flex-col gap-4">
             {analytics.templateUsage.length === 0 ? (
@@ -217,12 +219,12 @@ export function AdminAnalyticsPanel({ analytics }: { analytics: AdminPlatformAna
       </div>
 
       {/* Top case studies (Figma 35:8698) */}
-      <Card variant="flat" className="min-w-0 gap-4 p-6">
+      <Card className="min-w-0 gap-4 p-6">
         <h2 className="type-heading-s text-foreground">Top case studies</h2>
         <div className="w-full max-w-full overflow-x-auto">
           <table className="w-full min-w-140 border-collapse text-left">
             <thead>
-              <tr className="border-border border-b">
+              <tr className="border-border/70 border-b">
                 <th className="text-tertiary type-overline py-2.5 pr-4">Case study</th>
                 <th className="text-tertiary type-overline px-4 py-2.5">Author</th>
                 <th className="text-tertiary type-overline px-4 py-2.5">Template</th>

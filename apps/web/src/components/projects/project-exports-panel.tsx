@@ -22,6 +22,7 @@ import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog"
 import { ExportCaseStudyDialog } from "@/components/projects/export-dialog";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { can } from "@/lib/entitlements";
 import {
   EXPORT_PRESETS,
@@ -183,36 +184,37 @@ export function ProjectExportsPanel({
   return (
     <div
       data-testid="project-exports-panel"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-2 py-4 sm:px-6 sm:py-6 lg:px-8"
     >
       {/* Header & Sub-navigation */}
       <div className="flex flex-col gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3.5">
             <Link
               href={`/editor/${overview.projectId}`}
               aria-label="Back to case study editor"
-              className="border-border bg-elevated text-foreground hover:bg-surface inline-flex size-9 items-center justify-center rounded-full border transition-colors"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface shadow-xs mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
             >
               <ArrowLeft className="size-4" />
             </Link>
 
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1.5">
+              <Eyebrow className="w-fit">Exports</Eyebrow>
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-foreground type-heading-l">{overview.projectName}</h1>
+                <h1 className="text-foreground type-display-m">{overview.projectName}</h1>
                 {overview.isPublished ? (
                   <Badge tone="published">Published</Badge>
                 ) : (
                   <Badge tone="draft">Draft</Badge>
                 )}
               </div>
-              <p className="text-tertiary type-caption">
+              <p className="text-muted-foreground type-body-s">
                 Template: {overview.templateName} · High-resolution Chromium exports
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
             <Button asChild variant="secondary" size="sm">
               <Link href={`/editor/${overview.projectId}`}>Back to Editor</Link>
             </Button>
@@ -238,11 +240,11 @@ export function ProjectExportsPanel({
 
         <nav
           aria-label="Project publishing and exports"
-          className="border-border flex items-center gap-2 border-b pb-3"
+          className="border-border/70 bg-sunken/80 inline-flex w-fit max-w-full flex-wrap items-center gap-1 rounded-full border p-1"
         >
           <Link
             href={`/projects/${overview.projectId}/share`}
-            className="text-muted-foreground hover:text-foreground hover:bg-sunken type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5 transition-colors"
+            className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors"
           >
             <Globe className="size-3.5" />
             <span>Publish &amp; Share</span>
@@ -250,14 +252,14 @@ export function ProjectExportsPanel({
           <Link
             href={`/projects/${overview.projectId}/exports`}
             aria-current="page"
-            className="bg-inverse text-inverse-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5"
+            className="bg-elevated text-foreground shadow-card type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2"
           >
-            <Download className="size-3.5" />
+            <Download className="text-primary size-3.5" />
             <span>Exports (PNG / PDF / Behance)</span>
           </Link>
           <Link
             href={`/projects/${overview.projectId}/analytics`}
-            className="text-muted-foreground hover:text-foreground hover:bg-sunken type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5 transition-colors"
+            className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors"
           >
             <BarChart3 className="size-3.5" />
             <span>Analytics</span>
@@ -269,7 +271,7 @@ export function ProjectExportsPanel({
         <div
           role="alert"
           data-testid="exports-error-alert"
-          className="border-destructive/35 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-xl border p-4"
+          className="border-destructive/35 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-2xl border p-4"
         >
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
           <span className="type-body-s">{errorMessage}</span>
@@ -277,10 +279,10 @@ export function ProjectExportsPanel({
       )}
 
       {/* Preset Cards + Plan Quota Banner */}
-      <section className="border-border bg-elevated flex flex-col gap-5 rounded-2xl border p-6">
+      <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h2 className="text-foreground type-heading-s">Export Presets</h2>
+            <h2 className="text-foreground type-heading-m">Export Presets</h2>
             <p className="text-muted-foreground type-body-s">
               Generate pixel-accurate presentations matching your editor fonts and theme palette.
             </p>
@@ -317,15 +319,17 @@ export function ProjectExportsPanel({
                   setErrorMessage(null);
                 }}
                 className={cn(
-                  "flex flex-col justify-between gap-4 rounded-xl border p-5 text-left transition-colors",
+                  "flex flex-col justify-between gap-4 rounded-2xl border p-5 text-left transition-all",
                   isSelected
-                    ? "border-primary bg-accent/40"
-                    : "border-border bg-background hover:border-border-strong",
+                    ? "border-primary bg-accent/40 ring-primary/15 ring-2 -translate-y-0.5 shadow-card"
+                    : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
                 )}
               >
-                <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between gap-2">
-                    <PresetBadgeIcon format={preset.format} />
+                    <span className="bg-elevated border-border/70 inline-flex size-10 items-center justify-center rounded-xl border shadow-2xs">
+                      <PresetBadgeIcon format={preset.format} />
+                    </span>
                     <div className="flex items-center gap-1.5">
                       <Badge tone="neutral" withDot={false}>
                         {preset.badge}
@@ -335,7 +339,7 @@ export function ProjectExportsPanel({
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <span className="text-foreground type-body-m-strong">{preset.label}</span>
+                    <span className="text-foreground type-heading-s">{preset.label}</span>
                     <p className="text-muted-foreground type-caption">{preset.description}</p>
                   </div>
                 </div>
@@ -346,7 +350,7 @@ export function ProjectExportsPanel({
                     <span>Pro plan required</span>
                   </span>
                 ) : (
-                  <span className="text-tertiary type-caption">
+                  <span className="text-tertiary type-caption font-mono">
                     .{preset.fileExtension.toUpperCase()} download
                   </span>
                 )}
@@ -355,7 +359,7 @@ export function ProjectExportsPanel({
           })}
         </div>
 
-        <div className="border-border flex flex-wrap items-center justify-between gap-4 border-t pt-4">
+        <div className="border-border/70 flex flex-wrap items-center justify-between gap-4 border-t pt-5">
           <div className="flex items-center gap-2">
             <Sparkles className="text-primary size-4 shrink-0" />
             <span className="text-muted-foreground type-caption">
@@ -398,11 +402,11 @@ export function ProjectExportsPanel({
       {/* Download History */}
       <section
         aria-label="Export download history"
-        className="border-border bg-elevated flex flex-col gap-4 rounded-2xl border p-6"
+        className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col gap-0.5">
-            <h2 className="text-foreground type-heading-s">Export History</h2>
+            <h2 className="text-foreground type-heading-m">Export History</h2>
             <p className="text-muted-foreground type-body-s">
               Re-download any previously rendered presentation at any time.
             </p>
@@ -415,7 +419,7 @@ export function ProjectExportsPanel({
         {overview.exports.length === 0 ? (
           <div
             data-testid="exports-empty-state"
-            className="border-border bg-surface flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-12 text-center"
+            className="border-border/80 bg-surface/60 flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-dashed py-14 text-center"
           >
             <Clock className="text-tertiary size-6" />
             <p className="text-foreground type-body-s-strong">No exports generated yet</p>
@@ -425,7 +429,7 @@ export function ProjectExportsPanel({
             </p>
           </div>
         ) : (
-          <div data-testid="exports-history-list" className="divide-border divide-y">
+          <div data-testid="exports-history-list" className="divide-border/70 divide-y">
             {overview.exports.map((item) => (
               <div
                 key={item.id}
@@ -435,7 +439,7 @@ export function ProjectExportsPanel({
                 className="flex flex-wrap items-center justify-between gap-4 py-4 first:pt-1 last:pb-1"
               >
                 <div className="flex min-w-0 items-center gap-3.5">
-                  <div className="border-border bg-surface flex size-10 shrink-0 items-center justify-center rounded-xl border">
+                  <div className="border-border/80 bg-surface flex size-11 shrink-0 items-center justify-center rounded-2xl border">
                     <PresetBadgeIcon format={item.format} />
                   </div>
 

@@ -373,7 +373,7 @@ export function ImageSlotField({
       data-testid={`image-slot-field-${effectiveSlotKey}`}
       data-slot-key={effectiveSlotKey}
       data-slot-ratio={ratioText}
-      className="border-border bg-card flex flex-col gap-3 rounded-xl border p-3"
+      className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-3.5 shadow-2xs"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-foreground type-body-s-strong truncate">{label}</span>
@@ -525,14 +525,14 @@ export function ImageSlotField({
           onDrop={handleDrop}
           data-testid={`slot-dropzone-${effectiveSlotKey}`}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-5 text-center transition-colors outline-none",
+            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-5 text-center transition-all outline-none",
             isDragging
-              ? "border-primary bg-primary-soft/50"
-              : "border-border-strong/60 bg-surface hover:border-primary/60 hover:bg-surface/80",
+              ? "border-primary bg-accent/60"
+              : "border-border-strong/60 bg-surface/70 hover:border-primary/60 hover:bg-accent/30",
             readOnly && "cursor-not-allowed opacity-60",
           )}
         >
-          <span className="bg-primary-soft text-primary inline-flex size-9 items-center justify-center rounded-full">
+          <span className="bg-accent text-accent-foreground inline-flex size-9 items-center justify-center rounded-full">
             <Upload className="size-4" />
           </span>
           <div className="flex flex-col gap-0.5">

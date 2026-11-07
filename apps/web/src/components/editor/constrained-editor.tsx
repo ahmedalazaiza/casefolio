@@ -16,22 +16,34 @@ import {
   ArrowLeft,
   ArrowUp,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Cloud,
   Copy,
   Download,
   Eye,
   EyeOff,
+  FileText,
   Globe,
+  Image as ImageIcon,
   Layers,
   Loader2,
+  Minus,
   Monitor,
   Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   Plus,
   Redo2,
+  RotateCcw,
+  Search,
   SlidersHorizontal,
   Smartphone,
   Trash2,
   Undo2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -42,6 +54,7 @@ import {
   useState,
   type CSSProperties,
   type RefObject,
+  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { useStore } from "zustand";
 import {
@@ -101,6 +114,30 @@ import {
 type LeftPanelTab = "style" | "content" | "sections";
 type RightPanelTab = "fields" | "slots";
 type MobileSheetTab = "fields" | "sections" | "style" | "slots";
+type SlotFilterMode = "all" | "empty" | "filled";
+
+export const MIN_CANVAS_ZOOM = 0.5;
+export const MAX_CANVAS_ZOOM = 2;
+export const CANVAS_ZOOM_STEP = 0.1;
+
+function clampCanvasZoom(value: number): number {
+  const clamped = Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, value));
+  return Math.round(clamped * 100) / 100;
+}
+
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tagName = target.tagName.toLowerCase();
+  if (tagName === "input" || tagName === "textarea" || tagName === "select") {
+    return true;
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  return Boolean(target.closest('[contenteditable="true"], [role="textbox"]'));
+}
 
 const useEditorPuck = createUsePuck();
 
@@ -174,6 +211,10 @@ const PUCK_FONT_VARS = {
   "--puck-font-family-monospaced": "var(--font-mono)",
 } as CSSProperties;
 
+interface SafariGestureEvent extends Event {
+  scale: number;
+}
+
 export function ConstrainedEditor({
   initialPayload,
   onSaveProject,
@@ -198,13 +239,21 @@ export function ConstrainedEditor({
   const canRedo = useStore(editorStore.temporal, (s) => s.futureStates.length > 0);
 
   const [viewport, setViewport] = useState<EditorViewportMode>("desktop");
+  const [canvasZoom, setCanvasZoom] = useState<number>(1);
+  const [leftPanelOpen, setLeftPanelOpen] = useState<boolean>(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState<boolean>(true);
   const [leftTab, setLeftTab] = useState<LeftPanelTab>("sections");
   const [rightTab, setRightTab] = useState<RightPanelTab>("fields");
   const [mobileSheetTab, setMobileSheetTab] = useState<MobileSheetTab | null>(null);
   const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(0);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [insertPickerOpen, setInsertPickerOpen] = useState(false);
+  const [sectionSearchQuery, setSectionSearchQuery] = useState("");
+  const [slotFilter, setSlotFilter] = useState<SlotFilterMode>("all");
   const allowSectionMutations = initialPayload.template.allowSectionMutations !== false;
+
+  const canvasZoomRef = useRef(canvasZoom);
+  canvasZoomRef.current = canvasZoom;
 
   const lastPuckEmittedJsonRef = useRef<string>(
     serializePuckDocument(initialPayload.project.puckData),
@@ -228,6 +277,18 @@ export function ConstrainedEditor({
       }),
     [colorKeys, initialPayload.project.id, initialPayload.template.slots],
   );
+
+  const handleZoomIn = useCallback(() => {
+    setCanvasZoom((prev) => clampCanvasZoom(Math.round((prev + CANVAS_ZOOM_STEP) * 10) / 10));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setCanvasZoom((prev) => clampCanvasZoom(Math.round((prev - CANVAS_ZOOM_STEP) * 10) / 10));
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setCanvasZoom(1);
+  }, []);
 
   const performAutosave = useCallback(async () => {
     if (!onSaveProject || inFlightSaveRef.current) {
@@ -361,31 +422,184 @@ export function ConstrainedEditor({
     editorStore.temporal.getState().redo();
   }, [editorStore]);
 
-  // Global keyboard shortcuts: Ctrl+Z / Cmd+Z (Undo) & Ctrl+Shift+Z / Cmd+Shift+Z / Ctrl+Y (Redo)
+  // Global keyboard shortcuts:
+  // - Ctrl/Cmd+Z (Undo), Ctrl/Cmd+Shift+Z or Ctrl+Y (Redo)
+  // - Ctrl/Cmd + (+/=/-/0) OR plain +/=/-/0 (when not typing in inputs) for canvas zoom
+  // - [ / ] (when not typing) or Ctrl/Cmd+\ to toggle left/right panels
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isMod = event.metaKey || event.ctrlKey;
-      if (!isMod || event.altKey) return;
 
-      const key = event.key.toLowerCase();
-      if (key === "z") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (event.shiftKey) {
-          handleRedo();
-        } else {
-          handleUndo();
+      if (isMod && !event.altKey) {
+        const key = event.key.toLowerCase();
+        if (key === "z") {
+          event.preventDefault();
+          event.stopPropagation();
+          if (event.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
+          return;
         }
-      } else if (event.ctrlKey && !event.metaKey && key === "y") {
+        if (event.ctrlKey && !event.metaKey && key === "y") {
+          event.preventDefault();
+          event.stopPropagation();
+          handleRedo();
+          return;
+        }
+        if (
+          event.key === "+" ||
+          event.key === "=" ||
+          event.code === "Equal" ||
+          event.code === "NumpadAdd"
+        ) {
+          event.preventDefault();
+          handleZoomIn();
+          return;
+        }
+        if (
+          event.key === "-" ||
+          event.key === "_" ||
+          event.code === "Minus" ||
+          event.code === "NumpadSubtract"
+        ) {
+          event.preventDefault();
+          handleZoomOut();
+          return;
+        }
+        if (event.key === "0" || event.code === "Digit0" || event.code === "Numpad0") {
+          event.preventDefault();
+          handleZoomReset();
+          return;
+        }
+        if (event.key === "\\") {
+          event.preventDefault();
+          setLeftPanelOpen((prevLeft) => {
+            const shouldOpenBoth = !prevLeft && !rightPanelOpen;
+            setRightPanelOpen(shouldOpenBoth);
+            return shouldOpenBoth;
+          });
+          return;
+        }
+        return;
+      }
+
+      if (event.altKey || isEditableKeyboardTarget(event.target)) {
+        return;
+      }
+
+      if (event.key === "+" || event.key === "=" || event.code === "NumpadAdd") {
         event.preventDefault();
-        event.stopPropagation();
-        handleRedo();
+        handleZoomIn();
+      } else if (event.key === "-" || event.key === "_" || event.code === "NumpadSubtract") {
+        event.preventDefault();
+        handleZoomOut();
+      } else if (event.key === "0" || event.code === "Numpad0") {
+        event.preventDefault();
+        handleZoomReset();
+      } else if (event.key === "[") {
+        event.preventDefault();
+        setLeftPanelOpen((prev) => !prev);
+      } else if (event.key === "]") {
+        event.preventDefault();
+        setRightPanelOpen((prev) => !prev);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [handleRedo, handleUndo]);
+  }, [handleRedo, handleUndo, handleZoomIn, handleZoomOut, handleZoomReset, rightPanelOpen]);
+
+  // Canvas wheel (Ctrl/Cmd/Alt + wheel & trackpad two-finger pinch) + Safari gesture + touch pinch
+  useEffect(() => {
+    const canvasEl = canvasScrollRef.current;
+    if (!canvasEl) return;
+
+    let gestureBaseZoom = canvasZoomRef.current;
+    let touchStartDist: number | null = null;
+    let touchBaseZoom = canvasZoomRef.current;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+        return;
+      }
+      event.preventDefault();
+      if (event.deltaY === 0) return;
+
+      const delta =
+        Math.abs(event.deltaY) >= 40
+          ? -Math.sign(event.deltaY) * CANVAS_ZOOM_STEP
+          : -event.deltaY * 0.01;
+
+      setCanvasZoom((prev) => clampCanvasZoom(prev + delta));
+    };
+
+    const handleGestureStart = (event: Event) => {
+      event.preventDefault();
+      gestureBaseZoom = canvasZoomRef.current;
+    };
+
+    const handleGestureChange = (event: Event) => {
+      event.preventDefault();
+      const scale = (event as SafariGestureEvent).scale;
+      if (typeof scale === "number" && Number.isFinite(scale) && scale > 0) {
+        setCanvasZoom(clampCanvasZoom(gestureBaseZoom * scale));
+      }
+    };
+
+    const measureTouchDistance = (touches: TouchList): number => {
+      const t0 = touches[0];
+      const t1 = touches[1];
+      if (!t0 || !t1) return 0;
+      return Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 2) {
+        touchStartDist = measureTouchDistance(event.touches);
+        touchBaseZoom = canvasZoomRef.current;
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (event.touches.length === 2 && touchStartDist && touchStartDist > 0) {
+        event.preventDefault();
+        const nextDist = measureTouchDistance(event.touches);
+        if (nextDist > 0) {
+          setCanvasZoom(clampCanvasZoom(touchBaseZoom * (nextDist / touchStartDist)));
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      touchStartDist = null;
+    };
+
+    canvasEl.addEventListener("wheel", handleWheel, { passive: false });
+    canvasEl.addEventListener("gesturestart", handleGestureStart, { passive: false });
+    canvasEl.addEventListener("gesturechange", handleGestureChange, { passive: false });
+    canvasEl.addEventListener("touchstart", handleTouchStart, { passive: true });
+    canvasEl.addEventListener("touchmove", handleTouchMove, { passive: false });
+    canvasEl.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      canvasEl.removeEventListener("wheel", handleWheel);
+      canvasEl.removeEventListener("gesturestart", handleGestureStart);
+      canvasEl.removeEventListener("gesturechange", handleGestureChange);
+      canvasEl.removeEventListener("touchstart", handleTouchStart);
+      canvasEl.removeEventListener("touchmove", handleTouchMove);
+      canvasEl.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
+
+  const handleZoomBarWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    if (event.deltaY === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const delta = -Math.sign(event.deltaY) * CANVAS_ZOOM_STEP;
+    setCanvasZoom((prev) => clampCanvasZoom(prev + delta));
+  }, []);
 
   const handlePuckAction = useCallback(
     (action: PuckAction, newAppState: AppState) => {
@@ -558,13 +772,32 @@ export function ConstrainedEditor({
     [slotItems],
   );
 
+  const emptySlotCount = slotItems.length - filledSlotCount;
+
   const emptyRequiredSlots = useMemo(
     () => slotItems.filter((item) => item.required && !item.filled),
     [slotItems],
   );
 
+  const filteredSlotItems = useMemo(() => {
+    if (slotFilter === "empty") return slotItems.filter((item) => !item.filled);
+    if (slotFilter === "filled") return slotItems.filter((item) => item.filled);
+    return slotItems;
+  }, [slotFilter, slotItems]);
+
+  const visibleSectionCount = useMemo(
+    () => puckData.content.filter((item) => !item.props.hidden).length,
+    [puckData.content],
+  );
+
+  const normalizedSectionFilter = sectionSearchQuery.trim().toLowerCase();
+
   const selectedSection =
     selectedSectionIndex !== null ? (puckData.content[selectedSectionIndex] ?? null) : null;
+
+  const zoomPercent = Math.round(canvasZoom * 100);
+  const slotProgressPercent =
+    slotItems.length > 0 ? Math.round((filledSlotCount / slotItems.length) * 100) : 100;
 
   return (
     <div
@@ -600,24 +833,52 @@ export function ConstrainedEditor({
           style={{ visibility: "visible" }}
           className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
         >
-          {/* Top Editor Bar (matches Figma 2:4347, compact at 375px) */}
+          {/* Top Editor Bar */}
           <header
             data-slot="editor-topbar"
-            className="border-border bg-background z-30 flex h-15 shrink-0 items-center justify-between gap-2 border-b px-3 sm:h-17 sm:gap-3 sm:px-6 xl:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+            className="border-border/75 bg-elevated/95 z-30 flex h-15 shrink-0 items-center justify-between gap-2 border-b px-3 backdrop-blur-xl sm:h-16 sm:gap-3 sm:px-5 xl:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
           >
-            <div className="flex max-w-full min-w-0 flex-1 items-center gap-2 sm:gap-3 xl:justify-self-start">
+            <div className="flex max-w-full min-w-0 flex-1 items-center gap-2 sm:gap-2.5 xl:justify-self-start">
               <Link
                 href="/dashboard"
                 aria-label="Back to projects"
-                className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 sm:size-9"
+                className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-8.5 shrink-0 items-center justify-center rounded-full border shadow-2xs transition-colors outline-none focus-visible:ring-2 sm:size-9"
               >
                 <ArrowLeft className="size-4" />
               </Link>
 
+              <button
+                type="button"
+                data-testid="toggle-left-panel"
+                aria-label={leftPanelOpen ? "Close left panel" : "Open left panel"}
+                aria-expanded={leftPanelOpen}
+                title={leftPanelOpen ? "Close left panel ([)" : "Open left panel ([)"}
+                onClick={() => setLeftPanelOpen((prev) => !prev)}
+                className={cn(
+                  "focus-visible:ring-ring/40 hidden size-9 shrink-0 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 lg:inline-flex",
+                  leftPanelOpen
+                    ? "border-border/80 bg-surface text-foreground hover:bg-sunken"
+                    : "border-primary/40 bg-accent text-accent-foreground",
+                )}
+              >
+                {leftPanelOpen ? (
+                  <PanelLeftClose className="size-4" />
+                ) : (
+                  <PanelLeftOpen className="size-4" />
+                )}
+              </button>
+
+              <div className="bg-border/70 hidden h-5 w-px shrink-0 lg:block" />
+
               <div className="flex min-w-0 flex-col">
-                <span className="text-foreground type-body-s-strong sm:type-body-m-strong truncate">
-                  {puckData.root.props.title || initialPayload.project.name}
-                </span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="text-foreground font-display truncate text-sm font-medium tracking-tight sm:text-base">
+                    {puckData.root.props.title || initialPayload.project.name}
+                  </span>
+                  <Badge tone="neutral" withDot={false} className="hidden shrink-0 2xl:inline-flex">
+                    {initialPayload.template.name}
+                  </Badge>
+                </div>
                 <span
                   data-testid="editor-save-indicator"
                   data-save-status={saveStatus}
@@ -625,31 +886,31 @@ export function ConstrainedEditor({
                 >
                   {saveStatus === "saving" && (
                     <>
-                      <Loader2 className="text-primary size-3.5 shrink-0 animate-spin" />
+                      <Loader2 className="text-primary size-3 shrink-0 animate-spin" />
                       <span className="truncate">Saving...</span>
                     </>
                   )}
                   {saveStatus === "unsaved" && (
                     <>
-                      <Cloud className="text-muted-foreground size-3.5 shrink-0" />
+                      <Cloud className="text-muted-foreground size-3 shrink-0" />
                       <span className="truncate">Unsaved changes</span>
                     </>
                   )}
                   {saveStatus === "saved" && (
                     <>
-                      <Cloud className="text-success size-3.5 shrink-0" />
+                      <Cloud className="text-success size-3 shrink-0" />
                       <span className="truncate">Saved · just now</span>
                     </>
                   )}
                   {saveStatus === "conflict" && (
                     <>
-                      <AlertTriangle className="text-warning size-3.5 shrink-0" />
+                      <AlertTriangle className="text-warning size-3 shrink-0" />
                       <span className="text-warning truncate">Save conflict</span>
                     </>
                   )}
                   {saveStatus === "error" && (
                     <>
-                      <AlertCircle className="text-destructive size-3.5 shrink-0" />
+                      <AlertCircle className="text-destructive size-3 shrink-0" />
                       <span className="text-destructive truncate">Save failed</span>
                     </>
                   )}
@@ -657,18 +918,18 @@ export function ConstrainedEditor({
               </div>
             </div>
 
-            {/* Center Device Toggle (matches Figma 2:4359 & 2:6367) */}
+            {/* Center Device Toggle */}
             <div
               role="group"
               aria-label="Preview viewport"
-              className="bg-sunken hidden shrink-0 items-center rounded-full p-1 md:inline-flex xl:justify-self-center"
+              className="border-border/70 bg-surface hidden shrink-0 items-center rounded-full border p-1 md:inline-flex xl:justify-self-center"
             >
               <button
                 type="button"
                 aria-pressed={viewport === "desktop"}
                 onClick={() => setViewport("desktop")}
                 className={cn(
-                  "type-body-s-strong inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-colors",
+                  "type-body-s-strong inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.25 transition-all",
                   viewport === "desktop"
                     ? "bg-elevated text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
@@ -682,7 +943,7 @@ export function ConstrainedEditor({
                 aria-pressed={viewport === "mobile"}
                 onClick={() => setViewport("mobile")}
                 className={cn(
-                  "type-body-s-strong inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-colors",
+                  "type-body-s-strong inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.25 transition-all",
                   viewport === "mobile"
                     ? "bg-elevated text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
@@ -695,24 +956,28 @@ export function ConstrainedEditor({
 
             {/* Right Actions */}
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 xl:justify-self-end">
-              <button
-                type="button"
-                aria-label="Undo"
-                disabled={!canUndo}
-                onClick={handleUndo}
-                className="border-border bg-elevated text-foreground hover:bg-surface inline-flex size-8 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-45 sm:size-9"
-              >
-                <Undo2 className="size-4" />
-              </button>
-              <button
-                type="button"
-                aria-label="Redo"
-                disabled={!canRedo}
-                onClick={handleRedo}
-                className="border-border bg-elevated text-foreground hover:bg-surface inline-flex size-8 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-45 sm:size-9"
-              >
-                <Redo2 className="size-4" />
-              </button>
+              <div className="border-border/75 bg-surface inline-flex items-center rounded-full border p-0.5">
+                <button
+                  type="button"
+                  aria-label="Undo"
+                  title="Undo (⌘Z)"
+                  disabled={!canUndo}
+                  onClick={handleUndo}
+                  className="text-foreground hover:bg-elevated inline-flex size-7.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:size-8"
+                >
+                  <Undo2 className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Redo"
+                  title="Redo (⇧⌘Z)"
+                  disabled={!canRedo}
+                  onClick={handleRedo}
+                  className="text-foreground hover:bg-elevated inline-flex size-7.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:size-8"
+                >
+                  <Redo2 className="size-3.5" />
+                </button>
+              </div>
 
               <Button
                 type="button"
@@ -720,9 +985,9 @@ export function ConstrainedEditor({
                 size="sm"
                 aria-label="Preview case study"
                 onClick={() => setPreviewModalOpen(true)}
-                className="size-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+                className="size-8.5 p-0 sm:h-9 sm:w-auto sm:px-3.5"
               >
-                <Eye className="size-4" />
+                <Eye className="size-3.5" />
                 <span className="hidden sm:inline">Preview</span>
               </Button>
 
@@ -730,480 +995,770 @@ export function ConstrainedEditor({
                 asChild
                 variant="secondary"
                 size="sm"
-                className="size-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+                className="size-8.5 p-0 sm:h-9 sm:w-auto sm:px-3.5"
               >
                 <Link
                   href={`/projects/${initialPayload.project.id}/exports`}
                   aria-label="Export case study"
                 >
-                  <Download className="size-4" />
+                  <Download className="size-3.5" />
                   <span className="hidden sm:inline">Export</span>
                 </Link>
               </Button>
 
-              <Button asChild size="sm" className="px-2.5 sm:px-3.5">
+              <Button asChild variant="accent" size="sm" className="px-3 sm:px-4">
                 <Link href={`/projects/${initialPayload.project.id}/share`}>
                   <Globe className="size-3.5" />
                   <span>Publish</span>
                 </Link>
               </Button>
+
+              <button
+                type="button"
+                data-testid="toggle-right-panel"
+                aria-label={rightPanelOpen ? "Close right panel" : "Open right panel"}
+                aria-expanded={rightPanelOpen}
+                title={rightPanelOpen ? "Close right panel (])" : "Open right panel (])"}
+                onClick={() => setRightPanelOpen((prev) => !prev)}
+                className={cn(
+                  "focus-visible:ring-ring/40 hidden size-9 shrink-0 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 lg:inline-flex",
+                  rightPanelOpen
+                    ? "border-border/80 bg-surface text-foreground hover:bg-sunken"
+                    : "border-primary/40 bg-accent text-accent-foreground",
+                )}
+              >
+                {rightPanelOpen ? (
+                  <PanelRightClose className="size-4" />
+                ) : (
+                  <PanelRightOpen className="size-4" />
+                )}
+              </button>
             </div>
           </header>
 
-        {/* 3-Panel Workspace (matches Figma 2:4385) */}
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          {/* LEFT PANEL: Style / Content / Sections (340px on desktop) */}
-          <aside
-            aria-label="Template customization and sections"
-            data-slot="editor-left-panel"
-            className="border-border bg-background hidden min-h-0 w-85 shrink-0 flex-col border-r lg:flex"
-          >
-            <div className="border-border shrink-0 border-b p-4">
-              <div
-                role="tablist"
-                aria-label="Editor sidebar tabs"
-                className="bg-sunken grid grid-cols-3 rounded-full p-1"
-              >
-                {(
-                  [
-                    { key: "style", label: "Style" },
-                    { key: "content", label: "Content" },
-                    { key: "sections", label: "Sections" },
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={leftTab === tab.key}
-                    onClick={() => setLeftTab(tab.key)}
-                    className={cn(
-                      "type-body-s-strong rounded-full py-1.5 text-center transition-colors",
-                      leftTab === tab.key
-                        ? "bg-elevated text-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-5">
-              {/* TAB: SECTIONS */}
-              {leftTab === "sections" && (
-                <div data-testid="editor-sections-panel" className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex flex-col gap-0.5">
-                      <h2 className="text-foreground type-heading-s">Sections</h2>
-                      <span className="text-tertiary type-caption">
-                        Template: {initialPayload.template.name}
-                      </span>
-                    </div>
-
-                    {allowSectionMutations && (
-                      <Button
+          {/* 3-Panel Studio Workspace */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {/* LEFT PANEL: Sections / Style / Content */}
+            <aside
+              aria-label="Template customization and sections"
+              data-slot="editor-left-panel"
+              data-open={leftPanelOpen ? "true" : "false"}
+              className={cn(
+                "border-border/75 bg-background min-h-0 w-86 shrink-0 flex-col border-r",
+                leftPanelOpen ? "hidden lg:flex" : "hidden",
+              )}
+            >
+              <div className="border-border/70 bg-elevated/60 flex shrink-0 items-center gap-2 border-b px-3.5 py-3">
+                <div
+                  role="tablist"
+                  aria-label="Editor sidebar tabs"
+                  className="bg-surface border-border/60 grid flex-1 grid-cols-3 rounded-full border p-1"
+                >
+                  {(
+                    [
+                      { key: "sections", label: "Sections", icon: Layers },
+                      { key: "style", label: "Style", icon: Palette },
+                      { key: "content", label: "Content", icon: FileText },
+                    ] as const
+                  ).map((tab) => {
+                    const TabIcon = tab.icon;
+                    return (
+                      <button
+                        key={tab.key}
                         type="button"
-                        variant={insertPickerOpen ? "secondary" : "outline"}
-                        size="sm"
-                        data-testid="open-insert-section-menu"
-                        onClick={() => setInsertPickerOpen((prev) => !prev)}
-                        className="h-8 gap-1.5 px-2.5"
+                        role="tab"
+                        aria-selected={leftTab === tab.key}
+                        onClick={() => setLeftTab(tab.key)}
+                        className={cn(
+                          "type-caption inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 font-medium transition-all",
+                          leftTab === tab.key
+                            ? "bg-elevated text-foreground shadow-xs"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
                       >
-                        <Plus className="size-3.5" />
-                        <span>Insert section</span>
-                      </Button>
-                    )}
-                  </div>
+                        <TabIcon className="size-3.5 shrink-0" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
 
-                  <p className="text-muted-foreground type-caption">
-                    Select any section to edit its fields.{" "}
-                    {allowSectionMutations
-                      ? "Reorder, duplicate, hide, or insert structured narrative blocks."
-                      : "Optional sections can be hidden."}
-                  </p>
+                <button
+                  type="button"
+                  data-testid="collapse-left-panel"
+                  aria-label="Collapse left panel"
+                  title="Collapse left panel ([)"
+                  onClick={() => setLeftPanelOpen(false)}
+                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-full transition-colors"
+                >
+                  <PanelLeftClose className="size-4" />
+                </button>
+              </div>
 
-                  {allowSectionMutations && insertPickerOpen && (
-                    <div
-                      data-testid="insert-section-preset-picker"
-                      className="border-primary/35 bg-surface flex flex-col gap-2 rounded-xl border p-3"
-                    >
-                      <span className="text-tertiary type-overline">
-                        Choose structured section preset
-                      </span>
-                      <div className="grid gap-1.5">
-                        {SECTION_PRESET_OPTIONS.map((preset) => (
-                          <button
-                            key={preset.key}
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">
+                {/* TAB: SECTIONS */}
+                {leftTab === "sections" && (
+                  <div data-testid="editor-sections-panel" className="flex flex-col gap-3.5">
+                    <div className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-3.5 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-foreground type-heading-s">Sections</h2>
+                            <Badge tone="neutral" withDot={false}>
+                              {visibleSectionCount}/{puckData.content.length}
+                            </Badge>
+                          </div>
+                          <span className="text-tertiary type-caption">
+                            {initialPayload.template.name} narrative flow
+                          </span>
+                        </div>
+
+                        {allowSectionMutations && (
+                          <Button
                             type="button"
-                            data-testid={`insert-preset-${preset.key}`}
-                            onClick={() => handleInsertSectionPreset(preset.key)}
-                            className="border-border bg-card hover:border-primary/60 flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors"
+                            variant={insertPickerOpen ? "accent" : "outline"}
+                            size="sm"
+                            data-testid="open-insert-section-menu"
+                            onClick={() => setInsertPickerOpen((prev) => !prev)}
+                            className="h-8 gap-1.5 px-3"
                           >
-                            <span className="text-foreground type-body-s-strong">
-                              {preset.label}
-                            </span>
-                            <span className="text-tertiary type-caption">
-                              {preset.description}
-                            </span>
-                          </button>
-                        ))}
+                            <Plus className="size-3.5" />
+                            <span>Insert section</span>
+                          </Button>
+                        )}
                       </div>
-                    </div>
-                  )}
 
-                  <div className="flex flex-col gap-2.5">
-                    {puckData.content.map((section, idx) => {
-                      const required = isSectionRequired(section.type);
-                      const hidden = Boolean(section.props.hidden);
-                      const isSelected = selectedSectionIndex === idx;
-                      const typeLabel = formatSectionTypeLabel(section.type);
-                      const summaryLabel = formatSectionSummaryLabel(section);
-                      const isFirstOfType = firstIndexByType.get(section.type) === idx;
-                      const rowTestKey = isFirstOfType ? section.type : section.props.id;
-                      const canMoveUp = !required && idx > 1;
-                      const canMoveDown = !required && idx < puckData.content.length - 1;
-
-                      return (
-                        <div
-                          key={section.props.id}
-                          data-testid={`section-row-${rowTestKey}`}
-                          data-hidden={hidden ? "true" : "false"}
-                          className={cn(
-                            "flex flex-col gap-2 rounded-xl border p-3.5 transition-colors",
-                            isSelected
-                              ? "border-primary bg-accent/40"
-                              : "border-border bg-card hover:border-border-strong",
-                            hidden && "opacity-65",
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-3">
+                      {puckData.content.length >= 4 && (
+                        <div className="relative">
+                          <Search className="text-tertiary pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+                          <input
+                            type="search"
+                            value={sectionSearchQuery}
+                            onChange={(e) => setSectionSearchQuery(e.target.value)}
+                            placeholder="Filter sections..."
+                            aria-label="Filter sections"
+                            className="border-border/70 bg-surface/70 text-foreground placeholder:text-tertiary focus:border-ring h-8.5 w-full rounded-full border pr-7 pl-8.5 text-xs outline-none"
+                          />
+                          {sectionSearchQuery && (
                             <button
                               type="button"
-                              onClick={() => handleSelectSection(idx)}
-                              className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left outline-none"
+                              aria-label="Clear section filter"
+                              onClick={() => setSectionSearchQuery("")}
+                              className="text-tertiary hover:text-foreground absolute top-1/2 right-2.5 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded-full"
                             >
-                              <span className="text-foreground type-body-s-strong w-full truncate">
-                                {summaryLabel}
+                              <X className="size-3" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {allowSectionMutations && insertPickerOpen && (
+                      <div
+                        data-testid="insert-section-preset-picker"
+                        className="border-primary/30 bg-wash-panel flex flex-col gap-2 rounded-2xl border p-3.5 shadow-2xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-accent-foreground type-overline">
+                            Insert structured block
+                          </span>
+                          <button
+                            type="button"
+                            aria-label="Close preset picker"
+                            onClick={() => setInsertPickerOpen(false)}
+                            className="text-muted-foreground hover:text-foreground inline-flex size-5 items-center justify-center rounded-full"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
+                        <div className="grid gap-1.5">
+                          {SECTION_PRESET_OPTIONS.map((preset) => (
+                            <button
+                              key={preset.key}
+                              type="button"
+                              data-testid={`insert-preset-${preset.key}`}
+                              onClick={() => handleInsertSectionPreset(preset.key)}
+                              className="border-border/70 bg-elevated hover:border-primary/60 flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left shadow-2xs transition-all"
+                            >
+                              <span className="text-foreground type-body-s-strong">
+                                {preset.label}
                               </span>
-                              <span className="text-tertiary type-caption truncate">
-                                {required
-                                  ? `${typeLabel} · Required`
-                                  : hidden
-                                    ? `${typeLabel} · Hidden`
-                                    : typeLabel}
+                              <span className="text-muted-foreground type-caption">
+                                {preset.description}
                               </span>
                             </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                            {required ? (
-                              <Badge tone="neutral" withDot={false}>
-                                Locked
-                              </Badge>
-                            ) : (
+                    <div className="flex flex-col gap-2">
+                      {puckData.content.map((section, idx) => {
+                        const required = isSectionRequired(section.type);
+                        const hidden = Boolean(section.props.hidden);
+                        const isSelected = selectedSectionIndex === idx;
+                        const typeLabel = formatSectionTypeLabel(section.type);
+                        const summaryLabel = formatSectionSummaryLabel(section);
+                        const isFirstOfType = firstIndexByType.get(section.type) === idx;
+                        const rowTestKey = isFirstOfType ? section.type : section.props.id;
+                        const canMoveUp = !required && idx > 1;
+                        const canMoveDown = !required && idx < puckData.content.length - 1;
+
+                        const matchesFilter =
+                          !normalizedSectionFilter ||
+                          summaryLabel.toLowerCase().includes(normalizedSectionFilter) ||
+                          typeLabel.toLowerCase().includes(normalizedSectionFilter);
+
+                        if (!matchesFilter) {
+                          return null;
+                        }
+
+                        return (
+                          <div
+                            key={section.props.id}
+                            data-testid={`section-row-${rowTestKey}`}
+                            data-hidden={hidden ? "true" : "false"}
+                            className={cn(
+                              "group/row flex flex-col gap-2 rounded-2xl border p-3 transition-all",
+                              isSelected
+                                ? "border-primary bg-accent/50 shadow-2xs"
+                                : "border-border/70 bg-elevated hover:border-border-strong",
+                              hidden && "opacity-65",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2.5">
                               <button
                                 type="button"
-                                role="switch"
-                                aria-checked={!hidden}
-                                aria-label={`Toggle ${summaryLabel} visibility`}
-                                data-testid={`toggle-section-${rowTestKey}`}
-                                onClick={() => handleToggleSection(idx)}
-                                className={cn(
-                                  "focus-visible:ring-ring/40 relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors outline-none focus-visible:ring-2",
-                                  !hidden ? "bg-primary" : "bg-border-strong",
-                                )}
+                                onClick={() => handleSelectSection(idx)}
+                                className="flex min-w-0 flex-1 items-center gap-2.5 text-left outline-none"
                               >
                                 <span
                                   aria-hidden="true"
                                   className={cn(
-                                    "bg-background inline-block size-4.5 rounded-full shadow-xs transition-transform",
-                                    !hidden ? "translate-x-5.5" : "translate-x-1",
+                                    "inline-flex size-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-medium",
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-surface text-tertiary",
                                   )}
-                                />
+                                >
+                                  {String(idx + 1).padStart(2, "0")}
+                                </span>
+
+                                <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                                  <span className="text-foreground type-body-s-strong w-full truncate">
+                                    {summaryLabel}
+                                  </span>
+                                  <span className="text-tertiary type-caption truncate">
+                                    {required
+                                      ? `${typeLabel} · Required`
+                                      : hidden
+                                        ? `${typeLabel} · Hidden`
+                                        : typeLabel}
+                                  </span>
+                                </span>
                               </button>
+
+                              {required ? (
+                                <Badge tone="neutral" withDot={false}>
+                                  Locked
+                                </Badge>
+                              ) : (
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  aria-checked={!hidden}
+                                  aria-label={`Toggle ${summaryLabel} visibility`}
+                                  data-testid={`toggle-section-${rowTestKey}`}
+                                  onClick={() => handleToggleSection(idx)}
+                                  className={cn(
+                                    "focus-visible:ring-ring/40 relative inline-flex h-5.5 w-10 shrink-0 cursor-pointer items-center rounded-full transition-colors outline-none focus-visible:ring-2",
+                                    !hidden ? "bg-primary" : "bg-border-strong",
+                                  )}
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    className={cn(
+                                      "bg-background inline-block size-4 rounded-full shadow-xs transition-transform",
+                                      !hidden ? "translate-x-5" : "translate-x-0.75",
+                                    )}
+                                  />
+                                </button>
+                              )}
+                            </div>
+
+                            {!required && allowSectionMutations && (
+                              <div className="border-border/50 flex items-center justify-between gap-1 border-t pt-2">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    disabled={!canMoveUp}
+                                    aria-label={`Move ${summaryLabel} up`}
+                                    data-testid={`move-up-section-${rowTestKey}`}
+                                    onClick={() => handleMoveSection(idx, "up")}
+                                    className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                                  >
+                                    <ArrowUp className="size-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!canMoveDown}
+                                    aria-label={`Move ${summaryLabel} down`}
+                                    data-testid={`move-down-section-${rowTestKey}`}
+                                    onClick={() => handleMoveSection(idx, "down")}
+                                    className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                                  >
+                                    <ArrowDown className="size-3.5" />
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    aria-label={`Duplicate ${summaryLabel}`}
+                                    data-testid={`duplicate-section-${rowTestKey}`}
+                                    onClick={() => handleDuplicateSection(idx)}
+                                    className="text-muted-foreground hover:bg-surface hover:text-foreground type-caption inline-flex h-6.5 items-center gap-1 rounded-full px-2 transition-colors"
+                                  >
+                                    <Copy className="size-3" />
+                                    <span>Duplicate</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={`Remove ${summaryLabel}`}
+                                    data-testid={`remove-section-${rowTestKey}`}
+                                    onClick={() => handleRemoveSection(idx)}
+                                    className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive inline-flex size-6.5 items-center justify-center rounded-full transition-colors"
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </button>
+                                </div>
+                              </div>
                             )}
                           </div>
-
-                          {!required && allowSectionMutations && (
-                            <div className="border-border/50 flex items-center justify-between gap-1 border-t pt-2">
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  disabled={!canMoveUp}
-                                  aria-label={`Move ${summaryLabel} up`}
-                                  data-testid={`move-up-section-${rowTestKey}`}
-                                  onClick={() => handleMoveSection(idx, "up")}
-                                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35"
-                                >
-                                  <ArrowUp className="size-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={!canMoveDown}
-                                  aria-label={`Move ${summaryLabel} down`}
-                                  data-testid={`move-down-section-${rowTestKey}`}
-                                  onClick={() => handleMoveSection(idx, "down")}
-                                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35"
-                                >
-                                  <ArrowDown className="size-3.5" />
-                                </button>
-                              </div>
-
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  aria-label={`Duplicate ${summaryLabel}`}
-                                  data-testid={`duplicate-section-${rowTestKey}`}
-                                  onClick={() => handleDuplicateSection(idx)}
-                                  className="text-muted-foreground hover:bg-surface hover:text-foreground type-caption inline-flex h-6 items-center gap-1 rounded-md px-1.5 transition-colors"
-                                >
-                                  <Copy className="size-3" />
-                                  <span>Duplicate</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  aria-label={`Remove ${summaryLabel}`}
-                                  data-testid={`remove-section-${rowTestKey}`}
-                                  onClick={() => handleRemoveSection(idx)}
-                                  className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive inline-flex size-6 items-center justify-center rounded-md transition-colors"
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB: CONTENT */}
-              {leftTab === "content" && (
-                <div data-testid="editor-content-panel" className="flex flex-col gap-5">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="editor-case-study-title">Case study title</Label>
-                    <Input
-                      id="editor-case-study-title"
-                      value={puckData.root.props.title}
-                      onChange={(e) => handleCaseStudyTitleChange(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="border-border flex flex-col gap-2 border-t pt-4">
-                    <span className="text-tertiary type-overline">Jump to section fields</span>
-                    <div className="flex flex-col gap-1.5">
-                      {puckData.content.map((section, idx) => {
-                        const hidden = Boolean(section.props.hidden);
-                        const label = formatSectionSummaryLabel(section);
-                        return (
-                          <button
-                            key={section.props.id}
-                            type="button"
-                            onClick={() => handleSelectSection(idx)}
-                            className={cn(
-                              "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
-                              selectedSectionIndex === idx
-                                ? "border-primary bg-accent/40 text-foreground type-body-s-strong"
-                                : "border-border bg-card text-muted-foreground hover:text-foreground type-body-s",
-                            )}
-                          >
-                            <span className="truncate">{label}</span>
-                            {hidden && <EyeOff className="text-tertiary size-3.5 shrink-0" />}
-                          </button>
                         );
                       })}
                     </div>
                   </div>
+                )}
+
+                {/* TAB: CONTENT */}
+                {leftTab === "content" && (
+                  <div data-testid="editor-content-panel" className="flex flex-col gap-4">
+                    <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-4 shadow-2xs">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-foreground type-body-s-strong">Document info</span>
+                        <span className="text-tertiary type-caption">
+                          Shown in browser tabs, exports, and share cards.
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="editor-case-study-title">Case study title</Label>
+                        <Input
+                          id="editor-case-study-title"
+                          value={puckData.root.props.title}
+                          onChange={(e) => handleCaseStudyTitleChange(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="border-border/60 bg-surface/60 grid grid-cols-2 gap-2 rounded-xl border p-2.5">
+                        <div className="flex flex-col">
+                          <span className="text-tertiary type-caption">Template</span>
+                          <span className="text-foreground type-body-s-strong truncate">
+                            {initialPayload.template.name}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-tertiary type-caption">Format</span>
+                          <span className="text-foreground type-body-s-strong capitalize">
+                            {initialPayload.project.type}
+                          </span>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="border-border/70 bg-elevated flex flex-col gap-2.5 rounded-2xl border p-4 shadow-2xs">
+                      <span className="text-tertiary type-overline">Jump to section fields</span>
+                      <div className="flex flex-col gap-1.5">
+                        {puckData.content.map((section, idx) => {
+                          const hidden = Boolean(section.props.hidden);
+                          const label = formatSectionSummaryLabel(section);
+                          return (
+                            <button
+                              key={section.props.id}
+                              type="button"
+                              onClick={() => handleSelectSection(idx)}
+                              className={cn(
+                                "flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition-all",
+                                selectedSectionIndex === idx
+                                  ? "border-primary bg-accent/50 text-foreground type-body-s-strong"
+                                  : "border-border/60 bg-surface/60 text-muted-foreground hover:text-foreground hover:bg-surface type-body-s",
+                              )}
+                            >
+                              <span className="flex min-w-0 items-center gap-2">
+                                <span className="text-tertiary font-mono text-xs">
+                                  {String(idx + 1).padStart(2, "0")}
+                                </span>
+                                <span className="truncate">{label}</span>
+                              </span>
+                              {hidden && <EyeOff className="text-tertiary size-3.5 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  </div>
+                )}
+
+                {/* TAB: STYLE */}
+                {leftTab === "style" && (
+                  <ThemePanel
+                    theme={theme}
+                    onChangeTheme={setTheme}
+                    onResetToDefaults={handleResetThemeToDefaults}
+                  />
+                )}
+              </div>
+            </aside>
+
+            {/* CENTER PANEL: Live Preview Canvas + Floating Panel Handles + Zoom HUD */}
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              {/* Floating quick-open pills when panels are collapsed on desktop */}
+              {!leftPanelOpen && (
+                <button
+                  type="button"
+                  data-testid="reopen-left-panel"
+                  aria-label="Open left panel"
+                  onClick={() => setLeftPanelOpen(true)}
+                  className="border-border/80 bg-elevated/95 text-foreground shadow-float hover:bg-elevated type-caption absolute top-3.5 left-3.5 z-20 hidden items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium backdrop-blur-xl transition-all lg:inline-flex"
+                >
+                  <PanelLeftOpen className="size-3.5" />
+                  <span>Sections</span>
+                </button>
+              )}
+
+              {!rightPanelOpen && (
+                <button
+                  type="button"
+                  data-testid="reopen-right-panel"
+                  aria-label="Open right panel"
+                  onClick={() => setRightPanelOpen(true)}
+                  className="border-border/80 bg-elevated/95 text-foreground shadow-float hover:bg-elevated type-caption absolute top-3.5 right-3.5 z-20 hidden items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium backdrop-blur-xl transition-all lg:inline-flex"
+                >
+                  <span>Inspector</span>
+                  <PanelRightOpen className="size-3.5" />
+                </button>
+              )}
+
+              <main
+                ref={canvasScrollRef}
+                id="main-content"
+                data-slot="editor-canvas"
+                className="bg-editor-canvas flex min-h-0 min-w-0 flex-1 flex-col overflow-x-auto overflow-y-auto overscroll-contain px-3 pt-4 pb-20 sm:px-8 sm:pt-6 sm:pb-24"
+              >
+                <div className="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center gap-2 text-center sm:mb-5">
+                  <Badge tone="neutral" withDot={false}>
+                    {initialPayload.template.name} · v{initialPayload.template.version}
+                  </Badge>
+                  <span className="text-tertiary type-caption">
+                    Live preview · same renderer as publish &amp; export
+                  </span>
                 </div>
-              )}
 
-              {/* TAB: STYLE (Theme palette tokens, presets, WCAG contrast, & curated font pairs) */}
-              {leftTab === "style" && (
-                <ThemePanel
+                <EditorCanvasPreview
+                  puckData={puckData}
                   theme={theme}
-                  onChangeTheme={setTheme}
-                  onResetToDefaults={handleResetThemeToDefaults}
+                  slots={initialPayload.template.slots}
+                  projectType={initialPayload.project.type}
+                  viewport={viewport}
+                  zoom={canvasZoom}
+                  selectedSectionIndex={selectedSectionIndex}
+                  onSelectSection={handleCanvasSelectSection}
                 />
-              )}
-            </div>
-          </aside>
+              </main>
 
-          {/* CENTER PANEL: Live Preview Canvas (matches Figma 2:4438) */}
-          <main
-            ref={canvasScrollRef}
-            id="main-content"
-            data-slot="editor-canvas"
-            className="bg-surface flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-4 sm:px-8 sm:py-6"
-          >
-            <div className="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center gap-2 text-center sm:mb-5 sm:gap-2.5">
-              <Badge tone="neutral" withDot={false}>
-                {initialPayload.template.name} · v{initialPayload.template.version}
-              </Badge>
-              <span className="text-tertiary type-caption">
-                Live preview · same renderer as publish &amp; export
-              </span>
-            </div>
-
-            <EditorCanvasPreview
-              puckData={puckData}
-              theme={theme}
-              slots={initialPayload.template.slots}
-              projectType={initialPayload.project.type}
-              viewport={viewport}
-              selectedSectionIndex={selectedSectionIndex}
-              onSelectSection={handleCanvasSelectSection}
-            />
-          </main>
-
-          {/* RIGHT PANEL: Constrained Puck Fields Inspector & Slots Checklist (matches Figma 2:4480) */}
-          <aside
-            aria-label="Section fields and screen slots"
-            data-slot="editor-right-panel"
-            className="border-border bg-background hidden min-h-0 w-85 shrink-0 flex-col border-l lg:flex"
-          >
-            <div className="border-border shrink-0 border-b p-4">
+              {/* Floating Glass Zoom Pill Bar */}
               <div
-                role="tablist"
-                aria-label="Inspector tabs"
-                className="bg-sunken grid grid-cols-2 rounded-full p-1"
+                data-testid="editor-zoom-controls"
+                onWheel={handleZoomBarWheel}
+                title="Zoom canvas (+/- keys, trackpad pinch, or ⌘/Ctrl + scroll)"
+                className="border-border/80 bg-elevated/92 shadow-float pointer-events-auto absolute bottom-4 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1 rounded-full border p-1 backdrop-blur-xl"
               >
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={rightTab === "fields"}
-                  onClick={() => setRightTab("fields")}
-                  className={cn(
-                    "type-body-s-strong inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 transition-colors",
-                    rightTab === "fields"
-                      ? "bg-elevated text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
+                  data-testid="zoom-out-button"
+                  aria-label="Zoom out"
+                  disabled={canvasZoom <= MIN_CANVAS_ZOOM}
+                  onClick={handleZoomOut}
+                  className="text-foreground hover:bg-surface inline-flex size-7.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <SlidersHorizontal className="size-3.5" />
-                  <span>Fields</span>
+                  <Minus className="size-3.5" />
                 </button>
+
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={rightTab === "slots"}
-                  onClick={() => setRightTab("slots")}
-                  className={cn(
-                    "type-body-s-strong inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 transition-colors",
-                    rightTab === "slots"
-                      ? "bg-elevated text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
+                  data-testid="zoom-reset-button"
+                  aria-label="Reset zoom"
+                  onClick={handleZoomReset}
+                  className="text-foreground hover:bg-surface min-w-14 rounded-full px-2.5 py-1 text-center font-mono text-xs font-medium transition-colors"
                 >
-                  <span>Screenshots</span>
-                  <span className="text-tertiary type-caption">
-                    {filledSlotCount}/{slotItems.length}
-                  </span>
+                  {zoomPercent}%
                 </button>
+
+                <button
+                  type="button"
+                  data-testid="zoom-in-button"
+                  aria-label="Zoom in"
+                  disabled={canvasZoom >= MAX_CANVAS_ZOOM}
+                  onClick={handleZoomIn}
+                  className="text-foreground hover:bg-surface inline-flex size-7.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+
+                {zoomPercent !== 100 && (
+                  <>
+                    <span aria-hidden="true" className="bg-border/80 mx-0.5 h-4 w-px" />
+                    <button
+                      type="button"
+                      onClick={handleZoomReset}
+                      className="text-muted-foreground hover:text-foreground hover:bg-surface type-caption inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors"
+                    >
+                      <RotateCcw className="size-3" />
+                      <span>100%</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-5">
-              {rightTab === "fields" && (
-                <div data-testid="editor-fields-inspector" className="flex flex-col gap-4">
-                  {selectedSection ? (
-                    <>
-                      <div className="border-border flex items-center justify-between gap-2 border-b pb-3">
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-tertiary type-overline">
-                            Editing · {formatSectionTypeLabel(selectedSection.type)}
-                          </span>
-                          <h2 className="text-foreground type-heading-s truncate">
-                            {formatSectionSummaryLabel(selectedSection)}
-                          </h2>
-                        </div>
-                        {Boolean(selectedSection.props.hidden) && (
-                          <Badge tone="draft">Hidden</Badge>
-                        )}
-                      </div>
-
-                      {mobileSheetTab !== "fields" && <Puck.Fields wrapFields />}
-                    </>
-                  ) : (
-                    <div className="text-muted-foreground type-body-s py-8 text-center">
-                      Click any section on the canvas or in the Sections list to edit its content.
-                    </div>
-                  )}
-                </div>
+            {/* RIGHT PANEL: Constrained Puck Fields Inspector & Screenshots Checklist */}
+            <aside
+              aria-label="Section fields and screen slots"
+              data-slot="editor-right-panel"
+              data-open={rightPanelOpen ? "true" : "false"}
+              className={cn(
+                "border-border/75 bg-background min-h-0 w-90 shrink-0 flex-col border-l",
+                rightPanelOpen ? "hidden lg:flex" : "hidden",
               )}
-
-              {rightTab === "slots" && (
-                <div data-testid="editor-slots-panel" className="flex flex-col gap-4">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h2 className="text-foreground type-heading-s">Screenshots</h2>
-                    <span className="text-tertiary type-caption">
-                      {filledSlotCount} / {slotItems.length} slots
+            >
+              <div className="border-border/70 bg-elevated/60 flex shrink-0 items-center gap-2 border-b px-3.5 py-3">
+                <div
+                  role="tablist"
+                  aria-label="Inspector tabs"
+                  className="bg-surface border-border/60 grid flex-1 grid-cols-2 rounded-full border p-1"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={rightTab === "fields"}
+                    onClick={() => setRightTab("fields")}
+                    className={cn(
+                      "type-caption inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 font-medium transition-all",
+                      rightTab === "fields"
+                        ? "bg-elevated text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <SlidersHorizontal className="size-3.5" />
+                    <span>Fields</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={rightTab === "slots"}
+                    onClick={() => setRightTab("slots")}
+                    className={cn(
+                      "type-caption inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 font-medium transition-all",
+                      rightTab === "slots"
+                        ? "bg-elevated text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <ImageIcon className="size-3.5" />
+                    <span>Screenshots</span>
+                    <span className="text-tertiary font-mono text-xs">
+                      {filledSlotCount}/{slotItems.length}
                     </span>
-                  </div>
+                  </button>
+                </div>
 
-                  {emptyRequiredSlots.length > 0 && (
-                    <div className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-lg border p-3">
-                      <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
-                      <span className="type-caption">
-                        {emptyRequiredSlots.length} required{" "}
-                        {emptyRequiredSlots.length === 1 ? "slot is" : "slots are"} empty:{" "}
-                        &ldquo;{emptyRequiredSlots[0]?.label}&rdquo;
-                      </span>
-                    </div>
-                  )}
+                <button
+                  type="button"
+                  data-testid="collapse-right-panel"
+                  aria-label="Collapse right panel"
+                  title="Collapse right panel (])"
+                  onClick={() => setRightPanelOpen(false)}
+                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-full transition-colors"
+                >
+                  <PanelRightClose className="size-4" />
+                </button>
+              </div>
 
-                  <span className="text-tertiary type-overline">Slots</span>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">
+                {rightTab === "fields" && (
+                  <div data-testid="editor-fields-inspector" className="flex flex-col gap-4">
+                    {selectedSection && selectedSectionIndex !== null ? (
+                      <>
+                        <div className="border-border/70 bg-elevated flex flex-col gap-2.5 rounded-2xl border p-3.5 shadow-2xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-tertiary type-overline">
+                              Section {selectedSectionIndex + 1} of {puckData.content.length} ·{" "}
+                              {formatSectionTypeLabel(selectedSection.type)}
+                            </span>
 
-                  <div className="flex flex-col gap-2">
-                    {slotItems.map((slot) => (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        onClick={() => handleSelectSection(slot.sectionIndex)}
-                        className="border-border bg-card hover:border-border-strong flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors"
-                      >
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span className="bg-sunken border-border inline-flex h-11 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border">
-                            {slot.filled && slot.src ? (
-                              <img
-                                src={slot.src}
-                                alt={slot.label}
-                                className="size-full object-cover"
-                              />
-                            ) : slot.filled ? (
-                              <Check className="text-success size-3.5" />
-                            ) : (
-                              <span className="bg-border size-2 rounded-full" />
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                aria-label="Previous section"
+                                disabled={selectedSectionIndex <= 0}
+                                onClick={() => handleSelectSection(selectedSectionIndex - 1)}
+                                className="border-border/70 bg-surface text-foreground hover:bg-sunken inline-flex size-6.5 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                              >
+                                <ChevronLeft className="size-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Next section"
+                                disabled={selectedSectionIndex >= puckData.content.length - 1}
+                                onClick={() => handleSelectSection(selectedSectionIndex + 1)}
+                                className="border-border/70 bg-surface text-foreground hover:bg-sunken inline-flex size-6.5 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                              >
+                                <ChevronRight className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2">
+                            <h2 className="text-foreground type-heading-s truncate">
+                              {formatSectionSummaryLabel(selectedSection)}
+                            </h2>
+                            {Boolean(selectedSection.props.hidden) && (
+                              <Badge tone="draft">Hidden</Badge>
                             )}
-                          </span>
-                          <div className="flex min-w-0 flex-col">
-                            <span className="text-foreground type-body-s-strong truncate">
-                              {slot.label}
-                            </span>
-                            <span className="text-tertiary type-caption capitalize">
-                              {slot.device} · {slot.ratio}
-                            </span>
                           </div>
                         </div>
 
-                        <Badge tone={slot.filled ? "published" : "draft"}>
-                          {slot.filled ? "Filled" : "Empty"}
-                        </Badge>
-                      </button>
-                    ))}
+                        {mobileSheetTab !== "fields" && <Puck.Fields wrapFields={false} />}
+                      </>
+                    ) : (
+                      <div className="border-border/70 bg-elevated text-muted-foreground type-body-s rounded-2xl border p-6 text-center">
+                        Click any section on the canvas or in the Sections list to edit its content.
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          </aside>
-        </div>
+                )}
+
+                {rightTab === "slots" && (
+                  <div data-testid="editor-slots-panel" className="flex flex-col gap-3.5">
+                    {/* Upload readiness summary card */}
+                    <div className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-4 shadow-2xs">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h2 className="text-foreground type-heading-s">Screenshots</h2>
+                        <span className="text-foreground font-mono text-xs font-medium">
+                          {filledSlotCount} / {slotItems.length} ready
+                        </span>
+                      </div>
+
+                      <div className="bg-sunken h-2 w-full overflow-hidden rounded-full">
+                        <div
+                          className="bg-primary h-full rounded-full transition-all duration-300"
+                          style={{ width: `${slotProgressPercent}%` }}
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {(
+                          [
+                            { key: "all", label: `All (${slotItems.length})` },
+                            { key: "empty", label: `Empty (${emptySlotCount})` },
+                            { key: "filled", label: `Filled (${filledSlotCount})` },
+                          ] as const
+                        ).map((filterItem) => (
+                          <button
+                            key={filterItem.key}
+                            type="button"
+                            onClick={() => setSlotFilter(filterItem.key)}
+                            className={cn(
+                              "type-caption rounded-full border px-2.5 py-1 font-medium transition-colors",
+                              slotFilter === filterItem.key
+                                ? "border-primary bg-accent/60 text-foreground"
+                                : "border-border/70 bg-surface text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            {filterItem.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {emptyRequiredSlots.length > 0 && (
+                      <div className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-2xl border p-3.5">
+                        <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                        <span className="type-caption">
+                          {emptyRequiredSlots.length} required{" "}
+                          {emptyRequiredSlots.length === 1 ? "slot is" : "slots are"} empty:{" "}
+                          &ldquo;{emptyRequiredSlots[0]?.label}&rdquo;
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-2">
+                      {filteredSlotItems.map((slot) => (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          onClick={() => handleSelectSection(slot.sectionIndex)}
+                          className="border-border/70 bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-2xl border p-3 text-left shadow-2xs transition-all"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="bg-surface border-border/80 inline-flex h-11 w-8.5 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
+                              {slot.filled && slot.src ? (
+                                <img
+                                  src={slot.src}
+                                  alt={slot.label}
+                                  className="size-full object-cover"
+                                />
+                              ) : slot.filled ? (
+                                <Check className="text-success size-3.5" />
+                              ) : (
+                                <span className="bg-border-strong size-2 rounded-full" />
+                              )}
+                            </span>
+                            <div className="flex min-w-0 flex-col">
+                              <span className="text-foreground type-body-s-strong truncate">
+                                {slot.label}
+                              </span>
+                              <span className="text-tertiary type-caption capitalize">
+                                {slot.device} · {slot.ratio}
+                                {slot.required ? " · Required" : ""}
+                              </span>
+                            </div>
+                          </div>
+
+                          <Badge tone={slot.filled ? "published" : "draft"}>
+                            {slot.filled ? "Filled" : "Empty"}
+                          </Badge>
+                        </button>
+                      ))}
+
+                      {filteredSlotItems.length === 0 && (
+                        <div className="border-border/60 bg-elevated text-muted-foreground type-caption rounded-2xl border p-5 text-center">
+                          No screenshot slots match this filter.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </aside>
+          </div>
 
           {/* Mobile Bottom Action Bar (< 1024px, usable at 375px) */}
           <nav
             aria-label="Mobile editor controls"
             data-testid="editor-mobile-bar"
-            className="border-border bg-elevated z-30 grid shrink-0 grid-cols-4 gap-1 border-t px-2 py-1.5 lg:hidden"
+            className="border-border/80 bg-elevated/95 z-30 grid shrink-0 grid-cols-4 gap-1 border-t px-2 py-1.5 backdrop-blur-xl lg:hidden"
           >
             <button
               type="button"
@@ -1211,7 +1766,7 @@ export function ConstrainedEditor({
               aria-expanded={mobileSheetTab === "fields"}
               onClick={() => setMobileSheetTab("fields")}
               className={cn(
-                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
                 mobileSheetTab === "fields"
                   ? "bg-accent text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -1227,7 +1782,7 @@ export function ConstrainedEditor({
               aria-expanded={mobileSheetTab === "sections"}
               onClick={() => setMobileSheetTab("sections")}
               className={cn(
-                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
                 mobileSheetTab === "sections"
                   ? "bg-accent text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -1243,7 +1798,7 @@ export function ConstrainedEditor({
               aria-expanded={mobileSheetTab === "style"}
               onClick={() => setMobileSheetTab("style")}
               className={cn(
-                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
                 mobileSheetTab === "style"
                   ? "bg-accent text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -1259,7 +1814,7 @@ export function ConstrainedEditor({
               aria-expanded={mobileSheetTab === "slots"}
               onClick={() => setMobileSheetTab("slots")}
               className={cn(
-                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
                 mobileSheetTab === "slots"
                   ? "bg-accent text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -1282,7 +1837,7 @@ export function ConstrainedEditor({
             <SheetContent
               side="bottom"
               data-testid="editor-mobile-sheet"
-              className="border-border bg-background flex max-h-[82dvh] flex-col gap-0 rounded-t-2xl p-0"
+              className="border-border bg-background flex max-h-[82dvh] flex-col gap-0 rounded-t-3xl p-0"
             >
               <SheetHeader className="border-border shrink-0 gap-3 border-b px-4 pt-4 pr-12 pb-3 text-left">
                 <div className="flex flex-col gap-0.5">
@@ -1304,7 +1859,7 @@ export function ConstrainedEditor({
                 <div
                   role="tablist"
                   aria-label="Mobile editor panels"
-                  className="bg-sunken grid grid-cols-4 rounded-full p-1"
+                  className="bg-surface border-border/60 grid grid-cols-4 rounded-full border p-1"
                 >
                   {(
                     [
@@ -1354,7 +1909,7 @@ export function ConstrainedEditor({
                               "type-caption inline-flex max-w-44 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium transition-colors",
                               active
                                 ? "border-primary bg-accent text-foreground"
-                                : "border-border bg-card text-muted-foreground hover:text-foreground",
+                                : "border-border bg-elevated text-muted-foreground hover:text-foreground",
                             )}
                           >
                             <span className="truncate">{label}</span>
@@ -1367,7 +1922,7 @@ export function ConstrainedEditor({
                     </div>
 
                     {selectedSection ? (
-                      <Puck.Fields wrapFields />
+                      <Puck.Fields wrapFields={false} />
                     ) : (
                       <div className="text-muted-foreground type-body-s py-6 text-center">
                         Select a section above to edit its fields.
@@ -1385,7 +1940,7 @@ export function ConstrainedEditor({
                       {allowSectionMutations && (
                         <Button
                           type="button"
-                          variant={insertPickerOpen ? "secondary" : "outline"}
+                          variant={insertPickerOpen ? "accent" : "outline"}
                           size="sm"
                           onClick={() => setInsertPickerOpen((prev) => !prev)}
                           className="h-8 shrink-0 gap-1 px-2.5"
@@ -1397,7 +1952,7 @@ export function ConstrainedEditor({
                     </div>
 
                     {allowSectionMutations && insertPickerOpen && (
-                      <div className="border-primary/35 bg-surface grid gap-1.5 rounded-xl border p-2.5">
+                      <div className="border-primary/35 bg-wash-panel grid gap-1.5 rounded-2xl border p-2.5">
                         {SECTION_PRESET_OPTIONS.map((preset) => (
                           <button
                             key={preset.key}
@@ -1406,7 +1961,7 @@ export function ConstrainedEditor({
                               handleInsertSectionPreset(preset.key);
                               setMobileSheetTab("fields");
                             }}
-                            className="border-border bg-card flex flex-col items-start rounded-lg border px-3 py-2 text-left"
+                            className="border-border bg-elevated flex flex-col items-start rounded-xl border px-3 py-2 text-left"
                           >
                             <span className="text-foreground type-body-s-strong">
                               {preset.label}
@@ -1433,10 +1988,10 @@ export function ConstrainedEditor({
                           <div
                             key={section.props.id}
                             className={cn(
-                              "flex flex-col gap-2 rounded-xl border p-3 transition-colors",
+                              "flex flex-col gap-2 rounded-2xl border p-3 transition-colors",
                               isSelected
-                                ? "border-primary bg-accent/40"
-                                : "border-border bg-card",
+                                ? "border-primary bg-accent/50"
+                                : "border-border bg-elevated",
                               hidden && "opacity-65",
                             )}
                           >
@@ -1474,15 +2029,15 @@ export function ConstrainedEditor({
                                   data-testid={`mobile-toggle-section-${rowTestKey}`}
                                   onClick={() => handleToggleSection(idx)}
                                   className={cn(
-                                    "focus-visible:ring-ring/40 relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors outline-none focus-visible:ring-2",
+                                    "focus-visible:ring-ring/40 relative inline-flex h-5.5 w-10 shrink-0 cursor-pointer items-center rounded-full transition-colors outline-none focus-visible:ring-2",
                                     !hidden ? "bg-primary" : "bg-border-strong",
                                   )}
                                 >
                                   <span
                                     aria-hidden="true"
                                     className={cn(
-                                      "bg-background inline-block size-4.5 rounded-full shadow-xs transition-transform",
-                                      !hidden ? "translate-x-5.5" : "translate-x-1",
+                                      "bg-background inline-block size-4 rounded-full shadow-xs transition-transform",
+                                      !hidden ? "translate-x-5" : "translate-x-0.75",
                                     )}
                                   />
                                 </button>
@@ -1497,7 +2052,7 @@ export function ConstrainedEditor({
                                     disabled={idx <= 1}
                                     aria-label={`Move ${summaryLabel} up`}
                                     onClick={() => handleMoveSection(idx, "up")}
-                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-md disabled:opacity-35"
+                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-full disabled:opacity-35"
                                   >
                                     <ArrowUp className="size-3.5" />
                                   </button>
@@ -1506,7 +2061,7 @@ export function ConstrainedEditor({
                                     disabled={idx >= puckData.content.length - 1}
                                     aria-label={`Move ${summaryLabel} down`}
                                     onClick={() => handleMoveSection(idx, "down")}
-                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-md disabled:opacity-35"
+                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-full disabled:opacity-35"
                                   >
                                     <ArrowDown className="size-3.5" />
                                   </button>
@@ -1516,7 +2071,7 @@ export function ConstrainedEditor({
                                     type="button"
                                     aria-label={`Duplicate ${summaryLabel}`}
                                     onClick={() => handleDuplicateSection(idx)}
-                                    className="text-muted-foreground type-caption inline-flex h-6 items-center gap-1 rounded-md px-1.5"
+                                    className="text-muted-foreground type-caption inline-flex h-6 items-center gap-1 rounded-full px-1.5"
                                   >
                                     <Copy className="size-3" />
                                     <span>Duplicate</span>
@@ -1525,7 +2080,7 @@ export function ConstrainedEditor({
                                     type="button"
                                     aria-label={`Remove ${summaryLabel}`}
                                     onClick={() => handleRemoveSection(idx)}
-                                    className="text-muted-foreground hover:text-destructive inline-flex size-6 items-center justify-center rounded-md"
+                                    className="text-muted-foreground hover:text-destructive inline-flex size-6 items-center justify-center rounded-full"
                                   >
                                     <Trash2 className="size-3.5" />
                                   </button>
@@ -1540,8 +2095,8 @@ export function ConstrainedEditor({
                 )}
 
                 {mobileSheetTab === "style" && (
-                  <div data-testid="mobile-style-drawer" className="flex flex-col gap-5">
-                    <div className="flex flex-col gap-2">
+                  <div data-testid="mobile-style-drawer" className="flex flex-col gap-4">
+                    <div className="border-border/70 bg-elevated flex flex-col gap-2 rounded-2xl border p-3.5">
                       <Label htmlFor="mobile-editor-case-study-title">Case study title</Label>
                       <Input
                         id="mobile-editor-case-study-title"
@@ -1550,13 +2105,11 @@ export function ConstrainedEditor({
                       />
                     </div>
 
-                    <div className="border-border border-t pt-4">
-                      <ThemePanel
-                        theme={theme}
-                        onChangeTheme={setTheme}
-                        onResetToDefaults={handleResetThemeToDefaults}
-                      />
-                    </div>
+                    <ThemePanel
+                      theme={theme}
+                      onChangeTheme={setTheme}
+                      onResetToDefaults={handleResetThemeToDefaults}
+                    />
                   </div>
                 )}
 
@@ -1567,7 +2120,7 @@ export function ConstrainedEditor({
                       <div
                         role="group"
                         aria-label="Mobile preview viewport"
-                        className="bg-sunken inline-flex items-center rounded-full p-1"
+                        className="bg-surface border-border/60 inline-flex items-center rounded-full border p-1"
                       >
                         <button
                           type="button"
@@ -1617,14 +2170,14 @@ export function ConstrainedEditor({
                               handleSelectSection(slot.sectionIndex);
                               setMobileSheetTab("fields");
                             }}
-                            className="border-border bg-card hover:border-border-strong flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors"
+                            className="border-border bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-2xl border p-3 text-left transition-colors"
                           >
                             <div className="flex min-w-0 items-center gap-3">
-                              <span className="bg-sunken border-border inline-flex h-11 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border">
+                              <span className="bg-surface border-border inline-flex h-11 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
                                 {slot.filled ? (
                                   <Check className="text-success size-3.5" />
                                 ) : (
-                                  <span className="bg-border size-2 rounded-full" />
+                                  <span className="bg-border-strong size-2 rounded-full" />
                                 )}
                               </span>
                               <div className="flex min-w-0 flex-col">
@@ -1652,12 +2205,12 @@ export function ConstrainedEditor({
         </div>
       </Puck>
 
-      {/* Save Error / Conflict Banner (matches Figma 2:6162) */}
+      {/* Save Error / Conflict Banner */}
       {(saveStatus === "error" || saveStatus === "conflict") && (
         <div
           role="alert"
           data-testid="editor-save-toast"
-          className="bg-inverse text-inverse-foreground shadow-card fixed bottom-20 left-1/2 z-50 flex w-[min(92vw,26rem)] -translate-x-1/2 items-center justify-between gap-3 rounded-2xl px-4 py-3 lg:bottom-6"
+          className="bg-inverse text-inverse-foreground shadow-float fixed bottom-20 left-1/2 z-50 flex w-[min(92vw,26rem)] -translate-x-1/2 items-center justify-between gap-3 rounded-full px-4 py-2.5 lg:bottom-6"
         >
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="bg-destructive text-primary-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full">
@@ -1693,7 +2246,7 @@ export function ConstrainedEditor({
 
       {/* Full Clean Preview Modal */}
       <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-5xl rounded-3xl">
           <DialogHeader>
             <DialogTitle>
               {puckData.root.props.title || initialPayload.project.name}
@@ -1704,7 +2257,7 @@ export function ConstrainedEditor({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="border-border max-h-[70vh] overflow-y-auto rounded-xl border">
+          <div className="border-border max-h-[70vh] overflow-y-auto rounded-2xl border">
             <TemplatePuckRenderer
               puckData={puckData}
               theme={theme}

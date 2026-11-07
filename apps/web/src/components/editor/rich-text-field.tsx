@@ -203,12 +203,12 @@ export function RichTextField({
     <div data-testid="rich-text-field" className="flex flex-col gap-1.5">
       <span className="text-foreground type-caption font-medium">{label}</span>
 
-      <div className="border-input bg-background focus-within:ring-ring/40 overflow-hidden rounded-lg border transition-shadow focus-within:ring-2">
+      <div className="border-border/70 bg-elevated focus-within:ring-ring/25 focus-within:border-ring overflow-hidden rounded-xl border shadow-2xs transition-all focus-within:ring-3">
         {/* Constrained formatting toolbar: Bold, Italic, Lists, Link only */}
         <div
           role="toolbar"
           aria-label={`${label} formatting`}
-          className="border-border bg-surface flex flex-wrap items-center gap-1 border-b px-2 py-1.5"
+          className="border-border/70 bg-surface/70 flex flex-wrap items-center gap-1 border-b px-2.5 py-1.5"
         >
           <button
             type="button"

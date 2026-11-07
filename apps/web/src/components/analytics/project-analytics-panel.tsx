@@ -15,6 +15,7 @@ import { useState } from "react";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import type {
   AnalyticsRangeKey,
   ProjectAnalyticsPayload,
@@ -81,22 +82,22 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
   return (
     <div
       data-testid="project-analytics-panel"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-2 py-4 sm:px-6 sm:py-6 lg:px-8"
     >
       {/* Top project header + sub-navigation */}
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3.5">
             <Link
               href={`/editor/${analytics.projectId}`}
               aria-label="Back to case study editor"
-              className="border-border bg-elevated text-foreground hover:bg-surface mt-1 inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface shadow-xs mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
             >
               <ArrowLeft className="size-4" />
             </Link>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-tertiary type-overline">ANALYTICS</span>
+              <Eyebrow className="w-fit">Analytics</Eyebrow>
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-foreground type-display-m">{analytics.projectName}</h1>
                 {analytics.isPublished ? (
@@ -120,7 +121,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
                 role="group"
                 aria-label="Analytics date range"
                 data-testid="analytics-range-selector"
-                className="border-border bg-sunken inline-flex items-center gap-1 rounded-lg border p-1"
+                className="border-border/70 bg-sunken/80 inline-flex items-center gap-1 rounded-full border p-1"
               >
                 {RANGE_SEGMENTS.map((segment) => {
                   const isActive = analytics.range === segment.key;
@@ -134,7 +135,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
                       aria-pressed={isActive}
                       onClick={() => handleSelectRange(segment)}
                       className={cn(
-                        "focus-visible:ring-ring/40 inline-flex items-center gap-1 rounded-md px-3 py-1.5 transition-colors outline-none focus-visible:ring-2",
+                        "focus-visible:ring-ring/40 inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2",
                         isActive
                           ? "bg-elevated text-foreground shadow-card type-body-s-strong"
                           : "text-muted-foreground hover:text-foreground type-body-s",
@@ -162,18 +163,18 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
         {/* Sub-nav across Publish & Share, Exports, and Analytics */}
         <nav
           aria-label="Project publishing, exports, and analytics"
-          className="border-border flex flex-wrap items-center gap-2 border-b pb-3"
+          className="border-border/70 bg-sunken/80 inline-flex w-fit max-w-full flex-wrap items-center gap-1 rounded-full border p-1"
         >
           <Link
             href={`/projects/${analytics.projectId}/share`}
-            className="text-muted-foreground hover:text-foreground hover:bg-sunken type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5 transition-colors"
+            className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors"
           >
             <Globe className="size-3.5" />
             <span>Publish &amp; Share</span>
           </Link>
           <Link
             href={`/projects/${analytics.projectId}/exports`}
-            className="text-muted-foreground hover:text-foreground hover:bg-sunken type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5 transition-colors"
+            className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors"
           >
             <Download className="size-3.5" />
             <span>Exports (PNG / PDF / Behance)</span>
@@ -181,9 +182,9 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
           <Link
             href={`/projects/${analytics.projectId}/analytics`}
             aria-current="page"
-            className="bg-inverse text-inverse-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-1.5"
+            className="bg-elevated text-foreground shadow-card type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2"
           >
-            <BarChart3 className="size-3.5" />
+            <BarChart3 className="text-primary size-3.5" />
             <span>Analytics</span>
           </Link>
         </nav>
@@ -193,9 +194,9 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
         /* Matches Figma 2:8745 "Analytics — Not published yet" */
         <section
           data-testid="analytics-unpublished-empty"
-          className="border-border bg-elevated flex flex-col items-start gap-4 rounded-2xl border p-8 sm:p-14"
+          className="border-border/80 bg-elevated shadow-card flex flex-col items-start gap-4 rounded-3xl border p-8 sm:p-14"
         >
-          <div className="bg-sunken text-tertiary flex size-14 items-center justify-center rounded-2xl">
+          <div className="bg-accent text-primary flex size-14 items-center justify-center rounded-2xl">
             <Eye className="size-6" />
           </div>
           <div className="flex flex-col gap-2">
@@ -214,7 +215,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <article
               data-testid="analytics-kpi-views"
-              className="border-border bg-elevated flex flex-col gap-2 rounded-2xl border p-6"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
             >
               <span className="text-tertiary type-overline">VIEWS</span>
               <span
@@ -230,7 +231,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
 
             <article
               data-testid="analytics-kpi-visitors"
-              className="border-border bg-elevated flex flex-col gap-2 rounded-2xl border p-6"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
             >
               <span className="text-tertiary type-overline">UNIQUE VISITORS</span>
               <span
@@ -246,7 +247,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
 
             <article
               data-testid="analytics-kpi-engagement"
-              className="border-border bg-elevated flex flex-col gap-2 rounded-2xl border p-6"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
             >
               <span className="text-tertiary type-overline">VIEWS PER VISITOR</span>
               <span className="text-foreground type-display-m">
@@ -261,7 +262,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
 
             <article
               data-testid="analytics-kpi-exports"
-              className="border-border bg-elevated flex flex-col gap-2 rounded-2xl border p-6"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
             >
               <span className="text-tertiary type-overline">DOWNLOADS &amp; EXPORTS</span>
               <span className="text-foreground type-display-m">
@@ -277,7 +278,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
           <div className="grid gap-6 lg:grid-cols-12">
             <section
               data-testid="analytics-views-chart-card"
-              className="border-border bg-elevated flex flex-col justify-between gap-6 rounded-2xl border p-6 sm:p-8 lg:col-span-8"
+              className="border-border/80 bg-elevated shadow-card flex flex-col justify-between gap-6 rounded-3xl border p-6 sm:p-8 lg:col-span-8"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-foreground type-heading-s">Views over time</h2>
@@ -362,7 +363,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
 
             <section
               data-testid="analytics-top-sources-card"
-              className="border-border bg-elevated flex flex-col gap-5 rounded-2xl border p-6 sm:p-8 lg:col-span-4"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8 lg:col-span-4"
             >
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-foreground type-heading-s">Top sources</h2>

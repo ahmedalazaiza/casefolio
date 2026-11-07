@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { AlertTriangle, Check, Palette, RotateCcw, ShieldCheck, Type } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { evaluateThemeContrastIssues, normalizeHexColor } from "@/lib/template/contrast";
@@ -102,13 +103,13 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
   };
 
   return (
-    <div data-testid="editor-style-panel" className="flex flex-col gap-6">
+    <div data-testid="editor-style-panel" className="flex flex-col gap-4">
       {/* WCAG 2.1 Contrast Warning (< 4.5:1) */}
       {contrastIssues.length > 0 && (
         <div
           role="alert"
           data-testid="theme-contrast-warning"
-          className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-xl border p-3.5"
+          className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-2xl border p-3.5"
         >
           <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
           <div className="flex flex-col gap-1">
@@ -125,9 +126,18 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
         </div>
       )}
 
-      {/* Curated Palette Presets */}
-      <div className="flex flex-col gap-2.5">
-        <span className="text-tertiary type-overline">Palette presets</span>
+      {/* Card 1: Curated Palette Presets */}
+      <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-4 shadow-2xs">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="bg-accent text-accent-foreground inline-flex size-6 items-center justify-center rounded-full">
+              <Palette className="size-3.5" />
+            </span>
+            <span className="text-foreground type-body-s-strong">Palette presets</span>
+          </div>
+          <span className="text-tertiary type-caption">{CURATED_COLOR_PRESETS.length} themes</span>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           {CURATED_COLOR_PRESETS.map((preset) => {
             const isActive =
@@ -141,32 +151,52 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
                 data-testid={`palette-preset-${preset.id}`}
                 onClick={() => handleApplyPalettePreset(preset.colors)}
                 className={cn(
-                  "flex flex-col items-start gap-2 rounded-xl border p-2.5 text-left transition-colors",
+                  "group relative flex flex-col items-start gap-2 rounded-xl border p-2.5 text-left transition-all",
                   isActive
-                    ? "border-primary bg-accent/40"
-                    : "border-border bg-card hover:border-border-strong",
+                    ? "border-primary bg-accent/55 shadow-2xs"
+                    : "border-border/70 bg-surface/60 hover:border-border-strong hover:bg-surface",
                 )}
               >
-                <div className="flex items-center gap-1">
-                  {["primary", "secondary", "background", "text"].map((tokenKey) => (
-                    <span
-                      key={tokenKey}
-                      style={{ backgroundColor: preset.colors[tokenKey] }}
-                      className="border-border inline-block size-4 rounded-full border"
-                    />
-                  ))}
+                <div className="flex w-full items-center justify-between gap-1">
+                  <div className="flex items-center -space-x-1">
+                    {["primary", "secondary", "background", "text"].map((tokenKey) => (
+                      <span
+                        key={tokenKey}
+                        style={{ backgroundColor: preset.colors[tokenKey] }}
+                        className="border-elevated inline-block size-4.5 rounded-full border-2 shadow-2xs"
+                      />
+                    ))}
+                  </div>
+                  {isActive && (
+                    <span className="bg-primary text-primary-foreground inline-flex size-4 items-center justify-center rounded-full">
+                      <Check className="size-2.5" />
+                    </span>
+                  )}
                 </div>
                 <span className="text-foreground type-caption font-medium">{preset.name}</span>
               </button>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Individual Template Color Tokens (matches Figma 2:4396) */}
-      <div className="border-border flex flex-col gap-3 border-t pt-4">
-        <span className="text-tertiary type-overline">Colors · Template tokens</span>
-        <div className="flex flex-col gap-2">
+      {/* Card 2: Individual Template Color Tokens */}
+      <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-4 shadow-2xs">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-foreground type-body-s-strong">Color tokens</span>
+          {contrastIssues.length === 0 ? (
+            <Badge tone="published" withDot={false} className="gap-1">
+              <ShieldCheck className="size-3" />
+              <span>WCAG AA</span>
+            </Badge>
+          ) : (
+            <Badge tone="draft" withDot={false}>
+              Check contrast
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           {Object.entries(theme.colors).map(([tokenName, colorValue]) => {
             const label = formatColorTokenLabel(tokenName);
             const draftValue = hexDrafts[tokenName] ?? colorValue;
@@ -174,10 +204,10 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
             return (
               <div
                 key={tokenName}
-                className="border-border bg-card flex items-center justify-between gap-2.5 rounded-xl border px-3 py-2"
+                className="border-border/60 bg-surface/60 hover:border-border-strong flex items-center justify-between gap-2.5 rounded-xl border px-3 py-2 transition-colors"
               >
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <label className="border-border relative inline-flex size-7 shrink-0 cursor-pointer overflow-hidden rounded-md border">
+                  <label className="border-border relative inline-flex size-7 shrink-0 cursor-pointer overflow-hidden rounded-full border shadow-2xs">
                     <span
                       aria-hidden="true"
                       style={{ backgroundColor: colorValue }}
@@ -221,26 +251,61 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
                       return next;
                     });
                   }}
-                  className="text-tertiary focus:text-foreground focus:border-ring w-20 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-right font-mono text-xs uppercase outline-none"
+                  className="text-muted-foreground focus:text-foreground focus:border-ring bg-elevated/80 w-21 rounded-full border border-transparent px-2.5 py-1 text-right font-mono text-xs uppercase outline-none"
                 />
               </div>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Curated Licensed Fonts (matches Figma 2:4417) */}
-      <div className="border-border flex flex-col gap-3 border-t pt-4">
-        <span className="text-tertiary type-overline">Fonts</span>
+      {/* Card 3: Curated Licensed Fonts */}
+      <section className="border-border/70 bg-elevated flex flex-col gap-3.5 rounded-2xl border p-4 shadow-2xs">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="bg-accent text-accent-foreground inline-flex size-6 items-center justify-center rounded-full">
+              <Type className="size-3.5" />
+            </span>
+            <span className="text-foreground type-body-s-strong">Typography</span>
+          </div>
+          <span className="text-tertiary type-caption">Open-licensed</span>
+        </div>
+
+        {/* Live specimen preview */}
+        <div className="border-border/60 bg-surface/70 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span
+              style={{ fontFamily: `"${theme.fonts.heading.family}", sans-serif` }}
+              className="text-foreground truncate text-base font-medium tracking-tight"
+            >
+              {theme.fonts.heading.family}
+            </span>
+            <span
+              style={{ fontFamily: `"${theme.fonts.body.family}", sans-serif` }}
+              className="text-muted-foreground type-caption truncate"
+            >
+              Body in {theme.fonts.body.family}
+            </span>
+          </div>
+          <span
+            aria-hidden="true"
+            style={{ fontFamily: `"${theme.fonts.heading.family}", sans-serif` }}
+            className="text-primary shrink-0 text-2xl font-medium tracking-tight"
+          >
+            Aa
+          </span>
+        </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="theme-font-pair">Font pair</Label>
+          <Label htmlFor="theme-font-pair" className="text-muted-foreground type-caption">
+            Curated pairing
+          </Label>
           <select
             id="theme-font-pair"
             aria-label="Font pair"
             value={activeFontPairId}
             onChange={(e) => handleApplyFontPair(e.target.value)}
-            className="border-input bg-card text-foreground type-body-s focus-visible:ring-ring/40 h-10 w-full rounded-lg border px-3 outline-none focus-visible:ring-2"
+            className="border-border bg-surface/60 text-foreground type-body-s focus-visible:ring-ring/40 h-10 w-full rounded-xl border px-3 outline-none focus-visible:ring-2"
           >
             {CURATED_FONT_PAIRS.map((pair) => (
               <option key={pair.id} value={pair.id}>
@@ -251,49 +316,53 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
           </select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="theme-heading-font">Heading</Label>
-          <select
-            id="theme-heading-font"
-            aria-label="Heading font"
-            value={theme.fonts.heading.family}
-            onChange={(e) => handleUpdateFontFamily("heading", e.target.value)}
-            className="border-input bg-card text-foreground type-body-s-strong focus-visible:ring-ring/40 h-10 w-full rounded-lg border px-3 outline-none focus-visible:ring-2"
-          >
-            {availableFontFamilies.map((family) => (
-              <option key={family} value={family}>
-                {family}
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="theme-heading-font" className="text-muted-foreground type-caption">
+              Heading
+            </Label>
+            <select
+              id="theme-heading-font"
+              aria-label="Heading font"
+              value={theme.fonts.heading.family}
+              onChange={(e) => handleUpdateFontFamily("heading", e.target.value)}
+              className="border-border bg-surface/60 text-foreground type-body-s-strong focus-visible:ring-ring/40 h-9.5 w-full rounded-xl border px-2.5 outline-none focus-visible:ring-2"
+            >
+              {availableFontFamilies.map((family) => (
+                <option key={family} value={family}>
+                  {family}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="theme-body-font" className="text-muted-foreground type-caption">
+              Body
+            </Label>
+            <select
+              id="theme-body-font"
+              aria-label="Body font"
+              value={theme.fonts.body.family}
+              onChange={(e) => handleUpdateFontFamily("body", e.target.value)}
+              className="border-border bg-surface/60 text-foreground type-body-s-strong focus-visible:ring-ring/40 h-9.5 w-full rounded-xl border px-2.5 outline-none focus-visible:ring-2"
+            >
+              {availableFontFamilies.map((family) => (
+                <option key={family} value={family}>
+                  {family}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+      </section>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="theme-body-font">Body</Label>
-          <select
-            id="theme-body-font"
-            aria-label="Body font"
-            value={theme.fonts.body.family}
-            onChange={(e) => handleUpdateFontFamily("body", e.target.value)}
-            className="border-input bg-card text-foreground type-body-s-strong focus-visible:ring-ring/40 h-10 w-full rounded-lg border px-3 outline-none focus-visible:ring-2"
-          >
-            {availableFontFamilies.map((family) => (
-              <option key={family} value={family}>
-                {family}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <span className="text-tertiary type-caption">Curated, open-licensed font catalog</span>
-      </div>
-
-      <div className="border-border border-t pt-3">
+      <div className="pt-1">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="w-fit"
+          className="w-full justify-center"
           onClick={() => {
             setHexDrafts({});
             onResetToDefaults();

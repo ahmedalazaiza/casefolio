@@ -151,7 +151,7 @@ export function SecuritySettingsPanel({
   return (
     <div className="flex flex-col gap-6" data-testid="security-settings-panel">
       {/* Login & security card */}
-      <section className="border-border bg-elevated shadow-card flex flex-col gap-2 rounded-xl border p-6 sm:p-8">
+      <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6 sm:p-8">
         <h2 className="text-foreground type-heading-m pb-2">Login &amp; security</h2>
 
         <div className="divide-border flex flex-col divide-y">
@@ -232,10 +232,10 @@ export function SecuritySettingsPanel({
       </section>
 
       {/* Active sessions card */}
-      <section className="border-border bg-elevated shadow-card flex flex-col gap-4 rounded-xl border p-6 sm:p-8">
+      <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Shield className="text-muted-foreground size-4" />
+            <Shield className="text-primary size-4" />
             <h2 className="text-foreground type-heading-m">Active sessions</h2>
           </div>
           {otherSessionsCount > 0 && (
@@ -289,7 +289,7 @@ export function SecuritySettingsPanel({
       </section>
 
       {/* Delete account danger card */}
-      <section className="border-destructive/30 bg-elevated shadow-card flex flex-col gap-4 rounded-xl border p-6 sm:p-8">
+      <section className="border-destructive/30 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-6 sm:p-8">
         <div className="flex flex-col gap-1.5">
           <h2 className="text-foreground type-heading-m">Delete account</h2>
           <p className="text-muted-foreground type-body-s">

@@ -41,7 +41,7 @@ export function UserAccountMenu({ initials, name, email, image }: UserAccountMen
           <AvatarBadge initials={initials} src={image} alt={name ?? initials} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5">
         <DropdownMenuLabel className="flex flex-col gap-0.5">
           <span className="text-foreground type-body-s-strong truncate">
             {name ?? "Casefolio User"}

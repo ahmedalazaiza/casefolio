@@ -14,14 +14,14 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body className="bg-background text-foreground flex min-h-screen items-center justify-center p-6 antialiased">
-        <main className="border-border bg-card shadow-card flex w-full max-w-md flex-col items-center gap-5 rounded-2xl border p-8 text-center">
-          <span className="bg-destructive-soft text-destructive inline-flex size-12 items-center justify-center rounded-full">
+      <body className="bg-background bg-wash-top text-foreground flex min-h-screen items-center justify-center p-6 antialiased">
+        <main className="border-border/80 bg-elevated shadow-card flex w-full max-w-md flex-col items-center gap-5 rounded-3xl border p-8 text-center">
+          <span className="bg-destructive-soft text-destructive inline-flex size-12 items-center justify-center rounded-2xl">
             <AlertTriangle className="size-5" aria-hidden="true" />
           </span>
 
           <div className="flex flex-col gap-2">
-            <h1 className="text-foreground type-heading-m">Something went wrong</h1>
+            <h1 className="text-foreground type-display-s">Something went wrong</h1>
             <p className="text-muted-foreground type-body-s">
               An unexpected error occurred while rendering this page. Your saved project changes
               remain safe.

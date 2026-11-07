@@ -86,9 +86,9 @@ function PlanUsageCard({
   return (
     <div
       data-slot="plan-usage-card"
-      className="border-border bg-surface flex flex-col gap-2.5 rounded-lg border p-4"
+      className="border-border/70 bg-wash-panel flex flex-col gap-2.5 rounded-2xl border p-4 shadow-2xs"
     >
-      <span className="text-muted-foreground type-overline">{planLabel}</span>
+      <span className="text-accent-foreground type-overline">{planLabel}</span>
       <p className="text-foreground type-caption">{renewsLabel}</p>
       <div
         role="progressbar"
@@ -96,14 +96,14 @@ function PlanUsageCard({
         aria-valuenow={projectsUsed}
         aria-valuemin={0}
         aria-valuemax={effectiveMax}
-        className="bg-border h-1.5 w-full overflow-hidden rounded-full"
+        className="bg-background/80 h-1.5 w-full overflow-hidden rounded-full"
       >
         <div
-          className="bg-inverse h-full rounded-full transition-all"
+          className="bg-primary h-full rounded-full transition-all"
           style={{ width: `${ratio}%` }}
         />
       </div>
-      <p className="text-tertiary type-caption">
+      <p className="text-muted-foreground type-caption">
         {projectsLimit !== null
           ? `${projectsUsed} of ${projectsLimit} projects used`
           : `${projectsUsed} project${projectsUsed === 1 ? "" : "s"} · Unlimited`}
@@ -131,7 +131,7 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="bg-surface text-foreground flex min-h-screen flex-col">
+    <div className="bg-wash-top bg-surface text-foreground flex min-h-screen flex-col">
       <a
         href="#main-content"
         className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:px-4 focus:py-2"
@@ -139,7 +139,7 @@ export function AppShell({
         Skip to main content
       </a>
 
-      <header className="border-border bg-background sticky top-0 z-40 border-b">
+      <header className="border-border/70 bg-elevated/88 sticky top-0 z-40 border-b backdrop-blur-xl">
         <div className="flex h-17 items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -147,12 +147,12 @@ export function AppShell({
                 <button
                   type="button"
                   aria-label="Open workspace navigation"
-                  className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-md border transition-colors outline-none focus-visible:ring-2 lg:hidden"
+                  className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 lg:hidden"
                 >
                   <Menu className="size-4" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-4">
+              <SheetContent side="left" className="w-72 rounded-r-3xl p-4">
                 <SheetHeader className="px-2 pt-1 pb-2 text-left">
                   <SheetTitle>Workspace</SheetTitle>
                   <SheetDescription>Navigate your Casefolio workspace.</SheetDescription>
@@ -171,9 +171,9 @@ export function AppShell({
                         aria-current={active ? "page" : undefined}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
-                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-md border px-3 py-2 transition-colors outline-none focus-visible:ring-2",
+                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-full border px-3.5 py-2.5 transition-all outline-none focus-visible:ring-2",
                           active
-                            ? "border-border bg-elevated text-foreground type-body-s-strong"
+                            ? "border-border/80 bg-elevated text-foreground type-body-s-strong shadow-xs"
                             : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s border-transparent",
                         )}
                       >
@@ -205,7 +205,7 @@ export function AppShell({
             <button
               type="button"
               aria-label="Search workspace"
-              className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border shadow-2xs transition-colors outline-none focus-visible:ring-2"
             >
               <Search className="size-4" />
             </button>
@@ -246,7 +246,7 @@ export function AppShell({
       <div className="flex min-w-0 flex-1">
         <aside
           aria-label="Workspace sidebar"
-          className="border-border bg-background hidden w-64 shrink-0 flex-col justify-between border-r p-4 lg:flex"
+          className="border-border/70 bg-elevated/70 hidden w-66 shrink-0 flex-col justify-between border-r p-4 backdrop-blur-md lg:flex"
         >
           <nav aria-label="Workspace navigation" className="flex flex-col gap-1">
             {APP_NAV_ITEMS.map((item) => {
@@ -258,9 +258,9 @@ export function AppShell({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "focus-visible:ring-ring/40 flex items-center gap-3 rounded-md border px-3 py-2 transition-colors outline-none focus-visible:ring-2",
+                    "focus-visible:ring-ring/40 flex items-center gap-3 rounded-full border px-3.5 py-2.5 transition-all outline-none focus-visible:ring-2",
                     active
-                      ? "border-border bg-elevated text-foreground type-body-s-strong"
+                      ? "border-border/80 bg-elevated text-foreground type-body-s-strong shadow-xs"
                       : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s border-transparent",
                   )}
                 >

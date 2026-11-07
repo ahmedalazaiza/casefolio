@@ -19,18 +19,18 @@ export default async function AccountInvoicesPage() {
     <AccountSettingsShell activeTab="invoices">
       <section
         data-testid="invoices-settings-panel"
-        className="border-border bg-elevated shadow-card overflow-hidden rounded-xl border"
+        className="border-border/80 bg-elevated shadow-card overflow-hidden rounded-3xl border"
       >
         {overview.invoices.length === 0 ? (
           <div
             data-testid="invoices-empty-state"
-            className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center"
+            className="flex flex-col items-center justify-center gap-3.5 px-6 py-18 text-center"
           >
-            <div className="bg-sunken text-muted-foreground flex size-11 items-center justify-center rounded-full">
+            <div className="bg-accent text-primary flex size-12 items-center justify-center rounded-2xl">
               <ReceiptText className="size-5" />
             </div>
             <div className="flex flex-col gap-1">
-              <h2 className="text-foreground type-heading-s">No invoices yet</h2>
+              <h2 className="text-foreground type-heading-m">No invoices yet</h2>
               <p className="text-muted-foreground type-body-s max-w-md">
                 Receipts from Paddle appear here automatically whenever a Pro or Team
                 subscription charge completes.
@@ -44,7 +44,7 @@ export default async function AccountInvoicesPage() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left" data-testid="invoices-table">
               <thead>
-                <tr className="border-border border-b">
+                <tr className="border-border/70 bg-surface/50 border-b">
                   <th className="text-tertiary type-overline px-5 py-3.5">DATE</th>
                   <th className="text-tertiary type-overline px-5 py-3.5">PLAN</th>
                   <th className="text-tertiary type-overline px-5 py-3.5">AMOUNT</th>

@@ -245,10 +245,10 @@ export function BillingSettingsPanel({
         <div
           role="alert"
           data-testid="billing-payment-failed-banner"
-          className="border-destructive/30 bg-destructive-soft flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5"
+          className="border-destructive/30 bg-destructive-soft flex flex-wrap items-center justify-between gap-4 rounded-3xl border p-5 sm:p-6"
         >
           <div className="flex items-start gap-3.5">
-            <div className="bg-elevated text-destructive flex size-9 shrink-0 items-center justify-center rounded-lg">
+            <div className="bg-elevated text-destructive flex size-10 shrink-0 items-center justify-center rounded-2xl">
               <AlertTriangle className="size-4" />
             </div>
             <div className="flex flex-col gap-1">
@@ -276,10 +276,10 @@ export function BillingSettingsPanel({
         <div
           role="status"
           data-testid="billing-cancelled-banner"
-          className="border-warning/30 bg-warning-soft flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5"
+          className="border-warning/30 bg-warning-soft flex flex-wrap items-center justify-between gap-4 rounded-3xl border p-5 sm:p-6"
         >
           <div className="flex items-start gap-3.5">
-            <div className="bg-elevated text-warning flex size-9 shrink-0 items-center justify-center rounded-lg">
+            <div className="bg-elevated text-warning flex size-10 shrink-0 items-center justify-center rounded-2xl">
               <AlertTriangle className="size-4" />
             </div>
             <div className="flex flex-col gap-1">
@@ -321,7 +321,7 @@ export function BillingSettingsPanel({
         {/* Current plan card */}
         <section
           data-testid="billing-current-plan-card"
-          className="border-border bg-elevated shadow-card flex flex-col justify-between gap-5 rounded-xl border p-6 sm:p-7"
+          className="border-border/80 bg-wash-panel shadow-card flex flex-col justify-between gap-5 rounded-3xl border p-6 sm:p-7"
         >
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
@@ -437,7 +437,7 @@ export function BillingSettingsPanel({
         {/* Payment method card */}
         <section
           data-testid="billing-payment-method-card"
-          className="border-border bg-elevated shadow-card flex flex-col justify-between gap-5 rounded-xl border p-6 sm:p-7"
+          className="border-border/80 bg-elevated shadow-card flex flex-col justify-between gap-5 rounded-3xl border p-6 sm:p-7"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground type-body-s-strong">
@@ -498,7 +498,7 @@ export function BillingSettingsPanel({
       {/* Billing details card (Figma 2:11230) */}
       <section
         data-testid="billing-details-card"
-        className="border-border bg-elevated shadow-card flex flex-col gap-5 rounded-xl border p-6 sm:p-8"
+        className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
       >
         <div className="flex flex-col gap-1">
           <h3 className="text-foreground type-heading-m">Billing details</h3>
@@ -510,13 +510,13 @@ export function BillingSettingsPanel({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <span className="text-foreground type-body-s-strong">Account name</span>
-            <div className="border-border bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-md border px-3 py-2">
+            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-2xl border px-3.5 py-2">
               {accountName}
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="text-foreground type-body-s-strong">Billing email</span>
-            <div className="border-border bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-md border px-3 py-2 break-all">
+            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-2xl border px-3.5 py-2 break-all">
               {accountEmail}
             </div>
           </div>
@@ -526,7 +526,7 @@ export function BillingSettingsPanel({
           <span className="text-foreground type-body-s-strong">
             Tax &amp; VAT compliance
           </span>
-          <div className="border-border bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-md border px-3 py-2">
+          <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-2xl border px-3.5 py-2">
             Paddle.com Market Limited acts as Merchant of Record and calculates regional
             VAT/sales tax at checkout.
           </div>
@@ -548,7 +548,7 @@ export function BillingSettingsPanel({
             <div className="flex flex-col gap-5">
               {/* Billing period segment */}
               <div
-                className="border-border bg-sunken inline-flex self-start rounded-lg border p-1"
+                className="border-border/70 bg-sunken/80 inline-flex self-start rounded-full border p-1"
                 role="group"
                 aria-label="Billing interval"
               >
@@ -556,9 +556,9 @@ export function BillingSettingsPanel({
                   type="button"
                   data-testid="picker-interval-monthly"
                   onClick={() => setPickerInterval("monthly")}
-                  className={`type-caption rounded-md px-3.5 py-1.5 transition-colors ${
+                  className={`type-caption rounded-full px-4 py-1.5 transition-all ${
                     pickerInterval === "monthly"
-                      ? "bg-background text-foreground shadow-xs"
+                      ? "bg-elevated text-foreground shadow-card"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -568,9 +568,9 @@ export function BillingSettingsPanel({
                   type="button"
                   data-testid="picker-interval-yearly"
                   onClick={() => setPickerInterval("yearly")}
-                  className={`type-caption rounded-md px-3.5 py-1.5 transition-colors ${
+                  className={`type-caption rounded-full px-4 py-1.5 transition-all ${
                     pickerInterval === "yearly"
-                      ? "bg-background text-foreground shadow-xs"
+                      ? "bg-elevated text-foreground shadow-card"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -608,10 +608,10 @@ export function BillingSettingsPanel({
                           setPickerTier(tier);
                         }
                       }}
-                      className={`focus-visible:ring-ring/40 flex cursor-pointer flex-col justify-between gap-4 rounded-xl border p-4 text-left transition-colors outline-none focus-visible:ring-2 ${
+                      className={`focus-visible:ring-ring/40 flex cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-5 text-left transition-all outline-none focus-visible:ring-2 ${
                         selected
-                          ? "border-primary bg-accent"
-                          : "border-border bg-surface hover:border-border-strong"
+                          ? "border-primary bg-accent/50 ring-primary/15 ring-2"
+                          : "border-border/80 bg-surface/70 hover:border-border-strong"
                       }`}
                     >
                       <div className="flex flex-col gap-3">

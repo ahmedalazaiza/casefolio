@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { formatUsdWhole } from "@/lib/admin/overview-types";
 import type { AdminSubscriptionsOverview } from "@/lib/admin/users-types";
 import type { PlanTier } from "@casefolio/db";
 import { BILLING_PLAN_CATALOG } from "@/lib/billing/plans";
+import { cn } from "@/lib/utils";
 
 function statusTone(status: string): "published" | "draft" | "danger" | "neutral" {
   const s = status.trim().toLowerCase();
@@ -28,9 +30,10 @@ export function AdminSubscriptionsPanel({
   return (
     <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-8">
       {/* Page header (Figma 32:9505) */}
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-foreground type-heading-l">Subscriptions &amp; plans</h1>
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Eyebrow className="w-fit">Revenue &amp; Billing</Eyebrow>
+          <h1 className="text-foreground type-display-m">Subscriptions &amp; plans</h1>
           <p className="text-muted-foreground type-body-s">
             Plans, prices and active subscriptions synced via Paddle Billing.
           </p>
@@ -43,31 +46,31 @@ export function AdminSubscriptionsPanel({
 
       {/* Stats (Figma 34:8565) */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card variant="flat" className="min-w-0 justify-between gap-2 p-5">
+        <Card className="min-w-0 justify-between gap-2 p-5">
           <span className="text-muted-foreground type-caption">MRR</span>
-          <span className="text-foreground type-heading-l">{formatUsdWhole(overview.mrrUsd)}</span>
+          <span className="text-foreground type-display-s">{formatUsdWhole(overview.mrrUsd)}</span>
           <span className="text-success type-caption">Active monthly recurring revenue</span>
         </Card>
 
-        <Card variant="flat" className="min-w-0 justify-between gap-2 p-5">
+        <Card className="min-w-0 justify-between gap-2 p-5">
           <span className="text-muted-foreground type-caption">Paying users</span>
-          <span className="text-foreground type-heading-l">
+          <span className="text-foreground type-display-s">
             {overview.payingUsersCount.toLocaleString("en-US")}
           </span>
           <span className="text-muted-foreground type-caption">Pro &amp; Team subscribers</span>
         </Card>
 
-        <Card variant="flat" className="min-w-0 justify-between gap-2 p-5">
+        <Card className="min-w-0 justify-between gap-2 p-5">
           <span className="text-muted-foreground type-caption">Churn (30d)</span>
-          <span className="text-foreground type-heading-l">
+          <span className="text-foreground type-display-s">
             {overview.churn30dPercent.toFixed(1)}%
           </span>
           <span className="text-muted-foreground type-caption">Canceled in last 30 days</span>
         </Card>
 
-        <Card variant="flat" className="min-w-0 justify-between gap-2 p-5">
+        <Card className="min-w-0 justify-between gap-2 p-5">
           <span className="text-muted-foreground type-caption">Trials active</span>
-          <span className="text-foreground type-heading-l">
+          <span className="text-foreground type-display-s">
             {overview.trialsActiveCount.toLocaleString("en-US")}
           </span>
           <span className="text-muted-foreground type-caption">Active trial periods</span>
@@ -81,8 +84,10 @@ export function AdminSubscriptionsPanel({
           return (
             <Card
               key={tier}
-              variant={plan.highlighted ? "default" : "flat"}
-              className="min-w-0 justify-between gap-5 p-6"
+              className={cn(
+                "min-w-0 justify-between gap-5 p-6",
+                plan.highlighted && "bg-wash-panel border-primary/25 shadow-float",
+              )}
             >
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-2">
@@ -108,7 +113,7 @@ export function AdminSubscriptionsPanel({
                   ))}
                 </ul>
               </div>
-              <div className="border-border border-t pt-4">
+              <div className="border-border/70 border-t pt-4">
                 <span className="text-tertiary type-caption">
                   Default seats: {plan.defaultSeats}
                 </span>
@@ -119,12 +124,12 @@ export function AdminSubscriptionsPanel({
       </div>
 
       {/* Recent subscriptions table (Figma 34:8676) */}
-      <Card variant="flat" className="min-w-0 gap-4 p-6">
+      <Card className="min-w-0 gap-4 p-6">
         <h2 className="text-foreground type-heading-s">Recent subscriptions</h2>
         <div className="w-full max-w-full overflow-x-auto">
           <table className="w-full min-w-150 border-collapse text-left">
             <thead>
-              <tr className="border-border border-b">
+              <tr className="border-border/70 border-b">
                 <th className="text-tertiary type-overline py-2.5 pr-4">Customer</th>
                 <th className="text-tertiary type-overline px-4 py-2.5">Plan</th>
                 <th className="text-tertiary type-overline px-4 py-2.5">Amount</th>

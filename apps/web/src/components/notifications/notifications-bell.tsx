@@ -130,7 +130,7 @@ export function NotificationsBell({
         <button
           type="button"
           data-testid="notifications-bell-button"
-          className="border-border bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 relative inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
+          className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 shadow-card relative inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
         >
           <span className="sr-only">
             {unreadCount > 0 ? "Notifications, unread: " : "Notifications"}

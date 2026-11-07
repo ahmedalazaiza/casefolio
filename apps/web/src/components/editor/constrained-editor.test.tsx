@@ -245,4 +245,83 @@ describe("ConstrainedEditor (C-402)", () => {
       expect(within(canvasFrame).getAllByRole("heading", { name: "Overview" }).length).toBe(1);
     });
   });
+
+  it("allows closing and reopening both left and right panels via controls and keyboard shortcuts", () => {
+    const payload = buildEditorPayload();
+    const { container } = render(<ConstrainedEditor initialPayload={payload} />);
+
+    const leftPanel = container.querySelector('[data-slot="editor-left-panel"]');
+    const rightPanel = container.querySelector('[data-slot="editor-right-panel"]');
+    expect(leftPanel).toHaveAttribute("data-open", "true");
+    expect(rightPanel).toHaveAttribute("data-open", "true");
+
+    // Close left panel via topbar toggle, reopen via floating canvas pill
+    fireEvent.click(screen.getByTestId("toggle-left-panel"));
+    expect(leftPanel).toHaveAttribute("data-open", "false");
+    expect(screen.getByTestId("reopen-left-panel")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("reopen-left-panel"));
+    expect(leftPanel).toHaveAttribute("data-open", "true");
+
+    // Close right panel via panel header collapse button, reopen via topbar toggle
+    fireEvent.click(screen.getByTestId("collapse-right-panel"));
+    expect(rightPanel).toHaveAttribute("data-open", "false");
+    expect(screen.getByTestId("reopen-right-panel")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("toggle-right-panel"));
+    expect(rightPanel).toHaveAttribute("data-open", "true");
+
+    // Toggle panels with [ and ] keyboard shortcuts when not focused in an input
+    fireEvent.keyDown(window, { key: "[" });
+    expect(leftPanel).toHaveAttribute("data-open", "false");
+    fireEvent.keyDown(window, { key: "]" });
+    expect(rightPanel).toHaveAttribute("data-open", "false");
+  });
+
+  it("zooms canvas in/out via keyboard +/-, wheel/trackpad pinch, and HUD buttons without hijacking text inputs", async () => {
+    const payload = buildEditorPayload();
+    const { container } = render(<ConstrainedEditor initialPayload={payload} />);
+
+    const zoomStage = screen.getByTestId("editor-canvas-zoom-stage");
+    expect(zoomStage).toHaveAttribute("data-zoom", "100");
+
+    // Keyboard + and - buttons when not typing in an input
+    fireEvent.keyDown(window, { key: "+" });
+    expect(zoomStage).toHaveAttribute("data-zoom", "110");
+
+    fireEvent.keyDown(window, { key: "=" });
+    expect(zoomStage).toHaveAttribute("data-zoom", "120");
+
+    fireEvent.keyDown(window, { key: "-" });
+    expect(zoomStage).toHaveAttribute("data-zoom", "110");
+
+    // Typing + or - inside a text input must NOT trigger canvas zoom
+    const titleInput = await screen.findByDisplayValue("Orbit — Banking that moves with you");
+    titleInput.focus();
+    fireEvent.keyDown(titleInput, { key: "+" });
+    fireEvent.keyDown(titleInput, { key: "-" });
+    expect(zoomStage).toHaveAttribute("data-zoom", "110");
+
+    // Ctrl/Cmd + - still zooms even while focused
+    fireEvent.keyDown(titleInput, { key: "-", ctrlKey: true });
+    expect(zoomStage).toHaveAttribute("data-zoom", "100");
+
+    // Trackpad pinch / Ctrl+wheel on canvas zooms smoothly
+    const canvasMain = container.querySelector('[data-slot="editor-canvas"]')!;
+    fireEvent.wheel(canvasMain, { deltaY: -100, ctrlKey: true });
+    expect(zoomStage).toHaveAttribute("data-zoom", "110");
+
+    fireEvent.wheel(canvasMain, { deltaY: -5, ctrlKey: true });
+    expect(zoomStage).toHaveAttribute("data-zoom", "115");
+
+    // HUD buttons: Zoom in, Zoom out, Reset zoom
+    fireEvent.click(screen.getByTestId("zoom-in-button"));
+    expect(zoomStage).toHaveAttribute("data-zoom", "130");
+
+    fireEvent.click(screen.getByTestId("zoom-out-button"));
+    expect(zoomStage).toHaveAttribute("data-zoom", "120");
+
+    fireEvent.click(screen.getByTestId("zoom-reset-button"));
+    expect(zoomStage).toHaveAttribute("data-zoom", "100");
+  });
 });

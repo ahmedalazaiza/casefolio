@@ -153,7 +153,7 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
               onChange={(event) =>
                 setDesignFocus(event.target.value as "mobile" | "web" | "both")
               }
-              className="border-input bg-elevated text-foreground type-body-m h-11 rounded-md border px-3"
+              className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 type-body-m h-11 rounded-2xl border px-3.5 outline-none focus-visible:ring-2"
             >
               <option value="mobile">Mobile app</option>
               <option value="web">Website</option>
@@ -163,7 +163,7 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
 
           <div className="flex flex-col gap-1.5">
             <Label>Account email</Label>
-            <div className="border-border bg-surface text-muted-foreground type-body-s flex h-11 items-center justify-between rounded-md border px-3">
+            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex h-11 items-center justify-between rounded-2xl border px-3.5">
               <span className="truncate">{initialProfile.email}</span>
               <span className="text-success type-caption inline-flex shrink-0 items-center gap-1">
                 {initialProfile.emailVerified ? (

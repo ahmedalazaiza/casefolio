@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import {
   slugifyCategory,
@@ -195,9 +196,10 @@ export function AdminCategoriesPanel({
   return (
     <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6">
       {/* Page header (Figma 32:8761) */}
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-foreground type-heading-l">Categories &amp; types</h1>
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Eyebrow className="w-fit">Taxonomy</Eyebrow>
+          <h1 className="text-foreground type-display-m">Categories &amp; types</h1>
           <p className="text-muted-foreground type-body-s">
             Template types and categories shown in the picker.
           </p>
@@ -214,7 +216,7 @@ export function AdminCategoriesPanel({
         <div
           role="tablist"
           aria-label="Categories and types view"
-          className="border-border bg-elevated inline-flex flex-wrap gap-1 rounded-full border p-1"
+          className="border-border/70 bg-sunken/80 inline-flex flex-wrap gap-1 rounded-full border p-1"
         >
           {(
             [
@@ -232,9 +234,9 @@ export function AdminCategoriesPanel({
                 aria-selected={active}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-colors outline-none focus-visible:ring-2",
+                  "focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2",
                   active
-                    ? "bg-primary text-primary-foreground type-caption"
+                    ? "bg-elevated text-foreground shadow-card type-caption font-medium"
                     : "text-muted-foreground hover:text-foreground type-caption",
                 )}
               >
@@ -248,7 +250,7 @@ export function AdminCategoriesPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-4 py-3"
+          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-2xl border px-4 py-3"
         >
           {errorMessage}
         </div>
@@ -257,7 +259,7 @@ export function AdminCategoriesPanel({
       {successMessage && (
         <div
           role="status"
-          className="border-success/30 bg-success-soft text-foreground type-body-s rounded-lg border px-4 py-3"
+          className="border-success/30 bg-success-soft text-foreground type-body-s rounded-2xl border px-4 py-3"
         >
           {successMessage}
         </div>
@@ -265,19 +267,19 @@ export function AdminCategoriesPanel({
 
       {/* Types summary table (Figma 33:8314) */}
       {(activeTab === "all" || activeTab === "types") && (
-        <Card variant="flat" className="min-w-0 overflow-hidden">
+        <Card className="min-w-0 gap-0 overflow-hidden p-0">
           <div className="w-full max-w-full overflow-x-auto">
             <table className="w-full min-w-140 border-collapse text-left">
               <thead>
-                <tr className="border-border bg-surface border-b">
-                  <th className="text-tertiary type-overline px-5 py-3">Type</th>
-                  <th className="text-tertiary type-overline px-4 py-3">Templates</th>
-                  <th className="text-tertiary type-overline px-4 py-3">Projects</th>
-                  <th className="text-tertiary type-overline px-4 py-3">Status</th>
-                  <th className="text-tertiary type-overline px-5 py-3 text-right">Order</th>
+                <tr className="border-border/70 bg-surface/60 border-b">
+                  <th className="text-tertiary type-overline px-5 py-3.5">Type</th>
+                  <th className="text-tertiary type-overline px-4 py-3.5">Templates</th>
+                  <th className="text-tertiary type-overline px-4 py-3.5">Projects</th>
+                  <th className="text-tertiary type-overline px-4 py-3.5">Status</th>
+                  <th className="text-tertiary type-overline px-5 py-3.5 text-right">Order</th>
                 </tr>
               </thead>
-              <tbody className="divide-border divide-y">
+              <tbody className="divide-border/70 divide-y">
                 {overview.types.map((t) => (
                   <tr key={t.type} className="hover:bg-surface/60 transition-colors">
                     <td className="px-5 py-4">
@@ -305,7 +307,7 @@ export function AdminCategoriesPanel({
       {/* Categories CRUD + Ordering area (Figma 33:8430) */}
       {(activeTab === "all" || activeTab === "categories") && (
         <div className="grid gap-6 lg:grid-cols-12">
-          <Card variant="flat" className="min-w-0 gap-4 p-6 lg:col-span-7">
+          <Card className="min-w-0 gap-4 p-6 lg:col-span-7">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-foreground type-heading-s">
                 Categories ({overview.categories.length})
@@ -321,7 +323,7 @@ export function AdminCategoriesPanel({
                 No categories created yet. Add your first category to populate library filters.
               </p>
             ) : (
-              <ul className="divide-border flex flex-col divide-y" data-testid="admin-categories-list">
+              <ul className="divide-border/70 flex flex-col divide-y" data-testid="admin-categories-list">
                 {overview.categories.map((cat, idx) => {
                   const isSelected = mode === "edit" && selectedId === cat.id;
                   return (
@@ -329,7 +331,7 @@ export function AdminCategoriesPanel({
                       key={cat.id}
                       className={cn(
                         "flex flex-wrap items-center justify-between gap-3 py-3 transition-colors",
-                        isSelected && "bg-surface/80 -mx-2 rounded-md px-2",
+                        isSelected && "bg-accent/25 -mx-3 rounded-2xl px-3",
                       )}
                     >
                       <div className="flex min-w-0 items-center gap-3">
@@ -385,7 +387,7 @@ export function AdminCategoriesPanel({
             )}
           </Card>
 
-          <Card variant="flat" className="min-w-0 gap-4 p-6 lg:col-span-5">
+          <Card className="min-w-0 gap-4 p-6 lg:col-span-5">
             <h2 className="text-foreground type-heading-s">
               {mode === "create"
                 ? "New category"

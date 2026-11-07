@@ -194,10 +194,10 @@ export function ExportCaseStudyDialog({
                     setErrorMessage(null);
                   }}
                   className={cn(
-                    "flex flex-col gap-1.5 rounded-xl border p-4 text-left transition-colors",
+                    "flex flex-col gap-1.5 rounded-2xl border p-4 text-left transition-all",
                     isSelected
-                      ? "border-primary bg-accent/40"
-                      : "border-border bg-background hover:border-border-strong",
+                      ? "border-primary/50 bg-accent/30 shadow-xs"
+                      : "border-border/80 bg-surface/50 hover:border-border-strong",
                   )}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">

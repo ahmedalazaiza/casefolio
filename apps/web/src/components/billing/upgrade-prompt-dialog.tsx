@@ -53,7 +53,7 @@ export function UpgradePromptDialog({
             <DialogDescription>{featureDescription}</DialogDescription>
           </DialogHeader>
 
-          <div className="border-border bg-surface flex flex-col gap-3 rounded-xl border p-4">
+          <div className="border-border/70 bg-wash-panel flex flex-col gap-3 rounded-2xl border p-4">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-foreground type-body-s-strong">
                 Casefolio {planDef.name}

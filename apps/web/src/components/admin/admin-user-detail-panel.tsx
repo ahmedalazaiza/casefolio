@@ -7,7 +7,9 @@ import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { formatRelativeActivity, type AdminUserDetail } from "@/lib/admin/users-types";
+import { cn } from "@/lib/utils";
 
 export function AdminUserDetailPanel({
   detail: initialDetail,
@@ -111,10 +113,11 @@ export function AdminUserDetailPanel({
       </div>
 
       {/* Page header (Figma 32:9257) */}
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-col gap-1">
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Eyebrow className="w-fit">User Account</Eyebrow>
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-foreground type-heading-l">{detail.name}</h1>
+            <h1 className="text-foreground type-display-m">{detail.name}</h1>
             <Badge tone={detail.suspended ? "danger" : "published"}>
               {detail.suspended ? "Suspended" : "Active"}
             </Badge>
@@ -139,7 +142,7 @@ export function AdminUserDetailPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-4 py-3"
+          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-2xl border px-4 py-3"
         >
           {errorMessage}
         </div>
@@ -148,7 +151,7 @@ export function AdminUserDetailPanel({
       {feedback && (
         <div
           role="status"
-          className="border-success/30 bg-success-soft text-foreground type-body-s rounded-lg border px-4 py-3"
+          className="border-success/30 bg-success-soft text-foreground type-body-s rounded-2xl border px-4 py-3"
         >
           {feedback}
         </div>
@@ -158,25 +161,25 @@ export function AdminUserDetailPanel({
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-8">
           <div className="grid gap-4 sm:grid-cols-3">
-            <Card variant="flat" className="min-w-0 justify-between gap-2 p-5">
+            <Card className="min-w-0 justify-between gap-2 p-5">
               <span className="text-muted-foreground type-caption">Case studies</span>
-              <span className="text-foreground type-heading-l">{detail.totalProjects}</span>
+              <span className="text-foreground type-display-s">{detail.totalProjects}</span>
               <span className="text-muted-foreground type-caption">
                 {detail.publishedProjects} published
               </span>
             </Card>
 
-            <Card variant="flat" className="min-w-0 justify-between gap-2 p-5">
+            <Card className="min-w-0 justify-between gap-2 p-5">
               <span className="text-muted-foreground type-caption">Views (30d)</span>
-              <span className="text-foreground type-heading-l">
+              <span className="text-foreground type-display-s">
                 {detail.views30d.toLocaleString("en-US")}
               </span>
               <span className="text-success type-caption">Public link traffic</span>
             </Card>
 
-            <Card variant="flat" className="min-w-0 justify-between gap-2 p-5">
+            <Card className="min-w-0 justify-between gap-2 p-5">
               <span className="text-muted-foreground type-caption">PDF / PNG exports</span>
-              <span className="text-foreground type-heading-l">{detail.completedExports}</span>
+              <span className="text-foreground type-display-s">{detail.completedExports}</span>
               <span className="text-muted-foreground type-caption">
                 {detail.lastExportAtIso
                   ? `Last ${formatRelativeActivity(detail.lastExportAtIso)}`
@@ -185,12 +188,12 @@ export function AdminUserDetailPanel({
             </Card>
           </div>
 
-          <Card variant="flat" className="min-w-0 gap-4 p-6">
+          <Card className="min-w-0 gap-4 p-6">
             <h2 className="text-foreground type-heading-s">User projects</h2>
             <div className="w-full max-w-full overflow-x-auto">
               <table className="w-full min-w-120 border-collapse text-left">
                 <thead>
-                  <tr className="border-border border-b">
+                  <tr className="border-border/70 border-b">
                     <th className="text-tertiary type-overline py-2.5 pr-4">Project</th>
                     <th className="text-tertiary type-overline px-4 py-2.5">Template</th>
                     <th className="text-tertiary type-overline px-4 py-2.5">Status</th>
@@ -248,7 +251,7 @@ export function AdminUserDetailPanel({
 
         {/* Right column: Profile + Subscription (Figma 34:8519) */}
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-4">
-          <Card variant="flat" className="min-w-0 gap-4 p-6">
+          <Card className="min-w-0 gap-4 p-6">
             <div className="flex flex-col gap-0.5">
               <h2 className="text-foreground type-heading-s">{detail.name}</h2>
               <span className="text-muted-foreground type-caption">
@@ -256,7 +259,7 @@ export function AdminUserDetailPanel({
               </span>
             </div>
 
-            <dl className="divide-border flex flex-col divide-y">
+            <dl className="divide-border/70 flex flex-col divide-y">
               <div className="flex items-center justify-between py-2.5">
                 <dt className="text-muted-foreground type-body-s">Status</dt>
                 <dd>
@@ -280,7 +283,12 @@ export function AdminUserDetailPanel({
             </dl>
           </Card>
 
-          <Card variant="flat" className="min-w-0 gap-4 p-6">
+          <Card
+            className={cn(
+              "min-w-0 gap-4 p-6",
+              detail.subscription.plan !== "free" && "bg-wash-panel border-primary/25",
+            )}
+          >
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-col gap-0.5">
                 <h2 className="text-foreground type-heading-s">Subscription</h2>

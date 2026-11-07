@@ -7,6 +7,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   filterModerationItems,
   type AdminModerationOverview,
@@ -132,9 +133,10 @@ export function AdminModerationPanel({
   return (
     <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6">
       {/* Page header (Figma 32:9753 / 32:10497) */}
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-foreground type-heading-l">Moderation</h1>
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Eyebrow className="w-fit">Trust &amp; Safety</Eyebrow>
+          <h1 className="text-foreground type-display-m">Moderation</h1>
           <p className="text-muted-foreground type-body-s">
             Published case studies flagged or awaiting review.
           </p>
@@ -150,7 +152,7 @@ export function AdminModerationPanel({
         <div
           role="tablist"
           aria-label="Moderation status filter"
-          className="bg-sunken inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full p-1 whitespace-nowrap"
+          className="border-border/70 bg-sunken/80 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border p-1 whitespace-nowrap"
         >
           {segments.map((seg) => {
             const active = filter === seg.key;
@@ -162,9 +164,9 @@ export function AdminModerationPanel({
                 aria-selected={active}
                 onClick={() => handleSelectFilter(seg.key)}
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 transition-colors outline-none type-caption",
+                  "rounded-full px-3.5 py-1.5 transition-all outline-none type-caption",
                   active
-                    ? "bg-background text-foreground shadow-xs font-medium"
+                    ? "bg-elevated text-foreground shadow-card font-medium"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -190,7 +192,7 @@ export function AdminModerationPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="bg-destructive-soft text-destructive rounded-xl px-4 py-3 type-body-s"
+          className="border-destructive/30 bg-destructive-soft text-destructive rounded-2xl border px-4 py-3 type-body-s"
         >
           {errorMessage}
         </div>
@@ -199,7 +201,7 @@ export function AdminModerationPanel({
       {feedback && (
         <div
           role="status"
-          className="bg-success-soft text-success rounded-xl px-4 py-3 type-body-s"
+          className="border-success/30 bg-success-soft text-success rounded-2xl border px-4 py-3 type-body-s"
         >
           {feedback}
         </div>
@@ -208,11 +210,10 @@ export function AdminModerationPanel({
       {/* Empty state (Figma 32:10481 — "Nothing to review") */}
       {filtered.length === 0 ? (
         <Card
-          variant="flat"
           data-testid="moderation-empty-state"
           className="items-center justify-center gap-3 px-6 py-16 text-center"
         >
-          <span className="bg-success-soft text-success inline-flex size-11 items-center justify-center rounded-2xl">
+          <span className="bg-success-soft text-success inline-flex size-12 items-center justify-center rounded-2xl">
             <CheckCircle2 className="size-5" />
           </span>
           <h2 className="text-foreground type-heading-m">Nothing to review</h2>
@@ -229,11 +230,11 @@ export function AdminModerationPanel({
       ) : (
         <>
           {/* Queue table (Figma 34:8771) */}
-          <Card variant="flat" className="min-w-0 gap-0 overflow-hidden p-0">
+          <Card className="min-w-0 gap-0 overflow-hidden p-0">
             <div className="w-full max-w-full overflow-x-auto">
               <table className="w-full min-w-[760px] border-collapse text-left">
                 <thead>
-                  <tr className="border-border bg-surface text-muted-foreground border-b type-caption">
+                  <tr className="border-border/70 bg-surface/60 text-muted-foreground border-b type-caption">
                     <th className="px-6 py-3 font-medium">CASE STUDY</th>
                     <th className="px-4 py-3 font-medium">AUTHOR</th>
                     <th className="px-4 py-3 font-medium">REASON</th>
@@ -331,7 +332,6 @@ export function AdminModerationPanel({
           {/* Review panel (Figma 34:8881) */}
           {activeCase && (
             <Card
-              variant="flat"
               data-testid="moderation-review-panel"
               className="min-w-0 gap-4 p-6"
             >

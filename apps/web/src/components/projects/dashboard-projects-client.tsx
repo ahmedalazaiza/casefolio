@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -301,10 +302,10 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
   // Empty state matching Figma 2:2172 1:1
   if (projects.length === 0) {
     return (
-      <div className="mx-auto flex max-w-6xl flex-col gap-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-9">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-primary type-overline">Case Study Builder</span>
+          <div className="flex flex-col gap-2.5">
+            <Eyebrow className="w-fit">Case Study Builder</Eyebrow>
             <h1 className="type-display-m sm:type-display-l text-foreground">Your case studies</h1>
             <p className="text-muted-foreground type-body-m">
               Turn finished projects into polished, publishable stories.
@@ -322,14 +323,14 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
         <section
           data-testid="dashboard-empty-state"
           aria-labelledby="empty-dashboard-heading"
-          className="border-border-strong bg-card flex flex-col items-center justify-between gap-12 rounded-2xl border border-dashed px-6 py-14 text-center sm:px-12 sm:py-16"
+          className="border-border/80 bg-elevated shadow-card flex flex-col items-center justify-between gap-12 rounded-3xl border px-6 py-16 text-center sm:px-14 sm:py-20"
         >
           {/* Layered Aa card illustration matching Figma 2:2258 */}
           <div className="flex flex-col items-center gap-6">
             <div aria-hidden="true" className="relative flex h-44 w-64 items-center justify-center">
-              <div className="bg-accent/80 absolute h-34 w-48 -rotate-4 rounded-xl" />
-              <div className="bg-sunken absolute h-34 w-48 translate-x-2 translate-y-1 rotate-3 rounded-xl" />
-              <div className="border-border bg-elevated shadow-card relative flex h-34 w-48 flex-col justify-between rounded-xl border p-5 text-left">
+              <div className="bg-accent/80 absolute h-34 w-48 -rotate-4 rounded-2xl" />
+              <div className="bg-sunken absolute h-34 w-48 translate-x-2 translate-y-1 rotate-3 rounded-2xl" />
+              <div className="border-border/80 bg-elevated shadow-float relative flex h-34 w-48 flex-col justify-between rounded-2xl border p-5 text-left">
                 <span className="text-accent-foreground type-display-m leading-none">Aa</span>
                 <div className="flex flex-col gap-2">
                   <span className="bg-sunken block h-2 w-28 rounded-full" />
@@ -338,7 +339,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
               </div>
             </div>
 
-            <div className="flex max-w-lg flex-col gap-2">
+            <div className="flex max-w-lg flex-col gap-2.5">
               <h2 id="empty-dashboard-heading" className="text-foreground type-heading-l">
                 Your first case study starts here
               </h2>
@@ -362,10 +363,13 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
           </div>
 
           {/* 3-step hint strip matching Figma 2:2280 */}
-          <div className="grid w-full max-w-3xl grid-cols-1 gap-6 pt-2 text-left sm:grid-cols-3">
+          <div className="grid w-full max-w-4xl grid-cols-1 gap-4 pt-2 text-left sm:grid-cols-3">
             {EMPTY_STATE_HINTS.map((hint) => (
-              <div key={hint.step} className="flex flex-col gap-1">
-                <span className="text-accent-foreground type-overline">{hint.step}</span>
+              <div
+                key={hint.step}
+                className="border-border/70 bg-surface/70 flex flex-col gap-1.5 rounded-2xl border p-5"
+              >
+                <span className="text-primary type-overline font-mono">{hint.step}</span>
                 <h3 className="text-foreground type-body-m-strong">{hint.title}</h3>
                 <p className="text-muted-foreground type-body-s">{hint.description}</p>
               </div>
@@ -381,11 +385,11 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
     searchQuery.trim().length > 0 || statusFilter !== "all" || typeFilter !== "all";
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-7">
+    <div className="mx-auto flex max-w-6xl flex-col gap-8">
       {/* Header + status segments + New project CTA (Figma 2:2076) */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-primary type-overline">Case Study Builder</span>
+        <div className="flex flex-col gap-2.5">
+          <Eyebrow className="w-fit">Case Study Builder</Eyebrow>
           <h1 className="type-display-m sm:type-display-l text-foreground">Your case studies</h1>
           <p className="text-muted-foreground type-body-m">
             Turn finished projects into polished, publishable stories.
@@ -396,7 +400,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
           <div
             role="group"
             aria-label="Filter projects by status"
-            className="bg-sunken inline-flex items-center gap-1 rounded-full p-1"
+            className="border-border/70 bg-sunken/80 inline-flex items-center gap-1 rounded-full border p-1"
           >
             {(
               [
@@ -413,9 +417,9 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                   aria-pressed={active}
                   onClick={() => setStatusFilter(tab.id)}
                   className={cn(
-                    "type-body-s-strong focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2",
+                    "type-body-s-strong focus-visible:ring-ring/40 rounded-full px-4 py-1.5 transition-all outline-none focus-visible:ring-2",
                     active
-                      ? "bg-elevated text-foreground shadow-xs"
+                      ? "bg-elevated text-foreground shadow-card"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -435,11 +439,11 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
       </header>
 
       {/* Search, type filter, sort & quick-create bar (Figma 2:3534) */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="border-border/70 bg-elevated/85 shadow-card flex flex-col gap-3 rounded-3xl border p-3 backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search
             aria-hidden="true"
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
           />
           <input
             type="search"
@@ -447,7 +451,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search projects…"
-            className="border-input bg-card text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/40 type-body-s h-10 w-full rounded-full border pr-4 pl-9 outline-none focus-visible:ring-2"
+            className="border-border/80 bg-surface/80 text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/40 type-body-s h-10 w-full rounded-full border pr-4 pl-10 transition-colors outline-none focus-visible:bg-elevated focus-visible:ring-2"
           />
         </div>
 
@@ -459,7 +463,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
             id="dashboard-type-filter"
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
-            className="border-border bg-card text-foreground focus-visible:ring-ring/40 type-body-s h-10 rounded-full border px-3.5 outline-none focus-visible:ring-2"
+            className="border-border/80 bg-surface/80 text-foreground focus-visible:ring-ring/40 type-body-s h-10 rounded-full border px-4 outline-none focus-visible:ring-2"
           >
             <option value="all">Type: Any</option>
             <option value="mobile">Type: Mobile app</option>
@@ -474,25 +478,25 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
             id="dashboard-sort-select"
             value={sortMode}
             onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className="border-border bg-card text-foreground focus-visible:ring-ring/40 type-body-s h-10 rounded-full border px-3.5 outline-none focus-visible:ring-2"
+            className="border-border/80 bg-surface/80 text-foreground focus-visible:ring-ring/40 type-body-s h-10 rounded-full border px-4 outline-none focus-visible:ring-2"
           >
             <option value="updated">Sort: Last edited</option>
             <option value="created">Sort: Newest</option>
             <option value="name">Sort: Name (A–Z)</option>
           </select>
 
-          <div className="border-border hidden items-center gap-1.5 border-l pl-2.5 xl:flex">
+          <div className="border-border/70 hidden items-center gap-1.5 border-l pl-3 xl:flex">
             <span className="text-muted-foreground type-caption">Quick create:</span>
             <Link
               href="/new?type=mobile"
-              className="border-border bg-surface hover:bg-elevated text-foreground type-caption inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors"
+              className="border-border/80 bg-surface hover:bg-elevated text-foreground type-caption inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-2xs transition-colors"
             >
               <Smartphone className="size-3" />
               Mobile
             </Link>
             <Link
               href="/new?type=web"
-              className="border-border bg-surface hover:bg-elevated text-foreground type-caption inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors"
+              className="border-border/80 bg-surface hover:bg-elevated text-foreground type-caption inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-2xs transition-colors"
             >
               <Monitor className="size-3" />
               Website
@@ -512,11 +516,11 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
       {visibleProjects.length === 0 && hasFilters ? (
         <div
           data-testid="dashboard-no-results"
-          className="border-border bg-card flex flex-col items-center justify-center gap-3 rounded-xl border px-6 py-16 text-center"
+          className="border-border/80 bg-elevated shadow-card flex flex-col items-center justify-center gap-3.5 rounded-3xl border px-6 py-16 text-center"
         >
           <span
             aria-hidden="true"
-            className="bg-sunken text-muted-foreground inline-flex size-14 items-center justify-center rounded-xl"
+            className="bg-sunken text-muted-foreground inline-flex size-14 items-center justify-center rounded-2xl"
           >
             <Search className="size-6" />
           </span>
@@ -549,15 +553,15 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                 key={project.id}
                 data-slot="project-card"
                 data-project-id={project.id}
-                className="border-border bg-card text-card-foreground shadow-card hover:border-border-strong group relative flex min-w-0 flex-col gap-3 rounded-xl border p-3 transition-colors"
+                className="border-border/80 bg-elevated text-card-foreground shadow-card hover:border-border-strong hover:shadow-float group relative flex min-w-0 flex-col gap-3.5 rounded-3xl border p-3.5 transition-all duration-200 hover:-translate-y-0.5"
               >
                 <Link
                   href={`/editor/${project.id}`}
                   aria-label={`Open ${project.name} in editor`}
-                  className="focus-visible:ring-ring/40 block overflow-hidden rounded-lg outline-none focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 block overflow-hidden rounded-2xl outline-none focus-visible:ring-2"
                 >
                   <div
-                    className={`relative h-48 w-full overflow-hidden rounded-lg ${palette.surface}`}
+                    className={`relative h-48 w-full overflow-hidden rounded-2xl ${palette.surface}`}
                   >
                     <span
                       aria-hidden="true"
@@ -567,20 +571,20 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                     </span>
                     <div
                       aria-hidden="true"
-                      className={`absolute right-34 bottom-0 h-32 w-24 rounded-t-lg transition-transform duration-200 group-hover:-translate-y-0.5 ${palette.leftBar}`}
+                      className={`absolute right-34 bottom-0 h-32 w-24 rounded-t-xl transition-transform duration-300 group-hover:-translate-y-1 ${palette.leftBar}`}
                     />
                     <div
                       aria-hidden="true"
-                      className="bg-elevated shadow-card border-border/60 absolute right-5 bottom-0 h-36 w-26 rounded-t-lg border border-b-0 transition-transform duration-200 group-hover:-translate-y-1"
+                      className="bg-elevated shadow-card border-border/60 absolute right-5 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
                     />
                   </div>
                 </Link>
 
-                <div className="flex min-w-0 flex-col gap-1 px-1.5 pb-1">
+                <div className="flex min-w-0 flex-col gap-1 px-1.5 pb-1.5">
                   <div className="flex min-w-0 items-center justify-between gap-2">
                     <Link
                       href={`/editor/${project.id}`}
-                      className="text-foreground type-heading-s hover:text-accent-foreground min-w-0 truncate transition-colors"
+                      className="text-foreground type-heading-s hover:text-primary min-w-0 truncate transition-colors"
                     >
                       {project.name}
                     </Link>
@@ -594,7 +598,7 @@ export function DashboardProjectsClient({ initialProjects }: DashboardProjectsCl
                             type="button"
                             aria-label={`Actions for ${project.name}`}
                             disabled={isDuplicating}
-                            className="text-muted-foreground hover:bg-surface hover:text-foreground focus-visible:ring-ring/40 inline-flex size-7 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
+                            className="text-muted-foreground hover:bg-surface hover:text-foreground focus-visible:ring-ring/40 inline-flex size-8 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-2"
                           >
                             {isDuplicating ? (
                               <Loader2 className="size-4 animate-spin" />
