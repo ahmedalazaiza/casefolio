@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowRight, Search, Send, X } from "lucide-react";
+import { ArrowRight, LifeBuoy, Search, Send, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { searchHelpArticles, type HelpArticleSummary } from "@/lib/help/search";
 
 export interface HelpCenterClientProps {
@@ -18,17 +19,17 @@ export function HelpCenterClient({ articles, initialQuery = "" }: HelpCenterClie
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Dark inverse hero matching Figma 2:9977 */}
-      <section className="bg-inverse text-inverse-foreground flex flex-col gap-5 rounded-xl p-7 sm:p-10 lg:p-12">
-        <div className="flex flex-col gap-2">
-          <p className="text-inverse-foreground/80 type-overline">Help center</p>
-          <h1 className="type-display-m sm:type-display-l">How can we help?</h1>
+      {/* Brand-wash hero shared with every marketing page */}
+      <section className="bg-wash-panel text-foreground flex flex-col items-center gap-8 rounded-[2rem] px-6 py-16 text-center sm:py-20">
+        <div className="flex flex-col items-center gap-6">
+          <Eyebrow icon={<LifeBuoy />}>Help center</Eyebrow>
+          <h1 className="type-section text-balance">How can we help?</h1>
         </div>
 
-        <div className="relative w-full max-w-xl">
+        <div className="relative w-full max-w-xl text-left">
           <Search
             aria-hidden="true"
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-1/2"
           />
           <input
             type="search"
@@ -36,14 +37,14 @@ export function HelpCenterClient({ articles, initialQuery = "" }: HelpCenterClie
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search articles — e.g. “export PDF”"
-            className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/40 type-body-m h-12 w-full rounded-lg border pr-10 pl-10 outline-none focus-visible:ring-2"
+            className="border-border/60 bg-elevated text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/40 shadow-float type-body-m h-14 w-full rounded-full border pr-12 pl-12 outline-none focus-visible:ring-2"
           />
           {hasQuery && (
             <button
               type="button"
               aria-label="Clear search query"
               onClick={() => setQuery("")}
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-full"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-full"
             >
               <X className="size-3.5" />
             </button>

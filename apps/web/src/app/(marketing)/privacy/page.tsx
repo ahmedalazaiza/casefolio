@@ -1,4 +1,6 @@
+import { Scale } from "lucide-react";
 import type { Metadata } from "next";
+import { MarketingPageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Casefolio",
@@ -7,15 +9,14 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-14 sm:px-6 lg:py-20">
-      <header className="flex flex-col gap-2">
-        <p className="text-accent-foreground type-overline">Legal</p>
-        <h1 className="text-foreground type-display-m">Privacy Policy</h1>
-        <p className="text-muted-foreground type-caption">
-          Effective April 15, 2026
-        </p>
-      </header>
-      <div className="text-muted-foreground type-body-m flex flex-col gap-4">
+    <div className="mx-auto flex max-w-3xl flex-col gap-14 px-4 py-10 sm:px-6 lg:py-16">
+      <MarketingPageHeader
+        eyebrow="Legal"
+        icon={<Scale />}
+        title="Privacy Policy"
+        description="Effective April 15, 2026"
+      />
+      <div className="text-muted-foreground type-body-l flex flex-col gap-6">
         <p>
           Casefolio strips camera/GPS EXIF metadata from uploaded screenshots,
           hashes visitor identifiers with daily rotating salts for privacy-safe

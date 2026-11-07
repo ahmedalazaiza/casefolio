@@ -12,30 +12,29 @@ export function AuthSplitShell({ children }: { children: ReactNode }) {
         Skip to main content
       </a>
 
-      {/* Left value-prop panel matching Figma 2:773 & 2:837 */}
+      {/* Left value-prop panel — brand wash with floating UI cards */}
       <aside
         aria-label="Casefolio overview"
-        className="border-border bg-surface hidden flex-col justify-between border-r p-12 lg:flex lg:w-5/12 xl:w-120"
+        className="hidden p-3 lg:flex lg:w-5/12 xl:w-[34rem]"
       >
-        <BrandLogo href="/" />
+        <div className="bg-wash-panel relative flex w-full flex-col justify-between overflow-hidden rounded-[2rem] p-10">
+          <BrandLogo href="/" />
 
-        <div className="flex flex-col gap-4 py-12">
-          <h2 className="type-display-l text-foreground">
-            Your work
-            <br />
-            deserves
-            <br />a better story.
-          </h2>
-          <p className="text-muted-foreground type-body-l max-w-sm">
-            Turn finished projects into polished case studies — templates, live preview,
-            publish or export.
-          </p>
-        </div>
+          <div className="flex flex-col gap-5 py-12">
+            <h2 className="type-section text-foreground text-balance">
+              Your work deserves a better story.
+            </h2>
+            <p className="text-muted-foreground type-lead max-w-sm">
+              Turn finished projects into polished case studies — templates, live preview,
+              publish or export.
+            </p>
+          </div>
 
-        <div aria-hidden="true" className="grid grid-cols-3 gap-3.5">
-          <div className="bg-primary h-40 rounded-lg" />
-          <div className="bg-accent h-40 rounded-lg" />
-          <div className="bg-sunken h-40 rounded-lg" />
+          <div aria-hidden="true" className="grid grid-cols-3 items-end gap-3.5">
+            <div className="bg-primary shadow-float h-40 -rotate-3 rounded-2xl" />
+            <div className="bg-elevated shadow-float h-32 rotate-2 rounded-2xl" />
+            <div className="bg-inverse shadow-float h-44 rotate-3 rounded-2xl" />
+          </div>
         </div>
       </aside>
 

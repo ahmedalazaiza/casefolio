@@ -3,11 +3,11 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-  "flex flex-col rounded-lg border transition-colors",
+  "flex flex-col rounded-xl border transition-colors",
   {
     variants: {
       variant: {
-        default: "border-border bg-card text-card-foreground shadow-card",
+        default: "border-border/70 bg-card text-card-foreground shadow-card",
         flat: "border-border bg-card text-card-foreground",
         surface: "border-border bg-surface text-foreground",
         inverse: "border-inverse bg-inverse text-inverse-foreground shadow-card",

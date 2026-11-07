@@ -224,10 +224,10 @@ export function PlanCard({
       data-slot="plan-card"
       data-highlighted={highlighted ? "true" : "false"}
       className={cn(
-        "flex flex-col gap-6 rounded-xl border p-8 transition-colors",
+        "flex flex-col gap-6 rounded-3xl border p-9 transition-all duration-500 hover:-translate-y-1",
         highlighted
-          ? "border-inverse bg-inverse text-inverse-foreground shadow-card"
-          : "border-border bg-card text-card-foreground",
+          ? "border-inverse bg-inverse text-inverse-foreground shadow-overlay"
+          : "border-border/70 bg-card text-card-foreground shadow-card",
         className,
       )}
       {...props}
@@ -262,7 +262,7 @@ export function PlanCard({
 
       {ctaHref && !onSelectPlan ? (
         <Button
-          variant={highlighted ? "default" : "secondary"}
+          variant={highlighted ? "accent" : "secondary"}
           size="lg"
           className="w-full"
           asChild
@@ -272,7 +272,7 @@ export function PlanCard({
       ) : (
         <Button
           type="button"
-          variant={highlighted ? "default" : "secondary"}
+          variant={highlighted ? "accent" : "secondary"}
           size="lg"
           className="w-full"
           onClick={onSelectPlan}

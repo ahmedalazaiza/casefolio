@@ -44,7 +44,7 @@ export function LandingFaqAccordion({
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       {items.map((item, idx) => {
         const isOpen = openIndex === idx;
         const panelId = `faq-panel-${idx}`;
@@ -53,7 +53,7 @@ export function LandingFaqAccordion({
         return (
           <div
             key={item.question}
-            className="border-border bg-card overflow-hidden rounded-xl border transition-colors"
+            className={`overflow-hidden rounded-3xl border transition-all duration-500 ${isOpen ? "border-border/70 bg-card shadow-card" : "border-transparent bg-surface hover:bg-sunken"}`}
           >
             <h3 className="m-0">
               <button
@@ -62,12 +62,12 @@ export function LandingFaqAccordion({
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 onClick={() => setOpenIndex(isOpen ? null : idx)}
-                className="text-foreground type-heading-s focus-visible:ring-ring/40 flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors outline-none focus-visible:ring-2"
+                className="text-foreground type-heading-s focus-visible:ring-ring/40 flex w-full items-center justify-between gap-6 px-7 py-6 text-left transition-colors outline-none focus-visible:ring-2"
               >
                 <span>{item.question}</span>
                 <span
                   aria-hidden="true"
-                  className="text-muted-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full"
+                  className={`inline-flex size-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${isOpen ? "bg-inverse text-inverse-foreground rotate-180" : "bg-elevated text-foreground shadow-xs"}`}
                 >
                   {isOpen ? (
                     <Minus className="size-4" />
@@ -82,7 +82,7 @@ export function LandingFaqAccordion({
                 id={panelId}
                 role="region"
                 aria-labelledby={triggerId}
-                className="text-muted-foreground type-body-m px-6 pt-0 pb-6"
+                className="text-muted-foreground type-body-m animate-in fade-in slide-in-from-top-1 max-w-2xl px-7 pt-0 pb-7 duration-500"
               >
                 {item.answer}
               </div>

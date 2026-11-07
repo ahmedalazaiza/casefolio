@@ -2,141 +2,69 @@
 
 import {
   ArrowRight,
-  ArrowUpRight,
+  BookOpen,
   CheckCircle2,
-  Eye,
   Globe,
-  History,
-  Image as ImageIcon,
   Layers,
-  Monitor,
-  Palette,
-  Presentation,
+  LayoutTemplate,
+  MessageCircleQuestion,
   Rocket,
-  ShieldCheck,
-  Smartphone,
   Sparkles,
-  TabletSmartphone,
+  Tag,
 } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { LandingFaqAccordion } from "@/components/marketing/landing-faq-accordion";
 import { LandingHeroMotion } from "@/components/marketing/landing-hero-motion";
 import { LandingHeroVisual } from "@/components/marketing/landing-hero-visual";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { TemplateTypeCard } from "@/components/ui/domain-cards";
 import {
-  ANIMATION_DISTANCES,
-  ANIMATION_DURATIONS,
-  ANIMATION_EASINGS,
-  ANIMATION_STAGGERS,
-  gsap,
-  prefersReducedMotion,
-  ScrollTrigger,
-  useGSAP,
-} from "@/lib/animation/gsap";
+  CtaStage,
+  FeatureColumns,
+  FeatureList,
+  HeroDevice,
+  HowItWorksStage,
+  TemplateStack,
+} from "@/components/marketing/landing-showcase";
+import {
+  CountUp,
+  Reveal,
+  ScrollWords,
+  WordReveal,
+} from "@/components/marketing/motion";
+import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import type { LandingPlatformSnapshot } from "@/lib/marketing/landing-stats";
 import { cn } from "@/lib/utils";
 
-const SCREEN_WORKLOAD_PRESETS = [
-  {
-    screens: 6,
-    label: "6 UI screens",
-    manualSteps: "18 manual frame & crop steps",
-    manualTime: "~9 hrs on a blank canvas",
-    casefolioFlow: "6 ratio-locked drops · 1 click publish",
-  },
-  {
-    screens: 12,
-    label: "12 UI screens",
-    manualSteps: "36 manual frame & export steps",
-    manualTime: "~22 hrs aligning grids & PDFs",
-    casefolioFlow: "12 ratio-locked drops · auto-responsive",
-  },
-  {
-    screens: 18,
-    label: "18 UI screens (.Cinema scale)",
-    manualSteps: "54 manual mockup & slice steps",
-    manualTime: "2–3 wks rebuilding layout & exports",
-    casefolioFlow: "14 structured sections · instant PNG & PDF",
-  },
-] as const;
-
-const WORKFLOW_STEPS = [
-  {
-    step: "01",
-    title: "Pick a type",
-    badge: "Mobile · Website · Mobile + Web",
-    description:
-      "Select what you built so every ratio-locked slot, hardware bezel, and responsive grid matches your product from second one.",
-    previewImage: "/landing/orbit-home.svg",
-    previewCaption: "Auto-configures 9:19.5 mobile or 16:10 web slots",
-    previewAspect: "mobile" as const,
-  },
-  {
-    step: "02",
-    title: "Pick a template",
-    badge: "Versioned · Curated by Casefolio",
-    description:
-      "Start with a complete narrative arc — Hero, Overview, Pain Points, User Flow, Screen Showcase, and Quantified Results.",
-    previewImage: "/templates/cinema/cover.svg",
-    previewCaption: "Cinema v1.0.0 · 14 sections & 8 slots ready out of the box",
-    previewAspect: "wide" as const,
-  },
-  {
-    step: "03",
-    title: "Customize",
-    badge: "7 Device Mockups · Curated Tokens",
-    description:
-      "Drop screenshots into ratio-locked slots, switch between iPhone 16 Pro, Android, iPad, MacBook or Browser frames, and tune tokens.",
-    previewImage: "/templates/cinema/screen-seats.svg",
-    previewCaption: "Live seat-map screen inside iPhone 16 Pro Dynamic Island",
-    previewAspect: "mobile" as const,
-  },
-  {
-    step: "04",
-    title: "Publish or export",
-    badge: "Public URL · PNG · PDF · Behance",
-    description:
-      "Go live on casefolio.app/p/your-slug with OpenGraph previews, or export continuous PNGs and multi-page A4 PDFs from the same renderer.",
-    previewImage: "/landing/export-bundle-preview.svg",
-    previewCaption: "Identical output across web, Behance 1400px, and A4 PDF",
-    previewAspect: "wide" as const,
-  },
-] as const;
-
-const SAMPLE_PRO_REFERREERS = [
-  { source: "Direct portfolio link (/p/slug)", detail: "Tracked on Free & Pro" },
-  { source: "External referrer domain (e.g. linkedin.com)", detail: "Unlocked on Pro" },
-  { source: "Reader country & 7d / 30d window", detail: "Zero cookies · SHA-256" },
-] as const;
-
-function SectionHeader({
-  overline,
+function SectionIntro({
+  icon,
+  eyebrow,
   title,
   description,
 }: {
-  overline: string;
+  icon: ReactNode;
+  eyebrow: string;
   title: string;
   description?: string;
 }) {
   return (
-    <div
-      data-animate-header
-      className="mx-auto flex max-w-3xl flex-col items-center gap-3 text-center"
-    >
-      <span className="bg-accent text-accent-foreground type-overline inline-flex items-center gap-1.5 rounded-full px-3 py-1">
-        {overline}
-      </span>
-      <h2 className="text-foreground type-display-m sm:type-display-l text-balance">
-        {title}
-      </h2>
+    <div className="mx-auto mb-20 flex max-w-3xl flex-col items-center gap-6 text-center lg:mb-28">
+      <Reveal>
+        <Eyebrow icon={icon}>{eyebrow}</Eyebrow>
+      </Reveal>
+      <WordReveal
+        as="h2"
+        text={title}
+        onScroll
+        className="type-section text-foreground text-balance"
+      />
       {description && (
-        <p className="text-muted-foreground type-body-l max-w-2xl text-pretty">
-          {description}
-        </p>
+        <Reveal delay={0.15}>
+          <p className="text-muted-foreground type-lead max-w-xl text-pretty">
+            {description}
+          </p>
+        </Reveal>
       )}
     </div>
   );
@@ -146,39 +74,23 @@ function StatusPill({
   tone,
   children,
 }: {
-  tone: "success" | "accent" | "warning" | "neutral";
+  tone: "success" | "warning" | "neutral" | "accent";
   children: ReactNode;
 }) {
   const styles = {
-    success: {
-      pill: "bg-success-soft text-foreground",
-      dot: "bg-success",
-    },
-    accent: {
-      pill: "bg-accent text-accent-foreground",
-      dot: "bg-accent-foreground",
-    },
-    warning: {
-      pill: "bg-warning-soft text-foreground",
-      dot: "bg-warning",
-    },
-    neutral: {
-      pill: "bg-sunken text-muted-foreground",
-      dot: "bg-muted-foreground",
-    },
+    success: "bg-success-soft text-foreground",
+    warning: "bg-warning-soft text-foreground",
+    neutral: "bg-sunken text-muted-foreground",
+    accent: "bg-accent text-accent-foreground",
   }[tone];
 
   return (
     <span
       className={cn(
-        "type-caption inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5",
-        styles.pill,
+        "type-caption inline-flex shrink-0 items-center rounded-full px-3 py-1",
+        styles,
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn("size-1.5 rounded-full", styles.dot)}
-      />
       {children}
     </span>
   );
@@ -189,1026 +101,350 @@ export function LandingExperience({
 }: {
   snapshot: LandingPlatformSnapshot;
 }) {
-  const pageScopeRef = useRef<HTMLDivElement>(null);
-
-  const [workloadIndex, setWorkloadIndex] = useState(2);
-  const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [simulatedPublished, setSimulatedPublished] = useState(false);
-  const [telemetryMode, setTelemetryMode] = useState<"live" | "schema">("live");
 
-  const activeWorkload =
-    SCREEN_WORKLOAD_PRESETS[workloadIndex] ?? SCREEN_WORKLOAD_PRESETS[2]!;
-  const activeStep =
-    WORKFLOW_STEPS[activeStepIndex] ?? WORKFLOW_STEPS[0]!;
-
-  const editorFeatures = [
+  const metrics = [
     {
-      icon: ImageIcon,
-      badge: `${snapshot.deviceFramesCount} device frames`,
-      title: "Swap screens in slots",
-      description:
-        "Drop PNG, JPG, WebP or SVG into ratio-locked slots and switch between iPhone 16 Pro, Android, iPad, MacBook or Browser chrome.",
-    },
-    {
-      icon: Palette,
-      badge: `${snapshot.curatedPalettesCount} palettes · ${snapshot.curatedFontPairsCount} font pairs`,
-      title: "Your colors & fonts",
-      description:
-        "Edit semantic theme tokens — primary, surface, background, text, and licensed heading & body font pairs with contrast checks.",
-    },
-    {
-      icon: Layers,
-      badge: `${snapshot.sectionPresetsCount} narrative presets`,
-      title: "Sections your way",
-      description:
-        "Reorder, duplicate, hide optional sections, or insert User Flows, Staggered App Galleries, Personas, and Design Systems.",
-    },
-    {
-      icon: Eye,
-      badge: "375px + 1440px",
-      title: "Live preview",
-      description:
-        "Switch instantly between Desktop and Mobile viewports rendered with the exact same engine used for publish and export.",
-    },
-    {
-      icon: History,
-      badge: "Undo · Redo · Autosave",
-      title: "Autosave & versions",
-      description:
-        "Every edit autosaves cleanly with full undo/redo history while your project stays pinned to its exact template version.",
-    },
-    {
-      icon: CheckCircle2,
-      badge: "Zero broken layouts",
-      title: "Pre-publish check",
-      description:
-        "Validates empty required screenshot slots, aspect ratios, and token contrast before your case study goes public.",
-    },
-  ] as const;
-
-  useGSAP(
-    () => {
-      const scopeEl = pageScopeRef.current;
-      if (!scopeEl || prefersReducedMotion()) return;
-
-      const headers = scopeEl.querySelectorAll<HTMLElement>(
-        "[data-animate-header]",
-      );
-      headers.forEach((header) => {
-        ScrollTrigger.create({
-          trigger: header,
-          start: "top 95%",
-          once: true,
-          onEnter: () => {
-            const rect = header.getBoundingClientRect();
-            if (rect.top > window.innerHeight * 0.55) {
-              gsap.fromTo(
-                header,
-                { opacity: 0, y: ANIMATION_DISTANCES.baseY },
-                {
-                  opacity: 1,
-                  y: 0,
-                  duration: ANIMATION_DURATIONS.base,
-                  ease: ANIMATION_EASINGS.entrance,
-                  clearProps: "transform,opacity",
-                  overwrite: "auto",
-                },
-              );
-            }
-          },
-        });
-      });
-
-      const grids = scopeEl.querySelectorAll<HTMLElement>(
-        "[data-animate-grid]",
-      );
-      grids.forEach((grid) => {
-        const items = Array.from(grid.children) as HTMLElement[];
-        if (items.length === 0) return;
-
-        ScrollTrigger.create({
-          trigger: grid,
-          start: "top 95%",
-          once: true,
-          onEnter: () => {
-            const rect = grid.getBoundingClientRect();
-            if (rect.top > window.innerHeight * 0.55) {
-              gsap.fromTo(
-                items,
-                { opacity: 0, y: ANIMATION_DISTANCES.subtleY },
-                {
-                  opacity: 1,
-                  y: 0,
-                  duration: ANIMATION_DURATIONS.base,
-                  stagger: ANIMATION_STAGGERS.tight,
-                  ease: ANIMATION_EASINGS.entrance,
-                  clearProps: "transform,opacity",
-                  overwrite: "auto",
-                },
-              );
-            }
-          },
-        });
-      });
-
-      const refreshTimer = window.setTimeout(() => {
-        ScrollTrigger.refresh();
-      }, 120);
-
-      return () => {
-        window.clearTimeout(refreshTimer);
-      };
-    },
-    { scope: pageScopeRef },
-  );
-
-  const handleStepSelect = (index: number) => {
-    setActiveStepIndex(index);
-  };
-
-  const handleSimulatePublish = () => {
-    setSimulatedPublished((prev) => !prev);
-  };
-
-  const realPlatformSpecs = [
-    {
-      value: String(snapshot.publishedTemplatesCount),
-      label: "Live published templates",
+      value: snapshot.publishedTemplatesCount,
+      label: "Live templates",
       detail: snapshot.templates.map((t) => t.name).join(" · "),
     },
     {
-      value: String(snapshot.deviceFramesCount),
-      label: "Hardware mockup models",
-      detail: "iPhone 16 Pro · Android · iPad · MacBook · Browser",
+      value: snapshot.deviceFramesCount,
+      label: "Hardware frames",
+      detail: "iPhone · Android · iPad · MacBook",
     },
     {
-      value: String(snapshot.sectionPresetsCount),
-      label: "Structured section presets",
-      detail: `${snapshot.sectionTypesCount} canonical section types`,
+      value: snapshot.sectionPresetsCount,
+      label: "Section presets",
+      detail: `${snapshot.sectionTypesCount} core section types`,
     },
     {
-      value: String(snapshot.exportFormatsCount),
-      label: "Pixel-identical export formats",
-      detail: "Long PNG · Paged A4 PDF · Behance 1400px",
+      value: snapshot.exportFormatsCount,
+      label: "Export formats",
+      detail: "PNG · Behance 1400 · A4 PDF",
     },
   ] as const;
 
+  const liveCounts = [
+    { value: snapshot.liveProjectsCount, label: "Projects created" },
+    { value: snapshot.livePageViewsCount, label: "Public page views" },
+    { value: snapshot.liveExportsCount, label: "Exports completed" },
+  ] as const;
+
   return (
-    <div ref={pageScopeRef} className="relative flex flex-col">
-      {/* 1. Hero + Live Interactive Editor Preview */}
-      <section className="bg-background relative overflow-hidden px-4 pt-10 pb-16 sm:px-6 lg:px-8 lg:pt-14 lg:pb-24">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_70%_55%_at_50%_20%,black,transparent)] opacity-70"
-        />
-        <div
-          aria-hidden="true"
-          className="bg-primary/10 pointer-events-none absolute top-6 left-1/2 h-72 w-3/4 max-w-4xl -translate-x-1/2 rounded-full blur-3xl"
-        />
+    <div className="relative flex flex-col">
+      {/* 1. Hero */}
+      <section className="relative px-4 pt-6 pb-24 sm:px-6 lg:px-8 lg:pt-12 lg:pb-40">
+        <LandingHeroMotion
+          visual={
+            <HeroDevice snapshot={snapshot}>
+              <LandingHeroVisual />
+            </HeroDevice>
+          }
+        >
+          <Eyebrow icon={<Sparkles className="text-primary" />}>
+            {snapshot.publishedTemplatesCount} live templates ·{" "}
+            {snapshot.deviceFramesCount} hardware frames · Free to start
+          </Eyebrow>
 
-        <div className="relative z-10">
-          <LandingHeroMotion visual={<LandingHeroVisual />}>
-            <Badge tone="accent">
-              {snapshot.publishedTemplatesCount} live templates ·{" "}
-              {snapshot.deviceFramesCount} hardware frames · Free to start
-            </Badge>
+          <WordReveal
+            as="h1"
+            text="Turn finished projects into publishable case studies"
+            delay={0.1}
+            className="type-hero text-foreground max-w-6xl text-balance"
+          />
 
-            <h1 className="text-foreground type-display-m sm:type-display-l lg:type-display-xl max-w-4xl text-balance">
-              Turn finished projects into publishable case studies
-            </h1>
+          <p className="text-muted-foreground type-lead max-w-2xl text-pretty">
+            Pick a template crafted by the Casefolio team, snap your UI screens
+            into ratio-locked device frames, tune your tokens — then publish a
+            live URL or export PNG &amp; PDF in minutes.
+          </p>
 
-            <p className="text-muted-foreground type-body-l max-w-2xl text-pretty">
-              Pick a template crafted by the Casefolio team, snap your UI
-              screens into ratio-locked device frames, tune your tokens — then
-              publish a live URL or export PNG &amp; PDF in minutes.
-            </p>
+          <div className="flex w-full flex-col items-stretch justify-center gap-3 pt-2 sm:w-auto sm:flex-row sm:items-center">
+            <Button size="lg" asChild>
+              <Link href="/sign-up">
+                <span>Start free</span>
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <Button variant="secondary" size="lg" asChild>
+              <Link href="/templates">Browse templates</Link>
+            </Button>
+          </div>
 
-            <div className="flex w-full flex-col items-stretch justify-center gap-3 pt-1 sm:w-auto sm:flex-row sm:items-center">
-              <Button size="lg" asChild>
-                <Link href="/sign-up">
-                  <Sparkles className="size-4" />
-                  <span>Start free</span>
-                </Link>
-              </Button>
-              <Button variant="secondary" size="lg" asChild>
-                <Link href="/templates">
-                  <span>Browse templates</span>
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
-
-            <p className="text-muted-foreground type-caption">
-              {snapshot.freeProjectsIncluded} free case studies included · No
-              credit card required
-            </p>
-          </LandingHeroMotion>
-        </div>
+          <p className="text-muted-foreground type-caption">
+            {snapshot.freeProjectsIncluded} free case studies included · No
+            credit card required
+          </p>
+        </LandingHeroMotion>
       </section>
 
-      {/* 2. Real Live Architecture Spec Strip (Replaces removed fictional studio logos) */}
+      {/* 2. Platform numbers */}
       <section
-        aria-label="Platform architecture metrics"
-        className="border-border bg-surface/60 border-y px-4 py-10 sm:px-6 lg:px-8"
+        aria-label="Platform metrics"
+        className="container-page pb-[var(--section-space)]"
       >
-        <div
-          data-animate-grid
-          className="mx-auto grid max-w-7xl grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6"
+        <Reveal
+          stagger
+          className="grid grid-cols-2 gap-x-6 gap-y-14 lg:grid-cols-4"
         >
-          {realPlatformSpecs.map((spec) => (
+          {metrics.map((metric) => (
             <div
-              key={spec.label}
-              className="border-border bg-card flex flex-col gap-1.5 rounded-2xl border p-5"
+              key={metric.label}
+              className="flex flex-col items-center gap-2 text-center"
             >
-              <span className="text-primary type-display-m">{spec.value}</span>
-              <span className="text-foreground type-body-s-strong">
-                {spec.label}
+              <span className="type-section text-foreground">
+                <CountUp value={metric.value} />
               </span>
-              <span className="text-muted-foreground type-caption">
-                {spec.detail}
+              <span className="text-foreground type-body-m-strong">
+                {metric.label}
+              </span>
+              <span className="text-muted-foreground type-caption max-w-[14rem]">
+                {metric.detail}
               </span>
             </div>
           ))}
-        </div>
+        </Reveal>
       </section>
 
-      {/* 3. Problem Section + Interactive Screen Workload Reality Check */}
-      <section className="bg-surface px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="The problem"
-            title="Case studies take longer than the project"
-            description="Designers finish the product UI, then lose weeks rebuilding grids, framing mockups by hand, and re-slicing exports from scratch."
-          />
-
-          {/* Interactive Workload Reality Calculator */}
-          <div className="border-border bg-card shadow-card mx-auto flex w-full max-w-4xl flex-col gap-5 rounded-2xl border p-5 sm:p-7">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-              <div>
-                <p className="text-foreground type-heading-s">
-                  Compare the workflow for your project size
-                </p>
-                <p className="text-muted-foreground type-caption">
-                  Select how many finished UI screens are sitting in your Figma
-                  file:
-                </p>
-              </div>
-
-              <div
-                role="group"
-                aria-label="Project screen count"
-                className="bg-sunken border-border inline-flex items-center gap-1 rounded-full border p-1"
-              >
-                {SCREEN_WORKLOAD_PRESETS.map((preset, idx) => {
-                  const selected = idx === workloadIndex;
-                  return (
-                    <button
-                      key={preset.screens}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setWorkloadIndex(idx)}
-                      className={cn(
-                        "type-caption focus-visible:ring-ring/40 rounded-full px-3 py-1.5 transition-all outline-none focus-visible:ring-2",
-                        selected
-                          ? "bg-elevated text-foreground shadow-xs"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {preset.screens} screens
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="border-destructive/25 bg-destructive-soft/60 flex flex-col gap-1.5 rounded-xl border p-4">
-                <span className="text-destructive type-overline">
-                  Manual Blank Canvas
-                </span>
-                <p className="text-foreground type-heading-m">
-                  {activeWorkload.manualTime}
-                </p>
-                <p className="text-muted-foreground type-body-s">
-                  {activeWorkload.manualSteps} across web, Behance &amp; PDF.
-                </p>
-              </div>
-
-              <div className="border-success/35 bg-success-soft/70 flex flex-col gap-1.5 rounded-xl border p-4">
-                <span className="text-success type-overline">
-                  With Casefolio Slots
-                </span>
-                <p className="text-foreground type-heading-m">
-                  Same afternoon
-                </p>
-                <p className="text-muted-foreground type-body-s">
-                  {activeWorkload.casefolioFlow}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            data-animate-grid
-            className="grid grid-cols-1 gap-6 md:grid-cols-3"
-          >
-            <article className="border-border bg-card flex flex-col gap-3 rounded-2xl border p-7">
-              <p className="text-destructive type-display-m">Blank</p>
-              <h3 className="text-foreground type-heading-s">
-                Re-architecting every grid from zero
-              </h3>
-              <p className="text-muted-foreground type-body-s">
-                Starting from an empty artboard forces you to invent typography
-                scales, card spacing, and mobile breakpoints all over again.
-              </p>
-            </article>
-
-            <article className="border-border bg-card flex flex-col gap-3 rounded-2xl border p-7">
-              <p className="text-destructive type-display-m">Manual</p>
-              <h3 className="text-foreground type-heading-s">
-                Framing every screenshot by hand
-              </h3>
-              <p className="text-muted-foreground type-body-s">
-                Dragging screens into device mockups one by one — and redoing
-                every export the moment a single screen changes.
-              </p>
-            </article>
-
-            <article className="border-border bg-card flex flex-col gap-3 rounded-2xl border p-7">
-              <p className="text-destructive type-display-m">Fragmented</p>
-              <h3 className="text-foreground type-heading-s">
-                Inconsistent across projects
-              </h3>
-              <p className="text-muted-foreground type-body-s">
-                Every case study ends up with different margins, fonts, and PDF
-                dimensions instead of one cohesive body of work.
-              </p>
-            </article>
-          </div>
-        </div>
+      {/* 3. Statement */}
+      <section className="container-page pb-[var(--section-space)]">
+        <ScrollWords
+          text="Designers finish the product, then lose weeks rebuilding grids, framing mockups by hand and re-slicing exports. Casefolio keeps your layout rhythm unbreakable, so a finished project becomes a published case study in minutes."
+          className="type-heading-l text-foreground mx-auto max-w-4xl text-center text-balance lg:text-[2.75rem] lg:leading-[1.2]"
+        />
       </section>
 
-      {/* 4. Interactive 4-Step Workflow (#how-it-works) */}
+      {/* 4. How it works */}
       <section
         id="how-it-works"
-        className="bg-background scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28"
+        className="container-page scroll-mt-28 pb-[var(--section-space)]"
       >
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="How it works"
-            title="From finished UI to case study in four steps"
-            description="Select any step below to inspect the workflow — no blank canvas, and every decision stays editable."
-          />
-
-          <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
-            {/* Left: Interactive 4-step selector */}
-            <div className="flex flex-col gap-3 lg:col-span-6">
-              {WORKFLOW_STEPS.map((item, idx) => {
-                const selected = idx === activeStepIndex;
-                return (
-                  <button
-                    key={item.step}
-                    type="button"
-                    onClick={() => handleStepSelect(idx)}
-                    className={cn(
-                      "focus-visible:ring-ring/40 flex flex-col gap-2 rounded-2xl border p-5 text-left transition-all outline-none focus-visible:ring-2",
-                      selected
-                        ? "border-primary bg-card shadow-card"
-                        : "border-border bg-surface/60 hover:border-border-strong hover:bg-card",
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            "font-mono type-body-s-strong inline-flex size-9 items-center justify-center rounded-full transition-colors",
-                            selected
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-accent text-accent-foreground",
-                          )}
-                        >
-                          {item.step}
-                        </span>
-                        <h3 className="text-foreground type-heading-s">
-                          {item.title}
-                        </h3>
-                      </div>
-                      <span className="text-muted-foreground type-caption hidden sm:inline">
-                        {item.badge}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground type-body-s pl-12">
-                      {item.description}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Right: Live Visual Stage for Selected Step */}
-            <div className="border-border bg-card shadow-card flex flex-col justify-between gap-5 overflow-hidden rounded-2xl border p-6 sm:p-7 lg:col-span-6">
-              <div className="flex items-center justify-between gap-2">
-                <StatusPill tone="accent">
-                  Step {activeStep.step} · {activeStep.title}
-                </StatusPill>
-                <span className="text-muted-foreground font-mono type-caption">
-                  Step {activeStep.step} of 04
-                </span>
-              </div>
-
-              <div className="bg-sunken border-border flex flex-1 items-center justify-center overflow-hidden rounded-xl border p-5">
-                {activeStep.previewAspect === "mobile" ? (
-                  <div className="border-border-strong bg-inverse shadow-overlay w-52 overflow-hidden rounded-3xl border-4 p-1.5 sm:w-56">
-                    <img
-                      src={activeStep.previewImage}
-                      alt={activeStep.previewCaption}
-                      className="aspect-9/19 w-full rounded-2xl object-cover"
-                    />
-                  </div>
-                ) : (
-                  <img
-                    src={activeStep.previewImage}
-                    alt={activeStep.previewCaption}
-                    className="max-h-80 w-full rounded-xl object-cover shadow-card"
-                  />
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-muted-foreground type-caption">
-                  {activeStep.previewCaption}
-                </p>
-                <Button variant="secondary" size="sm" asChild>
-                  <Link href="/new">
-                    <span>Try step {activeStep.step}</span>
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SectionIntro
+          icon={<BookOpen />}
+          eyebrow="How it works"
+          title="From finished UI to case study in four steps"
+          description="Pick a type, choose a template, customize it, then publish or export. Every decision stays editable."
+        />
+        <HowItWorksStage snapshot={snapshot} />
       </section>
 
-      {/* 5. Template Types — Dynamic Real Counts from PostgreSQL */}
-      <section className="bg-surface px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="Template types"
-            title="Templates for what you actually design"
-            description="Every count below reflects published templates live in the Casefolio database right now."
-          />
-
-          <div
-            data-animate-grid
-            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            <TemplateTypeCard
-              title="Mobile app"
-              description="iOS & Android user journeys with iPhone 16 Pro, Notch & Android punch-hole slots."
-              templateCount={snapshot.mobileTemplatesCount}
-              icon={<Smartphone className="size-5" />}
-            />
-            <TemplateTypeCard
-              title="Website"
-              description="SaaS dashboards, marketing sites, and web apps wrapped in MacBook Pro & Browser frames."
-              templateCount={snapshot.webTemplatesCount}
-              icon={<Monitor className="size-5" />}
-            />
-            <TemplateTypeCard
-              title="Mobile + Web"
-              description="Cross-platform ecosystems combining mobile flows, design systems, and web views."
-              templateCount={snapshot.crossPlatformTemplatesCount}
-              icon={<TabletSmartphone className="size-5" />}
-            />
-            <TemplateTypeCard
-              title="Brand & Deck"
-              description="Visual identity systems, design language guides, and pitch narratives."
-              footerLabel="In roadmap"
-              state="coming-soon"
-              icon={<Presentation className="size-5" />}
-            />
-          </div>
-        </div>
+      {/* 5. Editor */}
+      <section
+        id="product"
+        className="container-page scroll-mt-28 pb-[var(--section-space)]"
+      >
+        <SectionIntro
+          icon={<Layers />}
+          eyebrow="The editor"
+          title="A full editor, without the busywork"
+          description="Structured flexibility: customize tokens, mockups, and narrative blocks while your layout rhythm stays unbreakable."
+        />
+        <FeatureColumns snapshot={snapshot} />
+        <FeatureList />
       </section>
 
-      {/* 6. Live Template Gallery — Real Published Templates & Real Artwork */}
-      <section className="bg-background px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-12 lg:gap-14">
-          <SectionHeader
-            overline="Live template gallery"
+      {/* 6. Templates */}
+      <section className="pb-[var(--section-space)]">
+        <div className="container-page">
+          <SectionIntro
+            icon={<LayoutTemplate />}
+            eyebrow="Templates"
             title="Start from a layout that already works"
-            description={`${snapshot.publishedTemplatesCount} curated templates (${snapshot.totalTemplateSections} pre-built sections & ${snapshot.totalTemplateSlots} ratio-locked slots) ready to open today.`}
+            description={`${snapshot.publishedTemplatesCount} curated templates with ${snapshot.totalTemplateSections} pre-built sections and ${snapshot.totalTemplateSlots} ratio-locked slots, ready to open today.`}
           />
-
-          <div
-            data-animate-grid
-            className="grid w-full grid-cols-1 gap-6 md:grid-cols-3"
-          >
-            {snapshot.templates.map((tpl) => {
-              const isMobileCover = tpl.type === "mobile";
-              return (
-                <article
-                  key={tpl.slug}
-                  className="border-border bg-card hover:border-border-strong shadow-card group flex flex-col justify-between gap-4 rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1"
-                >
-                  <Link
-                    href={`/new?template=${tpl.slug}`}
-                    className="bg-inverse border-border relative flex h-64 items-center justify-center overflow-hidden rounded-xl border"
-                  >
-                    {isMobileCover ? (
-                      <div className="flex items-end gap-3 pt-6">
-                        <img
-                          src={tpl.coverSrc}
-                          alt={`${tpl.name} primary preview`}
-                          className="border-border-strong/50 w-28 rounded-t-2xl border-x-2 border-t-2 object-cover shadow-overlay transition-transform duration-300 group-hover:-translate-y-1.5"
-                        />
-                        {tpl.previewSecondarySrc && (
-                          <img
-                            src={tpl.previewSecondarySrc}
-                            alt={`${tpl.name} secondary preview`}
-                            className="border-border-strong/50 w-24 translate-y-4 rounded-t-2xl border-x-2 border-t-2 object-cover opacity-90 shadow-overlay transition-transform duration-300 group-hover:translate-y-2"
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <img
-                        src={tpl.coverSrc}
-                        alt={`${tpl.name} template preview`}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      />
-                    )}
-                    <span className="bg-background/90 text-foreground border-border type-caption absolute top-3 left-3 rounded-full border px-2.5 py-0.5 backdrop-blur-md">
-                      {tpl.categoryName} · v{tpl.version}
-                    </span>
-                  </Link>
-
-                  <div className="flex flex-col gap-2 px-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-foreground type-heading-s">
-                        {tpl.name}
-                      </h3>
-                      <StatusPill
-                        tone={tpl.tier === "free" ? "success" : "accent"}
-                      >
-                        {tpl.tier === "free" ? "Free" : "Pro"}
-                      </StatusPill>
-                    </div>
-                    <p className="text-muted-foreground type-body-s line-clamp-2">
-                      {tpl.summary}
-                    </p>
-                    <div className="border-border mt-1 flex items-center justify-between border-t pt-3">
-                      <span className="text-tertiary font-mono type-caption">
-                        {tpl.sectionCount} sections · {tpl.slotCount} slots
-                      </span>
-                      <Link
-                        href={`/new?template=${tpl.slug}`}
-                        className="text-primary hover:text-primary/80 type-caption inline-flex items-center gap-1 font-semibold"
-                      >
-                        <span>Use {tpl.name}</span>
-                        <ArrowUpRight className="size-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-
+        </div>
+        <Reveal className="container-page flex flex-col items-center gap-14">
+          <TemplateStack templates={snapshot.templates} />
           <Button variant="secondary" size="lg" asChild>
             <Link href="/templates">
               <span>Browse all templates</span>
               <ArrowRight className="size-4" />
             </Link>
           </Button>
-        </div>
+        </Reveal>
       </section>
 
-      {/* 7. Constrained Editor Capabilities Bento (#product) */}
-      <section
-        id="product"
-        className="bg-surface scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28"
-      >
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="The constrained editor"
-            title="A full editor, without the busywork"
-            description="Structured flexibility: customize tokens, mockups, and narrative blocks while your layout rhythm stays unbreakable."
-          />
-
-          <div
-            data-animate-grid
-            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {editorFeatures.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <article
-                  key={feature.title}
-                  className="border-border bg-card hover:border-border-strong flex flex-col justify-between gap-5 rounded-2xl border p-6 transition-colors sm:p-7"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      aria-hidden="true"
-                      className="bg-accent text-accent-foreground inline-flex size-11 items-center justify-center rounded-xl"
-                    >
-                      <Icon className="size-5" />
-                    </span>
-                    <span className="bg-sunken text-muted-foreground font-mono type-caption rounded-full px-2.5 py-0.5">
-                      {feature.badge}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-foreground type-heading-s">
-                      {feature.title}
-                    </h3>
-                    <p className="text-muted-foreground type-body-s">
-                      {feature.description}
-                    </p>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* 8. Publish, Share & Export (#publish-export) */}
+      {/* 7. Publish & export */}
       <section
         id="publish-export"
-        className="bg-background scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28"
+        className="container-page scroll-mt-28 pb-[var(--section-space)]"
       >
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="Publish, share & export"
-            title="One case study, everywhere you need it"
-            description="Publish an indexed public URL on casefolio.app, or export crisp files for Behance, Dribbble, and recruiter PDF decks."
-          />
+        <SectionIntro
+          icon={<Rocket />}
+          eyebrow="Publish & export"
+          title="One case study, everywhere you need it"
+          description="Publish an indexed public URL on casefolio.app, or export crisp files for Behance, Dribbble, and recruiter PDF decks."
+        />
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Interactive Publish State Card */}
-            <article className="border-border bg-card shadow-card flex flex-col justify-between gap-6 rounded-2xl border p-7 sm:p-8">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2">
-                  <StatusPill tone={simulatedPublished ? "success" : "warning"}>
-                    {simulatedPublished ? "Published · Live" : "Draft Preview"}
-                  </StatusPill>
-                  <span className="text-muted-foreground type-caption">
-                    Public · Unlisted · Private
+        <Reveal stagger className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <article className="bg-surface border-border/60 flex flex-col justify-between gap-10 rounded-3xl border p-8 sm:p-10">
+            <div className="flex flex-col gap-4">
+              <StatusPill tone={simulatedPublished ? "success" : "warning"}>
+                {simulatedPublished ? "Published · Live" : "Draft preview"}
+              </StatusPill>
+              <h3 className="type-heading-l text-foreground">
+                A public page on casefolio.app
+              </h3>
+              <p className="text-muted-foreground type-body-m max-w-md">
+                Choose Public, Unlisted, or Private visibility, customize your
+                slug, and ship with automatic OpenGraph social cards.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="bg-elevated border-border/60 overflow-hidden rounded-2xl border shadow-xs">
+                <div className="border-border/60 flex items-center gap-3 border-b px-4 py-3">
+                  <span className="flex gap-1.5" aria-hidden="true">
+                    <span className="bg-border-strong size-2 rounded-full" />
+                    <span className="bg-border-strong size-2 rounded-full" />
+                    <span className="bg-border-strong size-2 rounded-full" />
                   </span>
-                </div>
-
-                <h3 className="text-foreground type-heading-m">
-                  A public page on casefolio.app
-                </h3>
-                <p className="text-muted-foreground type-body-m">
-                  Choose Public, Unlisted, or Private visibility, customize your
-                  slug, and ship with automatic OpenGraph social cards.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="border-border bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
-                  <span className="text-foreground font-mono type-body-s flex items-center gap-2 truncate">
-                    <Globe className="text-primary size-4 shrink-0" />
-                    <span className="truncate">
-                      casefolio.app/p/cinema-booking
-                    </span>
+                  <span className="text-foreground type-caption flex min-w-0 flex-1 items-center gap-2 font-mono">
+                    <Globe className="text-primary size-3.5 shrink-0" />
+                    <span className="truncate">casefolio.app/p/cinema-booking</span>
                   </span>
                   <StatusPill tone={simulatedPublished ? "success" : "neutral"}>
                     {simulatedPublished ? "Live 200 OK" : "Staged"}
                   </StatusPill>
                 </div>
-
-                <div className="border-border bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
-                  <span className="text-foreground type-body-s">
-                    SEO metadata &amp; OpenGraph unfurl card
-                  </span>
-                  <StatusPill tone="success">Ready</StatusPill>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSimulatePublish}
-                  className={cn(
-                    "type-body-s-strong focus-visible:ring-ring/40 mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all outline-none focus-visible:ring-2",
-                    simulatedPublished
-                      ? "border-success/40 bg-success-soft text-foreground"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent",
-                  )}
-                >
-                  <Rocket className="size-4" />
-                  <span>
-                    {simulatedPublished
-                      ? "Live URL active · Click to preview Draft state"
-                      : "Preview live public URL state"}
-                  </span>
-                </button>
-              </div>
-            </article>
-
-            {/* Export Bundle Visual Card */}
-            <article className="border-border bg-card shadow-card flex flex-col justify-between gap-6 rounded-2xl border p-7 sm:p-8">
-              <div className="flex flex-col gap-3">
-                <div>
-                  <StatusPill tone="accent">
-                    {snapshot.exportFormatsCount} Export Formats
-                  </StatusPill>
-                </div>
-                <h3 className="text-foreground type-heading-m">
-                  PNG &amp; PDF that match the preview
-                </h3>
-                <p className="text-muted-foreground type-body-m">
-                  Exports render from the exact same headless Chromium canvas as
-                  the editor — zero broken fonts or shifted frames.
-                </p>
-              </div>
-
-              <div className="border-border overflow-hidden rounded-xl border">
-                <img
-                  src="/landing/export-bundle-preview.svg"
-                  alt="Behance 1400px PNG, A4 PDF deck, and public OpenGraph preview cards"
-                  className="aspect-16/9 w-full object-cover"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <div className="border-border bg-surface flex items-center justify-between rounded-lg border px-3 py-2">
-                  <span className="text-foreground type-caption">PNG Long</span>
-                  <StatusPill tone="success">Free</StatusPill>
-                </div>
-                <div className="border-border bg-surface flex items-center justify-between rounded-lg border px-3 py-2">
-                  <span className="text-foreground type-caption">
-                    Behance 1400
-                  </span>
-                  <StatusPill tone="warning">Pro</StatusPill>
-                </div>
-                <div className="border-border bg-surface flex items-center justify-between rounded-lg border px-3 py-2">
-                  <span className="text-foreground type-caption">A4 PDF</span>
-                  <StatusPill tone="warning">Pro</StatusPill>
-                </div>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      {/* 9. Privacy-First Case Study Telemetry Inspector */}
-      <section className="bg-surface px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="Built-in analytics"
-            title="Know who is reading your work"
-            description="Every published page records privacy-safe views, unique visitor hashes, referrers, and countries — zero third-party ad cookies."
-          />
-
-          <div className="border-border bg-card shadow-card flex flex-col gap-6 rounded-2xl border p-6 sm:p-8">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <StatusPill tone="success">
-                  Live PostgreSQL Telemetry
-                </StatusPill>
-                <span className="text-muted-foreground font-mono type-caption">
-                  Real counts · Zero inflated vanity metrics
-                </span>
-              </div>
-
-              <div
-                role="group"
-                aria-label="Analytics inspector view"
-                className="bg-sunken border-border inline-flex items-center gap-1 rounded-full border p-1"
-              >
-                <button
-                  type="button"
-                  aria-pressed={telemetryMode === "live"}
-                  onClick={() => setTelemetryMode("live")}
-                  className={cn(
-                    "type-caption focus-visible:ring-ring/40 rounded-full px-3 py-1 transition-all outline-none focus-visible:ring-2",
-                    telemetryMode === "live"
-                      ? "bg-elevated text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Live platform counts
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={telemetryMode === "schema"}
-                  onClick={() => setTelemetryMode("schema")}
-                  className={cn(
-                    "type-caption focus-visible:ring-ring/40 rounded-full px-3 py-1 transition-all outline-none focus-visible:ring-2",
-                    telemetryMode === "schema"
-                      ? "bg-elevated text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Tracked signals
-                </button>
-              </div>
-            </div>
-
-            {telemetryMode === "live" ? (
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <div className="border-border bg-surface flex flex-col gap-1 rounded-xl border p-5">
-                  <p className="text-foreground type-display-m">
-                    {snapshot.liveProjectsCount.toLocaleString()}
-                  </p>
-                  <p className="text-muted-foreground type-body-s">
-                    Projects created on Casefolio
-                  </p>
-                </div>
-                <div className="border-border bg-surface flex flex-col gap-1 rounded-xl border p-5">
-                  <p className="text-foreground type-display-m">
-                    {snapshot.livePageViewsCount.toLocaleString()}
-                  </p>
-                  <p className="text-muted-foreground type-body-s">
-                    Recorded public page views
-                  </p>
-                </div>
-                <div className="border-border bg-surface flex flex-col gap-1 rounded-xl border p-5">
-                  <p className="text-primary type-display-m">
-                    {snapshot.liveExportsCount.toLocaleString()}
-                  </p>
-                  <p className="text-muted-foreground type-body-s">
-                    Completed PNG &amp; PDF exports
-                  </p>
-                </div>
-                <div className="border-border bg-surface flex flex-col gap-1 rounded-xl border p-5">
-                  <p className="text-success type-display-m">0</p>
-                  <p className="text-muted-foreground type-body-s">
-                    Third-party tracking cookies
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <div className="border-border bg-surface flex flex-col gap-1 rounded-xl border p-5">
-                  <p className="text-foreground type-heading-l">SHA-256</p>
-                  <p className="text-muted-foreground type-body-s">
-                    Daily rotating visitor hash
-                  </p>
-                </div>
-                <div className="border-border bg-surface flex flex-col gap-1 rounded-xl border p-5">
-                  <p className="text-foreground type-heading-l">7d &amp; 30d</p>
-                  <p className="text-muted-foreground type-body-s">
-                    Time-series traffic windows
-                  </p>
-                </div>
-                <div className="border-border bg-surface flex flex-col gap-1 rounded-xl border p-5">
-                  <p className="text-primary type-heading-l">Referrers</p>
-                  <p className="text-muted-foreground type-body-s">
-                    LinkedIn, Read.cv, Dribbble, Direct
-                  </p>
-                </div>
-                <div className="border-border bg-surface flex flex-col gap-1 rounded-xl border p-5">
-                  <p className="text-foreground type-heading-l">ISO Country</p>
-                  <p className="text-muted-foreground type-body-s">
-                    Edge geo header without IP storage
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {SAMPLE_PRO_REFERREERS.map((ref) => (
                 <div
-                  key={ref.source}
-                  className="border-border bg-surface flex items-center justify-between gap-3 rounded-xl border p-4"
+                  className={cn(
+                    "bg-inverse transition-opacity duration-700",
+                    simulatedPublished ? "opacity-100" : "opacity-45",
+                  )}
                 >
-                  <span className="text-foreground font-mono type-caption">
-                    {ref.source}
-                  </span>
-                  <span className="bg-sunken text-muted-foreground type-caption shrink-0 rounded-full px-2.5 py-0.5">
-                    {ref.detail}
-                  </span>
+                  <img
+                    src={snapshot.templates[0]?.coverSrc ?? "/templates/cinema/cover.svg"}
+                    alt="Published Cinema case study page"
+                    className="aspect-16/8 w-full object-cover"
+                  />
                 </div>
-              ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSimulatedPublished((prev) => !prev)}
+                className={cn(
+                  "type-body-s-strong focus-visible:ring-ring/40 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full transition-all duration-300 outline-none focus-visible:ring-2 active:scale-[0.99]",
+                  simulatedPublished
+                    ? "bg-success-soft text-foreground"
+                    : "bg-inverse text-inverse-foreground hover:bg-inverse/85",
+                )}
+              >
+                {simulatedPublished ? (
+                  <CheckCircle2 className="size-4" />
+                ) : (
+                  <Rocket className="size-4" />
+                )}
+                <span>
+                  {simulatedPublished
+                    ? "Live URL active · Click to preview Draft state"
+                    : "Preview live public URL state"}
+                </span>
+              </button>
             </div>
-          </div>
-        </div>
+          </article>
+
+          <article className="bg-surface border-border/60 flex flex-col justify-between gap-10 rounded-3xl border p-8 sm:p-10">
+            <div className="flex flex-col gap-4">
+              <StatusPill tone="accent">
+                {snapshot.exportFormatsCount} export formats
+              </StatusPill>
+              <h3 className="type-heading-l text-foreground">
+                PNG &amp; PDF that match the preview
+              </h3>
+              <p className="text-muted-foreground type-body-m max-w-md">
+                Exports render from the exact same headless Chromium canvas as
+                the editor — zero broken fonts or shifted frames.
+              </p>
+            </div>
+
+            <div className="bg-elevated border-border/60 overflow-hidden rounded-2xl border">
+              <img
+                src="/landing/export-bundle-preview.svg"
+                alt="Behance 1400px PNG, A4 PDF deck, and public OpenGraph preview cards"
+                className="aspect-16/9 w-full object-cover"
+              />
+            </div>
+          </article>
+        </Reveal>
+
+        <Reveal
+          stagger
+          className="border-border/60 mx-auto mt-24 grid max-w-3xl grid-cols-3 gap-6 border-t pt-14 text-center"
+        >
+          {liveCounts.map((item) => (
+            <div key={item.label} className="flex flex-col items-center gap-1.5">
+              <span className="type-heading-l text-foreground">
+                <CountUp value={item.value} />
+              </span>
+              <span className="text-muted-foreground type-caption">
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </Reveal>
+        <p className="text-tertiary type-caption mt-4 text-center">
+          Live counts from the Casefolio platform · privacy-safe analytics, zero
+          third-party ad cookies
+        </p>
       </section>
 
-      {/* 10. Pricing Section (#pricing) */}
+      {/* 8. Pricing */}
       <section
         id="pricing"
-        className="bg-background scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28"
+        className="container-page scroll-mt-28 pb-[var(--section-space)]"
       >
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="Pricing"
-            title="Simple plans for every designer"
-            description="Start free with two projects — upgrade anytime for unlimited case studies, unwatermarked PNG & PDF exports, and full analytics."
-          />
-
-          <LandingPricingSection />
-        </div>
+        <SectionIntro
+          icon={<Tag />}
+          eyebrow="Pricing"
+          title="Simple plans for every designer"
+          description="Start free with two projects — upgrade anytime for unlimited case studies, unwatermarked PNG & PDF exports, and full analytics."
+        />
+        <LandingPricingSection />
       </section>
 
-      {/* 11. Real Case Study Blueprints (Replaces fictional testimonials with real shipped blueprints) */}
-      <section className="bg-surface px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="Real case study blueprints"
-            title="Designers ship case studies faster"
-            description="Inspect the real multi-section architectures included inside Casefolio — zero placeholder lorem ipsum."
-          />
-
-          <div
-            data-animate-grid
-            className="grid grid-cols-1 gap-6 md:grid-cols-3"
-          >
-            {snapshot.templates.map((item) => (
-              <article
-                key={`blueprint-${item.slug}`}
-                className="border-border bg-card flex flex-col justify-between gap-5 rounded-2xl border p-6 sm:p-7"
-              >
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="bg-accent text-accent-foreground type-caption rounded-full px-2.5 py-0.5">
-                      {item.categoryName}
-                    </span>
-                    <span className="text-muted-foreground font-mono type-caption">
-                      {item.sectionCount} sections · {item.slotCount} slots
-                    </span>
-                  </div>
-                  <h3 className="text-foreground type-heading-m">
-                    {item.headline}
-                  </h3>
-                  <p className="text-muted-foreground type-body-s">
-                    {item.summary}
-                  </p>
-                </div>
-
-                <div className="border-border flex items-center justify-between border-t pt-4">
-                  <span className="text-muted-foreground type-caption inline-flex items-center gap-1.5">
-                    <ShieldCheck className="text-success size-4" />
-                    <span>Schema-validated v{item.version}</span>
-                  </span>
-                  <Link
-                    href={`/templates`}
-                    className="text-primary hover:underline type-caption font-semibold"
-                  >
-                    Inspect →
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 12. FAQ Section (#faq) */}
+      {/* 9. FAQ */}
       <section
         id="faq"
-        className="bg-background scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28"
+        className="container-page scroll-mt-28 pb-[var(--section-space)]"
       >
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
-          <SectionHeader
-            overline="FAQ"
-            title="Questions, answered"
-            description="Everything you need to know about templates, device mockups, exports, and plans."
-          />
-
+        <SectionIntro
+          icon={<MessageCircleQuestion />}
+          eyebrow="FAQ"
+          title="Questions, answered"
+          description="Everything you need to know about templates, device mockups, exports, and plans."
+        />
+        <Reveal>
           <LandingFaqAccordion />
-        </div>
+        </Reveal>
       </section>
 
-      {/* 13. Final CTA Box */}
-      <section className="bg-background px-4 pt-4 pb-24 sm:px-6 lg:px-8 lg:pb-32">
-        <div className="bg-inverse text-inverse-foreground relative mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-3xl px-6 py-16 text-center sm:px-12 lg:py-24">
-          <span className="bg-inverse-foreground/12 text-inverse-foreground type-caption inline-flex items-center gap-2 rounded-full px-3.5 py-1">
-            <Sparkles className="size-3.5" />
-            <span>
-              {snapshot.freeProjectsIncluded} free case studies included · No
-              credit card required
+      {/* 10. Final CTA */}
+      <section className="px-4 pb-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <CtaStage snapshot={snapshot}>
+            <span className="bg-primary text-primary-foreground shadow-float type-heading-m inline-flex size-16 items-center justify-center rounded-2xl">
+              C
             </span>
-          </span>
-
-          <h2 className="type-display-m sm:type-display-l max-w-2xl text-balance">
-            Your next case study is one template away
-          </h2>
-
-          <p className="text-inverse-foreground/80 type-body-l max-w-xl">
-            Start free with {snapshot.freeProjectsIncluded} full case studies —
-            pick Cinema, Orbit, or Meridian and publish today.
-          </p>
-
-          <div className="flex w-full flex-col items-stretch justify-center gap-3 pt-2 sm:w-auto sm:flex-row sm:items-center">
+            <WordReveal
+              as="h2"
+              text="Your next case study is one template away"
+              onScroll
+              className="type-section text-foreground text-balance"
+            />
+            <p className="text-muted-foreground type-lead max-w-md">
+              Start free with {snapshot.freeProjectsIncluded} full case studies
+              — pick Cinema, Orbit, or Meridian and publish today.
+            </p>
             <Button size="lg" asChild>
               <Link href="/sign-up">
-                <Sparkles className="size-4" />
                 <span>Start free</span>
+                <ArrowRight className="size-4" />
               </Link>
             </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              className="bg-inverse-foreground/12 text-inverse-foreground hover:bg-inverse-foreground/20 border-0"
-              asChild
-            >
-              <Link href="/templates">Browse templates</Link>
-            </Button>
-          </div>
+          </CtaStage>
         </div>
       </section>
     </div>

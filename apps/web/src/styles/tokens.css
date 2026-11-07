@@ -71,8 +71,19 @@
   --size-overline: 0.6875rem;
 
   /* Figma elevation effects */
-  --elevation-card: 0 1px 2px 0 #0d0a080f, 0 12px 32px -8px #0d0a0814;
-  --elevation-overlay: 0 24px 64px -12px #0d0a082e;
+  --elevation-card: 0 1px 2px 0 #0d0a0809, 0 18px 40px -18px #0d0a0818;
+  --elevation-overlay: 0 32px 80px -24px #0d0a0830;
+  --elevation-float: 0 2px 4px 0 #0d0a0808, 0 24px 48px -16px #0d0a0822;
+
+  /* Brand wash — tints derived from the accent token (never raw colours) */
+  --wash-accent: color-mix(in oklab, var(--accent-primary) 9%, var(--bg-canvas));
+  --wash-accent-strong: color-mix(in oklab, var(--accent-primary) 20%, var(--bg-canvas));
+  --wash-accent-deep: color-mix(in oklab, var(--accent-primary) 34%, var(--bg-canvas));
+
+  /* Layout rhythm — generous white space */
+  --section-space: clamp(5.5rem, 11vw, 10rem);
+  --container-page: 72rem;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Default case-study template preview tokens */
   --tmpl-bg: #121110;

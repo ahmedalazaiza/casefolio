@@ -230,7 +230,7 @@ export function LandingHeroVisual() {
     <figure
       id="hero-playground"
       aria-label="Casefolio editor preview showing customizable tokens, live case study canvas, and screenshot slot validation"
-      className="border-border bg-card shadow-overlay relative mx-auto w-full max-w-6xl scroll-mt-28 overflow-hidden rounded-2xl border text-left"
+      className="bg-card relative w-full scroll-mt-28 overflow-hidden text-left"
     >
       {/* Interactive Studio Bar — Switch real templates right inside the Hero */}
       <div className="border-border bg-surface/90 flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 sm:px-5">

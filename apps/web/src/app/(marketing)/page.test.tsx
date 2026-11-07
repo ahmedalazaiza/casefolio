@@ -32,17 +32,7 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     // Core section headings
     expect(
       screen.getByRole("heading", {
-        name: "Case studies take longer than the project",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
         name: "From finished UI to case study in four steps",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
-        name: "Templates for what you actually design",
       }),
     ).toBeInTheDocument();
     expect(
@@ -62,17 +52,7 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "Know who is reading your work",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
         name: "Simple plans for every designer",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
-        name: "Designers ship case studies faster",
       }),
     ).toBeInTheDocument();
     expect(
@@ -92,7 +72,7 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     expect(screen.getAllByText("Meridian").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("supports interactive editor preview, 4-step workflow selector, and public URL state toggle", async () => {
+  it("supports interactive editor preview, template carousel pager, and public URL state toggle", async () => {
     const user = userEvent.setup();
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
@@ -114,9 +94,10 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
       screen.getByText(/Pre-publish check passed/i),
     ).toBeInTheDocument();
 
-    // Switch 4-step workflow step
-    await user.click(screen.getByRole("button", { name: /02 Pick a template/i }));
-    expect(screen.getByText(/Step 02 of 04/i)).toBeInTheDocument();
+    // Browse the stacked template carousel via its pager dots
+    const orbitDot = screen.getByRole("tab", { name: "Show Orbit" });
+    await user.click(orbitDot);
+    expect(orbitDot).toHaveAttribute("aria-selected", "true");
 
     // Toggle public URL preview state
     await user.click(

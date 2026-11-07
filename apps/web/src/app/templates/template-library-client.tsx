@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Lock, RotateCcw, Search, Smartphone, Globe, Layers } from "lucide-react";
+import { Eye, LayoutTemplate, Lock, RotateCcw, Search, Smartphone, Globe, Layers } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { trackClientProductEvent } from "@/components/analytics/posthog-provider";
@@ -8,6 +8,7 @@ import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog"
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   Dialog,
   DialogContent,
@@ -136,20 +137,34 @@ export function TemplateLibraryClient({
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-tertiary type-overline">Case Study Templates</span>
-          <h1 className="text-foreground type-display-m">Template library</h1>
-          <p className="text-muted-foreground type-body-m max-w-2xl">
+      {isAuthenticated ? (
+        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-tertiary type-overline">Case Study Templates</span>
+            <h1 className="text-foreground type-display-m">Template library</h1>
+            <p className="text-muted-foreground type-body-m max-w-2xl">
+              Curated, slot-locked layouts built by the Casefolio team. Pick a template, drop in
+              your screens, and publish or export in minutes.
+            </p>
+          </div>
+
+          <Badge tone={canUseProTemplates ? "pro" : "neutral"} className="w-fit">
+            {canUseProTemplates ? `${userPlan.toUpperCase()} plan` : "Free plan"}
+          </Badge>
+        </header>
+      ) : (
+        <header className="mx-auto flex max-w-3xl flex-col items-center gap-6 pb-6 text-center">
+          <Eyebrow icon={<LayoutTemplate />}>Case Study Templates</Eyebrow>
+          <h1 className="text-foreground type-section text-balance">Template library</h1>
+          <p className="text-muted-foreground type-lead max-w-xl text-pretty">
             Curated, slot-locked layouts built by the Casefolio team. Pick a template, drop in your
             screens, and publish or export in minutes.
           </p>
-        </div>
-
-        <Badge tone={canUseProTemplates ? "pro" : "neutral"} className="w-fit">
-          {canUseProTemplates ? `${userPlan.toUpperCase()} plan` : "Free plan"}
-        </Badge>
-      </header>
+          <Badge tone={canUseProTemplates ? "pro" : "neutral"} className="w-fit">
+            {canUseProTemplates ? `${userPlan.toUpperCase()} plan` : "Free plan"}
+          </Badge>
+        </header>
+      )}
 
       <section
         aria-label="Template library filters"

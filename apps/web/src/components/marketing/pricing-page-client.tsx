@@ -1,12 +1,12 @@
 "use client";
 
 import type { PlanTier } from "@casefolio/db";
-import { Check, Minus, ShieldCheck } from "lucide-react";
+import { Check, Minus, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
-import { Badge } from "@/components/ui/badge";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { BILLING_PLAN_CATALOG, type BillingInterval, type PaidPlanTier } from "@/lib/billing/plans";
 import { FREE_MONTHLY_EXPORT_LIMIT } from "@/lib/exports/types";
 import { FREE_PROJECT_LIMIT } from "@/lib/projects/types";
@@ -160,13 +160,13 @@ export function PricingPageClient({
   }
 
   return (
-    <div className="bg-background min-w-0 px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+    <div className="min-w-0 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
       <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-16 lg:gap-20">
         {/* Header matching Figma 2:8861 */}
-        <header className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Badge tone="neutral">Case Study Builder</Badge>
-          <h1 className="text-foreground type-display-l text-balance">Unlock the full builder</h1>
-          <p className="text-muted-foreground type-body-l">
+        <header className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
+          <Eyebrow icon={<Sparkles />}>Case Study Builder</Eyebrow>
+          <h1 className="text-foreground type-section text-balance">Unlock the full builder</h1>
+          <p className="text-muted-foreground type-lead max-w-xl">
             Create, publish and export case studies from Casefolio templates. Start free with{" "}
             {FREE_PROJECT_LIMIT} projects — upgrade whenever your portfolio or studio grows.
           </p>
@@ -218,7 +218,7 @@ export function PricingPageClient({
             </h2>
           </div>
 
-          <div className="border-border bg-card relative w-full max-w-full overflow-x-auto rounded-xl border">
+          <div className="border-border bg-card relative w-full max-w-full overflow-x-auto rounded-3xl border">
             <table className="w-full min-w-160 border-collapse text-left">
               <thead>
                 <tr className="border-border bg-surface border-b">
