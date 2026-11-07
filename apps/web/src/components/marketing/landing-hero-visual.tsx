@@ -13,11 +13,9 @@ import {
   Sparkles,
   Undo2,
   Upload,
-  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { useStudioQuest } from "@/components/marketing/studio-quest-context";
 import { cn } from "@/lib/utils";
 
 type DemoProjectKey = "cinema" | "orbit" | "meridian";
@@ -196,7 +194,6 @@ const DEVICE_OPTIONS: readonly {
 ] as const;
 
 export function LandingHeroVisual() {
-  const { completeMission, completedIds } = useStudioQuest();
   const [activeProject, setActiveProject] = useState<DemoProjectKey>("cinema");
   const [activePalette, setActivePalette] = useState<DemoPaletteKey>("crimson");
   const [activeDevice, setActiveDevice] = useState<DemoDeviceKey>("iphone");
@@ -212,24 +209,18 @@ export function LandingHeroVisual() {
     setActiveProject(nextKey);
     setActiveDevice(spec.defaultDevice);
     setActivePalette(spec.defaultPalette);
-    if (nextKey !== activeProject) {
-      completeMission("device-swap");
-    }
   };
 
   const handleSelectDevice = (nextDevice: DemoDeviceKey) => {
     setActiveDevice(nextDevice);
-    completeMission("device-swap");
   };
 
   const handleSelectPalette = (nextPalette: DemoPaletteKey) => {
     setActivePalette(nextPalette);
-    completeMission("token-style");
   };
 
   const handleSnapMissingSlot = () => {
     setSlotFilled(true);
-    completeMission("slot-fill");
   };
 
   const filledCount = slotFilled ? 6 : 5;
@@ -238,18 +229,18 @@ export function LandingHeroVisual() {
   return (
     <figure
       id="hero-playground"
-      aria-label="Casefolio editor preview showing customizable tokens, live Orbit case study canvas, and screenshot slot validation"
+      aria-label="Casefolio editor preview showing customizable tokens, live case study canvas, and screenshot slot validation"
       className="border-border bg-card shadow-overlay relative mx-auto w-full max-w-6xl scroll-mt-28 overflow-hidden rounded-2xl border text-left"
     >
       {/* Interactive Studio Bar — Switch real templates right inside the Hero */}
       <div className="border-border bg-surface/90 flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 sm:px-5">
         <div className="flex items-center gap-2">
           <span className="bg-accent text-accent-foreground type-caption inline-flex items-center gap-1 rounded-full px-2.5 py-0.5">
-            <Zap className="size-3" />
-            <span>Interactive Playground</span>
+            <Sparkles className="size-3" />
+            <span>Interactive Live Editor</span>
           </span>
           <span className="text-muted-foreground type-caption hidden sm:inline">
-            Click tokens, device frames, or the empty slot to earn Studio XP
+            Switch templates, theme tokens, or hardware bezels live
           </span>
         </div>
 
@@ -345,7 +336,7 @@ export function LandingHeroVisual() {
             <Redo2 className="size-3.5" />
           </span>
           <Link
-            href={`/new?template=${activeProject === "cinema" ? "cinema" : activeProject === "orbit" ? "orbit-mobile" : "meridian-saas"}`}
+            href={`/new?template=${activeProject === "cinema" ? "cinema" : activeProject === "orbit" ? "orbit" : "meridian-pro"}`}
             className="bg-primary text-primary-foreground hover:bg-primary/90 type-caption inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 transition-colors"
           >
             <Sparkles className="size-3" />
@@ -362,13 +353,7 @@ export function LandingHeroVisual() {
             <span className="text-muted-foreground type-overline">
               1 · Theme Tokens
             </span>
-            {completedIds.has("token-style") ? (
-              <span className="text-success type-caption inline-flex items-center gap-1">
-                <Check className="size-3" /> +20 XP
-              </span>
-            ) : (
-              <span className="text-primary type-caption">Try clicking</span>
-            )}
+            <span className="text-muted-foreground type-caption">Curated</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
@@ -406,11 +391,7 @@ export function LandingHeroVisual() {
               <span className="text-muted-foreground type-overline">
                 2 · Hardware Frame
               </span>
-              {completedIds.has("device-swap") && (
-                <span className="text-success type-caption inline-flex items-center gap-1">
-                  <Check className="size-3" /> +20 XP
-                </span>
-              )}
+              <span className="text-muted-foreground type-caption">7 models</span>
             </div>
             <div className="grid grid-cols-3 gap-1.5 lg:grid-cols-1">
               {DEVICE_OPTIONS.map((device) => {
@@ -572,10 +553,10 @@ export function LandingHeroVisual() {
                             <Upload className="size-3.5" />
                           </span>
                           <span className="text-[var(--tmpl-text)] type-caption">
-                            Snap {screen.title}
+                            Drop {screen.title}
                           </span>
-                          <span className="bg-accent text-accent-foreground type-caption rounded-full px-2 py-0.5">
-                            +20 XP
+                          <span className="text-[var(--tmpl-muted)] font-mono type-caption">
+                            {screen.ratio}
                           </span>
                         </button>
                       )}
@@ -613,10 +594,10 @@ export function LandingHeroVisual() {
               <CheckCircle2 className="text-success mt-0.5 size-4 shrink-0" />
               <div className="flex flex-col gap-0.5">
                 <span className="type-caption font-semibold">
-                  Pre-publish check passed!
+                  Pre-publish check passed
                 </span>
                 <span className="text-muted-foreground type-caption">
-                  All ratio-locked slots filled · +20 XP earned
+                  All ratio-locked slots filled · Ready to publish
                 </span>
               </div>
             </div>
@@ -634,7 +615,7 @@ export function LandingHeroVisual() {
                 className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring/40 type-caption inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 transition-colors outline-none focus-visible:ring-2"
               >
                 <Upload className="size-3.5" />
-                <span>Snap screen into slot (+20 XP)</span>
+                <span>Snap screen into slot</span>
               </button>
             </div>
           )}

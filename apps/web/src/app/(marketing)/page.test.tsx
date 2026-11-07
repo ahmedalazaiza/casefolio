@@ -5,7 +5,7 @@ import { LandingExperience } from "@/components/marketing/landing-experience";
 import { BILLING_PLAN_CATALOG } from "@/lib/billing/plans";
 import { buildLandingSnapshot } from "@/lib/marketing/landing-stats";
 
-describe("HomePage — Gamified Studio Experience & Real Platform Metrics", () => {
+describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
   it("renders all landing sections with real numbers and removes 'Trusted by designers from'", () => {
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
@@ -17,8 +17,11 @@ describe("HomePage — Gamified Studio Experience & Real Platform Metrics", () =
       }),
     ).toBeInTheDocument();
 
-    // Verify "Trusted by designers from" section is completely removed
+    // Verify "Trusted by designers from" section and gamification/XP are completely absent
     expect(screen.queryByText(/Trusted by designers from/i)).toBeNull();
+    expect(screen.queryByText(/Studio Quest/i)).toBeNull();
+    expect(screen.queryByText(/Studio XP/i)).toBeNull();
+    expect(screen.queryByText(/\+20 XP/i)).toBeNull();
 
     expect(
       screen.getByRole("figure", {
@@ -89,40 +92,37 @@ describe("HomePage — Gamified Studio Experience & Real Platform Metrics", () =
     expect(screen.getAllByText("Meridian").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("awards Studio Quest XP across all 5 interactive missions up to 100/100 XP", async () => {
+  it("supports interactive editor preview, 4-step workflow selector, and public URL state toggle", async () => {
     const user = userEvent.setup();
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
 
-    const xpBar = screen.getByRole("progressbar", { name: "Studio Quest XP" });
-    expect(xpBar).toHaveAttribute("aria-valuenow", "0");
-
-    // Mission 1: Switch template/device (+20 XP)
+    // Switch live template tab in hero editor
     await user.click(screen.getByRole("tab", { name: /Orbit · Mobile App/i }));
-    expect(xpBar).toHaveAttribute("aria-valuenow", "20");
+    expect(
+      screen.getByText(/Orbit — Calm debt & wallet planner/i),
+    ).toBeInTheDocument();
 
-    // Mission 2: Tune color token palette (+20 XP)
+    // Switch color token palette
     await user.click(screen.getByRole("button", { name: /Emerald Signal/i }));
-    expect(xpBar).toHaveAttribute("aria-valuenow", "40");
 
-    // Mission 3: Snap missing screenshot into slot (+20 XP)
+    // Snap missing screenshot into slot
     await user.click(
       screen.getByRole("button", { name: /Snap screen into slot/i }),
     );
-    expect(xpBar).toHaveAttribute("aria-valuenow", "60");
-
-    // Mission 4: Explore 4-step workflow (+20 XP)
-    await user.click(screen.getByRole("button", { name: /02 Pick a template/i }));
-    expect(xpBar).toHaveAttribute("aria-valuenow", "80");
-
-    // Mission 5: Test-launch public URL (+20 XP -> 100/100 Ship-Ready Designer)
-    await user.click(
-      screen.getByRole("button", { name: /Test-launch public URL/i }),
-    );
-    expect(xpBar).toHaveAttribute("aria-valuenow", "100");
     expect(
-      screen.getAllByText(/Ship-Ready Designer/i).length,
-    ).toBeGreaterThanOrEqual(1);
+      screen.getByText(/Pre-publish check passed/i),
+    ).toBeInTheDocument();
+
+    // Switch 4-step workflow step
+    await user.click(screen.getByRole("button", { name: /02 Pick a template/i }));
+    expect(screen.getByText(/Step 02 of 04/i)).toBeInTheDocument();
+
+    // Toggle public URL preview state
+    await user.click(
+      screen.getByRole("button", { name: /Preview live public URL state/i }),
+    );
+    expect(screen.getByText(/Published · Live/i)).toBeInTheDocument();
   });
 
   it("toggles pricing between monthly and yearly prices from BILLING_PLAN_CATALOG", async () => {

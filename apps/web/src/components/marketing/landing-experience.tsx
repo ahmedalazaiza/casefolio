@@ -3,10 +3,7 @@
 import {
   ArrowRight,
   ArrowUpRight,
-  Check,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Eye,
   Globe,
   History,
@@ -20,8 +17,6 @@ import {
   Smartphone,
   Sparkles,
   TabletSmartphone,
-  Trophy,
-  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
@@ -29,11 +24,6 @@ import { LandingFaqAccordion } from "@/components/marketing/landing-faq-accordio
 import { LandingHeroMotion } from "@/components/marketing/landing-hero-motion";
 import { LandingHeroVisual } from "@/components/marketing/landing-hero-visual";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
-import {
-  STUDIO_QUEST_MISSIONS,
-  StudioQuestProvider,
-  useStudioQuest,
-} from "@/components/marketing/studio-quest-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TemplateTypeCard } from "@/components/ui/domain-cards";
@@ -74,7 +64,7 @@ const SCREEN_WORKLOAD_PRESETS = [
   },
 ] as const;
 
-const WORKFLOW_QUEST_STEPS = [
+const WORKFLOW_STEPS = [
   {
     step: "01",
     title: "Pick a type",
@@ -194,205 +184,12 @@ function StatusPill({
   );
 }
 
-function StudioQuestHeroRibbon() {
-  const { xp, maxXp, rank, completedIds } = useStudioQuest();
-  const isComplete = xp >= maxXp;
-
-  return (
-    <div
-      data-testid="studio-quest-ribbon"
-      className="border-border bg-elevated/90 shadow-card mx-auto flex w-full max-w-4xl flex-col gap-3 rounded-2xl border p-3.5 backdrop-blur-sm sm:p-4"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex size-7 items-center justify-center rounded-full",
-              isComplete
-                ? "bg-success text-success-foreground"
-                : "bg-primary text-primary-foreground",
-            )}
-          >
-            {isComplete ? (
-              <Trophy className="size-3.5" />
-            ) : (
-              <Zap className="size-3.5" />
-            )}
-          </span>
-          <div className="text-left">
-            <p className="text-foreground type-caption font-semibold">
-              Lvl {rank.level} · {rank.title}
-            </p>
-            <p className="text-muted-foreground type-caption">
-              Interactive Studio Quest · Complete 5 micro-actions on this page
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <div
-            role="progressbar"
-            aria-label="Studio Quest XP"
-            aria-valuenow={xp}
-            aria-valuemin={0}
-            aria-valuemax={maxXp}
-            className="bg-sunken h-2 w-24 overflow-hidden rounded-full sm:w-32"
-          >
-            <div
-              style={{ width: `${Math.min(100, (xp / maxXp) * 100)}%` }}
-              className={cn(
-                "h-full rounded-full transition-all duration-300",
-                isComplete ? "bg-success" : "bg-primary",
-              )}
-            />
-          </div>
-          <span className="text-foreground font-mono type-caption font-semibold">
-            {xp}/{maxXp} XP
-          </span>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
-        {STUDIO_QUEST_MISSIONS.map((mission) => {
-          const done = completedIds.has(mission.id);
-          return (
-            <a
-              key={mission.id}
-              href={mission.targetAnchor}
-              className={cn(
-                "type-caption inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-all",
-                done
-                  ? "border-success/40 bg-success-soft text-foreground"
-                  : "border-border bg-surface text-muted-foreground hover:border-border-strong hover:text-foreground",
-              )}
-            >
-              {done ? (
-                <Check className="text-success size-3" />
-              ) : (
-                <span className="bg-primary/60 size-1.5 rounded-full" />
-              )}
-              <span>{mission.shortLabel}</span>
-              <span className="text-tertiary font-mono">+{mission.xp}</span>
-            </a>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function FloatingQuestHud() {
-  const { xp, maxXp, rank, completedIds, lastUnlockedTitle } = useStudioQuest();
-  const [expanded, setExpanded] = useState(false);
-  const isComplete = xp >= maxXp;
-
-  return (
-    <aside
-      aria-label="Studio Quest progress"
-      className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-2 sm:right-6 sm:bottom-6"
-    >
-      {expanded && (
-        <div className="border-border bg-elevated/95 shadow-overlay flex w-72 flex-col gap-3 rounded-2xl border p-4 backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-foreground type-body-s-strong">
-                Lvl {rank.level} · {rank.title}
-              </p>
-              <p className="text-muted-foreground type-caption">
-                {completedIds.size} of {STUDIO_QUEST_MISSIONS.length} missions
-                complete
-              </p>
-            </div>
-            <span className="bg-accent text-accent-foreground font-mono type-caption rounded-full px-2.5 py-0.5">
-              {xp} XP
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            {STUDIO_QUEST_MISSIONS.map((mission) => {
-              const done = completedIds.has(mission.id);
-              return (
-                <a
-                  key={mission.id}
-                  href={mission.targetAnchor}
-                  onClick={() => setExpanded(false)}
-                  className={cn(
-                    "type-caption flex items-center justify-between rounded-lg border px-2.5 py-2 transition-colors",
-                    done
-                      ? "border-success/35 bg-success-soft text-foreground"
-                      : "border-border bg-surface text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <span className="flex items-center gap-2 truncate">
-                    {done ? (
-                      <CheckCircle2 className="text-success size-3.5 shrink-0" />
-                    ) : (
-                      <span className="border-border-strong size-3.5 shrink-0 rounded-full border" />
-                    )}
-                    <span className="truncate">{mission.shortLabel}</span>
-                  </span>
-                  <span className="font-mono shrink-0">+{mission.xp} XP</span>
-                </a>
-              );
-            })}
-          </div>
-
-          {isComplete && (
-            <Button size="sm" asChild className="w-full">
-              <Link href="/sign-up">
-                <Trophy className="size-3.5" />
-                <span>Claim 2 free projects</span>
-              </Link>
-            </Button>
-          )}
-        </div>
-      )}
-
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((prev) => !prev)}
-        className={cn(
-          "border-border bg-elevated/95 text-foreground shadow-overlay focus-visible:ring-ring/40 inline-flex items-center gap-2.5 rounded-full border px-3.5 py-2 backdrop-blur-xl transition-all outline-none focus-visible:ring-2",
-          isComplete && "border-success/50",
-        )}
-      >
-        <span
-          className={cn(
-            "inline-flex size-6 items-center justify-center rounded-full",
-            isComplete
-              ? "bg-success text-success-foreground"
-              : "bg-primary text-primary-foreground",
-          )}
-        >
-          {isComplete ? (
-            <Trophy className="size-3.5" />
-          ) : (
-            <Zap className="size-3.5" />
-          )}
-        </span>
-        <span className="type-caption font-medium">
-          {lastUnlockedTitle && !expanded
-            ? lastUnlockedTitle
-            : `Studio XP · ${xp}/${maxXp}`}
-        </span>
-        {expanded ? (
-          <ChevronDown className="text-muted-foreground size-3.5" />
-        ) : (
-          <ChevronUp className="text-muted-foreground size-3.5" />
-        )}
-      </button>
-    </aside>
-  );
-}
-
-function LandingExperienceInner({
+export function LandingExperience({
   snapshot,
 }: {
   snapshot: LandingPlatformSnapshot;
 }) {
   const pageScopeRef = useRef<HTMLDivElement>(null);
-  const { completeMission, completedIds, xp, maxXp } = useStudioQuest();
 
   const [workloadIndex, setWorkloadIndex] = useState(2);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
@@ -402,7 +199,7 @@ function LandingExperienceInner({
   const activeWorkload =
     SCREEN_WORKLOAD_PRESETS[workloadIndex] ?? SCREEN_WORKLOAD_PRESETS[2]!;
   const activeStep =
-    WORKFLOW_QUEST_STEPS[activeStepIndex] ?? WORKFLOW_QUEST_STEPS[0]!;
+    WORKFLOW_STEPS[activeStepIndex] ?? WORKFLOW_STEPS[0]!;
 
   const editorFeatures = [
     {
@@ -527,12 +324,10 @@ function LandingExperienceInner({
 
   const handleStepSelect = (index: number) => {
     setActiveStepIndex(index);
-    completeMission("workflow-step");
   };
 
   const handleSimulatePublish = () => {
     setSimulatedPublished((prev) => !prev);
-    completeMission("publish-launch");
   };
 
   const realPlatformSpecs = [
@@ -560,7 +355,7 @@ function LandingExperienceInner({
 
   return (
     <div ref={pageScopeRef} className="relative flex flex-col">
-      {/* 1. Gamified Hero + Live Interactive Editor Playground */}
+      {/* 1. Hero + Live Interactive Editor Preview */}
       <section className="bg-background relative overflow-hidden px-4 pt-10 pb-16 sm:px-6 lg:px-8 lg:pt-14 lg:pb-24">
         <div
           aria-hidden="true"
@@ -607,8 +402,6 @@ function LandingExperienceInner({
               {snapshot.freeProjectsIncluded} free case studies included · No
               credit card required
             </p>
-
-            <StudioQuestHeroRibbon />
           </LandingHeroMotion>
         </div>
       </section>
@@ -755,22 +548,22 @@ function LandingExperienceInner({
         </div>
       </section>
 
-      {/* 4. Interactive 4-Step Workflow Quest (#how-it-works) */}
+      {/* 4. Interactive 4-Step Workflow (#how-it-works) */}
       <section
         id="how-it-works"
         className="bg-background scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28"
       >
         <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
           <SectionHeader
-            overline="How it works · +20 XP Quest"
+            overline="How it works"
             title="From finished UI to case study in four steps"
-            description="Click any checkpoint below to inspect the live workflow — no blank canvas, and every decision stays editable."
+            description="Select any step below to inspect the workflow — no blank canvas, and every decision stays editable."
           />
 
           <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
             {/* Left: Interactive 4-step selector */}
             <div className="flex flex-col gap-3 lg:col-span-6">
-              {WORKFLOW_QUEST_STEPS.map((item, idx) => {
+              {WORKFLOW_STEPS.map((item, idx) => {
                 const selected = idx === activeStepIndex;
                 return (
                   <button
@@ -818,15 +611,9 @@ function LandingExperienceInner({
                 <StatusPill tone="accent">
                   Step {activeStep.step} · {activeStep.title}
                 </StatusPill>
-                {completedIds.has("workflow-step") ? (
-                  <span className="text-success type-caption inline-flex items-center gap-1">
-                    <CheckCircle2 className="size-3.5" /> +20 XP unlocked
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground type-caption">
-                    Click another step for +20 XP
-                  </span>
-                )}
+                <span className="text-muted-foreground font-mono type-caption">
+                  Step {activeStep.step} of 04
+                </span>
               </div>
 
               <div className="bg-sunken border-border flex flex-1 items-center justify-center overflow-hidden rounded-xl border p-5">
@@ -1046,31 +833,29 @@ function LandingExperienceInner({
         </div>
       </section>
 
-      {/* 8. Publish, Share & Export — Interactive Launch Simulator (#publish-export) */}
+      {/* 8. Publish, Share & Export (#publish-export) */}
       <section
         id="publish-export"
         className="bg-background scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8 lg:py-28"
       >
         <div className="mx-auto flex max-w-7xl flex-col gap-12 lg:gap-14">
           <SectionHeader
-            overline="Publish, share & export · +20 XP Quest"
+            overline="Publish, share & export"
             title="One case study, everywhere you need it"
             description="Publish an indexed public URL on casefolio.app, or export crisp files for Behance, Dribbble, and recruiter PDF decks."
           />
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Interactive Publish Simulator Card */}
+            {/* Interactive Publish State Card */}
             <article className="border-border bg-card shadow-card flex flex-col justify-between gap-6 rounded-2xl border p-7 sm:p-8">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">
                   <StatusPill tone={simulatedPublished ? "success" : "warning"}>
                     {simulatedPublished ? "Published · Live" : "Draft Preview"}
                   </StatusPill>
-                  {completedIds.has("publish-launch") && (
-                    <span className="text-success type-caption inline-flex items-center gap-1">
-                      <CheckCircle2 className="size-3.5" /> +20 XP unlocked
-                    </span>
-                  )}
+                  <span className="text-muted-foreground type-caption">
+                    Public · Unlisted · Private
+                  </span>
                 </div>
 
                 <h3 className="text-foreground type-heading-m">
@@ -1115,8 +900,8 @@ function LandingExperienceInner({
                   <Rocket className="size-4" />
                   <span>
                     {simulatedPublished
-                      ? "Live URL Active! Click to toggle back to Draft"
-                      : "Test-launch public URL (+20 XP)"}
+                      ? "Live URL active · Click to preview Draft state"
+                      : "Preview live public URL state"}
                   </span>
                 </button>
               </div>
@@ -1388,26 +1173,15 @@ function LandingExperienceInner({
         </div>
       </section>
 
-      {/* 13. Final CTA Box — Reacts to Studio Quest XP */}
+      {/* 13. Final CTA Box */}
       <section className="bg-background px-4 pt-4 pb-24 sm:px-6 lg:px-8 lg:pb-32">
         <div className="bg-inverse text-inverse-foreground relative mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-3xl px-6 py-16 text-center sm:px-12 lg:py-24">
           <span className="bg-inverse-foreground/12 text-inverse-foreground type-caption inline-flex items-center gap-2 rounded-full px-3.5 py-1">
-            {xp >= maxXp ? (
-              <>
-                <Trophy className="size-3.5" />
-                <span>
-                  100/100 Studio XP Complete · Ship-Ready Designer Unlocked!
-                </span>
-              </>
-            ) : (
-              <>
-                <Zap className="size-3.5" />
-                <span>
-                  {xp}/{maxXp} Studio XP earned ·{" "}
-                  {snapshot.freeProjectsIncluded} free projects ready
-                </span>
-              </>
-            )}
+            <Sparkles className="size-3.5" />
+            <span>
+              {snapshot.freeProjectsIncluded} free case studies included · No
+              credit card required
+            </span>
           </span>
 
           <h2 className="type-display-m sm:type-display-l max-w-2xl text-balance">
@@ -1437,20 +1211,6 @@ function LandingExperienceInner({
           </div>
         </div>
       </section>
-
-      <FloatingQuestHud />
     </div>
-  );
-}
-
-export function LandingExperience({
-  snapshot,
-}: {
-  snapshot: LandingPlatformSnapshot;
-}) {
-  return (
-    <StudioQuestProvider>
-      <LandingExperienceInner snapshot={snapshot} />
-    </StudioQuestProvider>
   );
 }
