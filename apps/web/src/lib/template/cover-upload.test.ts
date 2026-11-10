@@ -90,6 +90,9 @@ describe("Template cover upload, CDN resolution & browser export helpers", () =>
     expect(resolveTemplateCoverUrl("/landing/orbit-home.svg", "orbit")).toBe(
       "/templates/orbit/cover.svg",
     );
+    expect(resolveTemplateCoverUrl("", "northwind")).toBe("/templates/northwind/cover.svg");
+    expect(resolveTemplateCoverUrl("", "pulse")).toBe("/templates/pulse/cover.svg");
+    expect(resolveTemplateCoverUrl("", "atlas")).toBe("/templates/atlas/cover.svg");
     expect(resolveTemplateCoverUrl("", "unknown-slug")).toBeNull();
   });
 

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" fill="none">
+  <rect width="960" height="600" fill="#F5F7FB"/>
+  <rect x="28" y="28" width="904" height="544" rx="16" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="2"/>
+  <text x="64" y="80" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="800">Live Dispatch Board · 312 Active Loads</text>
+  <rect x="64" y="108" width="832" height="92" rx="12" fill="#F5F7FB" stroke="#2E5BFF" stroke-width="2"/>
+  <text x="88" y="148" fill="#2E5BFF" font-family="ui-monospace,monospace" font-size="14" font-weight="700">#NW-4821 · ORD → DFW · 53ft Reefer · Assigned (19s)</text>
+  <text x="88" y="176" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">Apex Freight Lines · 99.4% SLA · Driver telemetry active</text>
+  <rect x="64" y="220" width="832" height="88" rx="12" fill="#FFFFFF" stroke="#DDE3EE"/>
+  <text x="88" y="258" fill="#0B1220" font-family="ui-monospace,monospace" font-size="14" font-weight="700">#NW-4824 · ATL → MEM · Dry Van · Dock 14B</text>
+  <text x="88" y="286" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">Kestrel Logistics · ETA 16:40 CST</text>
+  <rect x="64" y="328" width="832" height="88" rx="12" fill="#FFFFFF" stroke="#DDE3EE"/>
+  <text x="88" y="366" fill="#0B1220" font-family="ui-monospace,monospace" font-size="14" font-weight="700">#NW-4829 · DEN → SEA · Flatbed · In Transit</text>
+  <text x="88" y="394" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">Cascade Carriers · On-Time (+22m buffer)</text>
+  <rect x="64" y="436" width="832" height="96" rx="12" fill="#0B1220"/>
+  <text x="88" y="478" fill="#FFFFFF" font-family="ui-monospace,monospace" font-size="14" font-weight="700">⌘K Command Bar · [A] Assign Carrier   [F] Filter Corridor   [E] Exceptions</text>
+  <text x="88" y="506" fill="#93C5FD" font-family="system-ui,-apple-system,sans-serif" font-size="13">Zero mouse movement required for high-volume shift operations</text>
+</svg>
+

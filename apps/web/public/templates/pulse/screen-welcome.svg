@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" fill="none">
+  <rect width="390" height="844" fill="#0D0D12"/>
+  <rect x="28" y="84" width="334" height="36" rx="18" fill="#17171F" stroke="#2A2A36"/>
+  <text x="195" y="107" text-anchor="middle" fill="#D4FF3A" font-family="ui-monospace,monospace" font-size="12" font-weight="700">STEP 1 OF 3 · 15 SECONDS</text>
+  <text x="32" y="196" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="34" font-weight="800">When does a</text>
+  <text x="32" y="240" fill="#FF5B3A" font-family="system-ui,-apple-system,sans-serif" font-size="34" font-weight="800">10-minute workout</text>
+  <text x="32" y="284" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="34" font-weight="800">fit your day?</text>
+
+  <rect x="28" y="340" width="334" height="96" rx="20" fill="#17171F" stroke="#FF5B3A" stroke-width="2"/>
+  <text x="56" y="382" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">Before work · 07:30</text>
+  <text x="56" y="410" fill="#9B9BAA" font-family="system-ui,-apple-system,sans-serif" font-size="14">Energizing mobility &amp; core</text>
+
+  <rect x="28" y="456" width="334" height="96" rx="20" fill="#17171F" stroke="#2A2A36"/>
+  <text x="56" y="498" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">Lunch reset · 12:30</text>
+  <text x="56" y="526" fill="#9B9BAA" font-family="system-ui,-apple-system,sans-serif" font-size="14">Desk posture &amp; low-sweat strength</text>
+
+  <rect x="28" y="572" width="334" height="96" rx="20" fill="#17171F" stroke="#2A2A36"/>
+  <text x="56" y="614" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">Evening wind-down · 19:00</text>
+  <text x="56" y="642" fill="#9B9BAA" font-family="system-ui,-apple-system,sans-serif" font-size="14">Full-body Express + stretch</text>
+
+  <rect x="28" y="716" width="334" height="64" rx="32" fill="#D4FF3A"/>
+  <text x="195" y="754" text-anchor="middle" fill="#0D0D12" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800">Start First 10-Min Session →</text>
+</svg>
+

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" fill="none">
+  <rect width="390" height="844" fill="#0D0D12"/>
+  <rect x="24" y="56" width="342" height="40" rx="20" fill="#17171F" stroke="#2A2A36"/>
+  <circle cx="48" cy="76" r="6" fill="#D4FF3A"/>
+  <text x="66" y="81" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">18-Day Forgiving Streak · Today's 10m</text>
+
+  <text x="28" y="146" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="30" font-weight="800">Morning Mobility &amp; Core</text>
+  <text x="28" y="176" fill="#9B9BAA" font-family="system-ui,-apple-system,sans-serif" font-size="15">10 mins · No equipment · Living room friendly</text>
+
+  <g transform="translate(195, 360)">
+    <circle r="126" stroke="#17171F" stroke-width="20"/>
+    <circle r="126" stroke="#FF5B3A" stroke-width="20" stroke-dasharray="580 792" stroke-linecap="round" transform="rotate(-90)"/>
+    <text x="0" y="10" text-anchor="middle" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="56" font-weight="800">06:42</text>
+    <text x="0" y="46" text-anchor="middle" fill="#D4FF3A" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">ROUND 3 OF 4 · 138 BPM</text>
+  </g>
+
+  <rect x="24" y="532" width="342" height="128" rx="22" fill="#17171F" stroke="#2A2A36"/>
+  <text x="48" y="568" fill="#D4FF3A" font-family="ui-monospace,monospace" font-size="12" font-weight="700">ACTIVE EXERCISE · 45 SECONDS</text>
+  <text x="48" y="602" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="800">Dynamic Plank Shoulder Taps</text>
+  <text x="48" y="632" fill="#9B9BAA" font-family="system-ui,-apple-system,sans-serif" font-size="14">Tap to switch to low-impact knee variation</text>
+
+  <rect x="24" y="688" width="342" height="64" rx="32" fill="#FF5B3A"/>
+  <text x="195" y="726" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800">Complete Round · Keep Streak</text>
+</svg>
+

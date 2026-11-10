@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" fill="none">
+  <rect width="1280" height="800" fill="#FBF7F1"/>
+  <rect x="32" y="32" width="1216" height="736" rx="24" fill="#FFFFFF" stroke="#E6DDCF" stroke-width="2"/>
+  <rect x="32" y="32" width="280" height="736" rx="24" fill="#F1EADF"/>
+  <text x="68" y="88" fill="#0F5C4D" font-family="Georgia,serif" font-size="26" font-weight="700">Atlas Planner</text>
+  <rect x="56" y="120" width="232" height="48" rx="12" fill="#0F5C4D"/>
+  <text x="80" y="150" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="700">Kyoto &amp; Naoshima · 10d</text>
+  <text x="80" y="204" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="600">Bookings &amp; Rail Passes</text>
+  <text x="80" y="252" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="600">Saved Places (28)</text>
+  <text x="80" y="300" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="600">Offline Mobile Sync</text>
+
+  <g transform="translate(348, 72)">
+    <text x="0" y="28" fill="#1D1A16" font-family="Georgia,serif" font-size="30" font-weight="700">Day 3 · Tokyo to Kyoto High-Speed Corridor</text>
+    <rect x="0" y="56" width="520" height="148" rx="18" fill="#FBF7F1" stroke="#0F5C4D" stroke-width="2"/>
+    <text x="28" y="96" fill="#0F5C4D" font-family="ui-monospace,monospace" font-size="13" font-weight="700">08:30 · SHINKANSEN NOZOMI #207 · TRACK 16</text>
+    <text x="28" y="130" fill="#1D1A16" font-family="Georgia,serif" font-size="22" font-weight="700">Tokyo Station → Kyoto Station (2h 14m)</text>
+    <text x="28" y="166" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="14">QR tickets &amp; seat map cached offline on 2 travellers' phones</text>
+
+    <rect x="0" y="228" width="520" height="132" rx="18" fill="#FFFFFF" stroke="#E6DDCF" stroke-width="1.5"/>
+    <text x="28" y="268" fill="#E8743B" font-family="ui-monospace,monospace" font-size="13" font-weight="700">11:30 · ARASHIYAMA &amp; TENRYU-JI GARDEN</text>
+    <text x="28" y="302" fill="#1D1A16" font-family="Georgia,serif" font-size="20" font-weight="700">Walking Loop + Lunch Reservation</text>
+    <text x="28" y="334" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="14">Offline vector map tile (14 MB) synced automatically</text>
+
+    <rect x="0" y="384" width="520" height="132" rx="18" fill="#FFFFFF" stroke="#E6DDCF" stroke-width="1.5"/>
+    <text x="28" y="424" fill="#0F5C4D" font-family="ui-monospace,monospace" font-size="13" font-weight="700">16:00 · HOTEL KANRA KYOTO CHECK-IN</text>
+    <text x="28" y="458" fill="#1D1A16" font-family="Georgia,serif" font-size="20" font-weight="700">Confirmation #KR-88412 · Shimogyo Ward</text>
+    <text x="28" y="490" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="14">Address card rendered in Japanese &amp; English for taxi hand-off</text>
+
+    <rect x="552" y="56" width="316" height="584" rx="22" fill="#0F5C4D"/>
+    <text x="580" y="102" fill="#A7F3D0" font-family="ui-monospace,monospace" font-size="12" font-weight="700">LIVE ROUTE &amp; MOBILE HAND-OFF</text>
+    <text x="580" y="140" fill="#FFFFFF" font-family="Georgia,serif" font-size="24" font-weight="700">Instant Device Sync</text>
+    <path d="M596 310C660 264 720 228 824 184" stroke="#E8743B" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="596" cy="310" r="9" fill="#FFFFFF" stroke="#E8743B" stroke-width="4"/>
+    <circle cx="824" cy="184" r="9" fill="#A7F3D0" stroke="#FFFFFF" stroke-width="3"/>
+    <rect x="580" y="380" width="260" height="112" rx="16" fill="#093D33"/>
+    <text x="604" y="426" fill="#FFFFFF" font-family="Georgia,serif" font-size="34" font-weight="700">92%</text>
+    <text x="604" y="458" fill="#D1FAE5" font-family="system-ui,-apple-system,sans-serif" font-size="14">Offline ticket retrieval abroad</text>
+    <rect x="580" y="512" width="260" height="104" rx="16" fill="#E8743B"/>
+    <text x="604" y="556" fill="#FFFFFF" font-family="Georgia,serif" font-size="32" font-weight="700">−5 apps</text>
+    <text x="604" y="586" fill="#FFF7ED" font-family="system-ui,-apple-system,sans-serif" font-size="14">Replaced per traveller journey</text>
+  </g>
+</svg>
+

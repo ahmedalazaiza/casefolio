@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#E9EEF8"/>
+  <g transform="translate(56, 56)">
+    <rect width="1168" height="608" rx="24" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="2"/>
+    <text x="48" y="72" fill="#2E5BFF" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700" letter-spacing="0.08em">FROM 9 SCATTERED TABS TO 1 UNIFIED CONTROL ROOM</text>
+    <text x="48" y="116" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="32" font-weight="800">140 legacy features consolidated into a 120-component system</text>
+    <g transform="translate(48, 164)">
+      <rect width="336" height="388" rx="18" fill="#F5F7FB" stroke="#DDE3EE"/>
+      <text x="28" y="48" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">BEFORE REDESIGN</text>
+      <text x="28" y="96" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="44" font-weight="800">9 tabs</text>
+      <text x="28" y="132" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="15">Required to match load, carrier, and route data manually.</text>
+      <rect x="28" y="176" width="280" height="52" rx="10" fill="#FEE2E2"/>
+      <text x="46" y="208" fill="#B91C1C" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">20% manual correction rate</text>
+    </g>
+    <g transform="translate(416, 164)">
+      <rect width="336" height="388" rx="18" fill="#F5F7FB" stroke="#2E5BFF" stroke-width="2"/>
+      <text x="28" y="48" fill="#2E5BFF" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">SHIPPED WORKSPACE</text>
+      <text x="28" y="96" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="44" font-weight="800">&lt; 30 sec</text>
+      <text x="28" y="132" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="15">Split-view dispatch console with full keyboard flow.</text>
+      <rect x="28" y="176" width="280" height="52" rx="10" fill="#DCFCE7"/>
+      <text x="46" y="208" fill="#15803D" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">−61% manual corrections</text>
+    </g>
+    <g transform="translate(784, 164)">
+      <rect width="336" height="388" rx="18" fill="#0B1220"/>
+      <text x="28" y="48" fill="#93C5FD" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">DESIGN SYSTEM SCALE</text>
+      <text x="28" y="96" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="44" font-weight="800">120 UI</text>
+      <text x="28" y="132" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="15">Tokenized Figma components powering 4 internal freight products.</text>
+      <rect x="28" y="176" width="280" height="52" rx="10" fill="#2E5BFF"/>
+      <text x="46" y="208" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">Rolled out across all 12 hubs</text>
+    </g>
+  </g>
+</svg>
+

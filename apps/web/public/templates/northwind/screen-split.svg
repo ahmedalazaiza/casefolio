@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" fill="none">
+  <rect width="960" height="600" fill="#F5F7FB"/>
+  <rect x="28" y="28" width="436" height="544" rx="16" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="2"/>
+  <text x="56" y="76" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="800">Load #NW-4821 Specification</text>
+  <rect x="56" y="104" width="380" height="120" rx="12" fill="#E9EEF8"/>
+  <text x="76" y="142" fill="#2E5BFF" font-family="ui-monospace,monospace" font-size="13" font-weight="700">ORIGIN &amp; DESTINATION</text>
+  <text x="76" y="174" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">Chicago Hub #4 → Dallas Terminal #2</text>
+  <text x="76" y="202" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="13">Temp-Controlled −10°C · 38,400 lbs</text>
+  <rect x="56" y="248" width="380" height="288" rx="12" fill="#F5F7FB" stroke="#DDE3EE"/>
+  <text x="76" y="288" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="700">Matched Carrier: Apex Freight</text>
+  <text x="76" y="320" fill="#15803D" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">99.4% On-Time Corridor Score</text>
+
+  <rect x="488" y="28" width="444" height="544" rx="16" fill="#0B1220"/>
+  <text x="524" y="76" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="800">Live Corridor GPS &amp; ETA</text>
+  <path d="M540 360C620 290 710 240 868 164" stroke="#2E5BFF" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="540" cy="360" r="9" fill="#FFFFFF" stroke="#2E5BFF" stroke-width="4"/>
+  <circle cx="868" cy="164" r="9" fill="#10B981" stroke="#FFFFFF" stroke-width="3"/>
+  <rect x="524" y="424" width="372" height="112" rx="14" fill="#1E293B"/>
+  <text x="548" y="466" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="800">ETA 14:20 CST · 14m Early</text>
+  <text x="548" y="498" fill="#93C5FD" font-family="system-ui,-apple-system,sans-serif" font-size="14">Shared load, carrier &amp; route context in one view</text>
+</svg>
+

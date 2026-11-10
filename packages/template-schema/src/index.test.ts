@@ -194,4 +194,30 @@ describe("Template JSON Zod schema (C-301)", () => {
       ).toBe(true);
     }
   });
+
+  it("validates Figma Case Study Set v1 templates (northwind, pulse, atlas) against templateDocumentSchema", () => {
+    const northwind = validateTemplateDocument(loadReferenceJson("template.northwind.json"));
+    expect(northwind.ok).toBe(true);
+    if (northwind.ok) {
+      expect(northwind.data.template.slug).toBe("northwind");
+      expect(northwind.data.template.type).toBe("web");
+      expect(northwind.data.puck.content).toHaveLength(8);
+    }
+
+    const pulse = validateTemplateDocument(loadReferenceJson("template.pulse.json"));
+    expect(pulse.ok).toBe(true);
+    if (pulse.ok) {
+      expect(pulse.data.template.slug).toBe("pulse");
+      expect(pulse.data.template.type).toBe("mobile");
+      expect(pulse.data.puck.content).toHaveLength(8);
+    }
+
+    const atlas = validateTemplateDocument(loadReferenceJson("template.atlas.json"));
+    expect(atlas.ok).toBe(true);
+    if (atlas.ok) {
+      expect(atlas.data.template.slug).toBe("atlas");
+      expect(atlas.data.template.type).toBe("both");
+      expect(atlas.data.puck.content).toHaveLength(9);
+    }
+  });
 });

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" fill="none">
+  <rect width="1280" height="800" fill="#F5F7FB"/>
+  <rect x="32" y="32" width="1216" height="736" rx="20" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="2"/>
+  <rect x="32" y="32" width="240" height="736" rx="20" fill="#E9EEF8"/>
+  <text x="64" y="84" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="800">Northwind Control</text>
+  <rect x="56" y="116" width="192" height="44" rx="10" fill="#2E5BFF"/>
+  <text x="76" y="144" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">Live Dispatch Board</text>
+  <text x="76" y="198" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="600">Load Detail Split View</text>
+  <text x="76" y="244" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="600">Exceptions Inbox (3)</text>
+  <text x="76" y="290" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="600">Carrier Performance</text>
+
+  <g transform="translate(304, 68)">
+    <text x="0" y="28" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="26" font-weight="800">Chicago Hub · 40,000 Shipments / Day</text>
+    <rect x="0" y="56" width="560" height="132" rx="16" fill="#F5F7FB" stroke="#2E5BFF" stroke-width="2"/>
+    <text x="24" y="92" fill="#2E5BFF" font-family="ui-monospace,monospace" font-size="14" font-weight="700">LOAD #NW-4821 · PRIORITY REEFER</text>
+    <text x="24" y="124" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="800">Chicago, IL (ORD) → Dallas, TX (DFW)</text>
+    <text x="24" y="156" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">Assigned to Apex Freight in 19s via keyboard flow [⌘K]</text>
+
+    <rect x="0" y="212" width="560" height="116" rx="16" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="1.5"/>
+    <text x="24" y="248" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">LOAD #NW-4824 · Atlanta, GA → Memphis, TN</text>
+    <text x="24" y="282" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">Dry Van · 42,100 lbs · Carrier SLA 99.4% · Dock 14B</text>
+
+    <rect x="0" y="352" width="560" height="116" rx="16" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="1.5"/>
+    <text x="24" y="388" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">LOAD #NW-4829 · Denver, CO → Seattle, WA</text>
+    <text x="24" y="422" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">Flatbed · 36,000 lbs · Cascade Carriers · On-Time</text>
+
+    <rect x="0" y="492" width="560" height="176" rx="16" fill="#E9EEF8"/>
+    <text x="24" y="532" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="700">Keyboard-First Command Stream</text>
+    <text x="24" y="568" fill="#2E5BFF" font-family="ui-monospace,monospace" font-size="14" font-weight="700">[A] Assign Best Carrier   [E] Resolve Delay   [R] Reroute Corridor</text>
+    <text x="24" y="604" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">300+ assignments per shift completed without leaving the home row.</text>
+
+    <rect x="592" y="56" width="320" height="612" rx="18" fill="#0B1220"/>
+    <text x="620" y="102" fill="#93C5FD" font-family="ui-monospace,monospace" font-size="12" font-weight="700">LIVE CORRIDOR TELEMETRY</text>
+    <text x="620" y="138" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="800">Route #NW-4821</text>
+    <path d="M636 320C690 278 750 244 864 196" stroke="#2E5BFF" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="636" cy="320" r="9" fill="#FFFFFF" stroke="#2E5BFF" stroke-width="4"/>
+    <circle cx="864" cy="196" r="9" fill="#10B981" stroke="#FFFFFF" stroke-width="3"/>
+    <rect x="620" y="400" width="264" height="112" rx="14" fill="#1E293B"/>
+    <text x="640" y="442" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="32" font-weight="800">−47%</text>
+    <text x="640" y="472" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="14">Time to assign a load across 12 hubs</text>
+    <rect x="620" y="532" width="264" height="108" rx="14" fill="#2E5BFF"/>
+    <text x="640" y="576" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="32" font-weight="800">3.2× faster</text>
+    <text x="640" y="606" fill="#DBEAFE" font-family="system-ui,-apple-system,sans-serif" font-size="14">Keyboard actions per operator shift</text>
+  </g>
+</svg>
+

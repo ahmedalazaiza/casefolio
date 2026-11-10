@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" fill="none">
+  <rect width="390" height="844" fill="#0D0D12"/>
+  <text x="32" y="108" fill="#D4FF3A" font-family="ui-monospace,monospace" font-size="12" font-weight="700">HABIT RHYTHM · FORGIVING STREAK</text>
+  <text x="32" y="156" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="36" font-weight="800">18 Days Active</text>
+
+  <rect x="28" y="196" width="334" height="176" rx="22" fill="#17171F" stroke="#2A2A36"/>
+  <text x="52" y="236" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="700">This Week · 5 of 6 Sessions</text>
+  <circle cx="68" cy="292" r="18" fill="#D4FF3A"/>
+  <circle cx="118" cy="292" r="18" fill="#D4FF3A"/>
+  <circle cx="168" cy="292" r="18" fill="#D4FF3A"/>
+  <circle cx="218" cy="292" r="18" fill="#22222D" stroke="#D4FF3A" stroke-width="2" stroke-dasharray="4 4"/>
+  <circle cx="268" cy="292" r="18" fill="#D4FF3A"/>
+  <circle cx="318" cy="292" r="18" fill="#FF5B3A"/>
+  <text x="52" y="346" fill="#9B9BAA" font-family="system-ui,-apple-system,sans-serif" font-size="13">Rest shield used Thursday — streak stays intact</text>
+
+  <rect x="28" y="396" width="334" height="236" rx="22" fill="#17171F" stroke="#2A2A36"/>
+  <text x="52" y="440" fill="#F4F4F6" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">Monthly Consistency (+58%)</text>
+  <rect x="56" y="540" width="28" height="60" rx="8" fill="#D4FF3A"/>
+  <rect x="104" y="512" width="28" height="88" rx="8" fill="#D4FF3A"/>
+  <rect x="152" y="492" width="28" height="108" rx="8" fill="#D4FF3A"/>
+  <rect x="200" y="520" width="28" height="80" rx="8" fill="#D4FF3A"/>
+  <rect x="248" y="476" width="28" height="124" rx="8" fill="#D4FF3A"/>
+  <rect x="296" y="460" width="28" height="140" rx="8" fill="#FF5B3A"/>
+
+  <rect x="28" y="660" width="334" height="112" rx="22" fill="#FF5B3A"/>
+  <text x="52" y="704" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="24" font-weight="800">2.4× Workouts / Week</text>
+  <text x="52" y="736" fill="#FFE4DE" font-family="system-ui,-apple-system,sans-serif" font-size="14">Compared to 12-week rigid plan baseline</text>
+</svg>
+

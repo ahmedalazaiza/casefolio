@@ -1,0 +1,371 @@
+{
+  "template": {
+    "id": "tpl_atlas_both_v1",
+    "slug": "atlas",
+    "name": "Atlas",
+    "type": "both",
+    "version": "1.0.0",
+    "status": "published",
+    "category": "Product Story",
+    "tier": "free",
+    "cover": {
+      "src": "/templates/atlas/cover.svg",
+      "ratio": "4:3"
+    },
+    "canvas": {
+      "width": 1440,
+      "exportPresets": ["png-long", "pdf", "behance-1400"],
+      "allowSectionMutations": true
+    },
+    "figmaSource": {
+      "fileKey": "4otk3FXD0q1TJ7aPGEIeGO",
+      "nodeId": "121:6651"
+    },
+    "theme": {
+      "colors": {
+        "primary": "#0F5C4D",
+        "secondary": "#F0E5D4",
+        "accent": "#E8743B",
+        "background": "#FBF7F1",
+        "surface": "#FFFFFF",
+        "surfaceAlt": "#F1EADF",
+        "text": "#1D1A16",
+        "textMuted": "#6F675C",
+        "line": "#E6DDCF",
+        "onPrimary": "#FFFFFF"
+      },
+      "fonts": {
+        "heading": {
+          "family": "Fraunces",
+          "weights": [600, 700]
+        },
+        "body": {
+          "family": "Manrope",
+          "weights": [400, 500, 700]
+        }
+      },
+      "typography": {
+        "display": { "font": "heading", "size": 60, "weight": 700, "lineHeight": 1.08 },
+        "h2": { "font": "heading", "size": 36, "weight": 700, "lineHeight": 1.15 },
+        "body": { "font": "body", "size": 17, "weight": 400, "lineHeight": 1.65 },
+        "caption": { "font": "body", "size": 13, "weight": 700, "lineHeight": 1.4 }
+      }
+    },
+    "slots": {
+      "hero.logo": { "ratio": "1:1", "minWidth": 72, "device": "none" },
+      "hero.mockup": { "ratio": "16:10", "minWidth": 1200, "device": "browser" },
+      "overview.banner": { "ratio": "16:9", "minWidth": 1200, "device": "none" },
+      "process.step.image": { "ratio": "4:3", "minWidth": 384, "device": "none" },
+      "gallery.desktop": { "ratio": "16:10", "minWidth": 584, "device": "browser" },
+      "gallery.mobile": { "ratio": "9:19.5", "minWidth": 256, "device": "iphone" },
+      "custom.image": { "ratio": "9:19.5", "minWidth": 280, "device": "iphone" }
+    }
+  },
+  "puck": {
+    "root": {
+      "props": {
+        "title": "Atlas: plan on your laptop, live it on your phone",
+        "themeRef": "template.theme"
+      }
+    },
+    "content": [
+      {
+        "type": "Hero",
+        "props": {
+          "id": "Hero-1",
+          "eyebrow": "Case Study · Web + Mobile",
+          "title": "Atlas: plan on your laptop, live it on your phone",
+          "subtitle": "A cross-platform travel planner that keeps itineraries, bookings and maps in sync — from first idea to final boarding pass.",
+          "tags": [
+            { "label": "Product Design" },
+            { "label": "Responsive Web" },
+            { "label": "iOS & Android" },
+            { "label": "Design System" }
+          ],
+          "layout": "centered",
+          "mockupStyle": "straight",
+          "glow": true,
+          "logo": {
+            "slot": "hero.logo",
+            "src": "/templates/atlas/logo.svg",
+            "alt": "Atlas logo",
+            "crop": null
+          },
+          "mockup": {
+            "slot": "hero.mockup",
+            "src": "/templates/atlas/hero-planner.svg",
+            "alt": "Atlas cross-platform travel planner",
+            "crop": null,
+            "device": "browser"
+          },
+          "background": "background",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Overview",
+        "props": {
+          "id": "Overview-1",
+          "eyebrow": "Overview",
+          "heading": "One trip, two very different moments",
+          "summary": "People research trips on a laptop over weeks, then need answers in seconds at the airport. Atlas unifies both: a spacious web planner for building itineraries and a focused mobile companion for travel day, built on one shared component library.",
+          "meta": [
+            { "label": "Role", "value": "Lead Product Designer" },
+            { "label": "Timeline", "value": "20 weeks" },
+            { "label": "Platforms", "value": "Web · iOS · Android" },
+            { "label": "Team", "value": "2 Design · 6 Eng" }
+          ],
+          "banner": {
+            "slot": "overview.banner",
+            "src": "/templates/atlas/overview-banner.svg",
+            "alt": "Atlas desktop planner and mobile companion overview",
+            "crop": null
+          },
+          "background": "surface",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Problem",
+        "props": {
+          "id": "Problem-1",
+          "eyebrow": "The problem",
+          "heading": "Plans got lost between devices",
+          "statement": "Travellers used an average of six apps per trip, and 41% had re-entered booking details at least once.",
+          "columns": 3,
+          "painPoints": [
+            {
+              "title": "Broken hand-off",
+              "body": "Itineraries built on desktop looked completely different on the phone."
+            },
+            {
+              "title": "Information overload",
+              "body": "The app showed the full planner when travellers only needed what's next."
+            },
+            {
+              "title": "Offline anxiety",
+              "body": "Tickets disappeared the moment the connection dropped abroad."
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Process",
+        "props": {
+          "id": "Process-1",
+          "eyebrow": "Process",
+          "heading": "Design once, adapt twice",
+          "subtitle": "Shared foundations, tailored density for each platform.",
+          "layout": "grid-3",
+          "accent": "primary",
+          "steps": [
+            {
+              "number": "01",
+              "title": "Map the journey",
+              "body": "Interviewed 20 frequent travellers and split tasks into planning and on-the-go moments.",
+              "image": {
+                "slot": "process.step.image",
+                "src": "/templates/atlas/step-journey.svg",
+                "alt": "Traveller journey mapping across planning and travel day",
+                "crop": null
+              }
+            },
+            {
+              "number": "02",
+              "title": "Shared foundations",
+              "body": "Built one set of tokens and components, then tuned layout and density per platform.",
+              "image": {
+                "slot": "process.step.image",
+                "src": "/templates/atlas/step-journey.svg",
+                "alt": "Shared design system tokens across web and mobile",
+                "crop": null
+              }
+            },
+            {
+              "number": "03",
+              "title": "Test in the wild",
+              "body": "A field study with 12 travellers across four real trips validated the hand-off.",
+              "image": {
+                "slot": "process.step.image",
+                "src": "/templates/atlas/step-journey.svg",
+                "alt": "Field validation across 12 travellers",
+                "crop": null
+              }
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "ScreensGallery",
+        "props": {
+          "id": "ScreensGallery-Web",
+          "eyebrow": "Web app",
+          "heading": "Plan with room to think",
+          "subtitle": "The desktop planner gives the whole trip at a glance.",
+          "columns": 2,
+          "showcaseLayout": "grid",
+          "deviceFrame": "browser",
+          "screens": [
+            {
+              "caption": "Trip overview",
+              "image": {
+                "slot": "gallery.desktop",
+                "src": "/templates/atlas/hero-planner.svg",
+                "alt": "Desktop trip overview",
+                "crop": null,
+                "device": "browser"
+              }
+            },
+            {
+              "caption": "Itinerary builder",
+              "image": {
+                "slot": "gallery.desktop",
+                "src": "/templates/atlas/hero-planner.svg",
+                "alt": "Desktop itinerary builder",
+                "crop": null,
+                "device": "browser"
+              }
+            },
+            {
+              "caption": "Map & places",
+              "image": {
+                "slot": "gallery.desktop",
+                "src": "/templates/atlas/overview-banner.svg",
+                "alt": "Interactive map and saved places",
+                "crop": null,
+                "device": "browser"
+              }
+            },
+            {
+              "caption": "Bookings",
+              "image": {
+                "slot": "gallery.desktop",
+                "src": "/templates/atlas/overview-banner.svg",
+                "alt": "Unified bookings and rail passes",
+                "crop": null,
+                "device": "browser"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "ScreensGallery",
+        "props": {
+          "id": "ScreensGallery-Mobile",
+          "eyebrow": "Mobile app",
+          "heading": "Travel day, simplified",
+          "subtitle": "The app surfaces only the next step — and works offline.",
+          "columns": 4,
+          "showcaseLayout": "grid",
+          "deviceFrame": "iphone",
+          "screens": [
+            {
+              "caption": "Today's plan",
+              "image": {
+                "slot": "gallery.mobile",
+                "src": "/templates/atlas/screen-mobile-today.svg",
+                "alt": "Today's plan mobile screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Boarding pass",
+              "image": {
+                "slot": "gallery.mobile",
+                "src": "/templates/atlas/screen-mobile-today.svg",
+                "alt": "Offline QR boarding pass",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Offline map",
+              "image": {
+                "slot": "gallery.mobile",
+                "src": "/templates/atlas/screen-mobile-today.svg",
+                "alt": "Offline walking map",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Trip journal",
+              "image": {
+                "slot": "gallery.mobile",
+                "src": "/templates/atlas/screen-mobile-today.svg",
+                "alt": "Mobile trip journal",
+                "crop": null,
+                "device": "iphone"
+              }
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-Sync",
+          "eyebrow": "Cross-platform",
+          "heading": "Start on the laptop, finish on the phone",
+          "body": "Every change syncs instantly. The web planner shows the whole trip; the app shows the next step, with tickets cached for offline use.",
+          "layout": "split-left",
+          "mockupStyle": "straight",
+          "accent": "accent",
+          "bullets": [
+            { "text": "Real-time sync between web and mobile" },
+            { "text": "Next-step cards on the lock screen" },
+            { "text": "Offline tickets and maps" }
+          ],
+          "image": {
+            "slot": "custom.image",
+            "src": "/templates/atlas/screen-mobile-today.svg",
+            "alt": "Atlas mobile companion lock screen sync",
+            "crop": null,
+            "device": "iphone"
+          },
+          "background": "background"
+        }
+      },
+      {
+        "type": "Results",
+        "props": {
+          "id": "Results-1",
+          "eyebrow": "Outcomes",
+          "heading": "Less juggling, more travelling",
+          "columns": 4,
+          "accent": "onPrimary",
+          "metrics": [
+            { "value": "−5", "label": "Apps replaced per trip" },
+            { "value": "+36%", "label": "Trips planned end-to-end" },
+            { "value": "92%", "label": "Offline ticket success" },
+            { "value": "4.7★", "label": "Average store rating" }
+          ],
+          "closing": "Atlas launched on web and mobile the same day and passed one million planned trips in its first year.",
+          "background": "primary"
+        }
+      },
+      {
+        "type": "CTA",
+        "props": {
+          "id": "CTA-1",
+          "heading": "Have a cross-platform product in mind?",
+          "subheading": "I design web and mobile experiences that feel like one product.",
+          "primaryLabel": "Start a conversation",
+          "primaryHref": "mailto:hello@casefolio.app",
+          "secondaryLabel": "See more work",
+          "secondaryHref": "https://casefolio.app",
+          "accent": "primary",
+          "background": "background"
+        }
+      }
+    ],
+    "zones": {}
+  }
+}
+

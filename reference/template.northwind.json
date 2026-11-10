@@ -1,0 +1,317 @@
+{
+  "template": {
+    "id": "tpl_northwind_web_v1",
+    "slug": "northwind",
+    "name": "Northwind",
+    "type": "web",
+    "version": "1.0.0",
+    "status": "published",
+    "category": "SaaS",
+    "tier": "free",
+    "cover": {
+      "src": "/templates/northwind/cover.svg",
+      "ratio": "4:3"
+    },
+    "canvas": {
+      "width": 1440,
+      "exportPresets": ["png-long", "pdf", "behance-1400"],
+      "allowSectionMutations": true
+    },
+    "figmaSource": {
+      "fileKey": "4otk3FXD0q1TJ7aPGEIeGO",
+      "nodeId": "119:6861"
+    },
+    "theme": {
+      "colors": {
+        "primary": "#2E5BFF",
+        "secondary": "#1E40AF",
+        "accent": "#2E5BFF",
+        "background": "#F5F7FB",
+        "surface": "#FFFFFF",
+        "surfaceAlt": "#E9EEF8",
+        "text": "#0B1220",
+        "textMuted": "#5A6478",
+        "line": "#DDE3EE",
+        "onPrimary": "#FFFFFF"
+      },
+      "fonts": {
+        "heading": {
+          "family": "Space Grotesk",
+          "weights": [700]
+        },
+        "body": {
+          "family": "Inter",
+          "weights": [400, 500, 700]
+        }
+      },
+      "typography": {
+        "display": { "font": "heading", "size": 60, "weight": 700, "lineHeight": 1.08 },
+        "h2": { "font": "heading", "size": 36, "weight": 700, "lineHeight": 1.15 },
+        "body": { "font": "body", "size": 17, "weight": 400, "lineHeight": 1.65 },
+        "caption": { "font": "body", "size": 13, "weight": 700, "lineHeight": 1.4 }
+      }
+    },
+    "slots": {
+      "hero.logo": { "ratio": "1:1", "minWidth": 72, "device": "none" },
+      "hero.mockup": { "ratio": "16:10", "minWidth": 1200, "device": "browser" },
+      "overview.banner": { "ratio": "16:9", "minWidth": 1200, "device": "browser" },
+      "process.step.image": { "ratio": "4:3", "minWidth": 282, "device": "none" },
+      "gallery.screen": { "ratio": "16:10", "minWidth": 584, "device": "browser" },
+      "quote.avatar": { "ratio": "1:1", "minWidth": 64, "device": "none" }
+    }
+  },
+  "puck": {
+    "root": {
+      "props": {
+        "title": "Northwind: turning freight chaos into a calm control room",
+        "themeRef": "template.theme"
+      }
+    },
+    "content": [
+      {
+        "type": "Hero",
+        "props": {
+          "id": "Hero-1",
+          "eyebrow": "Case Study · Web App · B2B SaaS",
+          "title": "Northwind: turning freight chaos into a calm control room",
+          "subtitle": "Redesigning the dispatch console that 1,200 operators use to move 40,000 shipments a day.",
+          "tags": [
+            { "label": "Product Design" },
+            { "label": "Web App" },
+            { "label": "Design System" },
+            { "label": "2026" }
+          ],
+          "layout": "centered",
+          "mockupStyle": "straight",
+          "glow": true,
+          "logo": {
+            "slot": "hero.logo",
+            "src": "/templates/northwind/logo.svg",
+            "alt": "Northwind logo",
+            "crop": null
+          },
+          "mockup": {
+            "slot": "hero.mockup",
+            "src": "/templates/northwind/hero-dispatch.svg",
+            "alt": "Northwind live freight dispatch console",
+            "crop": null,
+            "device": "browser"
+          },
+          "background": "background",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Overview",
+        "props": {
+          "id": "Overview-1",
+          "eyebrow": "Overview",
+          "heading": "A dispatch tool that grew faster than its users",
+          "summary": "Northwind's console started as a spreadsheet replacement and quietly became mission-critical. Over six years, 140 features were bolted on without a shared pattern library. I led the end-to-end redesign — from field research to a shipped design system — with a PM and four engineers.",
+          "meta": [
+            { "label": "Role", "value": "Lead Product Designer" },
+            { "label": "Timeline", "value": "16 weeks" },
+            { "label": "Platform", "value": "Web, desktop-first" },
+            { "label": "Team", "value": "1 PM · 4 Eng · 2 Design" }
+          ],
+          "banner": {
+            "slot": "overview.banner",
+            "src": "/templates/northwind/overview-banner.svg",
+            "alt": "Northwind dispatch console transformation overview",
+            "crop": null,
+            "device": "browser"
+          },
+          "background": "surface",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Problem",
+        "props": {
+          "id": "Problem-1",
+          "eyebrow": "The problem",
+          "heading": "Operators were fighting the interface, not the freight",
+          "statement": "Dispatchers juggled nine open tabs to assign a single load, and one in five assignments needed a manual correction.",
+          "columns": 3,
+          "painPoints": [
+            {
+              "title": "Scattered information",
+              "body": "Load, carrier and route data lived on three separate screens with no shared context."
+            },
+            {
+              "title": "Alert fatigue",
+              "body": "Every delay fired the same red banner, so critical exceptions were missed or ignored."
+            },
+            {
+              "title": "No keyboard flow",
+              "body": "Power users made 300+ assignments per shift, yet every action required the mouse."
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Process",
+        "props": {
+          "id": "Process-1",
+          "eyebrow": "Process",
+          "heading": "From the warehouse floor to a shipped system",
+          "subtitle": "Four phases, each closed with a measurable checkpoint.",
+          "layout": "cards",
+          "accent": "primary",
+          "steps": [
+            {
+              "number": "01",
+              "title": "Discover",
+              "body": "Shadowed 14 dispatchers across 3 hubs and mapped 62 recurring tasks.",
+              "image": {
+                "slot": "process.step.image",
+                "src": "/templates/northwind/step-discover.svg",
+                "alt": "Dispatcher field shadowing and task audit",
+                "crop": null
+              }
+            },
+            {
+              "number": "02",
+              "title": "Define",
+              "body": "Prioritised jobs-to-be-done and set a target of under 30 seconds per assignment.",
+              "image": {
+                "slot": "process.step.image",
+                "src": "/templates/northwind/step-discover.svg",
+                "alt": "Jobs-to-be-done and 30-second assignment target",
+                "crop": null
+              }
+            },
+            {
+              "number": "03",
+              "title": "Design",
+              "body": "Built a split-view workspace and a 120-component system in Figma.",
+              "image": {
+                "slot": "process.step.image",
+                "src": "/templates/northwind/step-discover.svg",
+                "alt": "Split-view workspace and 120-component Figma library",
+                "crop": null
+              }
+            },
+            {
+              "number": "04",
+              "title": "Validate",
+              "body": "Ran three rounds of moderated tests and a two-week pilot with 80 operators.",
+              "image": {
+                "slot": "process.step.image",
+                "src": "/templates/northwind/step-discover.svg",
+                "alt": "Two-week live pilot across 80 operators",
+                "crop": null
+              }
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "ScreensGallery",
+        "props": {
+          "id": "ScreensGallery-1",
+          "eyebrow": "Final screens",
+          "heading": "One workspace for every load",
+          "subtitle": "Desktop-first screens designed at 1440px and tested on 1280px operations monitors.",
+          "columns": 2,
+          "showcaseLayout": "grid",
+          "deviceFrame": "browser",
+          "screens": [
+            {
+              "caption": "Live dispatch board",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/northwind/screen-board.svg",
+                "alt": "Live dispatch board",
+                "crop": null,
+                "device": "browser"
+              }
+            },
+            {
+              "caption": "Load detail split view",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/northwind/screen-split.svg",
+                "alt": "Load detail split view",
+                "crop": null,
+                "device": "browser"
+              }
+            },
+            {
+              "caption": "Exceptions inbox",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/northwind/screen-exceptions.svg",
+                "alt": "Exceptions inbox",
+                "crop": null,
+                "device": "browser"
+              }
+            },
+            {
+              "caption": "Carrier performance",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/northwind/screen-carrier.svg",
+                "alt": "Carrier performance",
+                "crop": null,
+                "device": "browser"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Results",
+        "props": {
+          "id": "Results-1",
+          "eyebrow": "Outcomes",
+          "heading": "Calmer shifts, faster freight",
+          "columns": 3,
+          "accent": "onPrimary",
+          "metrics": [
+            { "value": "−47%", "label": "Time to assign a load" },
+            { "value": "3.2×", "label": "Keyboard actions per shift" },
+            { "value": "−61%", "label": "Manual corrections" }
+          ],
+          "closing": "Rolled out to all 12 hubs in Q2; the design system now powers four internal products.",
+          "background": "primary"
+        }
+      },
+      {
+        "type": "Quote",
+        "props": {
+          "id": "Quote-1",
+          "quote": "“For the first time, the screen keeps up with how fast we actually think.”",
+          "author": "Dana Whitfield",
+          "role": "Senior Dispatcher, Northwind Chicago Hub",
+          "avatar": {
+            "slot": "quote.avatar",
+            "src": "/templates/northwind/avatar-dana.svg",
+            "alt": "Dana Whitfield avatar",
+            "crop": null
+          },
+          "background": "surface"
+        }
+      },
+      {
+        "type": "CTA",
+        "props": {
+          "id": "CTA-1",
+          "heading": "Want the full story?",
+          "subheading": "Happy to walk you through the research, the trade-offs and the design system in a live session.",
+          "primaryLabel": "Get in touch",
+          "primaryHref": "mailto:hello@casefolio.app",
+          "secondaryLabel": "View prototype",
+          "secondaryHref": "https://casefolio.app",
+          "accent": "primary",
+          "background": "background"
+        }
+      }
+    ],
+    "zones": {}
+  }
+}
+

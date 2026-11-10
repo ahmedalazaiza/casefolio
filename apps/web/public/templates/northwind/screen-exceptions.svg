@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" fill="none">
+  <rect width="960" height="600" fill="#F5F7FB"/>
+  <rect x="28" y="28" width="904" height="544" rx="16" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="2"/>
+  <text x="64" y="80" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="800">Tiered Exceptions Inbox · Alert Fatigue Eliminated</text>
+  <rect x="64" y="112" width="832" height="124" rx="14" fill="#FEF2F2" stroke="#EF4444" stroke-width="2"/>
+  <text x="92" y="152" fill="#B91C1C" font-family="ui-monospace,monospace" font-size="13" font-weight="700">P1 CRITICAL · REEFER TEMP DEVIATION (+3.2°C)</text>
+  <text x="92" y="184" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800">Load #NW-4792 · St. Louis, MO → Nashville, TN</text>
+  <text x="92" y="212" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">One-keypress [R] dispatches backup reefer unit within 18 miles.</text>
+
+  <rect x="64" y="260" width="832" height="116" rx="14" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="92" y="298" fill="#B45309" font-family="ui-monospace,monospace" font-size="13" font-weight="700">P2 WARNING · I-80 WEATHER SLOWDOWN (25 MIN)</text>
+  <text x="92" y="330" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">4 loads buffered automatically · Customer SLA still green</text>
+
+  <rect x="64" y="400" width="832" height="128" rx="14" fill="#F5F7FB" stroke="#DDE3EE"/>
+  <text x="92" y="444" fill="#15803D" font-family="ui-monospace,monospace" font-size="13" font-weight="700">68 LOW-PRIORITY BANNERS SUPPRESSED THIS SHIFT</text>
+  <text x="92" y="480" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">−61% manual corrections after severity-tiered inbox launch</text>
+</svg>
+

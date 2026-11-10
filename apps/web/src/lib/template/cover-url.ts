@@ -5,6 +5,8 @@ export const SEEDED_TEMPLATE_COVER_FALLBACKS: Record<string, string> = {
   orbit: "/templates/orbit/cover.svg",
   "meridian-pro": "/templates/meridian-pro/cover.svg",
   atlas: "/templates/atlas/cover.svg",
+  northwind: "/templates/northwind/cover.svg",
+  pulse: "/templates/pulse/cover.svg",
 };
 
 const LEGACY_LANDING_COVER_REDIRECTS: Record<string, string> = {

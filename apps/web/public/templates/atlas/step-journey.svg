@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="#F1EADF"/>
+  <rect x="44" y="44" width="712" height="512" rx="22" fill="#FFFFFF" stroke="#E6DDCF" stroke-width="2"/>
+  <text x="84" y="104" fill="#0F5C4D" font-family="ui-monospace,monospace" font-size="13" font-weight="700">CROSS-PLATFORM ARCHITECTURE · TOKENS TO HAND-OFF</text>
+  <text x="84" y="150" fill="#1D1A16" font-family="Georgia,serif" font-size="28" font-weight="700">Shared foundations, tailored density per device</text>
+  <rect x="84" y="192" width="300" height="312" rx="16" fill="#FBF7F1" stroke="#E6DDCF"/>
+  <text x="112" y="238" fill="#0F5C4D" font-family="Georgia,serif" font-size="22" font-weight="700">Planning Moment</text>
+  <text x="112" y="274" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="14">Laptop · Multi-column comparison · Map + calendar split view</text>
+  <rect x="416" y="192" width="300" height="312" rx="16" fill="#0F5C4D"/>
+  <text x="444" y="238" fill="#FFFFFF" font-family="Georgia,serif" font-size="22" font-weight="700">On-the-Go Moment</text>
+  <text x="444" y="274" fill="#D1FAE5" font-family="system-ui,-apple-system,sans-serif" font-size="14">Phone · Single next-step card · Cached tickets &amp; offline vector map</text>
+</svg>
+

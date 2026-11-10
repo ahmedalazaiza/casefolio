@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <rect width="240" height="240" rx="120" fill="#22222D"/>
+  <circle cx="120" cy="96" r="42" fill="#FF5B3A"/>
+  <path d="M52 212C52 170 82 148 120 148C158 148 188 170 188 212" fill="#D4FF3A"/>
+  <text x="120" y="108" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="28" font-weight="800">MO</text>
+</svg>
+

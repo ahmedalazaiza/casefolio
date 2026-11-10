@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="#E9EEF8"/>
+  <rect x="48" y="48" width="704" height="504" rx="20" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="2"/>
+  <text x="88" y="108" fill="#2E5BFF" font-family="ui-monospace,monospace" font-size="14" font-weight="700">FIELD RESEARCH · 14 DISPATCHERS · 3 HUBS</text>
+  <text x="88" y="152" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="28" font-weight="800">Task frequency &amp; tab-switching audit</text>
+  <rect x="88" y="196" width="180" height="120" rx="14" fill="#F5F7FB" stroke="#DDE3EE"/>
+  <text x="112" y="252" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="36" font-weight="800">62</text>
+  <text x="112" y="284" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">Recurring tasks</text>
+  <rect x="292" y="196" width="180" height="120" rx="14" fill="#F5F7FB" stroke="#DDE3EE"/>
+  <text x="316" y="252" fill="#2E5BFF" font-family="system-ui,-apple-system,sans-serif" font-size="36" font-weight="800">&lt;30s</text>
+  <text x="316" y="284" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="14">Target SLA / load</text>
+  <rect x="496" y="196" width="216" height="120" rx="14" fill="#0B1220"/>
+  <text x="520" y="252" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="36" font-weight="800">80 ops</text>
+  <text x="520" y="284" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="14">2-week live hub pilot</text>
+  <rect x="88" y="348" width="624" height="156" rx="16" fill="#F5F7FB" stroke="#2E5BFF" stroke-width="1.5"/>
+  <text x="116" y="396" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="700">120-Component Figma System + Split-View Architecture</text>
+  <text x="116" y="432" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="15">Unified load, carrier, and route context on one 1440px operations screen.</text>
+</svg>
+

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#F1EADF"/>
+  <g transform="translate(56, 56)">
+    <rect width="1168" height="608" rx="28" fill="#FFFFFF" stroke="#E6DDCF" stroke-width="2"/>
+    <text x="56" y="76" fill="#E8743B" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700" letter-spacing="0.08em">ONE SHARED DESIGN SYSTEM · TWO TAILORED DENSITIES</text>
+    <text x="56" y="124" fill="#1D1A16" font-family="Georgia,serif" font-size="34" font-weight="700">Weeks of laptop research distilled into seconds at the boarding gate</text>
+
+    <g transform="translate(56, 172)">
+      <rect width="512" height="376" rx="20" fill="#FBF7F1" stroke="#E6DDCF" stroke-width="1.5"/>
+      <text x="32" y="50" fill="#0F5C4D" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">DESKTOP WEB PLANNER · 1440PX</text>
+      <text x="32" y="96" fill="#1D1A16" font-family="Georgia,serif" font-size="28" font-weight="700">Multi-day canvas, map &amp; budget</text>
+      <text x="32" y="134" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="15">Drag-and-drop itinerary blocks, side-by-side rail schedules, and collaborative notes.</text>
+      <rect x="32" y="180" width="448" height="160" rx="14" fill="#FFFFFF" stroke="#E6DDCF"/>
+      <text x="56" y="228" fill="#0F5C4D" font-family="Georgia,serif" font-size="36" font-weight="700">+36% Trips Planned</text>
+      <text x="56" y="264" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="15">End-to-end completion from first idea to booked itinerary</text>
+    </g>
+
+    <g transform="translate(600, 172)">
+      <rect width="512" height="376" rx="20" fill="#0F5C4D"/>
+      <text x="32" y="50" fill="#A7F3D0" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">MOBILE COMPANION · iOS &amp; ANDROID</text>
+      <text x="32" y="96" fill="#FFFFFF" font-family="Georgia,serif" font-size="28" font-weight="700">Context-aware next-step cards</text>
+      <text x="32" y="134" fill="#D1FAE5" font-family="system-ui,-apple-system,sans-serif" font-size="15">Surfaces only what is happening in the next 2 hours, with offline QR passes and maps.</text>
+      <rect x="32" y="180" width="448" height="160" rx="14" fill="#093D33"/>
+      <text x="56" y="228" fill="#E8743B" font-family="Georgia,serif" font-size="36" font-weight="700">92% Offline Success</text>
+      <text x="56" y="264" fill="#D1FAE5" font-family="system-ui,-apple-system,sans-serif" font-size="15">Zero lost boarding passes when roaming or underground</text>
+    </g>
+  </g>
+</svg>
+

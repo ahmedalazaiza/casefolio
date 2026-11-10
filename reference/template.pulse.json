@@ -1,0 +1,340 @@
+{
+  "template": {
+    "id": "tpl_pulse_mobile_v1",
+    "slug": "pulse",
+    "name": "Pulse",
+    "type": "mobile",
+    "version": "1.0.0",
+    "status": "published",
+    "category": "Health & Fitness",
+    "tier": "free",
+    "cover": {
+      "src": "/templates/pulse/cover.svg",
+      "ratio": "4:3"
+    },
+    "canvas": {
+      "width": 1440,
+      "exportPresets": ["png-long", "pdf", "behance-1400"],
+      "allowSectionMutations": true
+    },
+    "figmaSource": {
+      "fileKey": "4otk3FXD0q1TJ7aPGEIeGO",
+      "nodeId": "120:6651"
+    },
+    "theme": {
+      "colors": {
+        "primary": "#FF5B3A",
+        "secondary": "#22222D",
+        "accent": "#D4FF3A",
+        "background": "#0D0D12",
+        "surface": "#17171F",
+        "surfaceAlt": "#22222D",
+        "text": "#F4F4F6",
+        "textMuted": "#9B9BAA",
+        "line": "#2A2A36",
+        "onPrimary": "#FFFFFF"
+      },
+      "fonts": {
+        "heading": {
+          "family": "Sora",
+          "weights": [600, 700]
+        },
+        "body": {
+          "family": "DM Sans",
+          "weights": [400, 500, 700]
+        }
+      },
+      "typography": {
+        "display": { "font": "heading", "size": 56, "weight": 700, "lineHeight": 1.08 },
+        "h2": { "font": "heading", "size": 36, "weight": 700, "lineHeight": 1.15 },
+        "body": { "font": "body", "size": 17, "weight": 400, "lineHeight": 1.65 },
+        "caption": { "font": "body", "size": 13, "weight": 700, "lineHeight": 1.4 }
+      }
+    },
+    "slots": {
+      "hero.logo": { "ratio": "1:1", "minWidth": 72, "device": "none" },
+      "hero.mockup": { "ratio": "9:19.5", "minWidth": 320, "device": "iphone" },
+      "overview.banner": { "ratio": "16:9", "minWidth": 1200, "device": "none" },
+      "gallery.screen": { "ratio": "9:19.5", "minWidth": 256, "device": "iphone" },
+      "quote.avatar": { "ratio": "1:1", "minWidth": 64, "device": "none" }
+    }
+  },
+  "puck": {
+    "root": {
+      "props": {
+        "title": "Pulse: a fitness coach that fits into your day",
+        "themeRef": "template.theme"
+      }
+    },
+    "content": [
+      {
+        "type": "Hero",
+        "props": {
+          "id": "Hero-1",
+          "eyebrow": "Case Study · iOS & Android",
+          "title": "Pulse: a fitness coach that fits into your day",
+          "subtitle": "Designing a habit-first workout app that helps busy people train ten minutes at a time.",
+          "tags": [
+            { "label": "Mobile App" },
+            { "label": "UX Research" },
+            { "label": "Interaction Design" },
+            { "label": "Prototyping" }
+          ],
+          "layout": "split-right",
+          "mockupStyle": "straight",
+          "glow": true,
+          "logo": {
+            "slot": "hero.logo",
+            "src": "/templates/pulse/logo.svg",
+            "alt": "Pulse logo",
+            "crop": null
+          },
+          "mockup": {
+            "slot": "hero.mockup",
+            "src": "/templates/pulse/hero-workout.svg",
+            "alt": "Pulse 10-minute guided workout screen",
+            "crop": null,
+            "device": "iphone"
+          },
+          "background": "background",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Overview",
+        "props": {
+          "id": "Overview-1",
+          "eyebrow": "Overview",
+          "heading": "Small workouts, built into real routines",
+          "summary": "Pulse began as a 12-week training plan that most people abandoned by week two. We reframed it around tiny daily habits, adaptive sessions and forgiving streaks. I owned research, flows and the visual language from first sketch to App Store launch.",
+          "meta": [
+            { "label": "Role", "value": "Product Designer" },
+            { "label": "Timeline", "value": "12 weeks" },
+            { "label": "Platform", "value": "iOS & Android" },
+            { "label": "Tools", "value": "Figma, Maze, ProtoPie" }
+          ],
+          "banner": {
+            "slot": "overview.banner",
+            "src": "/templates/pulse/overview-banner.svg",
+            "alt": "Pulse habit loop and forgiving streak overview",
+            "crop": null
+          },
+          "background": "surface",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Problem",
+        "props": {
+          "id": "Problem-1",
+          "eyebrow": "The problem",
+          "heading": "Motivation died in the first two weeks",
+          "statement": "72% of new users stopped opening the app before their tenth workout.",
+          "columns": 3,
+          "painPoints": [
+            {
+              "title": "Plans felt rigid",
+              "body": "Missing a single day broke the programme, and people felt they had already failed."
+            },
+            {
+              "title": "Too much setup",
+              "body": "Onboarding asked 18 questions before showing a single workout."
+            },
+            {
+              "title": "No sense of progress",
+              "body": "Stats were buried in a profile tab that almost nobody visited."
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Process",
+        "props": {
+          "id": "Process-1",
+          "eyebrow": "Process",
+          "heading": "Designing for the bad day, not the perfect one",
+          "layout": "timeline",
+          "accent": "primary",
+          "steps": [
+            {
+              "number": "01",
+              "title": "Listen",
+              "body": "A three-week diary study with 24 people showed when workouts actually happen — and when they get skipped."
+            },
+            {
+              "number": "02",
+              "title": "Reframe",
+              "body": "We shifted the core loop from “complete the plan” to “show up today”."
+            },
+            {
+              "number": "03",
+              "title": "Prototype",
+              "body": "Tested five onboarding concepts in ProtoPie; a three-question flow won clearly."
+            },
+            {
+              "number": "04",
+              "title": "Iterate",
+              "body": "Weekly releases with in-app feedback, measured against day-30 retention."
+            }
+          ],
+          "background": "surface"
+        }
+      },
+      {
+        "type": "ScreensGallery",
+        "props": {
+          "id": "ScreensGallery-1",
+          "eyebrow": "Final screens",
+          "heading": "Ten minutes, beautifully guided",
+          "subtitle": "Key flows designed for one-handed use, from first launch to a long-running streak.",
+          "columns": 4,
+          "showcaseLayout": "grid",
+          "deviceFrame": "iphone",
+          "screens": [
+            {
+              "caption": "Welcome",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/pulse/screen-welcome.svg",
+                "alt": "Welcome screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Quick setup",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/pulse/screen-welcome.svg",
+                "alt": "Quick 3-question setup",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Today",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/pulse/hero-workout.svg",
+                "alt": "Today workout overview",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Live workout",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/pulse/hero-workout.svg",
+                "alt": "Live workout timer",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Rest timer",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/pulse/hero-workout.svg",
+                "alt": "Rest timer screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Streaks",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/pulse/screen-streaks.svg",
+                "alt": "Forgiving streaks screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Progress",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/pulse/screen-streaks.svg",
+                "alt": "Weekly progress chart",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Profile",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "/templates/pulse/screen-welcome.svg",
+                "alt": "Habit profile & preferences",
+                "crop": null,
+                "device": "iphone"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Results",
+        "props": {
+          "id": "Results-1",
+          "eyebrow": "Outcomes",
+          "heading": "Habits that actually stick",
+          "columns": 3,
+          "accent": "accent",
+          "metrics": [
+            { "value": "+58%", "label": "Day-30 retention" },
+            { "value": "2.4×", "label": "Workouts per week" },
+            { "value": "4.8★", "label": "App Store rating" }
+          ],
+          "takeaways": [
+            {
+              "title": "Design for the bad day",
+              "body": "Forgiving streaks kept people going after a missed session."
+            },
+            {
+              "title": "Ask less, show sooner",
+              "body": "Cutting onboarding to three questions doubled first-workout completion."
+            }
+          ],
+          "closing": "Pulse reached 250,000 downloads in its first four months.",
+          "background": "primary"
+        }
+      },
+      {
+        "type": "Quote",
+        "props": {
+          "id": "Quote-1",
+          "quote": "“Ten minutes felt doable, so I actually did it — every day for three months.”",
+          "author": "Maya Okafor",
+          "role": "Beta tester, London",
+          "avatar": {
+            "slot": "quote.avatar",
+            "src": "/templates/pulse/avatar-maya.svg",
+            "alt": "Maya Okafor avatar",
+            "crop": null
+          },
+          "background": "surface"
+        }
+      },
+      {
+        "type": "CTA",
+        "props": {
+          "id": "CTA-1",
+          "heading": "Let's build something people come back to",
+          "subheading": "Open to product design roles and freelance mobile projects.",
+          "primaryLabel": "Say hello",
+          "primaryHref": "mailto:hello@casefolio.app",
+          "secondaryLabel": "Download the app",
+          "secondaryHref": "https://casefolio.app",
+          "accent": "primary",
+          "background": "background"
+        }
+      }
+    ],
+    "zones": {}
+  }
+}
+

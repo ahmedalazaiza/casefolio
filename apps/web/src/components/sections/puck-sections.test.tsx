@@ -204,4 +204,22 @@ describe("Puck section components & TemplatePuckRenderer (C-302)", () => {
     const { container: hybridContainer } = render(<TemplatePuckRenderer document={hybridCinema} />);
     expect(hybridContainer.querySelectorAll('[data-device-model="macbook"]').length).toBe(1);
   });
+
+  it("renders Figma Case Study Set v1 templates (Northwind, Pulse, Atlas) end-to-end", () => {
+    for (const [fileName, expectedTitle] of [
+      ["template.northwind.json", "Northwind: turning freight chaos into a calm control room"],
+      ["template.pulse.json", "Pulse: a fitness coach that fits into your day"],
+      ["template.atlas.json", "Atlas: plan on your laptop, live it on your phone"],
+    ] as const) {
+      const parsed = validateTemplateDocument(
+        JSON.parse(readFileSync(resolveReferencePath(fileName), "utf-8")),
+      );
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) continue;
+
+      const { unmount } = render(<TemplatePuckRenderer document={parsed.data} />);
+      expect(screen.getByRole("heading", { level: 1, name: expectedTitle })).toBeInTheDocument();
+      unmount();
+    }
+  });
 });

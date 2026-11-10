@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" fill="none">
+  <rect width="390" height="844" fill="#FBF7F1"/>
+  <rect x="28" y="64" width="176" height="32" rx="16" fill="#0F5C4D"/>
+  <text x="116" y="85" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">OFFLINE PASS READY</text>
+  <text x="28" y="146" fill="#1D1A16" font-family="Georgia,serif" font-size="32" font-weight="700">Today in Kyoto</text>
+  <text x="28" y="176" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="15">Day 3 · Tuesday, Oct 14 · 19°C Crisp</text>
+
+  <rect x="28" y="212" width="334" height="296" rx="24" fill="#FFFFFF" stroke="#E6DDCF" stroke-width="2"/>
+  <rect x="28" y="212" width="334" height="82" rx="24" fill="#0F5C4D"/>
+  <text x="52" y="248" fill="#A7F3D0" font-family="ui-monospace,monospace" font-size="11" font-weight="700">BOARDING IN 18 MINUTES</text>
+  <text x="52" y="278" fill="#FFFFFF" font-family="Georgia,serif" font-size="24" font-weight="700">Tokyo  →  Kyoto</text>
+  <text x="52" y="336" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="700">TRACK 16 · CAR 7 · SEAT 4E</text>
+  <rect x="52" y="364" width="286" height="116" rx="14" fill="#1D1A16"/>
+  <text x="195" y="428" text-anchor="middle" fill="#FFFFFF" font-family="ui-monospace,monospace" font-size="14" font-weight="700">QR BOARDING PASS · CACHED</text>
+
+  <rect x="28" y="532" width="334" height="148" rx="22" fill="#F0E5D4" stroke="#E8743B" stroke-width="1.5"/>
+  <text x="52" y="572" fill="#E8743B" font-family="ui-monospace,monospace" font-size="12" font-weight="700">UP NEXT · 11:15 AM</text>
+  <text x="52" y="604" fill="#1D1A16" font-family="Georgia,serif" font-size="20" font-weight="700">Arashiyama Walking Route</text>
+  <text x="52" y="636" fill="#6F675C" font-family="system-ui,-apple-system,sans-serif" font-size="14">Offline map downloaded · 9 min from station</text>
+
+  <rect x="28" y="708" width="334" height="64" rx="32" fill="#E8743B"/>
+  <text x="195" y="746" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="17" font-weight="800">Open Offline Walking Map</text>
+</svg>
+

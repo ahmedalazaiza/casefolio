@@ -26,6 +26,9 @@ function resolveReferenceJsonPath(fileName: string): string {
 
 const ORBIT_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.example.json");
 const CINEMA_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.cinema.json");
+const NORTHWIND_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.northwind.json");
+const PULSE_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.pulse.json");
+const ATLAS_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.atlas.json");
 
 interface OrbitSeedJson {
   template: {
@@ -55,6 +58,8 @@ const DEFAULT_SEED_COVERS = new Set([
   "/templates/meridian-pro/cover.svg",
   "/templates/cinema/cover.svg",
   "/templates/atlas/cover.svg",
+  "/templates/northwind/cover.svg",
+  "/templates/pulse/cover.svg",
 ]);
 
 function resolveSeedCoverUrl(
@@ -401,106 +406,121 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
       }
     }
 
-    // Seed 3rd approved Starter (Free) template ("Atlas" — Bilingual Product Story, Spec §4 & §14.1)
-    const [productStoryCategory] = await db
-      .insert(categories)
-      .values({
-        name: "Product Story",
-        slug: "product-story",
-        sort: 4,
-      })
-      .onConflictDoUpdate({
-        target: categories.slug,
-        set: {
-          name: "Product Story",
-          sort: 4,
-        },
-      })
-      .returning({ id: categories.id });
+    // Seed Figma Case Study Set v1 templates ("Northwind", "Pulse", "Atlas")
+    const figmaSetTemplates: Array<{
+      jsonPath: string;
+      defaultCover: string;
+      categorySort: number;
+      changelog: string;
+    }> = [
+      {
+        jsonPath: NORTHWIND_TEMPLATE_JSON_PATH,
+        defaultCover: "/templates/northwind/cover.svg",
+        categorySort: 2,
+        changelog: "Northwind B2B SaaS dispatch console template (Figma node 119:6861)",
+      },
+      {
+        jsonPath: PULSE_TEMPLATE_JSON_PATH,
+        defaultCover: "/templates/pulse/cover.svg",
+        categorySort: 5,
+        changelog: "Pulse habit-first mobile fitness coach template (Figma node 120:6651)",
+      },
+      {
+        jsonPath: ATLAS_TEMPLATE_JSON_PATH,
+        defaultCover: "/templates/atlas/cover.svg",
+        categorySort: 4,
+        changelog: "Atlas cross-platform travel planner template (Figma node 121:6651)",
+      },
+    ];
 
-    if (productStoryCategory) {
-      const atlasPayload = structuredClone(orbitPayload) as unknown as Record<string, unknown> & {
-        template: Record<string, unknown>;
-        puck: {
-          root: { props: Record<string, unknown> };
-          content: Array<{ type: string; props: Record<string, unknown> }>;
-        };
-      };
-      const atlasCoverUrl = resolveSeedCoverUrl(
-        existingCoverBySlug.get("atlas"),
-        "/templates/atlas/cover.svg",
+    for (const entry of figmaSetTemplates) {
+      if (!existsSync(entry.jsonPath)) continue;
+
+      const rawJson = readFileSync(entry.jsonPath, "utf-8");
+      const payload = JSON.parse(rawJson) as OrbitSeedJson & Record<string, unknown>;
+      const catSlug = payload.template.category
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      const [catRow] = await db
+        .insert(categories)
+        .values({
+          name: payload.template.category,
+          slug: catSlug,
+          sort: entry.categorySort,
+        })
+        .onConflictDoUpdate({
+          target: categories.slug,
+          set: {
+            name: payload.template.category,
+            sort: entry.categorySort,
+          },
+        })
+        .returning({ id: categories.id });
+
+      if (!catRow) continue;
+
+      const resolvedCoverUrl = resolveSeedCoverUrl(
+        existingCoverBySlug.get(payload.template.slug),
+        payload.template.cover.src || entry.defaultCover,
       );
-      atlasPayload.template.id = "tpl_atlas_bilingual_v1";
-      atlasPayload.template.slug = "atlas";
-      atlasPayload.template.name = "Atlas";
-      atlasPayload.template.type = "both";
-      atlasPayload.template.version = "1.0.0";
-      atlasPayload.template.status = "published";
-      atlasPayload.template.category = "Product Story";
-      atlasPayload.template.tier = "free";
-      atlasPayload.template.cover = {
-        src: atlasCoverUrl,
-        ratio: "4:3",
+      payload.template.cover = {
+        src: resolvedCoverUrl,
+        ratio: payload.template.cover.ratio || "4:3",
       };
-      atlasPayload.puck.root.props.title = "Atlas — Bilingual Product Story";
-      const atlasHero = atlasPayload.puck.content.find((item) => item.type === "Hero");
-      if (atlasHero) {
-        atlasHero.props.eyebrow = "Case Study · Bilingual Web + Mobile";
-        atlasHero.props.title = "Atlas — Cross-border marketplace in Arabic & English";
-        atlasHero.props.subtitle =
-          "Designing bidirectional RTL/LTR checkout and seller flows without layout friction.";
-      }
 
-      const [atlasTpl] = await db
+      const [tplRow] = await db
         .insert(templates)
         .values({
-          slug: "atlas",
-          name: "Atlas",
-          type: "both",
-          categoryId: productStoryCategory.id,
-          tier: "free",
+          slug: payload.template.slug,
+          name: payload.template.name,
+          type: payload.template.type,
+          categoryId: catRow.id,
+          tier: payload.template.tier,
           status: "published",
-          coverUrl: atlasCoverUrl,
+          coverUrl: resolvedCoverUrl,
         })
         .onConflictDoUpdate({
           target: templates.slug,
           set: {
-            name: "Atlas",
-            type: "both",
-            categoryId: productStoryCategory.id,
-            tier: "free",
+            name: payload.template.name,
+            type: payload.template.type,
+            categoryId: catRow.id,
+            tier: payload.template.tier,
             status: "published",
-            coverUrl: atlasCoverUrl,
+            coverUrl: resolvedCoverUrl,
             updatedAt: new Date(),
           },
         })
         .returning({ id: templates.id });
 
-      if (atlasTpl) {
-        const [atlasVersion] = await db
-          .insert(templateVersions)
-          .values({
-            templateId: atlasTpl.id,
-            version: "1.0.0",
-            data: atlasPayload,
-            changelog: "Initial Atlas bilingual product story starter template",
-            publishedAt: new Date(),
-          })
-          .onConflictDoUpdate({
-            target: [templateVersions.templateId, templateVersions.version],
-            set: {
-              data: atlasPayload,
-              publishedAt: new Date(),
-            },
-          })
-          .returning({ id: templateVersions.id });
+      if (!tplRow) continue;
 
-        if (atlasVersion) {
-          await db
-            .update(templates)
-            .set({ currentVersionId: atlasVersion.id, updatedAt: new Date() })
-            .where(eq(templates.id, atlasTpl.id));
-        }
+      const [verRow] = await db
+        .insert(templateVersions)
+        .values({
+          templateId: tplRow.id,
+          version: payload.template.version,
+          data: payload,
+          changelog: entry.changelog,
+          publishedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [templateVersions.templateId, templateVersions.version],
+          set: {
+            data: payload,
+            changelog: entry.changelog,
+            publishedAt: new Date(),
+          },
+        })
+        .returning({ id: templateVersions.id });
+
+      if (verRow) {
+        await db
+          .update(templates)
+          .set({ currentVersionId: verRow.id, updatedAt: new Date() })
+          .where(eq(templates.id, tplRow.id));
       }
     }
 

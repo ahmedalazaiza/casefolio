@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" fill="none">
+  <rect width="960" height="600" fill="#F5F7FB"/>
+  <rect x="28" y="28" width="904" height="544" rx="16" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="2"/>
+  <text x="64" y="80" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="22" font-weight="800">Carrier Performance &amp; Lane Reliability</text>
+  <g transform="translate(64, 116)">
+    <rect width="260" height="160" rx="14" fill="#E9EEF8"/>
+    <text x="24" y="46" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">ON-TIME PICKUP</text>
+    <text x="24" y="102" fill="#2E5BFF" font-family="system-ui,-apple-system,sans-serif" font-size="44" font-weight="800">99.4%</text>
+    <text x="24" y="134" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="600">Apex Freight Lines</text>
+
+    <rect x="286" y="0" width="260" height="160" rx="14" fill="#F5F7FB" stroke="#DDE3EE"/>
+    <text x="310" y="46" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">AVG ASSIGN SPEED</text>
+    <text x="310" y="102" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="44" font-weight="800">19.4s</text>
+    <text x="310" y="134" fill="#15803D" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">−47% vs legacy console</text>
+
+    <rect x="572" y="0" width="260" height="160" rx="14" fill="#0B1220"/>
+    <text x="596" y="46" fill="#93C5FD" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">ACTIVE HUBS</text>
+    <text x="596" y="102" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="44" font-weight="800">12 / 12</text>
+    <text x="596" y="134" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="14">40,000 daily shipments</text>
+  </g>
+  <rect x="64" y="308" width="832" height="220" rx="14" fill="#F5F7FB" stroke="#DDE3EE"/>
+  <text x="92" y="352" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="700">Weekly Corridor Throughput (ORD · ATL · DEN · DFW)</text>
+  <rect x="92" y="444" width="88" height="56" rx="8" fill="#93C5FD"/>
+  <rect x="204" y="424" width="88" height="76" rx="8" fill="#60A5FA"/>
+  <rect x="316" y="400" width="88" height="100" rx="8" fill="#3B82F6"/>
+  <rect x="428" y="384" width="88" height="116" rx="8" fill="#2E5BFF"/>
+  <rect x="540" y="372" width="88" height="128" rx="8" fill="#1D4ED8"/>
+  <rect x="652" y="360" width="88" height="140" rx="8" fill="#1E40AF"/>
+</svg>
+
