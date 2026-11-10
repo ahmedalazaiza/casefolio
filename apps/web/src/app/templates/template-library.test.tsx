@@ -173,7 +173,7 @@ describe("TemplateLibraryClient (C-305)", () => {
     );
 
     const orbitImg = screen.getByAltText("Orbit cover thumbnail") as HTMLImageElement;
-    expect(orbitImg.getAttribute("src")).toBe("/landing/orbit-home.svg");
+    expect(orbitImg.getAttribute("src")).toBe("/templates/orbit/cover.svg");
 
     const novaImg = screen.getByAltText("Nova cover thumbnail") as HTMLImageElement;
     expect(novaImg.getAttribute("src")).toBe(

@@ -246,7 +246,7 @@ export function LandingExperience({
       </section>
 
       {/* 6. Templates */}
-      <section className="pb-[var(--section-space)]">
+      <section id="templates" className="scroll-mt-28 pb-[var(--section-space)]">
         <div className="container-page">
           <SectionIntro
             icon={<LayoutTemplate />}
@@ -255,7 +255,7 @@ export function LandingExperience({
             description={`${snapshot.publishedTemplatesCount} curated templates with ${snapshot.totalTemplateSections} pre-built sections and ${snapshot.totalTemplateSlots} ratio-locked slots, ready to open today.`}
           />
         </div>
-        <Reveal className="container-page flex w-full flex-col items-center gap-10 sm:gap-14">
+        <div className="container-page flex w-full flex-col items-center gap-10 sm:gap-14">
           <TemplateStack templates={snapshot.templates} />
           <Button variant="secondary" size="lg" asChild>
             <Link href="/templates">
@@ -263,7 +263,7 @@ export function LandingExperience({
               <ArrowRight className="size-4" />
             </Link>
           </Button>
-        </Reveal>
+        </div>
       </section>
 
       {/* 7. Publish & export */}

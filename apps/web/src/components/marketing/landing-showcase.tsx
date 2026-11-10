@@ -4,24 +4,29 @@ import {
   ArrowUpRight,
   Check,
   Eye,
+  FileDown,
   Globe,
   History,
   Image as ImageIcon,
   Layers,
+  LayoutTemplate,
   Lock,
   Palette,
+  Rocket,
   ShieldCheck,
   Smartphone,
 } from "lucide-react";
 import Link from "next/link";
 import {
-  useEffect,
   useRef,
   useState,
   type ComponentProps,
   type ReactNode,
 } from "react";
 import { Float, Parallax, Reveal } from "@/components/marketing/motion";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
+import { Badge, ProBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   ensureGsapPluginsRegistered,
   gsap,
@@ -62,6 +67,12 @@ function CardLabel({ children }: { children: ReactNode }) {
       {children}
     </p>
   );
+}
+
+function formatPlatformLabel(type: "mobile" | "web" | "both"): string {
+  if (type === "mobile") return "Mobile app";
+  if (type === "web") return "Website";
+  return "Mobile + Web";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -128,280 +139,576 @@ export function HeroFloaters({
 }
 
 /* -------------------------------------------------------------------------- */
-/* How it works — cards fan out while scrolling                                */
+/* How it works — interactive 4-step component-driven bento showcase           */
 /* -------------------------------------------------------------------------- */
 
-interface FanCardSpec {
-  key: string;
-  className: string;
-  fromX: number;
-  fromY: number;
-  fromRotate: number;
-  tilt: number;
-}
-
-const FAN_CARDS: readonly FanCardSpec[] = [
+const CURATED_PALETTE_SWATCHES = [
   {
-    key: "template",
-    className: "md:left-0 md:top-16 md:w-72",
-    fromX: 320,
-    fromY: 60,
-    fromRotate: 10,
-    tilt: -4,
+    id: "crimson",
+    label: "Crimson Theater",
+    token: "token.crimson",
+    swatches: ["bg-destructive", "bg-warning", "bg-inverse", "bg-surface"],
   },
   {
-    key: "type",
-    className: "md:left-24 md:bottom-0 md:w-64",
-    fromX: 300,
-    fromY: -40,
-    fromRotate: -8,
-    tilt: 3,
+    id: "indigo",
+    label: "Indigo Studio",
+    token: "token.indigo",
+    swatches: ["bg-primary", "bg-accent", "bg-inverse", "bg-surface"],
   },
   {
-    key: "slots",
-    className: "md:left-1/2 md:top-0 md:-ml-40 md:w-80",
-    fromX: 0,
-    fromY: 80,
-    fromRotate: 0,
-    tilt: 0,
+    id: "emerald",
+    label: "Emerald Signal",
+    token: "token.emerald",
+    swatches: ["bg-success", "bg-warning", "bg-inverse", "bg-surface"],
   },
-  {
-    key: "customize",
-    className: "md:right-0 md:top-10 md:w-72",
-    fromX: -320,
-    fromY: 60,
-    fromRotate: -10,
-    tilt: 4,
-  },
-  {
-    key: "publish",
-    className: "md:right-20 md:bottom-2 md:w-72",
-    fromX: -300,
-    fromY: -40,
-    fromRotate: 8,
-    tilt: -3,
-  },
-];
+] as const;
 
 export function HowItWorksStage({
   snapshot,
 }: {
   snapshot: LandingPlatformSnapshot;
 }) {
-  const stageRef = useRef<HTMLDivElement>(null);
-  const cinema = snapshot.templates[0];
+  const [activeStep, setActiveStep] = useState<0 | 1 | 2 | 3>(0);
+  const [selectedTypeIndex, setSelectedTypeIndex] = useState<number>(0);
+  const [selectedTemplateIndex, setSelectedTemplateIndex] = useState<number>(0);
+  const [selectedPaletteIndex, setSelectedPaletteIndex] = useState<number>(0);
+  const [selectedVisibility, setSelectedVisibility] = useState<
+    "Public" | "Unlisted" | "Private"
+  >("Public");
 
-  useGSAP(
-    () => {
-      const stage = stageRef.current;
-      if (!stage || prefersReducedMotion()) return;
-      ensureGsapPluginsRegistered();
+  const previewTemplates = snapshot.templates.slice(0, 4);
+  const activeTemplate =
+    previewTemplates[selectedTemplateIndex] ??
+    previewTemplates[0] ?? {
+      slug: "cinema",
+      name: "Cinema",
+      type: "both" as const,
+      categoryName: "Entertainment",
+      tier: "free" as const,
+      version: "1.0.0",
+      sectionCount: 14,
+      slotCount: 8,
+      coverSrc: "/templates/cinema/cover.svg",
+      headline: ".Cinema — Movie Ticket Booking Experience",
+      summary: "End-to-end dark-room booking narrative.",
+    };
 
-      const mm = gsap.matchMedia();
-      mm.add("(min-width: 768px)", () => {
-        const cards = gsap.utils.toArray<HTMLElement>("[data-fan-card]");
-        const timeline = gsap.timeline({
-          scrollTrigger: {
-            trigger: stage,
-            start: "top 88%",
-            end: "top 28%",
-            scrub: 0.9,
-          },
-        });
+  const activePalette =
+    CURATED_PALETTE_SWATCHES[selectedPaletteIndex] ?? CURATED_PALETTE_SWATCHES[0];
 
-        cards.forEach((card, index) => {
-          const spec = FAN_CARDS[index];
-          if (!spec) return;
-          timeline.from(
-            card,
-            {
-              x: spec.fromX,
-              y: spec.fromY,
-              rotate: spec.fromRotate,
-              scale: 0.78,
-              opacity: 0,
-              ease: "power3.out",
-              duration: 1,
-            },
-            index * 0.08,
-          );
-        });
-      });
-
-      return () => mm.revert();
+  const typeRows: readonly {
+    label: string;
+    ratioHint: string;
+    count: number;
+    icon: ReactNode;
+  }[] = [
+    {
+      label: "Mobile app",
+      ratioHint: "9:19.5 · iPhone 16 Pro & Android",
+      count: snapshot.mobileTemplatesCount,
+      icon: <Smartphone className="size-4" />,
     },
-    { scope: stageRef },
-  );
+    {
+      label: "Website",
+      ratioHint: "16:10 · Browser & MacBook Pro",
+      count: snapshot.webTemplatesCount,
+      icon: <Globe className="size-4" />,
+    },
+    {
+      label: "Mobile + Web",
+      ratioHint: "Multi-device · Synchronized frames",
+      count: snapshot.crossPlatformTemplatesCount,
+      icon: <Layers className="size-4" />,
+    },
+  ];
 
-  const typeRows: readonly { label: string; count: number; icon: ReactNode }[] =
-    [
-      {
-        label: "Mobile app",
-        count: snapshot.mobileTemplatesCount,
-        icon: <Smartphone className="size-3.5" />,
-      },
-      {
-        label: "Website",
-        count: snapshot.webTemplatesCount,
-        icon: <Globe className="size-3.5" />,
-      },
-      {
-        label: "Mobile + Web",
-        count: snapshot.crossPlatformTemplatesCount,
-        icon: <Layers className="size-3.5" />,
-      },
-    ];
+  const stepMeta = [
+    {
+      step: "01",
+      title: "01 · Pick a type",
+      shortLabel: "Pick a type",
+      badgeText: `${snapshot.deviceFramesCount} device frames`,
+      heading: "Choose your project format",
+      description:
+        "Select Mobile app, Website, or Cross-platform so Casefolio pre-locks your device bezels and slot aspect ratios.",
+    },
+    {
+      step: "02",
+      title: "02 · Pick a template",
+      shortLabel: "Pick a template",
+      badgeText: `${snapshot.publishedTemplatesCount} live templates`,
+      heading: "Start from a curated template",
+      description:
+        "Every template includes a dedicated cover thumbnail, structured narrative sections, and version-pinned layout rules.",
+    },
+    {
+      step: "03",
+      title: "03 · Customize",
+      shortLabel: "Customize slots & tokens",
+      badgeText: `${snapshot.totalTemplateSlots} ratio-locked slots`,
+      heading: "Drop in screens & tune tokens",
+      description:
+        "Snap your UI screenshots into ratio-locked slots and switch curated palettes, hardware bezels, and font pairs in one click.",
+    },
+    {
+      step: "04",
+      title: "04 · Publish or export",
+      shortLabel: "Publish or export",
+      badgeText: `${snapshot.exportFormatsCount} export formats`,
+      heading: "Ship a live URL or export deck",
+      description:
+        "Publish an indexed casefolio.app page with automatic OpenGraph cards, or export pixel-identical PNG, Behance 1400px, and A4 PDF.",
+    },
+  ] as const;
 
   return (
     <div
-      ref={stageRef}
-      className="relative mx-auto grid max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 md:block md:h-[34rem]"
+      data-testid="how-it-works-stage"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-8 sm:gap-10"
     >
-      {/* 02 — Template */}
+      {/* Interactive 4-Step Progress Rail */}
       <div
-        data-fan-card=""
-        className={cn("order-2 md:order-none md:absolute", FAN_CARDS[0]?.className)}
+        role="tablist"
+        aria-label="How Casefolio works steps"
+        className="border-border/70 bg-elevated/90 shadow-card mx-auto grid w-full max-w-4xl grid-cols-2 gap-1.5 rounded-2xl border p-1.5 sm:grid-cols-4 sm:rounded-full"
       >
-        <FloatCard className="p-3 md:-rotate-3">
-          <div className="bg-inverse overflow-hidden rounded-xl">
-            <img
-              src={cinema?.coverSrc ?? "/templates/cinema/cover.svg"}
-              alt="Cinema template cover"
-              className="aspect-16/10 w-full object-cover"
-            />
-          </div>
-          <div className="flex items-center justify-between gap-2 px-1 pt-3">
-            <div className="min-w-0">
-              <CardLabel>02 · Pick a template</CardLabel>
-              <p className="text-foreground type-body-s-strong mt-0.5 truncate">
-                {cinema?.name ?? "Cinema"} · v{cinema?.version ?? "1.0.0"}
-              </p>
-            </div>
-            <span className="bg-sunken text-muted-foreground type-caption shrink-0 rounded-full px-2.5 py-0.5">
-              {cinema?.sectionCount ?? 14} sections
-            </span>
-          </div>
-        </FloatCard>
-      </div>
-
-      {/* 01 — Type */}
-      <div
-        data-fan-card=""
-        className={cn("order-1 md:order-none md:absolute", FAN_CARDS[1]?.className)}
-      >
-        <FloatCard className="md:rotate-3">
-          <CardLabel>01 · Pick a type</CardLabel>
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {typeRows.map((row, index) => (
-              <li
-                key={row.label}
+        {stepMeta.map((item, idx) => {
+          const isCurrent = activeStep === idx;
+          return (
+            <button
+              key={item.step}
+              type="button"
+              role="tab"
+              aria-selected={isCurrent}
+              onClick={() => setActiveStep(idx as 0 | 1 | 2 | 3)}
+              className={cn(
+                "focus-visible:ring-ring/40 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-left transition-all duration-200 outline-none focus-visible:ring-2 sm:rounded-full sm:px-4",
+                isCurrent
+                  ? "bg-inverse text-inverse-foreground shadow-xs"
+                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
+              )}
+            >
+              <span
                 className={cn(
-                  "type-caption flex items-center justify-between rounded-xl px-3 py-2",
-                  index === 0
-                    ? "bg-inverse text-inverse-foreground"
-                    : "bg-surface text-foreground",
+                  "type-caption inline-flex size-5 shrink-0 items-center justify-center rounded-full font-mono font-bold",
+                  isCurrent
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-sunken text-muted-foreground",
                 )}
               >
-                <span className="flex items-center gap-2">
-                  {row.icon}
-                  {row.label}
+                {item.step}
+              </span>
+              <span className="type-caption truncate font-semibold">
+                {item.shortLabel}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 2x2 Component-Driven Step Bento Grid (ordered 01 -> 02 -> 03 -> 04, zero overlap) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+        {/* STEP 01 — Pick a type */}
+        <article
+          data-testid="how-it-works-step-1"
+          onMouseEnter={() => setActiveStep(0)}
+          className={cn(
+            "bg-elevated shadow-card flex min-w-0 flex-col justify-between gap-6 rounded-3xl border p-6 transition-all duration-300 sm:p-8",
+            activeStep === 0
+              ? "border-primary/45 ring-primary/10 ring-4"
+              : "border-border/70 hover:border-border-strong",
+          )}
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="bg-accent text-accent-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold">
+                <Smartphone className="size-3.5" />
+                {stepMeta[0].title}
+              </span>
+              <Badge tone="neutral" withDot={false}>
+                {stepMeta[0].badgeText}
+              </Badge>
+            </div>
+            <h3 className="type-heading-m text-foreground mt-1">
+              {stepMeta[0].heading}
+            </h3>
+            <p className="text-muted-foreground type-body-s">
+              {stepMeta[0].description}
+            </p>
+          </div>
+
+          <div className="bg-surface border-border/70 flex flex-col gap-2.5 rounded-2xl border p-4">
+            <div className="flex items-center justify-between px-1 pb-1">
+              <span className="text-tertiary type-caption font-mono uppercase">
+                Project format preset
+              </span>
+              <span className="text-muted-foreground type-caption">
+                {snapshot.publishedTemplatesCount} templates ready
+              </span>
+            </div>
+
+            <ul className="flex flex-col gap-2">
+              {typeRows.map((row, index) => {
+                const selected = selectedTypeIndex === index;
+                return (
+                  <li key={row.label}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedTypeIndex(index);
+                        setActiveStep(0);
+                      }}
+                      className={cn(
+                        "focus-visible:ring-ring/40 flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left transition-all outline-none focus-visible:ring-2",
+                        selected
+                          ? "border-primary/40 bg-elevated shadow-card text-foreground"
+                          : "border-border/50 bg-elevated/55 text-muted-foreground hover:bg-elevated hover:text-foreground",
+                      )}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={cn(
+                            "inline-flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
+                            selected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-sunken text-muted-foreground",
+                          )}
+                        >
+                          {row.icon}
+                        </span>
+                        <div className="flex min-w-0 flex-col">
+                          <span className="text-foreground type-body-s-strong truncate">
+                            {row.label}
+                          </span>
+                          <span className="text-muted-foreground type-caption truncate">
+                            {row.ratioHint}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="bg-sunken text-muted-foreground type-caption rounded-full px-2.5 py-0.5 font-mono">
+                          {row.count}
+                        </span>
+                        {selected && (
+                          <Badge tone="published" withDot={false}>
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </article>
+
+        {/* STEP 02 — Pick a template */}
+        <article
+          data-testid="how-it-works-step-2"
+          onMouseEnter={() => setActiveStep(1)}
+          className={cn(
+            "bg-elevated shadow-card flex min-w-0 flex-col justify-between gap-6 rounded-3xl border p-6 transition-all duration-300 sm:p-8",
+            activeStep === 1
+              ? "border-primary/45 ring-primary/10 ring-4"
+              : "border-border/70 hover:border-border-strong",
+          )}
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="bg-accent text-accent-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold">
+                <LayoutTemplate className="size-3.5" />
+                {stepMeta[1].title}
+              </span>
+              <Badge tone="neutral" withDot={false}>
+                {stepMeta[1].badgeText}
+              </Badge>
+            </div>
+            <h3 className="type-heading-m text-foreground mt-1">
+              {stepMeta[1].heading}
+            </h3>
+            <p className="text-muted-foreground type-body-s">
+              {stepMeta[1].description}
+            </p>
+          </div>
+
+          <div className="bg-surface border-border/70 flex flex-col gap-3.5 rounded-2xl border p-4">
+            {/* Mini template selector pills */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap gap-1.5">
+                {previewTemplates.map((tpl, idx) => {
+                  const selected = idx === selectedTemplateIndex;
+                  return (
+                    <button
+                      key={tpl.slug}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTemplateIndex(idx);
+                        setActiveStep(1);
+                      }}
+                      className={cn(
+                        "type-caption rounded-full px-3 py-1 font-semibold transition-all",
+                        selected
+                          ? "bg-inverse text-inverse-foreground shadow-2xs"
+                          : "bg-elevated text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {tpl.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-tertiary type-caption font-mono">
+                v{activeTemplate.version}
+              </span>
+            </div>
+
+            {/* Live TemplateThumbnail Component */}
+            <div className="border-border/70 bg-elevated overflow-hidden rounded-xl border shadow-2xs">
+              <TemplateThumbnail
+                coverUrl={activeTemplate.coverSrc}
+                slug={activeTemplate.slug}
+                name={activeTemplate.name}
+                loading="eager"
+                className="aspect-16/10 w-full"
+              />
+              <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-t px-3.5 py-2.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="text-foreground type-body-s-strong truncate">
+                    {activeTemplate.name}
+                  </span>
+                  <span className="text-tertiary type-caption">·</span>
+                  <span className="text-muted-foreground type-caption truncate">
+                    {activeTemplate.categoryName}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="bg-sunken text-muted-foreground type-caption rounded-full px-2.5 py-0.5">
+                    {activeTemplate.sectionCount} sections
+                  </span>
+                  <span className="bg-sunken text-muted-foreground type-caption rounded-full px-2.5 py-0.5">
+                    {activeTemplate.slotCount} slots
+                  </span>
+                  {activeTemplate.tier === "pro" ? (
+                    <ProBadge />
+                  ) : (
+                    <Badge tone="published" withDot={false}>
+                      Free
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        {/* STEP 03 — Customize slots & tokens */}
+        <article
+          data-testid="how-it-works-step-3"
+          onMouseEnter={() => setActiveStep(2)}
+          className={cn(
+            "bg-elevated shadow-card flex min-w-0 flex-col justify-between gap-6 rounded-3xl border p-6 transition-all duration-300 sm:p-8",
+            activeStep === 2
+              ? "border-primary/45 ring-primary/10 ring-4"
+              : "border-border/70 hover:border-border-strong",
+          )}
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="bg-accent text-accent-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold">
+                <Palette className="size-3.5" />
+                {stepMeta[2].title}
+              </span>
+              <Badge tone="neutral" withDot={false}>
+                {stepMeta[2].badgeText}
+              </Badge>
+            </div>
+            <h3 className="type-heading-m text-foreground mt-1">
+              {stepMeta[2].heading}
+            </h3>
+            <p className="text-muted-foreground type-body-s">
+              {stepMeta[2].description}
+            </p>
+          </div>
+
+          <div className="bg-surface border-border/70 flex flex-col gap-3.5 rounded-2xl border p-4">
+            {/* Ratio-locked slot status header */}
+            <div className="border-border/70 bg-elevated flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3">
+              <div className="flex items-center gap-2.5">
+                <span className="bg-success-soft text-success inline-flex size-8 shrink-0 items-center justify-center rounded-lg">
+                  <Check className="size-4" />
                 </span>
-                <span className="font-mono">{row.count}</span>
-              </li>
-            ))}
-          </ul>
-        </FloatCard>
-      </div>
-
-      {/* Slot check — centre stat */}
-      <div
-        data-fan-card=""
-        className={cn(
-          "order-3 sm:col-span-2 md:order-none md:col-span-1 md:absolute",
-          FAN_CARDS[2]?.className,
-        )}
-      >
-        <FloatCard className="p-5">
-          <CardLabel>
-            <Check className="text-success size-3.5" />
-            Ratio-locked slots
-          </CardLabel>
-          <p className="type-display-m text-foreground mt-4 sm:mt-6">
-            {snapshot.totalTemplateSlots}
-          </p>
-          <p className="text-muted-foreground type-body-s mt-1">
-            screenshot slots across {snapshot.publishedTemplatesCount} live
-            templates
-          </p>
-          <div className="mt-5 flex items-end gap-3 sm:mt-6">
-            <div className="bg-primary flex h-20 flex-1 items-end justify-center rounded-t-2xl pb-2 sm:h-24">
-              <span className="bg-primary-foreground/80 h-1 w-10 rounded-full" />
+                <div className="flex flex-col">
+                  <span className="text-foreground type-body-s-strong">
+                    Ratio-locked slots
+                  </span>
+                  <span className="text-muted-foreground type-caption">
+                    {snapshot.totalTemplateSlots} screenshot slots across{" "}
+                    {snapshot.publishedTemplatesCount} live templates
+                  </span>
+                </div>
+              </div>
+              <Badge tone="published">Verified</Badge>
             </div>
-            <div className="bg-inverse flex h-28 flex-1 items-end justify-center rounded-t-2xl pb-2 sm:h-32">
-              <span className="bg-inverse-foreground/80 h-1 w-10 rounded-full" />
+
+            {/* Interactive Theme Token Picker */}
+            <div className="border-border/70 bg-elevated flex flex-col gap-2.5 rounded-xl border p-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-foreground type-caption font-semibold">
+                  Curated theme palette
+                </span>
+                <span className="text-tertiary type-caption font-mono">
+                  {activePalette.token}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                {CURATED_PALETTE_SWATCHES.map((palette, idx) => {
+                  const active = idx === selectedPaletteIndex;
+                  return (
+                    <button
+                      key={palette.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPaletteIndex(idx);
+                        setActiveStep(2);
+                      }}
+                      className={cn(
+                        "flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left transition-all",
+                        active
+                          ? "border-primary bg-surface shadow-2xs"
+                          : "border-border/60 hover:border-border-strong",
+                      )}
+                    >
+                      <span className="text-foreground type-caption truncate font-medium">
+                        {palette.label.split(" ")[0]}
+                      </span>
+                      <span className="flex shrink-0 -space-x-1">
+                        {palette.swatches.slice(0, 3).map((swatchClass) => (
+                          <span
+                            key={swatchClass}
+                            className={cn(
+                              "border-elevated size-3.5 rounded-full border",
+                              swatchClass,
+                            )}
+                          />
+                        ))}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="border-border/60 flex flex-wrap items-center justify-between gap-1.5 border-t pt-2.5">
+                <div className="flex flex-wrap gap-1.5">
+                  {["iPhone 16 Pro", "Android", "MacBook"].map((frame) => (
+                    <span
+                      key={frame}
+                      className="bg-sunken text-muted-foreground type-caption rounded-full px-2.5 py-0.5"
+                    >
+                      {frame}
+                    </span>
+                  ))}
+                </div>
+                <span className="text-tertiary type-caption">
+                  {snapshot.curatedPalettesCount} palettes ·{" "}
+                  {snapshot.curatedFontPairsCount} font pairs
+                </span>
+              </div>
             </div>
           </div>
-        </FloatCard>
-      </div>
+        </article>
 
-      {/* 03 — Customize */}
-      <div
-        data-fan-card=""
-        className={cn("order-4 md:order-none md:absolute", FAN_CARDS[3]?.className)}
-      >
-        <FloatCard className="md:rotate-3">
-          <CardLabel>03 · Customize</CardLabel>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="size-7 rounded-full bg-[var(--tmpl-secondary)]" />
-            <span className="bg-primary size-7 rounded-full" />
-            <span className="size-7 rounded-full bg-[var(--tmpl-primary)]" />
-            <span className="bg-success size-7 rounded-full" />
-            <span className="bg-inverse size-7 rounded-full" />
-          </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {["iPhone 16 Pro", "Android", "MacBook"].map((frame) => (
-              <span
-                key={frame}
-                className="bg-sunken text-muted-foreground type-caption rounded-full px-2.5 py-0.5"
-              >
-                {frame}
+        {/* STEP 04 — Publish or export */}
+        <article
+          data-testid="how-it-works-step-4"
+          onMouseEnter={() => setActiveStep(3)}
+          className={cn(
+            "bg-elevated shadow-card flex min-w-0 flex-col justify-between gap-6 rounded-3xl border p-6 transition-all duration-300 sm:p-8",
+            activeStep === 3
+              ? "border-primary/45 ring-primary/10 ring-4"
+              : "border-border/70 hover:border-border-strong",
+          )}
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="bg-accent text-accent-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold">
+                <Rocket className="size-3.5" />
+                {stepMeta[3].title}
               </span>
-            ))}
+              <Badge tone="neutral" withDot={false}>
+                {stepMeta[3].badgeText}
+              </Badge>
+            </div>
+            <h3 className="type-heading-m text-foreground mt-1">
+              {stepMeta[3].heading}
+            </h3>
+            <p className="text-muted-foreground type-body-s">
+              {stepMeta[3].description}
+            </p>
           </div>
-          <p className="text-muted-foreground type-caption mt-3">
-            {snapshot.deviceFramesCount} frames · {snapshot.curatedPalettesCount}{" "}
-            palettes · {snapshot.curatedFontPairsCount} font pairs
-          </p>
-        </FloatCard>
-      </div>
 
-      {/* 04 — Publish */}
-      <div
-        data-fan-card=""
-        className={cn("order-5 md:order-none md:absolute", FAN_CARDS[4]?.className)}
-      >
-        <FloatCard className="md:-rotate-3">
-          <CardLabel>04 · Publish or export</CardLabel>
-          <div className="bg-surface text-foreground type-caption mt-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2">
-            <span className="flex min-w-0 items-center gap-2 truncate font-mono">
-              <Globe className="text-primary size-3.5 shrink-0" />
-              <span className="truncate">casefolio.app/p/you</span>
-            </span>
-            <span className="bg-success-soft text-foreground shrink-0 rounded-full px-2 py-0.5">
-              Live
-            </span>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {["PNG long", "Behance 1400", "A4 PDF"].map((format) => (
-              <span
-                key={format}
-                className="bg-sunken text-muted-foreground type-caption rounded-full px-2.5 py-0.5"
-              >
-                {format}
+          <div className="bg-surface border-border/70 flex flex-col gap-3 rounded-2xl border p-4">
+            {/* Live URL Bar */}
+            <div className="border-border/70 bg-elevated flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5">
+              <span className="text-foreground type-caption flex min-w-0 items-center gap-2 truncate font-mono">
+                <Globe className="text-primary size-4 shrink-0" />
+                <span className="truncate">
+                  casefolio.app/p/{activeTemplate.slug}
+                </span>
               </span>
-            ))}
+              <Badge tone="published">Live · 200 OK</Badge>
+            </div>
+
+            {/* Visibility Switcher */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-muted-foreground type-caption">
+                Visibility control
+              </span>
+              <div className="bg-elevated border-border/70 inline-flex gap-1 rounded-full border p-1">
+                {(["Public", "Unlisted", "Private"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      setSelectedVisibility(mode);
+                      setActiveStep(3);
+                    }}
+                    className={cn(
+                      "type-caption rounded-full px-2.5 py-0.5 font-medium transition-colors",
+                      selectedVisibility === mode
+                        ? "bg-inverse text-inverse-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Export Formats Row */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "PNG long", sub: "2x Retina" },
+                { label: "Behance 1400", sub: "1400px Slice" },
+                { label: "A4 PDF", sub: "Print Deck" },
+              ].map((preset) => (
+                <div
+                  key={preset.label}
+                  className="border-border/70 bg-elevated flex flex-col gap-0.5 rounded-xl border px-3 py-2"
+                >
+                  <span className="text-foreground type-caption flex items-center gap-1 font-semibold">
+                    <FileDown className="text-primary size-3 shrink-0" />
+                    <span className="truncate">{preset.label}</span>
+                  </span>
+                  <span className="text-tertiary type-caption">
+                    {preset.sub}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </FloatCard>
+        </article>
       </div>
     </div>
   );
@@ -598,7 +905,7 @@ export function FeatureList() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Template stack carousel                                                     */
+/* Template showcase gallery with full 4:3 thumbnails                          */
 /* -------------------------------------------------------------------------- */
 
 export function TemplateStack({
@@ -607,186 +914,159 @@ export function TemplateStack({
   templates: readonly LandingTemplateShowcaseItem[];
 }) {
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(1280);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number | null>(null);
-  const firstRun = useRef(true);
   const count = templates.length;
-
-  useEffect(() => {
-    const syncViewport = () => {
-      setViewportWidth(window.innerWidth);
-    };
-    syncViewport();
-    window.addEventListener("resize", syncViewport, { passive: true });
-    return () => window.removeEventListener("resize", syncViewport);
-  }, []);
-
-  useEffect(() => {
-    if (paused || count < 2 || prefersReducedMotion()) return;
-    const id = window.setInterval(() => {
-      setActive((current) => (current + 1) % count);
-    }, 5500);
-    return () => window.clearInterval(id);
-  }, [paused, count]);
-
-  useGSAP(
-    () => {
-      const stage = stageRef.current;
-      if (!stage || count === 0) return;
-      ensureGsapPluginsRegistered();
-
-      const isCompact = viewportWidth < 640;
-      const offset = isCompact ? 18 : viewportWidth < 1024 ? 170 : 310;
-      const sideScale = isCompact ? 0.94 : 0.88;
-      const sideOpacity = isCompact ? 0.32 : 0.85;
-      const sideRotate = isCompact ? 2.5 : 6;
-      const sideY = isCompact ? 14 : 28;
-      const instant = firstRun.current || prefersReducedMotion();
-      firstRun.current = false;
-
-      const cards = gsap.utils.toArray<HTMLElement>("[data-stack-card]");
-      cards.forEach((card, index) => {
-        const rel = (index - active + count) % count;
-        const state =
-          rel === 0
-            ? { x: 0, y: 0, rotate: 0, scale: 1, opacity: 1, zIndex: 30 }
-            : rel === 1
-              ? {
-                  x: offset,
-                  y: sideY,
-                  rotate: sideRotate,
-                  scale: sideScale,
-                  opacity: sideOpacity,
-                  zIndex: 20,
-                }
-              : rel === count - 1
-                ? {
-                    x: -offset,
-                    y: sideY,
-                    rotate: -sideRotate,
-                    scale: sideScale,
-                    opacity: sideOpacity,
-                    zIndex: 20,
-                  }
-                : { x: 0, y: 48, rotate: 0, scale: 0.7, opacity: 0, zIndex: 10 };
-
-        gsap.to(card, {
-          ...state,
-          xPercent: -50,
-          duration: instant ? 0 : 0.9,
-          ease: "expo.out",
-          overwrite: true,
-        });
-      });
-    },
-    { scope: stageRef, dependencies: [active, count, viewportWidth] },
-  );
 
   if (count === 0) return null;
 
   return (
     <div
-      className="flex w-full flex-col items-center gap-8 sm:gap-10"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onTouchStart={(event) => {
-        touchStartX.current = event.touches[0]?.clientX ?? null;
-        setPaused(true);
-      }}
-      onTouchEnd={(event) => {
-        const startX = touchStartX.current;
-        const endX = event.changedTouches[0]?.clientX ?? null;
-        touchStartX.current = null;
-        setPaused(false);
-        if (startX === null || endX === null || count < 2) return;
-        const deltaX = endX - startX;
-        if (Math.abs(deltaX) > 40) {
-          setActive((current) =>
-            deltaX < 0 ? (current + 1) % count : (current - 1 + count) % count,
-          );
-        }
-      }}
+      data-testid="landing-template-showcase"
+      className="flex w-full max-w-6xl flex-col items-center gap-8 sm:gap-10"
     >
+      {/* Quick Template Selector Rail */}
       <div
-        ref={stageRef}
-        className="relative h-[29.5rem] w-full max-w-5xl overflow-x-clip sm:h-[31rem] md:overflow-visible"
+        role="tablist"
+        aria-label="Choose template"
+        className="border-border/70 bg-elevated/90 shadow-card flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-2xl border p-1.5 sm:rounded-full"
       >
         {templates.map((template, index) => {
-          const isActive = index === active;
+          const isSelected = index === active;
+          return (
+            <button
+              key={template.slug}
+              type="button"
+              role="tab"
+              aria-selected={isSelected}
+              aria-label={`Show ${template.name}`}
+              onClick={() => setActive(index)}
+              className={cn(
+                "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-xl px-3.5 py-2 transition-all outline-none focus-visible:ring-2 sm:rounded-full sm:px-4",
+                isSelected
+                  ? "bg-inverse text-inverse-foreground type-body-s-strong shadow-xs"
+                  : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s",
+              )}
+            >
+              <span>{template.name}</span>
+              <span
+                className={cn(
+                  "type-caption rounded-full px-2 py-0.5",
+                  isSelected
+                    ? "bg-inverse-foreground/15 text-inverse-foreground"
+                    : "bg-sunken text-muted-foreground",
+                )}
+              >
+                {template.categoryName}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Responsive Template Thumbnail Cards Grid (all templates visible & crisp) */}
+      <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
+        {templates.map((template, index) => {
+          const isHighlighted = index === active;
           return (
             <article
               key={template.slug}
               data-stack-card=""
+              data-template-slug={template.slug}
               onClick={() => setActive(index)}
-              aria-hidden={isActive ? undefined : true}
               className={cn(
-                "border-border/60 bg-elevated shadow-float absolute top-2 left-1/2 w-[min(21.5rem,calc(100%-1rem))] rounded-3xl border p-3 will-change-transform sm:w-[22rem]",
-                !isActive && "cursor-pointer",
+                "group bg-elevated shadow-card flex min-w-0 flex-col justify-between overflow-hidden rounded-3xl border p-4 transition-all duration-300 sm:p-5",
+                isHighlighted
+                  ? "border-primary/45 shadow-float ring-primary/10 ring-4"
+                  : "border-border/70 hover:border-border-strong hover:shadow-float",
               )}
             >
-              <div className="bg-inverse overflow-hidden rounded-2xl">
-                <img
-                  src={template.coverSrc}
+              {/* Browser / Studio Frame around the TemplateThumbnail */}
+              <div className="border-border/70 bg-surface overflow-hidden rounded-2xl border">
+                <div className="border-border/60 bg-elevated/90 flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="hidden items-center gap-1.5 sm:flex" aria-hidden="true">
+                      <span className="bg-border-strong size-2 rounded-full" />
+                      <span className="bg-border-strong size-2 rounded-full" />
+                      <span className="bg-border-strong size-2 rounded-full" />
+                    </span>
+                    <span className="text-muted-foreground type-caption truncate font-mono">
+                      casefolio.app/p/{template.slug}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="bg-sunken text-muted-foreground type-caption rounded-full px-2.5 py-0.5">
+                      {formatPlatformLabel(template.type)}
+                    </span>
+                    <span className="bg-sunken text-tertiary type-caption hidden rounded-full px-2 py-0.5 font-mono sm:inline-flex">
+                      v{template.version}
+                    </span>
+                  </div>
+                </div>
+
+                <TemplateThumbnail
+                  coverUrl={template.coverSrc}
+                  slug={template.slug}
+                  name={template.name}
                   alt={`${template.name} template preview`}
-                  className="aspect-4/3 w-full object-cover"
+                  loading="eager"
+                  className="aspect-4/3 w-full"
+                  imageClassName="group-hover:scale-[1.02]"
                 />
               </div>
-              <div className="flex flex-col gap-3 px-2 pt-4 pb-2">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="type-heading-m text-foreground truncate">
-                    {template.name}
-                  </h3>
-                  <span
-                    className={cn(
-                      "type-caption shrink-0 rounded-full px-2.5 py-0.5",
-                      template.tier === "free"
-                        ? "bg-success-soft text-foreground"
-                        : "bg-accent text-accent-foreground",
+
+              {/* Card Details & Actions */}
+              <div className="flex flex-1 flex-col justify-between gap-4 px-1 pt-5 pb-1">
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <h3 className="type-heading-m text-foreground truncate">
+                        {template.name}
+                      </h3>
+                      <span className="bg-sunken text-muted-foreground type-caption shrink-0 rounded-full px-2.5 py-0.5">
+                        {template.categoryName}
+                      </span>
+                    </div>
+
+                    {template.tier === "free" ? (
+                      <Badge tone="published" withDot={false}>
+                        Free
+                      </Badge>
+                    ) : (
+                      <ProBadge />
                     )}
-                  >
-                    {template.tier === "free" ? "Free" : "Pro"}
-                  </span>
+                  </div>
+
+                  <p className="text-foreground type-body-s-strong line-clamp-1">
+                    {template.headline}
+                  </p>
+                  <p className="text-muted-foreground type-body-s line-clamp-2">
+                    {template.summary}
+                  </p>
                 </div>
-                <p className="text-muted-foreground type-body-s line-clamp-2">
-                  {template.summary}
-                </p>
-                <div className="border-border/60 flex items-center justify-between gap-2 border-t pt-3">
-                  <span className="text-tertiary type-caption min-w-0 truncate font-mono">
-                    {template.categoryName} · {template.sectionCount} sections ·{" "}
-                    {template.slotCount} slots
+
+                <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-t pt-3.5">
+                  <span className="text-tertiary type-caption font-mono">
+                    {template.sectionCount} sections · {template.slotCount} ratio-locked slots
                   </span>
-                  <Link
-                    href={`/new?template=${template.slug}`}
-                    tabIndex={isActive ? 0 : -1}
-                    className="text-foreground type-caption inline-flex shrink-0 items-center gap-1 font-semibold"
-                  >
-                    <span>Use</span>
-                    <ArrowUpRight className="size-3.5" />
-                  </Link>
+
+                  <div className="flex items-center gap-2">
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link href={`/templates?preview=${template.slug}`}>
+                        <Eye className="size-3.5" />
+                        <span>Preview</span>
+                      </Link>
+                    </Button>
+                    <Button size="sm" asChild>
+                      <Link href={`/new?template=${template.slug}`}>
+                        <span>Use template</span>
+                        <ArrowUpRight className="size-3.5" />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </article>
           );
         })}
-      </div>
-
-      <div role="tablist" aria-label="Choose template" className="flex gap-2">
-        {templates.map((template, index) => (
-          <button
-            key={template.slug}
-            type="button"
-            role="tab"
-            aria-selected={index === active}
-            aria-label={`Show ${template.name}`}
-            onClick={() => setActive(index)}
-            className={cn(
-              "focus-visible:ring-ring/40 h-2.5 rounded-full outline-none transition-all duration-500 focus-visible:ring-2",
-              index === active ? "bg-primary w-14" : "bg-border-strong w-6",
-            )}
-          />
-        ))}
       </div>
     </div>
   );

@@ -103,17 +103,17 @@ export function WordReveal({
       ensureGsapPluginsRegistered();
 
       const targets = el.querySelectorAll<HTMLElement>("[data-word]");
-      const travel = (targets[0]?.offsetHeight ?? 80) * 1.15;
+      const travel = onScroll ? 14 : (targets[0]?.offsetHeight ?? 80) * 1.15;
       gsap.set(targets, { y: travel });
       gsap.to(targets, {
         y: 0,
-        duration: 1.05,
+        duration: onScroll ? 0.55 : 1.05,
         delay,
         ease: "expo.out",
-        stagger: 0.06,
+        stagger: onScroll ? 0.03 : 0.06,
         clearProps: "transform",
         ...(onScroll
-          ? { scrollTrigger: { trigger: el, start: "top 88%", once: true } }
+          ? { scrollTrigger: { trigger: el, start: "top 95%", once: true } }
           : {}),
       });
     },

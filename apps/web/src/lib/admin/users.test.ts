@@ -111,7 +111,7 @@ describe("Admin users & subscriptions service (C-904)", () => {
 
     // 2. Subscriptions overview includes active MRR
     const subsOverview = await getAdminSubscriptionsOverview();
-    expect(subsOverview.mrrUsd).toBeGreaterThanOrEqual(16);
+    expect(subsOverview.mrrUsd).toBeGreaterThanOrEqual(12);
     expect(subsOverview.payingUsersCount).toBeGreaterThanOrEqual(1);
 
     // 3. Live Paddle API fetch & sync

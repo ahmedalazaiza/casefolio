@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none">
+  <defs>
+    <radialGradient id="atlasTealGlow" cx="68%" cy="38%" r="58%">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.38"/>
+      <stop offset="52%" stop-color="#F59E0B" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#071013" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Studio Backdrop -->
+  <rect width="1200" height="900" fill="#071013"/>
+  <rect width="1200" height="900" fill="url(#atlasTealGlow)"/>
+
+  <!-- Widescreen Bilingual Marketplace Frame (Left / Center) -->
+  <g transform="translate(76, 86)">
+    <rect width="756" height="644" rx="28" fill="#0D181C" stroke="#1E363D" stroke-width="2"/>
+    <rect width="756" height="52" rx="28" fill="#112026"/>
+    <line x1="0" y1="52" x2="756" y2="52" stroke="#1E363D" stroke-width="1.5"/>
+    <circle cx="28" cy="26" r="6" fill="#EF4444"/>
+    <circle cx="48" cy="26" r="6" fill="#F59E0B"/>
+    <circle cx="68" cy="26" r="6" fill="#10B981"/>
+
+    <rect x="220" y="13" width="316" height="26" rx="13" fill="#081114" stroke="#1E363D"/>
+    <text x="378" y="30" text-anchor="middle" fill="#99F6E4" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="600">atlas.market · EN (LTR) ⇄ العربية (RTL)</text>
+
+    <rect x="618" y="14" width="114" height="24" rx="12" fill="#0F292A" stroke="#14B8A6"/>
+    <text x="675" y="30" text-anchor="middle" fill="#5EEAD4" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">BILINGUAL</text>
+
+    <!-- Header Copy -->
+    <rect x="40" y="80" width="248" height="28" rx="14" fill="#0F292A" stroke="#14B8A6"/>
+    <text x="164" y="98" text-anchor="middle" fill="#5EEAD4" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700" letter-spacing="0.8">PRODUCT STORY · MOBILE + WEB</text>
+
+    <text x="40" y="148" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="33" font-weight="800">Atlas — Cross-border</text>
+    <text x="40" y="190" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="33" font-weight="800">marketplace in Arabic &amp; English</text>
+    <text x="40" y="222" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="500">Bidirectional RTL/LTR design system, landed-duty checkout, and seller logistics.</text>
+
+    <!-- Side-by-Side LTR vs RTL Parity Comparison Cards -->
+    <rect x="40" y="252" width="328" height="244" rx="20" fill="#112026" stroke="#1E363D"/>
+    <rect x="60" y="274" width="84" height="24" rx="12" fill="#134E4A"/>
+    <text x="102" y="290" text-anchor="middle" fill="#5EEAD4" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">LTR · EN</text>
+    <text x="60" y="328" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800">Artisan Brass Lamp</text>
+    <text x="60" y="352" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="13">Ships from Amman · 3-day DHL</text>
+    <text x="60" y="394" fill="#FBBF24" font-family="system-ui,-apple-system,sans-serif" font-size="28" font-weight="800">$184.00 USD</text>
+    <rect x="60" y="420" width="288" height="48" rx="14" fill="#0D9488"/>
+    <text x="204" y="450" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">Express Checkout →</text>
+
+    <rect x="388" y="252" width="328" height="244" rx="20" fill="#112026" stroke="#14B8A6"/>
+    <rect x="612" y="274" width="84" height="24" rx="12" fill="#134E4A"/>
+    <text x="654" y="290" text-anchor="middle" fill="#5EEAD4" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">RTL · عربي</text>
+    <text x="696" y="328" text-anchor="end" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800">مصباح نحاسي حرفي</text>
+    <text x="696" y="352" text-anchor="end" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="13">شحن سريع من عمّان · شامل الجمارك</text>
+    <text x="696" y="394" text-anchor="end" fill="#FBBF24" font-family="system-ui,-apple-system,sans-serif" font-size="28" font-weight="800">٦٧٥ ر.س</text>
+    <rect x="408" y="420" width="288" height="48" rx="14" fill="#F59E0B"/>
+    <text x="552" y="450" text-anchor="middle" fill="#081114" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="800">← إتمام الطلب فوراً</text>
+
+    <!-- Bottom KPI Strip -->
+    <rect x="40" y="520" width="214" height="88" rx="16" fill="#112026" stroke="#1E363D"/>
+    <text x="60" y="548" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">MENA CONVERSION LIFT</text>
+    <text x="60" y="586" fill="#34D399" font-family="system-ui,-apple-system,sans-serif" font-size="28" font-weight="800">+54.2%</text>
+
+    <rect x="272" y="520" width="214" height="88" rx="16" fill="#112026" stroke="#1E363D"/>
+    <text x="292" y="548" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">RTL TOKEN PARITY</text>
+    <text x="292" y="586" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="28" font-weight="800">100%</text>
+
+    <rect x="504" y="520" width="212" height="88" rx="16" fill="#112026" stroke="#1E363D"/>
+    <text x="524" y="548" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">CURATED SECTIONS</text>
+    <text x="524" y="586" fill="#FBBF24" font-family="system-ui,-apple-system,sans-serif" font-size="28" font-weight="800">6 · 5 Slots</text>
+  </g>
+
+  <!-- Foreground iPhone 16 Pro Mobile Checkout Mockup (Right) -->
+  <g transform="translate(784, 134)">
+    <rect x="-8" y="-8" width="348" height="684" rx="54" fill="#030709" opacity="0.7"/>
+    <rect x="0" y="0" width="332" height="668" rx="48" fill="#15282F" stroke="#2A4D58" stroke-width="3"/>
+    <rect x="12" y="12" width="308" height="644" rx="38" fill="#091317"/>
+    <rect x="116" y="24" width="100" height="22" rx="11" fill="#030709"/>
+
+    <text x="34" y="76" fill="#5EEAD4" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700" letter-spacing="1">ATLAS MOBILE CHECKOUT</text>
+    <text x="34" y="104" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="800">Landed Duty Guarantee</text>
+
+    <!-- Duty Breakdown Card -->
+    <rect x="30" y="126" width="272" height="196" rx="22" fill="#112026" stroke="#1E363D"/>
+    <text x="50" y="160" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="600">ORDER SUMMARY · RIYADH</text>
+    <text x="50" y="196" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="600">Subtotal (2 items)</text>
+    <text x="282" y="196" text-anchor="end" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">$162.00</text>
+    <text x="50" y="226" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="500">Customs &amp; VAT pre-cleared</text>
+    <text x="282" y="226" text-anchor="end" fill="#34D399" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">$22.00</text>
+    <line x1="50" y1="248" x2="282" y2="248" stroke="#1E363D"/>
+    <text x="50" y="284" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="800">Total Guaranteed</text>
+    <text x="282" y="284" text-anchor="end" fill="#FBBF24" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="800">$184.00</text>
+
+    <!-- Live Courier Tracker -->
+    <rect x="30" y="342" width="272" height="176" rx="22" fill="#112026" stroke="#1E363D"/>
+    <text x="50" y="376" fill="#5EEAD4" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700" letter-spacing="0.8">EXPRESS AIRWAY BILL</text>
+    <text x="50" y="408" fill="#F0FDFA" font-family="system-ui,-apple-system,sans-serif" font-size="17" font-weight="800">AMM → RUH · Cleared</text>
+    <rect x="50" y="428" width="232" height="8" rx="4" fill="#091317"/>
+    <rect x="50" y="428" width="188" height="8" rx="4" fill="#14B8A6"/>
+    <text x="50" y="464" fill="#94A3B8" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="500">Zero surprise doorstep fees</text>
+    <rect x="50" y="478" width="136" height="24" rx="12" fill="#052E16"/>
+    <text x="118" y="494" text-anchor="middle" fill="#34D399" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">Apple Pay + Mada</text>
+
+    <rect x="30" y="542" width="272" height="52" rx="16" fill="#14B8A6"/>
+    <text x="166" y="574" text-anchor="middle" fill="#042F2E" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="800">Pay $184.00 · Instant</text>
+    <rect x="116" y="636" width="100" height="5" rx="2.5" fill="#475569"/>
+  </g>
+</svg>
+

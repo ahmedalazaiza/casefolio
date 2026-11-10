@@ -121,12 +121,50 @@ export function UploadTemplateWizard({
     setCoverRatio(tpl.cover.ratio);
   }
 
+  function tryPrefillMetadataFromJsonText(jsonText: string) {
+    try {
+      const parsedObj = JSON.parse(jsonText) as {
+        template?: {
+          name?: unknown;
+          slug?: unknown;
+          type?: unknown;
+          category?: unknown;
+          tier?: unknown;
+          cover?: { src?: unknown; ratio?: unknown };
+        };
+      };
+      const tpl = parsedObj?.template;
+      if (!tpl || typeof tpl !== "object") return;
+      if (typeof tpl.name === "string" && tpl.name.trim()) setName(tpl.name.trim());
+      if (typeof tpl.slug === "string" && tpl.slug.trim()) setSlug(tpl.slug.trim());
+      if (tpl.type === "mobile" || tpl.type === "web" || tpl.type === "both") {
+        setProjectType(tpl.type);
+      }
+      if (typeof tpl.category === "string" && tpl.category.trim()) {
+        setCategory(tpl.category.trim());
+      }
+      if (tpl.tier === "free" || tpl.tier === "pro") {
+        setTier(tpl.tier);
+      }
+      if (!hasCustomCover) {
+        const rawSrc = typeof tpl.cover?.src === "string" ? tpl.cover.src.trim() : "";
+        setCoverUrl(rawSrc);
+      }
+      if (typeof tpl.cover?.ratio === "string" && tpl.cover.ratio.trim()) {
+        setCoverRatio(tpl.cover.ratio.trim());
+      }
+    } catch {
+      // Ignore partial/invalid JSON while typing
+    }
+  }
+
   async function handleFileSelect(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
     const text = await file.text();
     setUploadedFileName(file.name);
     setRawJson(text);
+    tryPrefillMetadataFromJsonText(text);
     setServerError(null);
     setServerIssues([]);
   }

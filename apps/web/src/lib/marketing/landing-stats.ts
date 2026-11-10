@@ -71,7 +71,7 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     version: "1.0.0",
     sectionCount: 6,
     slotCount: 5,
-    coverSrc: "/landing/orbit-home.svg",
+    coverSrc: "/templates/orbit/cover.svg",
     previewSecondarySrc: "/landing/orbit-plan.svg",
     headline: "Orbit — Calm Personal Debt & Wallet App",
     summary:
@@ -86,10 +86,24 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     version: "1.0.0",
     sectionCount: 6,
     slotCount: 5,
-    coverSrc: "/landing/meridian-dashboard.svg",
+    coverSrc: "/templates/meridian-pro/cover.svg",
     headline: "Meridian — B2B Revenue OS Workspace",
     summary:
       "Widescreen browser & MacBook case study crafted for enterprise SaaS dashboards, cohort builders, and executive KPIs.",
+  },
+  {
+    slug: "atlas",
+    name: "Atlas",
+    type: "both",
+    categoryName: "Product Story",
+    tier: "free",
+    version: "1.0.0",
+    sectionCount: 6,
+    slotCount: 5,
+    coverSrc: "/templates/atlas/cover.svg",
+    headline: "Atlas — Bilingual Product Story",
+    summary:
+      "Cross-border marketplace narrative in Arabic & English with bidirectional RTL/LTR checkout and seller flows.",
   },
 ] as const;
 
@@ -101,8 +115,10 @@ function mapPublishedItemToShowcase(
     resolveTemplateCoverUrl(item.coverUrl, item.slug) ??
     known?.coverSrc ??
     (item.type === "web"
-      ? "/landing/meridian-dashboard.svg"
-      : "/landing/orbit-home.svg");
+      ? "/templates/meridian-pro/cover.svg"
+      : item.type === "both"
+        ? "/templates/cinema/cover.svg"
+        : "/templates/orbit/cover.svg");
 
   return {
     slug: item.slug,

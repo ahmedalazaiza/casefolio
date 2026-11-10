@@ -503,6 +503,8 @@ export interface CreateTemplateVersionInput {
   version: string;
   changelog: string;
   rawJson: string;
+  coverUrl?: string;
+  coverRatio?: string;
   publishImmediately?: boolean;
 }
 
@@ -512,6 +514,8 @@ export async function createNewTemplateVersion({
   version,
   changelog,
   rawJson,
+  coverUrl,
+  coverRatio,
   publishImmediately = false,
 }: CreateTemplateVersionInput): Promise<CreateTemplateVersionResult> {
   const semverCheck = semverSchema.safeParse(version);
@@ -567,7 +571,16 @@ export async function createNewTemplateVersion({
     }
   }
 
-  const parsedJson = parseAndValidateTemplateJson(rawJson);
+  const effectiveCoverUrl = coverUrl?.trim() || tpl.template.coverUrl;
+  const candidateJson = effectiveCoverUrl
+    ? normalizeRawTemplateJsonCoverIfMissing(
+        rawJson,
+        effectiveCoverUrl,
+        coverRatio?.trim() || "4:3",
+      ).normalizedJson
+    : rawJson;
+
+  const parsedJson = parseAndValidateTemplateJson(candidateJson);
   if (!parsedJson.ok) {
     return {
       ok: false,
@@ -589,8 +602,10 @@ export async function createNewTemplateVersion({
       category: tpl.category?.name ?? parsedJson.data.template.category,
       tier: tpl.template.tier,
       cover: {
-        src: tpl.template.coverUrl ?? parsedJson.data.template.cover.src,
-        ratio: parsedJson.data.template.cover.ratio,
+        src: effectiveCoverUrl || parsedJson.data.template.cover.src,
+        ratio: coverRatio?.trim()
+          ? (coverRatio.trim() as TemplateDocument["template"]["cover"]["ratio"])
+          : parsedJson.data.template.cover.ratio,
       },
     },
   };
@@ -630,6 +645,7 @@ export async function createNewTemplateVersion({
       .set({
         currentVersionId: insertedVersion.id,
         status: "published",
+        coverUrl: versionDocument.template.cover.src,
         updatedAt: now,
       })
       .where(eq(dbSchema.templates.id, templateId));
@@ -642,7 +658,10 @@ export async function createNewTemplateVersion({
   } else {
     await db
       .update(dbSchema.templates)
-      .set({ updatedAt: now })
+      .set({
+        ...(coverUrl?.trim() ? { coverUrl: coverUrl.trim() } : {}),
+        updatedAt: now,
+      })
       .where(eq(dbSchema.templates.id, templateId));
   }
 

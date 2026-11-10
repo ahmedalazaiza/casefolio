@@ -89,7 +89,7 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
     return row!;
   }
 
-  async function createPaidTeamFixture(seats: number) {
+  async function createPaidTeamFixture(seats: number, now?: Date) {
     const owner = await createVerifiedUser("team-owner");
     const suffix = randomUUID().slice(0, 8);
     const [org] = await db
@@ -116,6 +116,7 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
         orgId: org!.id,
         seats,
       },
+      now ? { now } : undefined,
     );
     expect(checkout.ok).toBe(true);
 
@@ -134,6 +135,7 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
     ownerId: string,
     role: "admin" | "member",
     label: string,
+    now?: Date,
   ) {
     const user = await createVerifiedUser(label);
     const inv = await createGatedTeamInvitation({
@@ -143,6 +145,7 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
         email: user.email,
         role,
       },
+      now,
     });
     expect(inv.ok).toBe(true);
     if (!inv.ok) throw new Error(inv.error);
@@ -151,6 +154,7 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
       actorUserId: user.id,
       invitationId: inv.invitationId,
       token: inv.invitationToken,
+      now,
     });
     expect(accepted.ok).toBe(true);
     if (!accepted.ok) throw new Error(accepted.error);
@@ -826,7 +830,7 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
 
   it("7. grants zero seats on failed seat-increase payment and preserves original pastDueSince across repeated failure webhooks (7d grace -> >7d read-only)", async () => {
     const t0 = new Date("2026-11-07T10:00:00.000Z");
-    const team = await createPaidTeamFixture(2);
+    const team = await createPaidTeamFixture(2, new Date(t0.getTime() - 60_000));
 
     const preview = await previewTeamSeatIncrease({
       actorUserId: team.owner.id,
@@ -906,9 +910,9 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
 
   it("8. schedules renewal seat decreases (do_not_bill) without reducing mid-period capacity, caps new admissions to renewalQuantity, blocks conflicting seat changes, and adopts renewalQuantity on verified renewal", async () => {
     const now = new Date("2026-11-07T12:00:00.000Z");
-    const team = await createPaidTeamFixture(3);
-    const m2 = await admitMemberToTeam(team.org.id, team.owner.id, "member", "seat-2");
-    const m3 = await admitMemberToTeam(team.org.id, team.owner.id, "member", "seat-3");
+    const team = await createPaidTeamFixture(3, new Date(now.getTime() - 60_000));
+    const m2 = await admitMemberToTeam(team.org.id, team.owner.id, "member", "seat-2", now);
+    const m3 = await admitMemberToTeam(team.org.id, team.owner.id, "member", "seat-3", now);
 
     // Cannot decrease to 2 seats while all 3 seats are occupied
     const blockedDecrease = await scheduleTeamSeatDecrease({

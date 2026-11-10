@@ -47,16 +47,52 @@ export interface SeedResult {
   templateVersionId: string;
 }
 
+const DEFAULT_SEED_COVERS = new Set([
+  "/landing/orbit-home.svg",
+  "/landing/orbit-plan.svg",
+  "/landing/meridian-dashboard.svg",
+  "/templates/orbit/cover.svg",
+  "/templates/meridian-pro/cover.svg",
+  "/templates/cinema/cover.svg",
+  "/templates/atlas/cover.svg",
+]);
+
+function resolveSeedCoverUrl(
+  existingCoverUrl: string | null | undefined,
+  defaultCoverUrl: string,
+): string {
+  const trimmed = existingCoverUrl?.trim() ?? "";
+  if (
+    trimmed.length > 0 &&
+    !DEFAULT_SEED_COVERS.has(trimmed) &&
+    !trimmed.startsWith("https://cdn.casefolio.app/")
+  ) {
+    return trimmed;
+  }
+  return defaultCoverUrl;
+}
+
 export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
   const ownsConnection = !dbInstance;
   const conn = dbInstance ? null : createDbConnection();
   const db = dbInstance ?? conn!.db;
 
   try {
+    const existingTemplateRows = await db
+      .select({ slug: templates.slug, coverUrl: templates.coverUrl })
+      .from(templates);
+    const existingCoverBySlug = new Map(
+      existingTemplateRows.map((row) => [row.slug, row.coverUrl]),
+    );
+
     const rawOrbit = readFileSync(ORBIT_TEMPLATE_JSON_PATH, "utf-8");
     const orbitPayload = JSON.parse(rawOrbit) as OrbitSeedJson & Record<string, unknown>;
+    const orbitCoverUrl = resolveSeedCoverUrl(
+      existingCoverBySlug.get(orbitPayload.template.slug),
+      "/templates/orbit/cover.svg",
+    );
     orbitPayload.template.cover = {
-      src: "/landing/orbit-home.svg",
+      src: orbitCoverUrl,
       ratio: orbitPayload.template.cover.ratio || "4:3",
     };
 
@@ -193,6 +229,10 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
           content: Array<{ type: string; props: Record<string, unknown> }>;
         };
       };
+      const meridianCoverUrl = resolveSeedCoverUrl(
+        existingCoverBySlug.get("meridian-pro"),
+        "/templates/meridian-pro/cover.svg",
+      );
       meridianPayload.template.id = "tpl_meridian_web_v1";
       meridianPayload.template.slug = "meridian-pro";
       meridianPayload.template.name = "Meridian";
@@ -202,7 +242,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
       meridianPayload.template.category = "SaaS";
       meridianPayload.template.tier = "pro";
       meridianPayload.template.cover = {
-        src: "/landing/meridian-dashboard.svg",
+        src: meridianCoverUrl,
         ratio: "4:3",
       };
       meridianPayload.template.slots = {
@@ -230,7 +270,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
           categoryId: saasCategory.id,
           tier: "pro",
           status: "published",
-          coverUrl: "/landing/meridian-dashboard.svg",
+          coverUrl: meridianCoverUrl,
         })
         .onConflictDoUpdate({
           target: templates.slug,
@@ -240,7 +280,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
             categoryId: saasCategory.id,
             tier: "pro",
             status: "published",
-            coverUrl: "/landing/meridian-dashboard.svg",
+            coverUrl: meridianCoverUrl,
             updatedAt: new Date(),
           },
         })
@@ -299,6 +339,14 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
         .returning({ id: categories.id });
 
       if (entertainmentCategory) {
+        const cinemaCoverUrl = resolveSeedCoverUrl(
+          existingCoverBySlug.get(cinemaPayload.template.slug),
+          cinemaPayload.template.cover.src || "/templates/cinema/cover.svg",
+        );
+        cinemaPayload.template.cover = {
+          src: cinemaCoverUrl,
+          ratio: cinemaPayload.template.cover.ratio || "4:3",
+        };
         const [cinemaTpl] = await db
           .insert(templates)
           .values({
@@ -308,7 +356,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
             categoryId: entertainmentCategory.id,
             tier: cinemaPayload.template.tier,
             status: "published",
-            coverUrl: cinemaPayload.template.cover.src,
+            coverUrl: cinemaCoverUrl,
           })
           .onConflictDoUpdate({
             target: templates.slug,
@@ -318,7 +366,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
               categoryId: entertainmentCategory.id,
               tier: cinemaPayload.template.tier,
               status: "published",
-              coverUrl: cinemaPayload.template.cover.src,
+              coverUrl: cinemaCoverUrl,
               updatedAt: new Date(),
             },
           })
@@ -378,6 +426,10 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
           content: Array<{ type: string; props: Record<string, unknown> }>;
         };
       };
+      const atlasCoverUrl = resolveSeedCoverUrl(
+        existingCoverBySlug.get("atlas"),
+        "/templates/atlas/cover.svg",
+      );
       atlasPayload.template.id = "tpl_atlas_bilingual_v1";
       atlasPayload.template.slug = "atlas";
       atlasPayload.template.name = "Atlas";
@@ -387,7 +439,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
       atlasPayload.template.category = "Product Story";
       atlasPayload.template.tier = "free";
       atlasPayload.template.cover = {
-        src: "/landing/orbit-plan.svg",
+        src: atlasCoverUrl,
         ratio: "4:3",
       };
       atlasPayload.puck.root.props.title = "Atlas — Bilingual Product Story";
@@ -408,7 +460,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
           categoryId: productStoryCategory.id,
           tier: "free",
           status: "published",
-          coverUrl: "/landing/orbit-plan.svg",
+          coverUrl: atlasCoverUrl,
         })
         .onConflictDoUpdate({
           target: templates.slug,
@@ -418,7 +470,7 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
             categoryId: productStoryCategory.id,
             tier: "free",
             status: "published",
-            coverUrl: "/landing/orbit-plan.svg",
+            coverUrl: atlasCoverUrl,
             updatedAt: new Date(),
           },
         })

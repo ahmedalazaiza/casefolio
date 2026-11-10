@@ -1,9 +1,16 @@
 const LEGACY_PLACEHOLDER_HOSTS = new Set(["cdn.casefolio.app"]);
 
-const LEGACY_SLUG_COVER_FALLBACKS: Record<string, string> = {
+export const SEEDED_TEMPLATE_COVER_FALLBACKS: Record<string, string> = {
   cinema: "/templates/cinema/cover.svg",
-  orbit: "/landing/orbit-home.svg",
-  "meridian-pro": "/landing/meridian-dashboard.svg",
+  orbit: "/templates/orbit/cover.svg",
+  "meridian-pro": "/templates/meridian-pro/cover.svg",
+  atlas: "/templates/atlas/cover.svg",
+};
+
+const LEGACY_LANDING_COVER_REDIRECTS: Record<string, string> = {
+  "/landing/orbit-home.svg": "/templates/orbit/cover.svg",
+  "/landing/orbit-plan.svg": "/templates/atlas/cover.svg",
+  "/landing/meridian-dashboard.svg": "/templates/meridian-pro/cover.svg",
 };
 
 /**
@@ -37,12 +44,19 @@ export function resolveTemplateCoverUrl(
   if (typeof coverUrl === "string") {
     const trimmed = coverUrl.trim();
     if (trimmed.length > 0) {
+      if (trimmed in LEGACY_LANDING_COVER_REDIRECTS) {
+        if (cleanSlug && cleanSlug in SEEDED_TEMPLATE_COVER_FALLBACKS) {
+          return SEEDED_TEMPLATE_COVER_FALLBACKS[cleanSlug]!;
+        }
+        return LEGACY_LANDING_COVER_REDIRECTS[trimmed]!;
+      }
+
       if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
         return trimmed;
       }
 
       if (isLegacyPlaceholderCoverUrl(trimmed)) {
-        return LEGACY_SLUG_COVER_FALLBACKS[cleanSlug] ?? null;
+        return SEEDED_TEMPLATE_COVER_FALLBACKS[cleanSlug] ?? null;
       }
 
       if (
@@ -56,8 +70,8 @@ export function resolveTemplateCoverUrl(
     }
   }
 
-  if (cleanSlug && cleanSlug in LEGACY_SLUG_COVER_FALLBACKS) {
-    return LEGACY_SLUG_COVER_FALLBACKS[cleanSlug] ?? null;
+  if (cleanSlug && cleanSlug in SEEDED_TEMPLATE_COVER_FALLBACKS) {
+    return SEEDED_TEMPLATE_COVER_FALLBACKS[cleanSlug] ?? null;
   }
 
   return null;

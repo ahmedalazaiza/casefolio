@@ -304,7 +304,9 @@ export const templates = pgTable(
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     tier: text("tier").$type<TemplateTier>().notNull().default("free"),
     status: text("status").$type<TemplateStatus>().notNull().default("draft"),
-    coverUrl: text("cover_url"),
+    coverUrl: text("cover_url")
+      .notNull()
+      .default("/templates/cinema/cover.svg"),
     currentVersionId: uuid("current_version_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

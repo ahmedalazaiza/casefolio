@@ -30,6 +30,8 @@ const createVersionActionPayloadSchema = z.object({
   version: semverSchema,
   changelog: z.string().trim().max(500).default(""),
   rawJson: z.string().min(1, "Template JSON is required."),
+  coverUrl: z.string().trim().optional(),
+  coverRatio: z.string().trim().optional(),
   publishImmediately: z.boolean().default(false),
 });
 

@@ -80,13 +80,16 @@ describe("Template cover upload, CDN resolution & browser export helpers", () =>
     );
     expect(
       resolveTemplateCoverUrl("https://cdn.casefolio.app/templates/orbit/cover.png", "orbit"),
-    ).toBe("/landing/orbit-home.svg");
+    ).toBe("/templates/orbit/cover.svg");
     expect(
       resolveTemplateCoverUrl(
         "https://cdn.casefolio.app/templates/meridian-pro/cover.png",
         "meridian-pro",
       ),
-    ).toBe("/landing/meridian-dashboard.svg");
+    ).toBe("/templates/meridian-pro/cover.svg");
+    expect(resolveTemplateCoverUrl("/landing/orbit-home.svg", "orbit")).toBe(
+      "/templates/orbit/cover.svg",
+    );
     expect(resolveTemplateCoverUrl("", "unknown-slug")).toBeNull();
   });
 

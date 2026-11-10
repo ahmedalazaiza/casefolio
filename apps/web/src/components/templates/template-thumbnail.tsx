@@ -8,6 +8,8 @@ export interface TemplateThumbnailProps {
   coverUrl?: string | null;
   slug?: string | null;
   name: string;
+  alt?: string;
+  loading?: "lazy" | "eager";
   theme?: {
     bg?: string;
     fg?: string;
@@ -23,6 +25,8 @@ export function TemplateThumbnail({
   coverUrl,
   slug,
   name,
+  alt,
+  loading = "lazy",
   theme,
   className,
   imageClassName,
@@ -48,11 +52,11 @@ export function TemplateThumbnail({
       >
         <img
           src={resolvedUrl}
-          alt={`${name} cover thumbnail`}
-          loading="lazy"
+          alt={alt ?? `${name} cover thumbnail`}
+          loading={loading}
           onError={() => setFailedUrl(resolvedUrl)}
           className={cn(
-            "size-full object-cover object-top transition-transform duration-500",
+            "size-full object-cover object-center transition-transform duration-500",
             imageClassName,
           )}
         />
