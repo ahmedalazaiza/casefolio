@@ -61,6 +61,8 @@ describe("Phase 11 Security Review & Hardening Audit (C-1101)", () => {
     const explicitPublicRouteGuards: Record<string, RegExp> = {
       "api/auth/[...all]/route.ts": /checkAuthEndpointRateLimit/,
       "api/paddle/webhook/route.ts": /handleSignedPaddleWebhookRequest/,
+      // Machine-to-machine: fails closed (503) without CRON_SECRET and compares in constant time
+      "api/cron/billing-reconcile/route.ts": /CRON_SECRET[\s\S]*timingSafeEqual|timingSafeEqual[\s\S]*CRON_SECRET/,
       "api/uploads/local-put/route.ts": /verifyStorageToken/,
       "api/track/route.ts": /recordPublishedProjectView/,
       "api/reports/route.ts": /consumeUploadRateLimit/,

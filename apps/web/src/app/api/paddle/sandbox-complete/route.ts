@@ -38,9 +38,13 @@ export async function POST(request: Request) {
         ? 403
         : result.code === "RATE_LIMITED"
           ? 429
-          : result.code === "WEBHOOK_FAILED"
-            ? 500
-            : 400;
+          : result.code === "ALREADY_SUBSCRIBED"
+            ? 409
+            : result.code === "BILLING_NOT_CONFIGURED"
+              ? 503
+              : result.code === "WEBHOOK_FAILED"
+                ? 500
+                : 400;
     return NextResponse.json(result, { status });
   }
 

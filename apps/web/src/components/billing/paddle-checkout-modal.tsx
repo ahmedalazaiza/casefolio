@@ -2,6 +2,7 @@
 
 import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 import { Check, CreditCard, Loader2, Minus, Plus, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -37,13 +38,55 @@ export interface PreparedCheckoutPayload {
   seats: number;
   amountUsd: number;
   customerEmail: string;
+  orgId: string | null;
+  /** Identity-free: `operationId` points at the server-side checkout intent. */
   customData: {
-    userId: string;
-    orgId: string | null;
+    operationId: string;
     plan: PaidPlanTier;
     interval: BillingInterval;
     seats: number;
   };
+}
+
+const PLAN_CONFIRM_POLL_MS = 2_000;
+const PLAN_CONFIRM_TIMEOUT_MS = 90_000;
+
+/** `live_` tokens belong to Paddle production; everything else is the sandbox. */
+const IS_PRODUCTION_BILLING = (process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? "").startsWith("live_");
+
+/**
+ * The Paddle overlay reports `checkout.completed` the instant the customer pays, but the plan only
+ * changes once our signed webhook has been processed. Instead of optimistically claiming an upgrade
+ * (and being wrong if the webhook is delayed or rejected) we poll the server until the VERIFIED plan
+ * matches, and fall back to honest "still activating" copy — never asking the customer to pay twice.
+ */
+async function confirmPlanActivation(args: {
+  plan: PaidPlanTier;
+  orgId: string | null;
+}): Promise<"active" | "pending"> {
+  const deadline = Date.now() + PLAN_CONFIRM_TIMEOUT_MS;
+  const query = args.orgId ? `?orgId=${encodeURIComponent(args.orgId)}` : "";
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`/api/paddle/status${query}`, { cache: "no-store" });
+      if (response.ok) {
+        const json = (await response.json()) as {
+          personal: { plan: string };
+          team: { plan: string; status: string } | null;
+        };
+        const activated =
+          args.plan === "pro"
+            ? json.personal.plan === "pro"
+            : json.team?.plan === "team" && ["active", "trialing"].includes(json.team.status);
+        if (activated) return "active";
+      }
+    } catch {
+      // transient network error — keep polling until the deadline
+    }
+    await new Promise((resolve) => setTimeout(resolve, PLAN_CONFIRM_POLL_MS));
+  }
+  return "pending";
 }
 
 export interface PaddleCheckoutModalProps {
@@ -76,6 +119,7 @@ export function PaddleCheckoutModal({
   const [submittingSandbox, setSubmittingSandbox] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [prepared, setPrepared] = useState<PreparedCheckoutPayload | null>(null);
+  const [alreadySubscribed, setAlreadySubscribed] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -83,6 +127,7 @@ export function PaddleCheckoutModal({
       setSelectedInterval(initialInterval);
       setSelectedSeats(clampTeamsSeats(initialSeats));
       setErrorMessage(null);
+      setAlreadySubscribed(false);
       setPrepared(null);
     }
   }, [open, initialPlan, initialInterval, initialSeats]);
@@ -92,15 +137,36 @@ export function PaddleCheckoutModal({
   const displayAmount = getChargeAmountUsd(selectedPlan, selectedInterval, effectiveSeats);
 
   async function launchPaddleOverlay(session: PreparedCheckoutPayload) {
+    const planName = BILLING_PLAN_CATALOG[session.plan].name;
+    let completionHandled = false;
+
     const paddle: Paddle | undefined = await initializePaddle({
       environment: session.environment,
       token: session.clientToken,
       eventCallback(event) {
-        if (event.name === "checkout.completed") {
-          toast.success(`Upgraded to ${BILLING_PLAN_CATALOG[session.plan].name}!`);
-          onOpenChange(false);
-          onCheckoutCompleted?.(session.plan);
-          router.refresh();
+        if (event.name === "checkout.completed" && !completionHandled) {
+          completionHandled = true;
+          const toastId = toast.loading(`Payment received — activating ${planName}…`);
+          void confirmPlanActivation({ plan: session.plan, orgId: session.orgId }).then(
+            (outcome) => {
+              if (outcome === "active") {
+                toast.success(`You're on Casefolio ${planName}!`, { id: toastId });
+                onCheckoutCompleted?.(session.plan);
+              } else {
+                toast.message(
+                  `Your payment went through. ${planName} is still activating and will appear in Billing shortly — you don't need to pay again.`,
+                  { id: toastId, duration: 12_000 },
+                );
+              }
+              router.refresh();
+            },
+          );
+        } else if (
+          event.name === "checkout.payment.failed" ||
+          event.name === "checkout.failed" ||
+          event.name === "checkout.error"
+        ) {
+          toast.error("We couldn't complete the payment. You haven't been charged — try another card.");
         }
       },
     });
@@ -127,6 +193,7 @@ export function PaddleCheckoutModal({
 
   async function handlePrepareOrOpenCheckout() {
     setErrorMessage(null);
+    setAlreadySubscribed(false);
     setLoadingSession(true);
 
     try {
@@ -143,9 +210,10 @@ export function PaddleCheckoutModal({
 
       const json = (await response.json()) as
         | { ok: true; session: PreparedCheckoutPayload }
-        | { ok: false; error?: string };
+        | { ok: false; code?: string; error?: string };
 
       if (!response.ok || !json.ok) {
+        setAlreadySubscribed("code" in json && json.code === "ALREADY_SUBSCRIBED");
         setErrorMessage(
           ("error" in json && json.error) || "Failed to initialize checkout session.",
         );
@@ -214,9 +282,11 @@ export function PaddleCheckoutModal({
               {prepared ? "Paddle Sandbox Checkout" : `Upgrade to ${planDef.name}`}
             </DialogTitle>
             <ProBadge />
-            <Badge tone="neutral" withDot={false}>
-              Sandbox
-            </Badge>
+            {!IS_PRODUCTION_BILLING && (
+              <Badge tone="neutral" withDot={false}>
+                Sandbox
+              </Badge>
+            )}
           </div>
           <DialogDescription>
             {prepared
@@ -362,12 +432,23 @@ export function PaddleCheckoutModal({
             </div>
 
             {errorMessage && (
-              <p
+              <div
                 role="alert"
-                className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+                data-testid="checkout-error"
+                className="border-destructive/30 bg-destructive-soft text-destructive type-body-s flex flex-col gap-2 rounded-lg border px-3.5 py-2.5"
               >
-                {errorMessage}
-              </p>
+                <p>{errorMessage}</p>
+                {alreadySubscribed && (
+                  <Link
+                    href="/account/billing"
+                    data-testid="checkout-manage-billing-link"
+                    className="text-foreground type-body-s-strong underline underline-offset-2"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Go to Billing
+                  </Link>
+                )}
+              </div>
             )}
 
             <DialogFooter>
@@ -444,12 +525,23 @@ export function PaddleCheckoutModal({
             </div>
 
             {errorMessage && (
-              <p
+              <div
                 role="alert"
-                className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+                data-testid="checkout-error"
+                className="border-destructive/30 bg-destructive-soft text-destructive type-body-s flex flex-col gap-2 rounded-lg border px-3.5 py-2.5"
               >
-                {errorMessage}
-              </p>
+                <p>{errorMessage}</p>
+                {alreadySubscribed && (
+                  <Link
+                    href="/account/billing"
+                    data-testid="checkout-manage-billing-link"
+                    className="text-foreground type-body-s-strong underline underline-offset-2"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Go to Billing
+                  </Link>
+                )}
+              </div>
             )}
 
             <DialogFooter>

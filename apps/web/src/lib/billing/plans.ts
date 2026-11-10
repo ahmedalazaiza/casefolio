@@ -17,6 +17,13 @@ export const PAID_GRACE_MAX_RATIO = 1.2;
 export const PAID_GRACE_DURATION_DAYS = 7;
 export const PAID_GRACE_COOLDOWN_DAYS = 365;
 export const PAST_DUE_GRACE_DAYS = 7;
+/**
+ * Fail-safe: an `active`/`trialing` subscription whose paid-through date is this many days in the
+ * past stops granting paid access. A healthy subscription gets a fresh period end from Paddle on
+ * every renewal, so a stale one means we missed the cancel/expiry webhook. Reconciliation
+ * (`reconcileSubscriptionWithPaddle`) normally repairs it long before this triggers.
+ */
+export const STALE_ACTIVE_SUBSCRIPTION_DAYS = 14;
 export const RENEWAL_LOCK_WINDOW_MINUTES = 30;
 export const INVITATION_EXPIRY_DAYS = 7;
 export const PRIVATE_RECOVERY_MIN_DAYS = 90;
@@ -586,8 +593,13 @@ export function evaluateSubscriptionLifecycle(args: {
   );
 
   if (normalized === "active" || normalized === "trialing") {
+    const isStale = Boolean(
+      args.currentPeriodEnd &&
+        now.getTime() - args.currentPeriodEnd.getTime() >
+          STALE_ACTIVE_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000,
+    );
     return {
-      grantsPaidAccess: true,
+      grantsPaidAccess: !isStale,
       isPastDueInGrace: false,
       isPastDueReadOnly: false,
       blocksSeatAndInviteMutations: withinRenewalLock || hasScheduledChange,

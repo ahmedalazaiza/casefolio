@@ -5,9 +5,11 @@ import {
   desc,
   eq,
   gt,
+  inArray,
   isNull,
   ne,
   normalizeMembershipRole,
+  or,
   sql,
   type PlanTier,
 } from "@casefolio/db";
@@ -18,7 +20,6 @@ import {
   checkoutRequestSchema,
   computeTeamsPrice,
   evaluateSubscriptionLifecycle,
-  formatPlanHeadingLabel,
   getChargeAmountCents,
   getChargeAmountUsd,
   isSubscriptionLockedForQuantityChange,
@@ -29,12 +30,13 @@ import {
   type PaidPlanTier,
 } from "@/lib/billing/plans";
 import {
+  getBillingConfigStatus,
   getPaddleApiBaseUrl,
   isPaddleOverlayLiveReady,
   isRealPaddleApiKeyConfigured,
-  resolvePlanFromServerPriceId,
   resolveServerPaddlePriceId,
 } from "@/lib/billing/server-config";
+import { buildBillingInvoices, type BillingInvoiceItem } from "@/lib/billing/invoices";
 import { signPaddleWebhookPayload } from "@/lib/billing/signature";
 import {
   applyPersonalDowngradePublicationRules,
@@ -64,9 +66,18 @@ export interface PreparedCheckoutSession {
   amountCents: number;
   amountUsd: number;
   customerEmail: string;
+  /**
+   * Organization the purchase will belong to (Teams only). Resolved server-side; never trusted
+   * from the browser when the webhook arrives.
+   */
+  orgId: string | null;
+  /**
+   * What the browser forwards to Paddle as `custom_data`. It deliberately carries NO identity:
+   * `operationId` points at a server-created checkout intent that binds the purchase to the
+   * authenticated user/org when the webhook arrives.
+   */
   customData: {
-    userId: string;
-    orgId: string | null;
+    operationId: string;
     plan: PaidPlanTier;
     interval: BillingInterval;
     seats: number;
@@ -84,19 +95,13 @@ export type PrepareCheckoutResult =
         | "VALIDATION_ERROR"
         | "CAPACITY_REVIEW_REQUIRED"
         | "FORBIDDEN"
-        | "RATE_LIMITED";
+        | "RATE_LIMITED"
+        | "ALREADY_SUBSCRIBED"
+        | "BILLING_NOT_CONFIGURED";
       error: string;
     };
 
-export interface BillingInvoiceItem {
-  id: string;
-  invoiceNumber: string;
-  occurredAtIso: string;
-  planLabel: string;
-  amountUsd: number;
-  status: "paid" | "failed";
-  receiptUrl: string;
-}
+export type { BillingInvoiceItem };
 
 export interface UserSubscriptionSummary {
   id: string;
@@ -107,9 +112,10 @@ export interface UserSubscriptionSummary {
   status: string;
   currentPeriodEndIso: string | null;
   pastDueSinceIso?: string | null;
-  paymentBrand: string;
-  paymentLast4: string;
-  paymentExpiry: string;
+  /** `null` when Paddle has not reported a card (manage it in the Paddle portal). Never invented. */
+  paymentBrand: string | null;
+  paymentLast4: string | null;
+  paymentExpiry: string | null;
 }
 
 export interface TeamBillingSeatOverview {
@@ -296,9 +302,91 @@ export async function prepareCheckoutSessionForUser(
   }
 
   const priceId = resolveServerPaddlePriceId(valid.plan, valid.interval);
+  const overlayReady = isPaddleOverlayLiveReady(priceId);
+
+  // Production must never silently fall back to the local simulator: fail loudly instead.
+  if (env.PADDLE_ENV === "production") {
+    const config = getBillingConfigStatus();
+    if (!config.productionReady || !overlayReady) {
+      return {
+        ok: false,
+        code: "BILLING_NOT_CONFIGURED",
+        error:
+          "Billing is temporarily unavailable. Please contact support — you have not been charged.",
+      };
+    }
+  }
+
+  // Teams always belong to an organization: resolve/create it BEFORE payment so the purchase can
+  // never degrade into a personal "team" plan.
+  if (valid.plan === "team" && !orgId) {
+    orgId = await resolveOrCreateOwnedTeamOrgId(actor);
+  }
+
+  // One live subscription per scope (personal workspace / organization). A second checkout would
+  // create a second Paddle subscription that we could no longer manage while it kept billing.
+  const [existingScopeSub] = await db
+    .select({
+      status: dbSchema.subscriptions.status,
+      paddleSubscriptionId: dbSchema.subscriptions.paddleSubscriptionId,
+      scheduledChangeAction: dbSchema.subscriptions.scheduledChangeAction,
+    })
+    .from(dbSchema.subscriptions)
+    .where(
+      orgId
+        ? eq(dbSchema.subscriptions.orgId, orgId)
+        : and(
+            eq(dbSchema.subscriptions.userId, actor.id),
+            isNull(dbSchema.subscriptions.orgId),
+          ),
+    )
+    .orderBy(desc(dbSchema.subscriptions.updatedAt))
+    .limit(1);
+
+  if (
+    existingScopeSub?.paddleSubscriptionId &&
+    ["active", "trialing", "past_due", "paused", "cancel_at_period_end"].includes(
+      existingScopeSub.status,
+    )
+  ) {
+    const scheduledToEnd =
+      existingScopeSub.status === "cancel_at_period_end" ||
+      existingScopeSub.scheduledChangeAction === "cancel";
+    return {
+      ok: false,
+      code: "ALREADY_SUBSCRIBED",
+      error: scheduledToEnd
+        ? "This subscription is scheduled to end. Resume it from Billing instead of buying again."
+        : existingScopeSub.status === "past_due"
+          ? "Your last payment failed. Update your payment method in Billing instead of buying again."
+          : "You already have an active subscription. Manage or change it from Billing — you have not been charged.",
+    };
+  }
+
   const amountCents = getChargeAmountCents(valid.plan, valid.interval, seats);
   const amountUsd = getChargeAmountUsd(valid.plan, valid.interval, seats);
-  const mode = isPaddleOverlayLiveReady(priceId) ? "paddle" : "sandbox_simulated";
+  const mode = overlayReady ? "paddle" : "sandbox_simulated";
+
+  // Server-side checkout intent: the ONLY thing that ties a brand-new Paddle subscription to a
+  // Casefolio user/organization when the webhook arrives (custom_data identity is browser-controlled).
+  const operationId = randomUUID();
+  await db.insert(dbSchema.billingOperations).values({
+    id: operationId,
+    actorUserId: actor.id,
+    kind: "checkout",
+    status: "pending",
+    targetQuantity: seats,
+    previewAmountCents: amountCents,
+    idempotencyKey: `checkout:${actor.id}:${operationId}`,
+    meta: {
+      plan: valid.plan,
+      interval: valid.interval,
+      seats,
+      orgId,
+      priceId,
+      mode,
+    },
+  });
 
   return {
     ok: true,
@@ -313,14 +401,143 @@ export async function prepareCheckoutSessionForUser(
       amountCents,
       amountUsd,
       customerEmail: actor.email,
+      orgId,
       customData: {
-        userId: actor.id,
-        orgId,
+        operationId,
         plan: valid.plan,
         interval: valid.interval,
         seats,
       },
     },
+  };
+}
+
+async function recoverSimulatedPastDueSubscription(
+  actor: BillingActor,
+  rawInput: unknown,
+  nowOverride?: Date,
+): Promise<
+  | {
+      ok: true;
+      eventId: string;
+      effectivePlan: PlanTier;
+      subscriptionId: string | null;
+      orgId: string | null;
+      seats: number;
+    }
+  | {
+      ok: false;
+      code: "WEBHOOK_FAILED";
+      error: string;
+    }
+  | null
+> {
+  const parsed = checkoutRequestSchema.safeParse(rawInput);
+  if (!parsed.success) return null;
+  const valid = parsed.data;
+
+  let orgId = valid.orgId ?? null;
+  if (valid.plan === "team" && !orgId) {
+    const [owned] = await db
+      .select({ orgId: dbSchema.memberships.orgId })
+      .from(dbSchema.memberships)
+      .where(
+        and(
+          eq(dbSchema.memberships.userId, actor.id),
+          eq(dbSchema.memberships.role, "owner"),
+        ),
+      )
+      .limit(1);
+    orgId = owned?.orgId ?? null;
+  }
+  if (valid.plan === "pro" && orgId) return null;
+
+  if (orgId) {
+    const [membership] = await db
+      .select({ role: dbSchema.memberships.role })
+      .from(dbSchema.memberships)
+      .where(
+        and(eq(dbSchema.memberships.orgId, orgId), eq(dbSchema.memberships.userId, actor.id)),
+      )
+      .limit(1);
+    if (!membership || normalizeMembershipRole(membership.role) !== "owner") return null;
+  }
+
+  const [sub] = await db
+    .select()
+    .from(dbSchema.subscriptions)
+    .where(
+      orgId
+        ? eq(dbSchema.subscriptions.orgId, orgId)
+        : and(
+            eq(dbSchema.subscriptions.userId, actor.id),
+            isNull(dbSchema.subscriptions.orgId),
+          ),
+    )
+    .orderBy(desc(dbSchema.subscriptions.updatedAt))
+    .limit(1);
+
+  if (
+    !sub ||
+    sub.status !== "past_due" ||
+    !sub.paddleSubscriptionId?.startsWith("sub_sdbx_")
+  ) {
+    return null;
+  }
+
+  const now = nowOverride ?? new Date();
+  const periodDays = sub.interval === "yearly" ? 365 : 30;
+  const periodEnd = new Date(now.getTime() + periodDays * 24 * 60 * 60 * 1000);
+  const eventId = `evt_sdbx_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
+  const priceId = resolveServerPaddlePriceId(
+    sub.orgId ? "team" : "pro",
+    sub.interval,
+  );
+
+  const rawBody = JSON.stringify({
+    event_id: eventId,
+    event_type: "subscription.updated",
+    occurred_at: now.toISOString(),
+    data: {
+      id: sub.paddleSubscriptionId,
+      customer_id: sub.paddleCustomerId,
+      status: "active",
+      current_billing_period: { starts_at: now.toISOString(), ends_at: periodEnd.toISOString() },
+      next_billed_at: periodEnd.toISOString(),
+      scheduled_change: null,
+      items: [
+        {
+          quantity: sub.currentPaidCapacity,
+          price: {
+            id: priceId,
+            billing_cycle: { interval: sub.interval === "yearly" ? "year" : "month", frequency: 1 },
+          },
+        },
+      ],
+    },
+  });
+
+  const result = await handleSignedPaddleWebhookRequest({
+    rawBody,
+    signatureHeader: signPaddleWebhookPayload(
+      rawBody,
+      env.PADDLE_WEBHOOK_SECRET,
+      Math.floor(now.getTime() / 1000),
+    ),
+    now,
+  });
+
+  if (!result.ok) {
+    return { ok: false, code: "WEBHOOK_FAILED", error: result.error };
+  }
+
+  return {
+    ok: true,
+    eventId: result.eventId,
+    effectivePlan: result.effectivePlan ?? sub.plan,
+    subscriptionId: result.subscriptionId,
+    orgId: sub.orgId,
+    seats: sub.currentPaidCapacity,
   };
 }
 
@@ -348,6 +565,8 @@ export async function completeSandboxCheckoutForUser(
         | "CAPACITY_REVIEW_REQUIRED"
         | "FORBIDDEN"
         | "RATE_LIMITED"
+        | "ALREADY_SUBSCRIBED"
+        | "BILLING_NOT_CONFIGURED"
         | "WEBHOOK_FAILED";
       error: string;
     }
@@ -360,6 +579,11 @@ export async function completeSandboxCheckoutForUser(
     };
   }
 
+  // Sandbox "update payment method": re-running checkout on a simulated subscription that is
+  // `past_due` simulates a successful retry of the payment instead of buying a second subscription.
+  const recovery = await recoverSimulatedPastDueSubscription(actor, rawInput, options?.now);
+  if (recovery) return recovery;
+
   const prepared = await prepareCheckoutSessionForUser(actor, rawInput);
   if (!prepared.ok) {
     return prepared;
@@ -370,10 +594,7 @@ export async function completeSandboxCheckoutForUser(
   const periodDays = session.interval === "yearly" ? 365 : 30;
   const periodEnd = new Date(now.getTime() + periodDays * 24 * 60 * 60 * 1000);
 
-  let targetOrgId = session.customData.orgId;
-  if (session.plan === "team" && !targetOrgId) {
-    targetOrgId = await resolveOrCreateOwnedTeamOrgId(actor);
-  }
+  const targetOrgId = session.orgId;
 
   let existingSub: typeof dbSchema.subscriptions.$inferSelect | undefined;
   if (session.plan === "team" && targetOrgId) {
@@ -404,9 +625,9 @@ export async function completeSandboxCheckoutForUser(
   const shortScope = (targetOrgId ?? actor.id).replace(/-/g, "").slice(0, 12);
   const paddleCustomerId =
     existingSub?.paddleCustomerId ?? `ctm_sdbx_${shortScope}`;
-  const paddleSubscriptionId =
-    existingSub?.paddleSubscriptionId ??
-    `sub_sdbx_${randomUUID().replace(/-/g, "").slice(0, 20)}`;
+  // A purchase always creates a NEW Paddle subscription (a live one would have been refused by
+  // `prepareCheckoutSessionForUser`), so the simulator exercises the same checkout-intent path as Paddle.
+  const paddleSubscriptionId = `sub_sdbx_${randomUUID().replace(/-/g, "").slice(0, 20)}`;
 
   const eventId = `evt_sdbx_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
   const invoiceNumber = `INV-${now.getUTCFullYear()}-${randomUUID().slice(0, 6).toUpperCase()}`;
@@ -440,8 +661,7 @@ export async function completeSandboxCheckoutForUser(
         },
       ],
       custom_data: {
-        userId: session.customData.userId,
-        orgId: targetOrgId,
+        operationId: session.customData.operationId,
         plan: session.plan,
         interval: session.interval,
         seats: session.seats,
@@ -661,120 +881,71 @@ export async function getUserBillingOverview(
     effectivePlan = "free";
   }
 
-  const recentEvents = await db
-    .select()
-    .from(dbSchema.webhookEvents)
-    .where(eq(dbSchema.webhookEvents.provider, "paddle"))
-    .orderBy(desc(dbSchema.webhookEvents.processedAt))
-    .limit(100);
+  // Invoices are scoped by Paddle-assigned subscription / customer ids that belong to THIS user's
+  // (or owned team's) subscription rows. Browser-controlled `custom_data` is never used to decide
+  // whose invoice an event is, and the query is filtered in SQL so one busy tenant can never push
+  // another customer's history out of a global "latest 100" window.
+  const [teamSubRow] =
+    teamBilling?.isOwner && teamBilling.organizationId
+      ? await db
+          .select({
+            paddleSubscriptionId: dbSchema.subscriptions.paddleSubscriptionId,
+            paddleCustomerId: dbSchema.subscriptions.paddleCustomerId,
+          })
+          .from(dbSchema.subscriptions)
+          .where(eq(dbSchema.subscriptions.orgId, teamBilling.organizationId))
+          .orderBy(desc(dbSchema.subscriptions.updatedAt))
+          .limit(1)
+      : [];
 
-  let detectedInterval: BillingInterval = subRow?.interval ?? "monthly";
-  let paymentBrand = "VISA";
-  let paymentLast4 = "4242";
-  let paymentExpiry = "08/29";
-  const invoices: BillingInvoiceItem[] = [];
+  const ownedSubscriptionIds = [
+    subRow?.paddleSubscriptionId,
+    teamSubRow?.paddleSubscriptionId,
+  ].filter((value): value is string => Boolean(value));
+  const ownedCustomerIds = [subRow?.paddleCustomerId, teamSubRow?.paddleCustomerId].filter(
+    (value): value is string => Boolean(value),
+  );
 
-  for (const evt of recentEvents) {
-    const payload = asRecord(evt.payload);
-    const data = asRecord(payload?.data);
-    if (!data) continue;
+  const recentEvents =
+    ownedSubscriptionIds.length === 0 && ownedCustomerIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(dbSchema.webhookEvents)
+          .where(
+            and(
+              eq(dbSchema.webhookEvents.provider, "paddle"),
+              or(
+                ownedSubscriptionIds.length
+                  ? inArray(
+                      sql<string>`${dbSchema.webhookEvents.payload}->'data'->>'subscription_id'`,
+                      ownedSubscriptionIds,
+                    )
+                  : undefined,
+                ownedSubscriptionIds.length
+                  ? inArray(
+                      sql<string>`${dbSchema.webhookEvents.payload}->'data'->>'id'`,
+                      ownedSubscriptionIds,
+                    )
+                  : undefined,
+                ownedCustomerIds.length
+                  ? inArray(
+                      sql<string>`${dbSchema.webhookEvents.payload}->'data'->>'customer_id'`,
+                      ownedCustomerIds,
+                    )
+                  : undefined,
+              ),
+            ),
+          )
+          .orderBy(desc(dbSchema.webhookEvents.processedAt))
+          .limit(200);
 
-    const customData = asRecord(data.custom_data);
-    const evtUserId =
-      typeof customData?.userId === "string"
-        ? customData.userId
-        : typeof customData?.user_id === "string"
-          ? customData.user_id
-          : null;
-    const evtOrgId =
-      typeof customData?.orgId === "string"
-        ? customData.orgId
-        : typeof customData?.org_id === "string"
-          ? customData.org_id
-          : null;
-    const evtCustomerId =
-      typeof data.customer_id === "string" ? data.customer_id : null;
-    const evtSubId =
-      typeof data.subscription_id === "string"
-        ? data.subscription_id
-        : typeof data.id === "string"
-          ? data.id
-          : null;
-
-    const belongsToOwnedTeam = Boolean(
-      teamBilling?.isOwner && evtOrgId && evtOrgId === teamBilling.organizationId,
-    );
-    const belongsToPersonal =
-      (!evtOrgId && evtUserId === userId) ||
-      (subRow?.paddleCustomerId && evtCustomerId === subRow.paddleCustomerId) ||
-      (subRow?.paddleSubscriptionId && evtSubId === subRow.paddleSubscriptionId);
-
-    if (!belongsToPersonal && !belongsToOwnedTeam) continue;
-
-    const items = Array.isArray(data.items) ? data.items : [];
-    const firstItem = asRecord(items[0]);
-    const priceObj = asRecord(firstItem?.price);
-    const mapped = resolvePlanFromServerPriceId(
-      typeof priceObj?.id === "string" ? priceObj.id : undefined,
-    );
-
-    const itemInterval: BillingInterval =
-      customData?.interval === "yearly" || mapped?.interval === "yearly"
-        ? "yearly"
-        : "monthly";
-
-    if (belongsToPersonal && invoices.length === 0) {
-      detectedInterval = itemInterval;
-    }
-
-    const pm = asRecord(customData?.paymentMethod);
-    if (pm) {
-      if (typeof pm.brand === "string") paymentBrand = pm.brand;
-      if (typeof pm.last4 === "string") paymentLast4 = pm.last4;
-      if (typeof pm.expiry === "string") paymentExpiry = pm.expiry;
-    }
-
-    const isChargeEvent =
-      evt.eventType === "subscription.activated" ||
-      evt.eventType === "subscription.created" ||
-      evt.eventType === "transaction.completed" ||
-      evt.eventType === "transaction.payment_failed";
-
-    if (isChargeEvent) {
-      const eventPlan: PaidPlanTier =
-        customData?.plan === "team" || mapped?.plan === "team" || Boolean(evtOrgId)
-          ? "team"
-          : "pro";
-      const itemSeats =
-        typeof firstItem?.quantity === "number"
-          ? firstItem.quantity
-          : typeof customData?.seats === "number"
-            ? customData.seats
-            : 1;
-      const amountUsd =
-        typeof customData?.amountUsd === "number"
-          ? customData.amountUsd
-          : getChargeAmountUsd(eventPlan, itemInterval, itemSeats);
-      const invoiceNumber =
-        typeof customData?.invoiceNumber === "string"
-          ? customData.invoiceNumber
-          : `INV-${evt.eventId.slice(-8).toUpperCase()}`;
-      const occurredAtIso =
-        typeof payload?.occurred_at === "string"
-          ? payload.occurred_at
-          : evt.processedAt.toISOString();
-
-      invoices.push({
-        id: evt.eventId,
-        invoiceNumber,
-        occurredAtIso,
-        planLabel: formatPlanHeadingLabel(eventPlan, itemInterval, itemSeats),
-        amountUsd,
-        status: evt.eventType === "transaction.payment_failed" ? "failed" : "paid",
-        receiptUrl: `/api/paddle/invoices/${encodeURIComponent(evt.eventId)}`,
-      });
-    }
-  }
+  const built = buildBillingInvoices(recentEvents);
+  const invoices = built.invoices;
+  const detectedInterval: BillingInterval = subRow?.interval ?? built.detectedInterval ?? "monthly";
+  const paymentBrand = built.paymentMethod?.brand ?? null;
+  const paymentLast4 = built.paymentMethod?.last4 ?? null;
+  const paymentExpiry = built.paymentMethod?.expiry ?? null;
 
   return {
     effectivePlan,

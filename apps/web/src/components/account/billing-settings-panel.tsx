@@ -470,9 +470,12 @@ export function BillingSettingsPanel({
             <div className="flex flex-col gap-1">
               <span className="text-foreground type-body-s-strong">Payment failed</span>
               <p className="text-muted-foreground type-body-s max-w-xl">
-                We couldn&apos;t charge {sub.paymentBrand} ••{sub.paymentLast4}. Paddle
-                will retry automatically during your 7-day grace window — update your
-                payment method to keep {planTitle} features active.
+                We couldn&apos;t charge{" "}
+                {sub.paymentBrand && sub.paymentLast4
+                  ? `${sub.paymentBrand} ••${sub.paymentLast4}`
+                  : "your payment method"}
+                . Paddle will retry automatically during your 7-day grace window — update
+                your payment method to keep {planTitle} features active.
               </p>
             </div>
           </div>
@@ -695,7 +698,7 @@ export function BillingSettingsPanel({
             )}
           </div>
 
-          {hasPaidAccess && sub ? (
+          {hasPaidAccess && sub && sub.paymentBrand && sub.paymentLast4 ? (
             <div className="flex items-center gap-3.5">
               <div className="border-border bg-surface text-foreground type-caption flex h-9 min-w-12 items-center justify-center rounded-md border px-2.5 font-mono">
                 {sub.paymentBrand}
@@ -705,10 +708,21 @@ export function BillingSettingsPanel({
                   {sub.paymentBrand === "VISA" ? "Visa" : sub.paymentBrand} ending{" "}
                   {sub.paymentLast4}
                 </span>
-                <span className="text-muted-foreground type-caption">
-                  Expires {sub.paymentExpiry}
-                </span>
+                {sub.paymentExpiry && (
+                  <span className="text-muted-foreground type-caption">
+                    Expires {sub.paymentExpiry}
+                  </span>
+                )}
               </div>
+            </div>
+          ) : hasPaidAccess && sub ? (
+            <div className="flex flex-col gap-1" data-testid="billing-payment-method-managed">
+              <span className="text-foreground type-body-s-strong">
+                Payment method managed by Paddle
+              </span>
+              <span className="text-muted-foreground type-caption">
+                Update your card, Apple Pay, or PayPal securely in the Paddle customer portal.
+              </span>
             </div>
           ) : (
             <div className="flex flex-col gap-1">
@@ -1439,13 +1453,14 @@ export function BillingSettingsPanel({
             <div className="flex flex-col gap-4">
               <div className="border-border bg-surface flex flex-col gap-1.5 rounded-lg border p-4">
                 <span className="text-foreground type-body-s-strong">
-                  Current method: {sub?.paymentBrand ?? "VISA"} ••••{" "}
-                  {sub?.paymentLast4 ?? "4242"}
+                  {sub?.paymentBrand && sub?.paymentLast4
+                    ? `Current method: ${sub.paymentBrand} •••• ${sub.paymentLast4}`
+                    : "Current method: managed in Paddle"}
                 </span>
                 <span className="text-muted-foreground type-caption">
                   {overview.hasLivePaddlePortal
                     ? "Open the Paddle Customer Portal to replace your card or switch to PayPal."
-                    : "In Sandbox mode, re-run Sandbox Checkout to refresh your test payment method and clear any failed-payment state."}
+                    : "In Sandbox mode, retry the sandbox payment from Upgrade to simulate a successful payment retry and clear the failed-payment state."}
                 </span>
               </div>
 
