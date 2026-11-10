@@ -138,6 +138,12 @@ export const CURATED_FONT_CATALOG: readonly CuratedFontOption[] = [
     weights: [400, 500, 600, 700],
     googleFamilyParam: "Sora:wght@400;500;600;700",
   },
+  {
+    family: "Manrope",
+    category: "sans",
+    weights: [400, 500, 600, 700],
+    googleFamilyParam: "Manrope:wght@400;500;600;700",
+  },
 ] as const;
 
 export const CURATED_FONT_PAIRS: readonly CuratedFontPair[] = [

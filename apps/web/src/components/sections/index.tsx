@@ -1,5 +1,4 @@
 import type { PuckContext } from "@puckeditor/core";
-import { Check } from "lucide-react";
 import type { CSSProperties } from "react";
 import { ImageSlotFrame } from "@/components/sections/image-slot-frame";
 import { RichTextView } from "@/components/sections/rich-text-view";
@@ -198,8 +197,8 @@ export function HeroSection({
           isCentered
             ? viewClass(
                 isMobile,
-                "flex flex-col items-center gap-[40px] text-center",
-                "lg:gap-[56px]",
+                "flex flex-col items-start gap-[40px] text-left",
+                "lg:items-center lg:gap-[72px] lg:text-center",
               )
             : viewClass(
                 isMobile,
@@ -215,7 +214,12 @@ export function HeroSection({
               "flex w-full flex-col items-start gap-[16px]",
               "lg:min-w-0 lg:flex-1 lg:gap-[24px]",
             ),
-            isCentered && "max-w-[920px] items-center text-center",
+            isCentered &&
+              viewClass(
+                isMobile,
+                "items-start text-left",
+                "lg:w-full lg:max-w-[1200px] lg:flex-initial lg:items-center lg:text-center",
+              ),
             !isCentered && effectiveLayout === "split-left" && !isMobile && "lg:order-2",
           )}
         >
@@ -224,10 +228,10 @@ export function HeroSection({
               className={cn(
                 viewClass(
                   isMobile,
-                  "flex flex-row items-center gap-[12px] pb-[8px]",
-                  "lg:flex-col lg:items-start lg:gap-[24px] lg:pb-0",
+                  "flex w-full flex-row items-center gap-[12px] pb-[8px]",
+                  "lg:w-auto lg:flex-col lg:items-start lg:gap-[24px] lg:pb-0",
                 ),
-                isCentered && "items-center justify-center lg:items-center",
+                isCentered && !isMobile && "lg:items-center lg:justify-center",
               )}
             >
               {logo && (
@@ -251,8 +255,8 @@ export function HeroSection({
                     innerClassName="size-full"
                     placeholderIconClassName={viewClass(
                       isMobile,
-                      "size-[16px]",
-                      "lg:size-[22px]",
+                      "size-[20px]",
+                      "lg:size-[20px]",
                     )}
                   />
                 </div>
@@ -263,11 +267,19 @@ export function HeroSection({
 
           <h1
             style={HEADING_FONT_STYLE}
-            className={viewClass(
-              isMobile,
-              "font-semibold text-[2.5rem] leading-[1.06] tracking-[-0.02em]",
-              "lg:text-[4rem] lg:leading-[1.04]",
-            )}
+            className={
+              isCentered
+                ? viewClass(
+                    isMobile,
+                    "font-semibold text-[2.75rem] leading-[1.06]",
+                    "lg:max-w-[1080px] lg:text-[4.5rem] lg:leading-[1.04]",
+                  )
+                : viewClass(
+                    isMobile,
+                    "font-semibold text-[2.5rem] leading-[1.06]",
+                    "lg:text-[4rem] lg:leading-[1.04]",
+                  )
+            }
           >
             {title}
           </h1>
@@ -281,7 +293,7 @@ export function HeroSection({
                   "font-normal text-[1.125rem] leading-[1.55]",
                   "lg:text-[1.3125rem] lg:leading-[1.55]",
                 ),
-                isCentered && "max-w-[740px]",
+                isCentered && !isMobile && "lg:max-w-[760px]",
               )}
             >
               {subtitle}
@@ -294,10 +306,9 @@ export function HeroSection({
               className={cn(
                 viewClass(
                   isMobile,
-                  "flex flex-wrap items-start gap-[8px] pt-[4px]",
-                  "lg:pt-[8px]",
+                  "flex flex-wrap items-start gap-[8px]",
+                  isCentered ? "lg:justify-center" : "lg:pt-[8px]",
                 ),
-                isCentered && "justify-center",
               )}
             >
               {tags.map((tag, idx) => (
@@ -309,7 +320,7 @@ export function HeroSection({
                   }}
                   className={viewClass(
                     isMobile,
-                    "rounded-full border border-solid px-[12px] py-[6px] font-medium text-[0.8125rem] leading-[1.2]",
+                    "rounded-full border border-solid px-[12px] py-[6px] font-medium text-[0.8125rem] leading-[1.3]",
                     "lg:px-[16px] lg:py-[8px] lg:text-[0.875rem]",
                   )}
                 >
@@ -341,6 +352,26 @@ export function HeroSection({
                 presentation={mockupStyle}
                 glow={glow}
                 accentToken={accent}
+                className={viewClass(
+                  isMobile,
+                  "w-full rounded-[10px]",
+                  "lg:rounded-[14px]",
+                )}
+                toolbarClassName={viewClass(
+                  isMobile,
+                  "gap-[6px] px-[12px] py-[9px]",
+                  "lg:gap-[8px] lg:px-[16px] lg:py-[12px]",
+                )}
+                dotClassName={viewClass(
+                  isMobile,
+                  "size-[7px]",
+                  "lg:size-[10px]",
+                )}
+                placeholderIconClassName={viewClass(
+                  isMobile,
+                  "size-[40px]",
+                  "lg:size-[56px]",
+                )}
               />
             ) : (
               <div
@@ -635,7 +666,7 @@ export function ProblemSection({
         >
           {eyebrow ? (
             <>
-              <SectionEyebrow text={eyebrow} accent="primary" isMobile={isMobile} />
+              <SectionEyebrow text={eyebrow} accent="accent" isMobile={isMobile} />
               <h2
                 style={HEADING_FONT_STYLE}
                 className={viewClass(
@@ -659,7 +690,7 @@ export function ProblemSection({
             </>
           ) : (
             <>
-              <SectionEyebrow text={heading} accent="primary" isMobile={isMobile} />
+              <SectionEyebrow text={heading} accent="accent" isMobile={isMobile} />
               <h2
                 style={HEADING_FONT_STYLE}
                 className={viewClass(
@@ -696,7 +727,7 @@ export function ProblemSection({
             >
               <div
                 aria-hidden="true"
-                style={{ backgroundColor: tokenColorVar("primary", "--primary") }}
+                style={{ backgroundColor: tokenColorVar("accent", "--primary") }}
                 className={viewClass(
                   isMobile,
                   "h-[4px] w-[32px] shrink-0 rounded-[2px]",
@@ -766,6 +797,12 @@ export function ProcessSection({
   const { projectType, slots, viewport } = readRenderMetadata(puck);
   const isMobile = viewport === "mobile";
   const hasStepImages = steps.some((step) => Boolean(step.image));
+  const stepGridDesktopClass =
+    steps.length === 4
+      ? "lg:grid-cols-4"
+      : layout === "grid-3" || steps.length === 3
+        ? "lg:grid-cols-3"
+        : "lg:grid-cols-2";
 
   return (
     <section
@@ -809,7 +846,7 @@ export function ProcessSection({
               style={MUTED_TEXT_STYLE}
               className={viewClass(
                 isMobile,
-                "max-w-[760px] font-normal text-[1.0625rem] leading-[1.55]",
+                "max-w-[760px] font-normal text-[1.125rem] leading-[1.55]",
                 "lg:text-[1.25rem] lg:leading-[1.55]",
               )}
             >
@@ -888,8 +925,8 @@ export function ProcessSection({
           <div
             className={viewClass(
               isMobile,
-              "grid grid-cols-1 gap-6",
-              layout === "grid-3" ? "lg:grid-cols-3" : "lg:grid-cols-2",
+              "grid w-full grid-cols-1 gap-[40px]",
+              cn("lg:gap-[24px]", stepGridDesktopClass),
             )}
           >
             {steps.map((step, idx) => {
@@ -897,41 +934,62 @@ export function ProcessSection({
               return (
                 <article
                   key={`${id}-step-${idx}`}
-                  style={{
-                    backgroundColor:
-                      background === "surface"
-                        ? tokenColorVar("background", "--background")
-                        : tokenColorVar("surface", "--surface"),
-                    borderColor: "var(--tpl-color-line, var(--border))",
-                  }}
-                  className="flex flex-col justify-between gap-5 rounded-[20px] border border-solid p-6"
+                  className={viewClass(
+                    isMobile,
+                    "flex w-full flex-col items-start gap-[10px]",
+                    "lg:gap-[14px]",
+                  )}
                 >
-                  <div className="flex flex-col gap-2">
-                    <span
-                      style={{
-                        ...HEADING_FONT_STYLE,
-                        color: tokenColorVar(accent, "--primary"),
-                      }}
-                      className="font-semibold text-[1.5rem] leading-none"
-                    >
-                      {step.number}
-                    </span>
-                    <h3 style={HEADING_FONT_STYLE} className="font-semibold text-[1.375rem] leading-[1.2]">
-                      {step.title}
-                    </h3>
-                    <p style={MUTED_TEXT_STYLE} className="text-[1rem] leading-[1.55]">
-                      {step.body}
-                    </p>
-                  </div>
-
                   {step.image && (
                     <ImageSlotFrame
                       image={step.image}
                       slotDefinition={stepSlot}
                       fallbackRatio="4:3"
                       projectType={projectType}
+                      className={viewClass(
+                        isMobile,
+                        "w-full rounded-[14px]",
+                        "lg:rounded-[16px]",
+                      )}
+                      placeholderIconClassName={viewClass(
+                        isMobile,
+                        "size-[40px]",
+                        steps.length === 3 ? "lg:size-[55px]" : "lg:size-[40px]",
+                      )}
                     />
                   )}
+                  <span
+                    style={{
+                      color: tokenColorVar(accent, "--primary"),
+                    }}
+                    className={viewClass(
+                      isMobile,
+                      "font-bold text-[0.8125rem] leading-[1.4] tracking-[1.04px]",
+                      "lg:text-[0.875rem] lg:tracking-[1.12px]",
+                    )}
+                  >
+                    {step.number}
+                  </span>
+                  <h3
+                    style={HEADING_FONT_STYLE}
+                    className={viewClass(
+                      isMobile,
+                      "font-semibold text-[1.3125rem] leading-[1.22]",
+                      "lg:text-[1.5rem] lg:leading-[1.2]",
+                    )}
+                  >
+                    {step.title}
+                  </h3>
+                  <p
+                    style={MUTED_TEXT_STYLE}
+                    className={viewClass(
+                      isMobile,
+                      "font-normal text-[1rem] leading-[1.55]",
+                      "lg:text-[1.0625rem] lg:leading-[1.55]",
+                    )}
+                  >
+                    {step.body}
+                  </p>
                 </article>
               );
             })}
@@ -976,12 +1034,10 @@ export function ScreensGallerySection({
 
   const { projectType = "mobile", slots, viewport } = readRenderMetadata(puck);
   const isMobile = viewport === "mobile";
-  const isMobileGallery =
-    projectType === "mobile" &&
-    deviceFrame !== "browser" &&
-    deviceFrame !== "macbook" &&
-    deviceFrame !== "tablet" &&
-    deviceFrame !== "none";
+  const isPhoneGallery =
+    deviceFrame === "iphone" ||
+    deviceFrame === "android" ||
+    (deviceFrame === "auto" && projectType === "mobile");
 
   const desktopGridClass =
     columns === 2
@@ -1048,7 +1104,7 @@ export function ScreensGallerySection({
 
         <div
           className={cn(
-            isMobileGallery
+            isPhoneGallery
               ? viewClass(
                   isMobile,
                   "flex w-full flex-row items-start gap-[16px] overflow-x-auto",
@@ -1059,8 +1115,8 @@ export function ScreensGallerySection({
                 )
               : viewClass(
                   isMobile,
-                  "grid w-full grid-cols-1 gap-[24px]",
-                  cn("lg:gap-x-[32px] lg:gap-y-[48px]", desktopGridClass),
+                  "grid w-full grid-cols-1 gap-[32px]",
+                  cn("lg:gap-x-[32px] lg:gap-y-[56px]", desktopGridClass),
                 ),
             isStaggered && !isMobile && "lg:pb-8",
           )}
@@ -1071,7 +1127,7 @@ export function ScreensGallerySection({
               <figure
                 key={`${id}-screen-${idx}`}
                 className={cn(
-                  isMobileGallery
+                  isPhoneGallery
                     ? viewClass(
                         isMobile,
                         "flex w-[200px] shrink-0 flex-col items-center gap-[12px]",
@@ -1089,20 +1145,29 @@ export function ScreensGallerySection({
                   image={item.image}
                   slotDefinition={screenSlot}
                   overrideDevice={deviceFrame}
-                  fallbackRatio={projectType === "web" ? "16:10" : "9:19.5"}
+                  fallbackRatio={isPhoneGallery ? "9:19.5" : "16:10"}
                   projectType={projectType}
                   preferDeviceChrome
                   className={
-                    isMobileGallery
+                    isPhoneGallery
                       ? viewClass(
                           isMobile,
-                          "w-[200px] max-w-none rounded-[30px] p-[8px]",
-                          "lg:w-full lg:max-w-[276px] lg:rounded-[46px] lg:p-[10px]",
+                          cn(
+                            "w-[200px] max-w-none rounded-[30px] p-[8px]",
+                            projectType === "both"
+                              ? "bg-[var(--tpl-color-text,var(--foreground))]"
+                              : "bg-[var(--tpl-color-surface,var(--surface))]",
+                          ),
+                          "lg:w-full lg:max-w-[276px] lg:rounded-[46px] lg:bg-[var(--tpl-color-secondary,var(--tpl-color-surface,var(--surface)))] lg:p-[10px]",
                         )
-                      : undefined
+                      : viewClass(
+                          isMobile,
+                          "w-full rounded-[10px]",
+                          "lg:rounded-[14px]",
+                        )
                   }
                   innerClassName={
-                    isMobileGallery
+                    isPhoneGallery
                       ? viewClass(
                           isMobile,
                           "rounded-[22px]",
@@ -1110,14 +1175,36 @@ export function ScreensGallerySection({
                         )
                       : undefined
                   }
+                  toolbarClassName={
+                    !isPhoneGallery
+                      ? viewClass(
+                          isMobile,
+                          "gap-[6px] px-[12px] py-[9px]",
+                          "lg:gap-[8px] lg:px-[16px] lg:py-[12px]",
+                        )
+                      : undefined
+                  }
+                  dotClassName={
+                    !isPhoneGallery
+                      ? viewClass(
+                          isMobile,
+                          "size-[7px]",
+                          "lg:size-[10px]",
+                        )
+                      : undefined
+                  }
                   placeholderIconClassName={
-                    isMobileGallery
+                    isPhoneGallery
                       ? viewClass(
                           isMobile,
                           "size-[28px]",
                           "lg:size-[38px]",
                         )
-                      : undefined
+                      : viewClass(
+                          isMobile,
+                          "size-[40px]",
+                          "lg:size-[56px]",
+                        )
                   }
                 />
                 {item.caption && (
@@ -1176,6 +1263,7 @@ export function ResultsSection({
   const isMobile = viewport === "mobile";
   const isPrimaryBg = background === "primary";
 
+  const mobileGridClass = columns === 4 ? "grid-cols-2" : "grid-cols-1";
   const desktopGridClass =
     columns === 2
       ? "lg:grid-cols-2"
@@ -1187,7 +1275,7 @@ export function ResultsSection({
     ? "var(--tpl-color-onPrimary, var(--primary-foreground))"
     : "var(--tpl-color-text, var(--foreground))";
   const secondaryTextColor = isPrimaryBg
-    ? "rgba(255, 255, 255, 0.82)"
+    ? "color-mix(in oklab, var(--tpl-color-onPrimary, var(--primary-foreground)) 82%, transparent)"
     : "var(--tpl-color-textMuted, var(--muted-foreground))";
 
   return (
@@ -1248,7 +1336,7 @@ export function ResultsSection({
         <div
           className={viewClass(
             isMobile,
-            "grid w-full grid-cols-1 gap-[12px]",
+            cn("grid w-full gap-[12px]", mobileGridClass),
             cn("lg:gap-[24px]", desktopGridClass),
           )}
         >
@@ -1257,7 +1345,10 @@ export function ResultsSection({
               key={`${id}-metric-${idx}`}
               style={
                 isPrimaryBg
-                  ? { backgroundColor: "rgba(255, 255, 255, 0.12)" }
+                  ? {
+                      backgroundColor:
+                        "color-mix(in oklab, var(--tpl-color-onPrimary, var(--primary-foreground)) 12%, transparent)",
+                    }
                   : {
                       backgroundColor: tokenColorVar("surface", "--surface"),
                       borderColor: "var(--tpl-color-line, var(--border))",
@@ -1283,7 +1374,7 @@ export function ResultsSection({
                 }}
                 className={viewClass(
                   isMobile,
-                  "font-semibold text-[2.5rem] leading-none",
+                  "font-semibold text-[2.75rem] leading-none",
                   "lg:text-[4rem]",
                 )}
               >
@@ -1293,7 +1384,7 @@ export function ResultsSection({
                 style={{ color: secondaryTextColor }}
                 className={viewClass(
                   isMobile,
-                  "font-medium text-[0.875rem] leading-[1.35]",
+                  "font-medium text-[0.875rem] leading-[1.4]",
                   "lg:text-[1.0625rem] lg:leading-[1.4]",
                 )}
               >
@@ -1543,8 +1634,8 @@ export function CtaSection({
           style={HEADING_FONT_STYLE}
           className={viewClass(
             isMobile,
-            "max-w-[780px] font-semibold text-[2rem] leading-[1.1]",
-            "lg:text-[3.5rem] lg:leading-[1.08]",
+            "max-w-[880px] font-semibold text-[2.25rem] leading-[1.08]",
+            "lg:text-[3.5rem] lg:leading-[1.05]",
           )}
         >
           {heading}
@@ -1554,7 +1645,7 @@ export function CtaSection({
             style={MUTED_TEXT_STYLE}
             className={viewClass(
               isMobile,
-              "max-w-[620px] font-normal text-[1rem] leading-[1.55]",
+              "max-w-[640px] font-normal text-[1rem] leading-[1.55]",
               "lg:text-[1.25rem] lg:leading-[1.55]",
             )}
           >
@@ -1577,8 +1668,8 @@ export function CtaSection({
             }}
             className={viewClass(
               isMobile,
-              "inline-flex w-full items-center justify-center rounded-full px-[24px] py-[15px] font-bold text-[0.9375rem] leading-none transition-opacity hover:opacity-90",
-              "lg:w-auto lg:px-[28px] lg:py-[16px] lg:text-[1rem]",
+              "inline-flex w-full items-center justify-center rounded-full px-[24px] py-[16px] font-medium text-[1rem] leading-[1.2] transition-opacity hover:opacity-90",
+              "lg:w-auto lg:px-[32px] lg:py-[18px] lg:text-[1.0625rem]",
             )}
           >
             {primaryLabel}
@@ -1592,8 +1683,8 @@ export function CtaSection({
               }}
               className={viewClass(
                 isMobile,
-                "inline-flex w-full items-center justify-center rounded-full border border-solid px-[24px] py-[15px] font-medium text-[0.9375rem] leading-none transition-colors",
-                "lg:w-auto lg:px-[28px] lg:py-[16px] lg:text-[1rem]",
+                "inline-flex w-full items-center justify-center rounded-full border-[1.5px] border-solid px-[24px] py-[16px] font-medium text-[1rem] leading-[1.2] transition-colors",
+                "lg:w-auto lg:px-[32px] lg:py-[18px] lg:text-[1.0625rem]",
               )}
             >
               {secondaryLabel}
@@ -1655,6 +1746,12 @@ export function CustomSection({
 
   if (layout === "split-right" || layout === "split-left") {
     const isLeft = layout === "split-left";
+    const effectiveDevice = image?.device ?? customSlot?.device;
+    const isPhoneMockup =
+      effectiveDevice === "iphone" ||
+      effectiveDevice === "android" ||
+      (!effectiveDevice && projectType !== "web");
+
     return (
       <section
         id={id}
@@ -1668,20 +1765,85 @@ export function CustomSection({
         )}
       >
         <div
-          style={{
-            backgroundColor: tokenColorVar("surface", "--surface"),
-            borderColor: "var(--tpl-color-line, var(--border))",
-          }}
           className={viewClass(
             isMobile,
-            "mx-auto grid max-w-[1200px] items-center gap-8 rounded-[24px] border border-solid p-6",
-            "lg:grid-cols-12 lg:gap-12 lg:rounded-[32px] lg:p-12",
+            "mx-auto flex max-w-[1200px] flex-col items-start gap-[32px]",
+            "lg:flex-row lg:items-center lg:gap-[96px]",
           )}
         >
+          {image && (
+            <div
+              className={cn(
+                viewClass(
+                  isMobile,
+                  "w-full",
+                  "lg:w-auto lg:shrink-0",
+                ),
+                !isMobile && (isLeft ? "lg:order-1" : "lg:order-2"),
+              )}
+            >
+              {isPhoneMockup ? (
+                <div
+                  data-slot="custom-mockup-stage"
+                  style={{
+                    backgroundColor: tokenColorVar("surface", "--surface"),
+                    borderColor: "var(--tpl-color-line, var(--border))",
+                  }}
+                  className={viewClass(
+                    isMobile,
+                    "flex w-full items-start justify-center rounded-[28px] border border-solid py-[32px]",
+                    "lg:w-auto lg:rounded-[40px] lg:p-[56px]",
+                  )}
+                >
+                  <ImageSlotFrame
+                    image={image}
+                    slotDefinition={customSlot}
+                    fallbackRatio="9:19.5"
+                    projectType={projectType}
+                    preferDeviceChrome
+                    presentation={mockupStyle}
+                    glow={false}
+                    accentToken={accent}
+                    className={viewClass(
+                      isMobile,
+                      "w-[220px] max-w-none rounded-[33px] bg-[var(--tpl-color-text,var(--foreground))] p-[8px]",
+                      "lg:w-[300px] lg:rounded-[46px] lg:bg-[var(--tpl-color-secondary,var(--tpl-color-surface,var(--surface)))] lg:p-[10px]",
+                    )}
+                    innerClassName={viewClass(
+                      isMobile,
+                      "rounded-[25px]",
+                      "lg:rounded-[36px]",
+                    )}
+                    placeholderIconClassName={viewClass(
+                      isMobile,
+                      "size-[29px]",
+                      "lg:size-[40px]",
+                    )}
+                  />
+                </div>
+              ) : (
+                <ImageSlotFrame
+                  image={image}
+                  slotDefinition={customSlot}
+                  fallbackRatio="16:10"
+                  projectType={projectType}
+                  preferDeviceChrome
+                  presentation={mockupStyle}
+                  glow={false}
+                  accentToken={accent}
+                />
+              )}
+            </div>
+          )}
+
           <div
             className={cn(
-              "flex flex-col gap-5",
-              !isMobile && (isLeft ? "lg:order-2 lg:col-span-7" : "lg:col-span-7"),
+              viewClass(
+                isMobile,
+                "flex w-full flex-col items-start gap-[16px]",
+                "lg:min-w-0 lg:flex-1 lg:gap-[24px]",
+              ),
+              !isMobile && (isLeft ? "lg:order-2" : "lg:order-1"),
             )}
           >
             <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
@@ -1689,8 +1851,8 @@ export function CustomSection({
               style={HEADING_FONT_STYLE}
               className={viewClass(
                 isMobile,
-                "font-semibold text-[1.75rem] leading-[1.12]",
-                "lg:text-[2.5rem] lg:leading-[1.1]",
+                "font-semibold text-[2rem] leading-[1.12]",
+                "lg:text-[3rem] lg:leading-[1.1]",
               )}
             >
               {heading}
@@ -1699,44 +1861,53 @@ export function CustomSection({
               value={body}
               idPrefix={`${id}-custom`}
               style={MUTED_TEXT_STYLE}
-              className="text-[1.125rem] leading-[1.6]"
+              className={viewClass(
+                isMobile,
+                "font-normal text-[1rem] leading-[1.55]",
+                "lg:text-[1.1875rem] lg:leading-[1.55]",
+              )}
             />
             {bullets && bullets.length > 0 && (
-              <ul className="flex flex-col gap-2.5 pt-1">
+              <ul
+                className={viewClass(
+                  isMobile,
+                  "flex w-full flex-col items-start gap-[12px]",
+                  "lg:gap-[16px]",
+                )}
+              >
                 {bullets.map((bullet, idx) => (
-                  <li key={`${id}-bullet-${idx}`} className="flex items-start gap-3">
+                  <li
+                    key={`${id}-bullet-${idx}`}
+                    className={viewClass(
+                      isMobile,
+                      "flex w-full items-center gap-[12px]",
+                      "lg:gap-[14px]",
+                    )}
+                  >
                     <span
+                      aria-hidden="true"
                       style={{ backgroundColor: tokenColorVar(accent, "--primary") }}
-                      className="text-primary-foreground mt-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full"
+                      className={viewClass(
+                        isMobile,
+                        "size-[8px] shrink-0 rounded-full",
+                        "lg:size-[10px]",
+                      )}
+                    />
+                    <span
+                      style={{ color: "var(--tpl-color-text, var(--foreground))" }}
+                      className={viewClass(
+                        isMobile,
+                        "font-medium text-[1rem] leading-[1.4]",
+                        "lg:text-[1.125rem] lg:leading-[1.4]",
+                      )}
                     >
-                      <Check className="size-3" />
+                      {bullet.text}
                     </span>
-                    <span className="text-[1rem] leading-[1.55]">{bullet.text}</span>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-
-          {image && (
-            <div
-              className={cn(
-                "w-full",
-                !isMobile && (isLeft ? "lg:order-1 lg:col-span-5" : "lg:col-span-5"),
-              )}
-            >
-              <ImageSlotFrame
-                image={image}
-                slotDefinition={customSlot}
-                fallbackRatio={projectType === "web" ? "16:10" : "9:19.5"}
-                projectType={projectType}
-                preferDeviceChrome
-                presentation={mockupStyle}
-                glow={false}
-                accentToken={accent}
-              />
-            </div>
-          )}
         </div>
       </section>
     );

@@ -240,5 +240,36 @@ describe("Puck section components & TemplatePuckRenderer (C-302)", () => {
     // 1 hero iPhone + 8 gallery iPhones = 9 mobile device frames
     expect(mobileContainer.querySelectorAll('[data-device-frame="mobile"]').length).toBe(9);
     unmountMobile();
+
+    const northwindParsed = validateTemplateDocument(
+      JSON.parse(readFileSync(resolveReferencePath("template.northwind.json"), "utf-8")),
+    );
+    expect(northwindParsed.ok).toBe(true);
+    if (!northwindParsed.ok) return;
+
+    const { container: northwindContainer, unmount: unmountNorthwind } = render(
+      <TemplatePuckRenderer document={northwindParsed.data} viewport="mobile" />,
+    );
+    // 1 hero browser + 4 gallery browsers = 5 browser frames
+    expect(northwindContainer.querySelectorAll('[data-device-model="browser"]').length).toBe(5);
+    // 1 logo + 1 overview banner + 4 process step images + 1 quote avatar = 7 plain frames
+    expect(northwindContainer.querySelectorAll('[data-device-model="plain"]').length).toBe(7);
+    unmountNorthwind();
+
+    const atlasParsed = validateTemplateDocument(
+      JSON.parse(readFileSync(resolveReferencePath("template.atlas.json"), "utf-8")),
+    );
+    expect(atlasParsed.ok).toBe(true);
+    if (!atlasParsed.ok) return;
+
+    const { container: atlasContainer, unmount: unmountAtlas } = render(
+      <TemplatePuckRenderer document={atlasParsed.data} viewport="mobile" />,
+    );
+    // 1 hero browser + 4 web gallery browsers = 5 browser frames
+    expect(atlasContainer.querySelectorAll('[data-device-model="browser"]').length).toBe(5);
+    // 4 mobile gallery iPhones + 1 custom cross-platform iPhone = 5 iPhone frames
+    expect(atlasContainer.querySelectorAll('[data-device-model="iphone"]').length).toBe(5);
+    expect(atlasContainer.querySelector('[data-slot="custom-mockup-stage"]')).not.toBeNull();
+    unmountAtlas();
   });
 });

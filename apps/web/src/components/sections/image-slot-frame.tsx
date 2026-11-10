@@ -132,8 +132,11 @@ export interface ImageSlotFrameProps {
   glow?: boolean;
   accentToken?: string;
   compact?: boolean;
+  bezelColor?: string;
   className?: string;
   innerClassName?: string;
+  toolbarClassName?: string;
+  dotClassName?: string;
   placeholderIconClassName?: string;
 }
 
@@ -148,8 +151,11 @@ export function ImageSlotFrame({
   glow = false,
   accentToken = "primary",
   compact = false,
+  bezelColor,
   className,
   innerClassName,
+  toolbarClassName,
+  dotClassName,
   placeholderIconClassName,
 }: ImageSlotFrameProps) {
   const ratioText = slotDefinition?.ratio ?? fallbackRatio;
@@ -230,10 +236,11 @@ export function ImageSlotFrame({
         data-device-frame="mobile"
         data-device-model={model}
         style={{
-          backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))",
+          ...(bezelColor ? { backgroundColor: bezelColor } : {}),
           borderColor: "var(--tpl-color-line, var(--border))",
         }}
         className={cn(
+          !bezelColor && "bg-[var(--tpl-color-surfaceAlt,var(--sunken))]",
           "relative mx-auto flex w-full max-w-[276px] flex-col items-start rounded-[30px] border border-solid p-[8px]",
           presentationClass,
           className,
@@ -307,38 +314,29 @@ export function ImageSlotFrame({
           borderColor: "var(--tpl-color-line, var(--border))",
         }}
         className={cn(
-          "w-full overflow-hidden rounded-[16px] border border-solid lg:rounded-[20px]",
+          "w-full overflow-hidden rounded-[10px] border border-solid",
           presentationClass,
           className,
         )}
       >
         <div
-          style={{
-            backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))",
-            borderColor: "var(--tpl-color-line, var(--border))",
-          }}
-          className="flex h-9 items-center gap-2 border-b px-4"
+          aria-hidden="true"
+          className={cn(
+            "flex w-full items-center gap-[6px] px-[12px] py-[9px]",
+            toolbarClassName,
+          )}
         >
-          <div className="flex items-center gap-1.5" aria-hidden="true">
-            <span
-              style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
-              className="size-2.5 rounded-full"
-            />
-            <span
-              style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
-              className="size-2.5 rounded-full"
-            />
-            <span
-              style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
-              className="size-2.5 rounded-full"
-            />
-          </div>
-          <div
-            style={{
-              backgroundColor: "var(--tpl-color-surface, var(--surface))",
-              color: "var(--tpl-color-textMuted, var(--muted-foreground))",
-            }}
-            className="mx-auto h-5 w-48 max-w-[60%] truncate rounded-md px-3 text-center text-[0.6875rem] leading-5"
+          <span
+            style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
+            className={cn("size-[7px] shrink-0 rounded-full", dotClassName)}
+          />
+          <span
+            style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
+            className={cn("size-[7px] shrink-0 rounded-full", dotClassName)}
+          />
+          <span
+            style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
+            className={cn("size-[7px] shrink-0 rounded-full", dotClassName)}
           />
         </div>
         {viewportContent}

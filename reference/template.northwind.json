@@ -54,7 +54,7 @@
     "slots": {
       "hero.logo": { "ratio": "1:1", "minWidth": 72, "device": "none" },
       "hero.mockup": { "ratio": "16:10", "minWidth": 1200, "device": "browser" },
-      "overview.banner": { "ratio": "16:9", "minWidth": 1200, "device": "browser" },
+      "overview.banner": { "ratio": "16:9", "minWidth": 1200, "device": "none" },
       "process.step.image": { "ratio": "4:3", "minWidth": 282, "device": "none" },
       "gallery.screen": { "ratio": "16:10", "minWidth": 584, "device": "browser" },
       "quote.avatar": { "ratio": "1:1", "minWidth": 64, "device": "none" }
@@ -118,8 +118,7 @@
             "slot": "overview.banner",
             "src": "",
             "alt": "Northwind dispatch console transformation overview",
-            "crop": null,
-            "device": "browser"
+            "crop": null
           },
           "background": "surface",
           "accent": "primary"

@@ -1,157 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none">
-  <defs>
-    <radialGradient id="nwBlueGlow" cx="72%" cy="32%" r="58%">
-      <stop offset="0%" stop-color="#2E5BFF" stop-opacity="0.16"/>
-      <stop offset="60%" stop-color="#2E5BFF" stop-opacity="0.04"/>
-      <stop offset="100%" stop-color="#F5F7FB" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="nwPrimaryCard" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#2E5BFF"/>
-      <stop offset="100%" stop-color="#1E40AF"/>
-    </linearGradient>
-    <filter id="nwShadow" x="-8%" y="-8%" width="116%" height="120%">
-      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#0B1220" flood-opacity="0.12"/>
-    </filter>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1080" fill="none">
+  <!-- Background -->
+  <rect width="1440" height="1080" fill="#F5F7FB"/>
 
-  <rect width="1200" height="900" fill="#F5F7FB"/>
-  <rect width="1200" height="900" fill="url(#nwBlueGlow)"/>
-
-  <!-- Top Header Pill & Headline Preview -->
-  <g transform="translate(64, 48)">
-    <rect width="290" height="34" rx="17" fill="#E9EEF8" stroke="#DDE3EE"/>
-    <circle cx="20" cy="17" r="5" fill="#2E5BFF"/>
-    <text x="34" y="22" fill="#2E5BFF" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="700" letter-spacing="0.08em">WEB APP · B2B SAAS · DESIGN SYSTEM</text>
-    <text x="0" y="72" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="34" font-weight="800" letter-spacing="-0.02em">Northwind: turning freight chaos into a calm control room</text>
-    <text x="0" y="102" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="500">1,200 dispatch operators · 40,000 daily shipments · 120-component Figma system</text>
+  <!-- Logo slot (72x72, rounded 18px) -->
+  <rect x="684" y="64" width="72" height="72" rx="18" fill="#E9EEF8"/>
+  <g transform="translate(710, 90)" stroke="#5A6478" stroke-opacity="0.55" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1.5" y="1.5" width="17" height="17" rx="2.5"/>
+    <circle cx="6.5" cy="6.5" r="1.5"/>
+    <path d="M18.5 13L14.2 8.7L4.5 18.5"/>
   </g>
 
-  <!-- Main Desktop Browser Frame -->
-  <g transform="translate(64, 184)" filter="url(#nwShadow)">
-    <rect width="1072" height="580" rx="22" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="2"/>
-    <rect width="1072" height="48" rx="22" fill="#E9EEF8"/>
-    <rect y="28" width="1072" height="20" fill="#E9EEF8"/>
-    <circle cx="26" cy="24" r="6" fill="#EF4444"/>
-    <circle cx="46" cy="24" r="6" fill="#F59E0B"/>
-    <circle cx="66" cy="24" r="6" fill="#10B981"/>
-    <rect x="310" y="11" width="452" height="26" rx="8" fill="#FFFFFF" stroke="#DDE3EE"/>
-    <text x="536" y="28" text-anchor="middle" fill="#5A6478" font-family="ui-monospace,monospace" font-size="12" font-weight="600">console.northwind.freight/dispatch/chicago-hub</text>
-    <rect x="928" y="12" width="124" height="24" rx="7" fill="#2E5BFF"/>
-    <text x="990" y="28" text-anchor="middle" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">⌘K Quick Assign</text>
+  <!-- Eyebrow -->
+  <text x="720" y="172" text-anchor="middle" fill="#2E5BFF" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" letter-spacing="1.68">CASE STUDY · WEB APP · B2B SAAS</text>
 
-    <!-- Left Sidebar Navigation -->
-    <rect x="0" y="48" width="196" height="532" fill="#F5F7FB"/>
-    <line x1="196" y1="48" x2="196" y2="580" stroke="#DDE3EE" stroke-width="1.5"/>
-    <g transform="translate(20, 72)">
-      <rect width="32" height="32" rx="8" fill="#2E5BFF"/>
-      <path d="M10 22L16 10L22 22L16 18.5L10 22Z" fill="#FFFFFF"/>
-      <text x="44" y="21" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="800">Northwind</text>
+  <!-- Title -->
+  <text x="720" y="244" text-anchor="middle" fill="#0B1220" font-family="'Space Grotesk', system-ui, -apple-system, sans-serif" font-size="64" font-weight="700">Northwind: turning freight</text>
+  <text x="720" y="314" text-anchor="middle" fill="#0B1220" font-family="'Space Grotesk', system-ui, -apple-system, sans-serif" font-size="64" font-weight="700">chaos into a calm control room</text>
 
-      <rect y="52" width="156" height="36" rx="8" fill="#2E5BFF"/>
-      <text x="16" y="75" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="700">Live Dispatch Board</text>
+  <!-- Subtitle -->
+  <text x="720" y="368" text-anchor="middle" fill="#5A6478" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="20" font-weight="400">Redesigning the dispatch console that 1,200 operators use to move 40,000</text>
+  <text x="720" y="398" text-anchor="middle" fill="#5A6478" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="20" font-weight="400">shipments a day.</text>
 
-      <rect y="98" width="156" height="36" rx="8" fill="transparent"/>
-      <text x="16" y="121" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="600">Exceptions Inbox (3)</text>
+  <!-- Tags -->
+  <g transform="translate(490, 424)">
+    <rect x="0" y="0" width="136" height="36" rx="18" fill="none" stroke="#DDE3EE"/>
+    <text x="68" y="23" text-anchor="middle" fill="#0B1220" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Product Design</text>
 
-      <rect y="144" width="156" height="36" rx="8" fill="transparent"/>
-      <text x="16" y="167" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="600">Carrier Performance</text>
+    <rect x="144" y="0" width="95" height="36" rx="18" fill="none" stroke="#DDE3EE"/>
+    <text x="191.5" y="23" text-anchor="middle" fill="#0B1220" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Web App</text>
 
-      <rect y="190" width="156" height="36" rx="8" fill="transparent"/>
-      <text x="16" y="213" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="600">Hub Capacity · 12</text>
+    <rect x="247" y="0" width="135" height="36" rx="18" fill="none" stroke="#DDE3EE"/>
+    <text x="314.5" y="23" text-anchor="middle" fill="#0B1220" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Design System</text>
 
-      <rect y="368" width="156" height="110" rx="12" fill="#FFFFFF" stroke="#DDE3EE"/>
-      <text x="14" y="392" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="10" font-weight="700">SHIFT VELOCITY</text>
-      <text x="14" y="424" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="26" font-weight="800">19.4s</text>
-      <text x="14" y="444" fill="#10B981" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">−47% vs legacy console</text>
-      <rect x="14" y="456" width="128" height="6" rx="3" fill="#E9EEF8"/>
-      <rect x="14" y="456" width="96" height="6" rx="3" fill="#2E5BFF"/>
-    </g>
-
-    <!-- Center Dispatch Queue -->
-    <g transform="translate(220, 72)">
-      <text x="0" y="20" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800">Active Loads · Midwest Corridor</text>
-      <rect x="330" y="2" width="124" height="26" rx="13" fill="#E9EEF8"/>
-      <text x="392" y="19" text-anchor="middle" fill="#2E5BFF" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">312 Active Loads</text>
-
-      <!-- Load Row 1 (Selected) -->
-      <g transform="translate(0, 44)">
-        <rect width="456" height="94" rx="14" fill="#F5F7FB" stroke="#2E5BFF" stroke-width="2"/>
-        <rect x="16" y="16" width="76" height="22" rx="6" fill="#2E5BFF"/>
-        <text x="54" y="31" text-anchor="middle" fill="#FFFFFF" font-family="ui-monospace,monospace" font-size="11" font-weight="700">NW-4821</text>
-        <text x="104" y="31" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">Chicago, IL → Dallas, TX</text>
-        <rect x="358" y="16" width="82" height="22" rx="11" fill="#DCFCE7"/>
-        <text x="399" y="31" text-anchor="middle" fill="#15803D" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">Assigned</text>
-        <text x="16" y="60" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="500">53ft Reefer · 38,400 lbs · Apex Freight Lines · ETA 14:20 CST</text>
-        <text x="16" y="80" fill="#2E5BFF" font-family="ui-monospace,monospace" font-size="11" font-weight="600">[A] Reassign   [T] Live Telemetry   [E] Clear Alert</text>
-      </g>
-
-      <!-- Load Row 2 -->
-      <g transform="translate(0, 152)">
-        <rect width="456" height="84" rx="14" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="1.5"/>
-        <rect x="16" y="16" width="76" height="22" rx="6" fill="#E9EEF8"/>
-        <text x="54" y="31" text-anchor="middle" fill="#0B1220" font-family="ui-monospace,monospace" font-size="11" font-weight="700">NW-4824</text>
-        <text x="104" y="31" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">Atlanta, GA → Memphis, TN</text>
-        <rect x="346" y="16" width="94" height="22" rx="11" fill="#FEF3C7"/>
-        <text x="393" y="31" text-anchor="middle" fill="#B45309" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">Weather Hold</text>
-        <text x="16" y="60" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="500">Dry Van · 42,100 lbs · Kestrel Logistics · Dock 14B</text>
-      </g>
-
-      <!-- Load Row 3 -->
-      <g transform="translate(0, 250)">
-        <rect width="456" height="84" rx="14" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="1.5"/>
-        <rect x="16" y="16" width="76" height="22" rx="6" fill="#E9EEF8"/>
-        <text x="54" y="31" text-anchor="middle" fill="#0B1220" font-family="ui-monospace,monospace" font-size="11" font-weight="700">NW-4829</text>
-        <text x="104" y="31" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">Denver, CO → Seattle, WA</text>
-        <rect x="358" y="16" width="82" height="22" rx="11" fill="#DCFCE7"/>
-        <text x="399" y="31" text-anchor="middle" fill="#15803D" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">In Transit</text>
-        <text x="16" y="60" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="500">Flatbed · 36,000 lbs · Cascade Carriers · 99.2% On-Time</text>
-      </g>
-
-      <!-- Load Row 4 -->
-      <g transform="translate(0, 348)">
-        <rect width="456" height="84" rx="14" fill="#FFFFFF" stroke="#DDE3EE" stroke-width="1.5"/>
-        <rect x="16" y="16" width="76" height="22" rx="6" fill="#E9EEF8"/>
-        <text x="54" y="31" text-anchor="middle" fill="#0B1220" font-family="ui-monospace,monospace" font-size="11" font-weight="700">NW-4835</text>
-        <text x="104" y="31" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">Columbus, OH → Newark, NJ</text>
-        <rect x="358" y="16" width="82" height="22" rx="11" fill="#E9EEF8"/>
-        <text x="399" y="31" text-anchor="middle" fill="#2E5BFF" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700">Matching</text>
-        <text x="16" y="60" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="500">Intermodal · 44,000 lbs · 3 Verified Carriers Ready</text>
-      </g>
-    </g>
-
-    <!-- Right Split View: Route Telemetry & Outcomes -->
-    <line x1="700" y1="48" x2="700" y2="580" stroke="#DDE3EE" stroke-width="1.5"/>
-    <g transform="translate(722, 72)">
-      <text x="0" y="20" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="800">Split-View Route Telemetry</text>
-      <rect y="36" width="326" height="190" rx="14" fill="#0B1220"/>
-      <!-- Stylized Route Map -->
-      <path d="M42 176C98 152 142 126 196 112C236 100 264 82 292 64" stroke="#2E5BFF" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 6"/>
-      <path d="M42 176C98 152 142 126 196 112" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="42" cy="176" r="7" fill="#FFFFFF" stroke="#2E5BFF" stroke-width="3"/>
-      <circle cx="196" cy="112" r="8" fill="#2E5BFF" stroke="#FFFFFF" stroke-width="3"/>
-      <circle cx="292" cy="64" r="7" fill="#10B981" stroke="#FFFFFF" stroke-width="2"/>
-      <text x="24" y="64" fill="#93C5FD" font-family="ui-monospace,monospace" font-size="11" font-weight="700">ORD HUB → DFW TERMINAL</text>
-      <text x="24" y="84" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="700">642 mi · On Schedule (+14m buffer)</text>
-
-      <!-- Outcomes Card inside Split View -->
-      <rect y="244" width="326" height="236" rx="16" fill="url(#nwPrimaryCard)"/>
-      <text x="24" y="278" fill="#BFDBFE" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="700" letter-spacing="0.08em">SHIPPED OUTCOMES · 12 HUBS</text>
-      <text x="24" y="328" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="42" font-weight="800">−47%</text>
-      <text x="156" y="316" fill="#E9EEF8" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="600">Time to assign</text>
-      <text x="156" y="334" fill="#BFDBFE" font-family="system-ui,-apple-system,sans-serif" font-size="12">a freight load</text>
-      <line x1="24" y1="354" x2="302" y2="354" stroke="#60A5FA" stroke-opacity="0.35"/>
-      <text x="24" y="398" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="30" font-weight="800">3.2×</text>
-      <text x="24" y="420" fill="#DBEAFE" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="500">Keyboard actions</text>
-      <text x="178" y="398" fill="#FFFFFF" font-family="system-ui,-apple-system,sans-serif" font-size="30" font-weight="800">−61%</text>
-      <text x="178" y="420" fill="#DBEAFE" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="500">Manual corrections</text>
-    </g>
+    <rect x="390" y="0" width="70" height="36" rx="18" fill="none" stroke="#DDE3EE"/>
+    <text x="425" y="23" text-anchor="middle" fill="#0B1220" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">2026</text>
   </g>
 
-  <!-- Bottom Attribution Strip -->
-  <g transform="translate(64, 804)">
-    <rect width="1072" height="54" rx="14" fill="#FFFFFF" stroke="#DDE3EE"/>
-    <text x="24" y="33" fill="#0B1220" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700">“For the first time, the screen keeps up with how fast we actually think.”</text>
-    <text x="1048" y="33" text-anchor="end" fill="#5A6478" font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="600">Dana Whitfield · Senior Dispatcher, Chicago Hub</text>
+  <!-- Browser Mockup Frame (1200w) -->
+  <g transform="translate(120, 504)">
+    <rect width="1200" height="540" rx="14" fill="#FFFFFF" stroke="#DDE3EE"/>
+    <circle cx="21" cy="17" r="5" fill="#DDE3EE"/>
+    <circle cx="39" cy="17" r="5" fill="#DDE3EE"/>
+    <circle cx="57" cy="17" r="5" fill="#DDE3EE"/>
+    <rect x="1" y="34" width="1198" height="505" rx="0" fill="#E9EEF8"/>
+    <g transform="translate(572, 258)" stroke="#5A6478" stroke-opacity="0.55" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="48" height="48" rx="6"/>
+      <circle cx="18" cy="18" r="4"/>
+      <path d="M52 36L40 24L12 52"/>
+    </g>
   </g>
 </svg>
-
