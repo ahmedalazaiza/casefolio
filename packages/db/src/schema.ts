@@ -867,3 +867,13 @@ export const SUPPORT_TABLE_NAMES = [
 ] as const;
 
 export const ALL_SCHEMA_TABLE_NAMES = [...ERD_TABLE_NAMES, ...SUPPORT_TABLE_NAMES] as const;
+
+// Durable per-IP request counters for Better Auth (`rateLimit.storage: "database"`).
+// Serverless instances do not share memory, so in-memory counters neither protect auth endpoints
+// nor behave predictably for real users; this table gives one shared, atomic source of truth.
+export const rateLimits = pgTable("rate_limits", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+});

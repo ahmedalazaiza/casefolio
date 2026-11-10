@@ -101,10 +101,14 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
       ratio: orbitPayload.template.cover.ratio || "4:3",
     };
 
+    // Bootstrap platform admin. Set SEED_ADMIN_EMAIL to a mailbox you control for staging/production;
+    // it defaults to the documented local/dev account. The conflict branch never downgrades or
+    // changes the plan of an existing account — it only guarantees the bootstrap role.
+    const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? "admin@casefolio.app").trim().toLowerCase();
     const [admin] = await db
       .insert(users)
       .values({
-        email: "admin@casefolio.app",
+        email: adminEmail,
         emailVerified: true,
         name: "Casefolio Admin",
         role: "superadmin",
@@ -118,7 +122,6 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
         target: users.email,
         set: {
           role: "superadmin",
-          plan: "pro",
           emailVerified: true,
           updatedAt: new Date(),
         },

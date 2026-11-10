@@ -197,8 +197,26 @@ export const auth = betterAuth({
   },
   rateLimit: {
     enabled: process.env.NODE_ENV === "production",
+    // Shared across serverless instances (see `rate_limits`); in-memory counters are per-instance.
+    storage: "database",
+    // Keyed per client IP + path. The general ceiling must stay generous: offices, schools and
+    // mobile carriers put many real users behind one IP, and session reads happen on every page.
     window: 60,
-    max: 30,
+    max: 300,
+    customRules: {
+      // Read-only session probe — never throttle it (it would log users out of the UI).
+      "/get-session": false,
+      // Credential endpoints: tight enough to stop brute force / email bombing, loose enough that
+      // a team signing in from one office does not lock itself out.
+      "/sign-in/email": { window: 60, max: 30 },
+      "/sign-up/email": { window: 60, max: 30 },
+      "/sign-in/magic-link": { window: 60, max: 6 },
+      "/email-otp/send-verification-otp": { window: 60, max: 6 },
+      "/sign-in/email-otp": { window: 60, max: 12 },
+      "/email-otp/verify-email": { window: 60, max: 12 },
+      "/request-password-reset": { window: 300, max: 6 },
+      "/reset-password": { window: 300, max: 10 },
+    },
   },
   plugins: [
     magicLink({

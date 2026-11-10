@@ -937,7 +937,6 @@ export function TemplateStack({
               type="button"
               role="tab"
               aria-selected={isSelected}
-              aria-label={`Show ${template.name}`}
               onClick={() => setActive(index)}
               className={cn(
                 "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-xl px-3.5 py-2 transition-all outline-none focus-visible:ring-2 sm:rounded-full sm:px-4",

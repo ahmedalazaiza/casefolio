@@ -270,9 +270,14 @@ test("Phase 7 E2E: Free gating -> Paddle Sandbox checkout upgrades to Pro -> Mer
       .orderBy(desc(webhookEvents.processedAt))
       .limit(20);
 
+    // Ownership is bound server-side (checkout intent), so custom_data deliberately carries no
+    // user id. Identify the activation event by the Paddle subscription id the user now owns.
     const checkoutEvent = recentWebhooks.find((evt) => {
-      const payload = evt.payload as { data?: { custom_data?: { userId?: string } } };
-      return payload?.data?.custom_data?.userId === createdUserId;
+      const payload = evt.payload as { data?: { id?: string } };
+      return (
+        evt.eventType === "subscription.activated" &&
+        payload?.data?.id === latestSub?.paddleSubscriptionId
+      );
     });
     expect(checkoutEvent).toBeTruthy();
 

@@ -1,4 +1,5 @@
 import { count, eq, sql } from "@casefolio/db";
+import { evaluateBillingConfig } from "@/lib/billing/server-config";
 import { db, dbSchema } from "@/lib/db";
 import { parseSentryDsn } from "@/lib/monitoring/sentry";
 
@@ -11,6 +12,12 @@ export interface WebHealthReport {
   environment: {
     nodeEnv: string;
     paddleEnv: "sandbox" | "production";
+    /**
+     * `true` when Paddle keys/prices are real and consistent with `paddleEnv`. A sandbox deployment
+     * without real sandbox ids runs on the signed local simulator (`false`); production with
+     * `false` cannot take payments and must be fixed before launch.
+     */
+    billingConfigured: boolean;
     sentryConfigured: boolean;
   };
   checks: {
@@ -46,6 +53,7 @@ export async function checkWebHealth(options?: {
   const probe = options?.probeDatabase ?? defaultProbe;
   const paddleEnv = source.PADDLE_ENV === "production" ? "production" : "sandbox";
   const sentryConfigured = Boolean(parseSentryDsn(source.SENTRY_DSN));
+  const billingConfigured = evaluateBillingConfig(source).productionReady;
 
   try {
     const { publishedTemplatesCount } = await probe();
@@ -60,6 +68,7 @@ export async function checkWebHealth(options?: {
       environment: {
         nodeEnv: source.NODE_ENV ?? "development",
         paddleEnv,
+        billingConfigured,
         sentryConfigured,
       },
       checks: {
@@ -84,6 +93,7 @@ export async function checkWebHealth(options?: {
       environment: {
         nodeEnv: source.NODE_ENV ?? "development",
         paddleEnv,
+        billingConfigured,
         sentryConfigured,
       },
       checks: {

@@ -22,6 +22,13 @@
       "when": 1794311800000,
       "tag": "0002_template_cover_not_null",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794398200000,
+      "tag": "0003_auth_rate_limits",
+      "breakpoints": true
     }
   ]
 }

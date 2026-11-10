@@ -45,3 +45,54 @@ describe("production billing safety gate (P0-5)", () => {
     expect(status.problems.join("\n")).toMatch(/live_ client token/);
   });
 });
+
+describe("evaluateBillingConfig (pure, shared with /api/health)", () => {
+  const realPrices = {
+    PADDLE_PRICE_PRO_MONTHLY: "pri_01hproMonthly0000000000000",
+    PADDLE_PRICE_PRO_YEARLY: "pri_01hproYearly00000000000000",
+    PADDLE_PRICE_TEAM_MONTHLY: "pri_01hteamMonthly000000000000",
+    PADDLE_PRICE_TEAM_YEARLY: "pri_01hteamYearly0000000000000",
+  };
+
+  it("accepts a consistent sandbox configuration", async () => {
+    const { evaluateBillingConfig } = await import("@/lib/billing/server-config");
+    const status = evaluateBillingConfig({
+      PADDLE_ENV: "sandbox",
+      NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: "test_0123456789abcdef01234567",
+      PADDLE_API_KEY: "pdl_sdbx_apikey_0123456789abcdef0123456789",
+      ...realPrices,
+    });
+    expect(status).toEqual({ productionReady: true, environment: "sandbox", problems: [] });
+  });
+
+  it("rejects mixing live credentials with sandbox (and vice versa) and duplicate prices", async () => {
+    const { evaluateBillingConfig } = await import("@/lib/billing/server-config");
+    const liveInSandbox = evaluateBillingConfig({
+      PADDLE_ENV: "sandbox",
+      NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: "live_0123456789abcdef01234567",
+      PADDLE_API_KEY: "pdl_live_apikey_0123456789abcdef0123456789",
+      ...realPrices,
+    });
+    expect(liveInSandbox.productionReady).toBe(false);
+    expect(liveInSandbox.problems.join("\n")).toMatch(/sandbox must not use a live_/);
+
+    const sandboxInProd = evaluateBillingConfig({
+      PADDLE_ENV: "production",
+      NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: "test_0123456789abcdef01234567",
+      PADDLE_API_KEY: "pdl_sdbx_apikey_0123456789abcdef0123456789",
+      ...realPrices,
+    });
+    expect(sandboxInProd.productionReady).toBe(false);
+    expect(sandboxInProd.problems.join("\n")).toMatch(/requires a live_/);
+    expect(sandboxInProd.problems.join("\n")).toMatch(/cannot use a sandbox API key/);
+
+    const duplicated = evaluateBillingConfig({
+      PADDLE_ENV: "sandbox",
+      NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: "test_0123456789abcdef01234567",
+      PADDLE_API_KEY: "pdl_sdbx_apikey_0123456789abcdef0123456789",
+      ...realPrices,
+      PADDLE_PRICE_TEAM_YEARLY: realPrices.PADDLE_PRICE_PRO_YEARLY,
+    });
+    expect(duplicated.problems.join("\n")).toMatch(/four distinct prices/);
+  });
+});

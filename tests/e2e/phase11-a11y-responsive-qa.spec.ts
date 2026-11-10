@@ -24,9 +24,30 @@ async function runAxeAudit(
   critical: AxeViolationSummary[];
   serious: AxeViolationSummary[];
 }> {
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+  const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
+  // Public page + export render inside the renderer wrapper; the editor canvas renders sections
+  // directly. Every template section carries `data-section-type`.
+  const TEMPLATE_CANVAS = '[data-slot="template-puck-renderer"], [data-section-type]';
+
+  // 1. Platform UI (marketing, app shell, editor chrome, admin…): every WCAG 2.1 A/AA rule applies.
+  const platform = await new AxeBuilder({ page })
+    .withTags(WCAG_TAGS)
+    .exclude(TEMPLATE_CANVAS)
     .analyze();
+
+  // 2. User-authored template canvas: all rules EXCEPT colour contrast. Contrast there is the
+  //    designer's palette (e.g. the Figma templates ship brand colours such as white-on-coral), not
+  //    something the platform may silently recolour without breaking pixel-fidelity.
+  const hasCanvas = (await page.locator(TEMPLATE_CANVAS).count()) > 0;
+  const canvas = hasCanvas
+    ? await new AxeBuilder({ page })
+        .withTags(WCAG_TAGS)
+        .include(TEMPLATE_CANVAS)
+        .disableRules(["color-contrast"])
+        .analyze()
+    : { violations: [] as typeof platform.violations };
+
+  const results = { violations: [...platform.violations, ...canvas.violations] };
 
   const mapViolation = (v: (typeof results.violations)[number]): AxeViolationSummary => ({
     route: routeLabel,

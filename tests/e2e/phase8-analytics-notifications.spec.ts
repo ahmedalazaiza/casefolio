@@ -81,6 +81,12 @@ test("Phase 8 E2E: PostHog zero-PII events -> unpublished analytics empty state 
 
     // 0. Reset dev PostHog & notification email audit buffers
     const clearRes = await page.request.delete("/api/dev/analytics-events");
+    // The in-memory PostHog/email audit buffers only exist outside production builds (the endpoint is
+    // intentionally 404 in `NODE_ENV=production`). Run this spec against `pnpm dev`.
+    test.skip(
+      clearRes.status() === 404,
+      "Requires the dev server: /api/dev/analytics-events is disabled in production builds.",
+    );
     expect(clearRes.status()).toBe(200);
 
     // 1. Sign up & verify user (`signup` PostHog event)

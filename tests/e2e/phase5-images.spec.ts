@@ -305,7 +305,7 @@ test("Phase 5 E2E: upload image into hero.mockup, verify locked 9:19.5 crop, CDN
       })
       .toBe(true);
 
-    // 6. Verify C-501 private-until-published: anonymous visitor gets 403 on CDN URL while owner gets 200
+    // 6. Verify C-501 private-until-published: anonymous visitor gets 404 (existence is not revealed, Spec §10.2/§15) on CDN URL while owner gets 200
     const ownerCdnRes = await page.request.get(imgSrc!);
     expect(ownerCdnRes.status()).toBe(200);
     expect(ownerCdnRes.headers()["content-type"]).toBe("image/png");
@@ -314,7 +314,7 @@ test("Phase 5 E2E: upload image into hero.mockup, verify locked 9:19.5 crop, CDN
     const anonContext = await browser.newContext();
     try {
       const anonRes = await anonContext.request.get(`http://localhost:3000${imgSrc}`);
-      expect(anonRes.status()).toBe(403);
+      expect(anonRes.status()).toBe(404);
     } finally {
       await anonContext.close();
     }

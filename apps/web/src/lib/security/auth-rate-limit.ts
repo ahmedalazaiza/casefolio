@@ -10,7 +10,12 @@ const RATE_LIMITED_AUTH_PREFIXES = [
   "/api/auth/magic-link",
 ] as const;
 
-export const DEFAULT_AUTH_RATE_LIMIT_PER_MIN = 45;
+/**
+ * Coarse, per-instance flood guard in front of Better Auth. The precise, per-endpoint limits live in
+ * Better Auth's durable `rate_limits` storage (see `auth/server.ts`); this ceiling only has to stop
+ * raw floods without throttling many real users that share one office/school/carrier IP.
+ */
+export const DEFAULT_AUTH_RATE_LIMIT_PER_MIN = 150;
 
 export function extractClientIp(headers: Headers): string {
   const forwarded = headers.get("x-forwarded-for");

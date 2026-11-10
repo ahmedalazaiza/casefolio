@@ -93,28 +93,43 @@ export interface BillingConfigStatus {
   problems: string[];
 }
 
+export interface BillingConfigInput {
+  PADDLE_ENV?: string;
+  NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?: string;
+  PADDLE_API_KEY?: string;
+  PADDLE_PRICE_PRO_MONTHLY?: string;
+  PADDLE_PRICE_PRO_YEARLY?: string;
+  PADDLE_PRICE_TEAM_MONTHLY?: string;
+  PADDLE_PRICE_TEAM_YEARLY?: string;
+}
+
 /**
  * Validates that the Paddle configuration is internally consistent for the declared
  * `PADDLE_ENV`. Sandbox deployments may legitimately run with placeholder ids (the app then
  * uses the signed local simulator), but production must never silently fall back to it.
+ * Pure: takes the values explicitly so `/api/health` and tests can reuse it.
  */
-export function getBillingConfigStatus(): BillingConfigStatus {
+export function evaluateBillingConfig(input: BillingConfigInput): BillingConfigStatus {
   const problems: string[] = [];
-  const token = env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN.trim().toLowerCase();
-  const apiKey = env.PADDLE_API_KEY.trim().toLowerCase();
+  const environment: "sandbox" | "production" =
+    input.PADDLE_ENV === "production" ? "production" : "sandbox";
+  const rawToken = input.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? "";
+  const rawApiKey = input.PADDLE_API_KEY ?? "";
+  const token = rawToken.trim().toLowerCase();
+  const apiKey = rawApiKey.trim().toLowerCase();
 
-  if (!isRealPaddleTokenConfigured()) {
+  if (!isRealPaddleTokenConfigured(rawToken)) {
     problems.push("NEXT_PUBLIC_PADDLE_CLIENT_TOKEN is missing or a placeholder.");
   }
-  if (!isRealPaddleApiKeyConfigured()) {
+  if (!isRealPaddleApiKeyConfigured(rawApiKey)) {
     problems.push("PADDLE_API_KEY is missing or a placeholder.");
   }
 
   const priceIds: Array<[string, string]> = [
-    ["PADDLE_PRICE_PRO_MONTHLY", env.PADDLE_PRICE_PRO_MONTHLY],
-    ["PADDLE_PRICE_PRO_YEARLY", env.PADDLE_PRICE_PRO_YEARLY],
-    ["PADDLE_PRICE_TEAM_MONTHLY", env.PADDLE_PRICE_TEAM_MONTHLY],
-    ["PADDLE_PRICE_TEAM_YEARLY", env.PADDLE_PRICE_TEAM_YEARLY],
+    ["PADDLE_PRICE_PRO_MONTHLY", input.PADDLE_PRICE_PRO_MONTHLY ?? ""],
+    ["PADDLE_PRICE_PRO_YEARLY", input.PADDLE_PRICE_PRO_YEARLY ?? ""],
+    ["PADDLE_PRICE_TEAM_MONTHLY", input.PADDLE_PRICE_TEAM_MONTHLY ?? ""],
+    ["PADDLE_PRICE_TEAM_YEARLY", input.PADDLE_PRICE_TEAM_YEARLY ?? ""],
   ];
   for (const [name, value] of priceIds) {
     if (!isRealPaddlePriceId(value)) {
@@ -125,7 +140,7 @@ export function getBillingConfigStatus(): BillingConfigStatus {
     problems.push("PADDLE_PRICE_* ids must be four distinct prices.");
   }
 
-  if (env.PADDLE_ENV === "production") {
+  if (environment === "production") {
     if (!token.startsWith("live_")) {
       problems.push("PADDLE_ENV=production requires a live_ client token.");
     }
@@ -141,11 +156,19 @@ export function getBillingConfigStatus(): BillingConfigStatus {
     }
   }
 
-  return {
-    productionReady: problems.length === 0,
-    environment: env.PADDLE_ENV,
-    problems,
-  };
+  return { productionReady: problems.length === 0, environment, problems };
+}
+
+export function getBillingConfigStatus(): BillingConfigStatus {
+  return evaluateBillingConfig({
+    PADDLE_ENV: env.PADDLE_ENV,
+    NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
+    PADDLE_API_KEY: env.PADDLE_API_KEY,
+    PADDLE_PRICE_PRO_MONTHLY: env.PADDLE_PRICE_PRO_MONTHLY,
+    PADDLE_PRICE_PRO_YEARLY: env.PADDLE_PRICE_PRO_YEARLY,
+    PADDLE_PRICE_TEAM_MONTHLY: env.PADDLE_PRICE_TEAM_MONTHLY,
+    PADDLE_PRICE_TEAM_YEARLY: env.PADDLE_PRICE_TEAM_YEARLY,
+  });
 }
 
 export function getPaddleApiBaseUrl(): string {

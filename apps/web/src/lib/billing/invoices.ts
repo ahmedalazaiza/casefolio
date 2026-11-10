@@ -200,3 +200,4 @@ export function buildBillingInvoices(events: BillingEventRow[]): {
 
   return { invoices, detectedInterval, paymentMethod };
 }
+

@@ -87,7 +87,7 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     expect(heroImages[1]).toHaveAttribute("src", "/landing/hero-editor-dark.png");
 
     // Browse the stacked template carousel via its pager dots
-    const orbitDot = screen.getByRole("tab", { name: "Show Orbit" });
+    const orbitDot = screen.getByRole("tab", { name: /^Orbit/ });
     await user.click(orbitDot);
     expect(orbitDot).toHaveAttribute("aria-selected", "true");
 
