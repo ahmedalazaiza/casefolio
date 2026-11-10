@@ -37,12 +37,12 @@ import { cn } from "@/lib/utils";
 export type CasefolioPuckComponentMap = {
   Hero: Omit<HeroSectionProps, "id" | "puck">;
   Overview: Omit<OverviewSectionProps, "id" | "puck">;
-  Problem: Omit<ProblemSectionProps, "id">;
+  Problem: Omit<ProblemSectionProps, "id" | "puck">;
   Process: Omit<ProcessSectionProps, "id" | "puck">;
   ScreensGallery: Omit<ScreensGallerySectionProps, "id" | "puck">;
-  Results: Omit<ResultsSectionProps, "id">;
+  Results: Omit<ResultsSectionProps, "id" | "puck">;
   Quote: Omit<QuoteSectionProps, "id" | "puck">;
-  CTA: Omit<CtaSectionProps, "id">;
+  CTA: Omit<CtaSectionProps, "id" | "puck">;
   Custom: Omit<CustomSectionProps, "id" | "puck">;
 };
 
@@ -223,7 +223,7 @@ export function createCasefolioPuckConfig(
           },
           background: colorField,
         },
-        render: ({ id, ...props }) => <ProblemSection id={id} {...props} />,
+        render: ({ id, puck, ...props }) => <ProblemSection id={id} puck={puck} {...props} />,
       },
       Process: {
         label: "Process",
@@ -357,7 +357,7 @@ export function createCasefolioPuckConfig(
           background: colorField,
           accent: accentField,
         },
-        render: ({ id, ...props }) => <ResultsSection id={id} {...props} />,
+        render: ({ id, puck, ...props }) => <ResultsSection id={id} puck={puck} {...props} />,
       },
       Quote: {
         label: "Quote",
@@ -382,7 +382,7 @@ export function createCasefolioPuckConfig(
           background: colorField,
           accent: accentField,
         },
-        render: ({ id, ...props }) => <CtaSection id={id} {...props} />,
+        render: ({ id, puck, ...props }) => <CtaSection id={id} puck={puck} {...props} />,
       },
       Custom: {
         label: "Custom Section",
@@ -457,6 +457,7 @@ export interface TemplatePuckRendererProps {
   theme?: TemplateTheme;
   slots?: Record<string, TemplateSlotDefinition>;
   projectType?: TemplateProjectType;
+  viewport?: "desktop" | "mobile";
   className?: string;
 }
 
@@ -466,6 +467,7 @@ export function TemplatePuckRenderer({
   theme,
   slots,
   projectType,
+  viewport,
   className,
 }: TemplatePuckRendererProps) {
   const resolvedPuck = puckData ?? document?.puck;
@@ -489,6 +491,7 @@ export function TemplatePuckRenderer({
     <div
       data-slot="template-puck-renderer"
       data-project-type={resolvedType}
+      data-viewport={viewport}
       style={buildTemplateThemeStyle(resolvedTheme)}
       className={cn("overflow-hidden rounded-xl", className)}
     >
@@ -502,6 +505,7 @@ export function TemplatePuckRenderer({
           projectType: resolvedType,
           slots: resolvedSlots,
           theme: resolvedTheme,
+          viewport,
         }}
       />
     </div>

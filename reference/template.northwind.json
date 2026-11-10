@@ -83,16 +83,16 @@
           ],
           "layout": "centered",
           "mockupStyle": "straight",
-          "glow": true,
+          "glow": false,
           "logo": {
             "slot": "hero.logo",
-            "src": "/templates/northwind/logo.svg",
+            "src": "",
             "alt": "Northwind logo",
             "crop": null
           },
           "mockup": {
             "slot": "hero.mockup",
-            "src": "/templates/northwind/hero-dispatch.svg",
+            "src": "",
             "alt": "Northwind live freight dispatch console",
             "crop": null,
             "device": "browser"
@@ -116,7 +116,7 @@
           ],
           "banner": {
             "slot": "overview.banner",
-            "src": "/templates/northwind/overview-banner.svg",
+            "src": "",
             "alt": "Northwind dispatch console transformation overview",
             "crop": null,
             "device": "browser"
@@ -166,7 +166,7 @@
               "body": "Shadowed 14 dispatchers across 3 hubs and mapped 62 recurring tasks.",
               "image": {
                 "slot": "process.step.image",
-                "src": "/templates/northwind/step-discover.svg",
+                "src": "",
                 "alt": "Dispatcher field shadowing and task audit",
                 "crop": null
               }
@@ -177,7 +177,7 @@
               "body": "Prioritised jobs-to-be-done and set a target of under 30 seconds per assignment.",
               "image": {
                 "slot": "process.step.image",
-                "src": "/templates/northwind/step-discover.svg",
+                "src": "",
                 "alt": "Jobs-to-be-done and 30-second assignment target",
                 "crop": null
               }
@@ -188,7 +188,7 @@
               "body": "Built a split-view workspace and a 120-component system in Figma.",
               "image": {
                 "slot": "process.step.image",
-                "src": "/templates/northwind/step-discover.svg",
+                "src": "",
                 "alt": "Split-view workspace and 120-component Figma library",
                 "crop": null
               }
@@ -199,7 +199,7 @@
               "body": "Ran three rounds of moderated tests and a two-week pilot with 80 operators.",
               "image": {
                 "slot": "process.step.image",
-                "src": "/templates/northwind/step-discover.svg",
+                "src": "",
                 "alt": "Two-week live pilot across 80 operators",
                 "crop": null
               }
@@ -223,7 +223,7 @@
               "caption": "Live dispatch board",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/northwind/screen-board.svg",
+                "src": "",
                 "alt": "Live dispatch board",
                 "crop": null,
                 "device": "browser"
@@ -233,7 +233,7 @@
               "caption": "Load detail split view",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/northwind/screen-split.svg",
+                "src": "",
                 "alt": "Load detail split view",
                 "crop": null,
                 "device": "browser"
@@ -243,7 +243,7 @@
               "caption": "Exceptions inbox",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/northwind/screen-exceptions.svg",
+                "src": "",
                 "alt": "Exceptions inbox",
                 "crop": null,
                 "device": "browser"
@@ -253,7 +253,7 @@
               "caption": "Carrier performance",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/northwind/screen-carrier.svg",
+                "src": "",
                 "alt": "Carrier performance",
                 "crop": null,
                 "device": "browser"
@@ -284,12 +284,12 @@
         "type": "Quote",
         "props": {
           "id": "Quote-1",
-          "quote": "“For the first time, the screen keeps up with how fast we actually think.”",
+          "quote": "For the first time, the screen keeps up with how fast we actually think.",
           "author": "Dana Whitfield",
           "role": "Senior Dispatcher, Northwind Chicago Hub",
           "avatar": {
             "slot": "quote.avatar",
-            "src": "/templates/northwind/avatar-dana.svg",
+            "src": "",
             "alt": "Dana Whitfield avatar",
             "crop": null
           },
@@ -314,4 +314,3 @@
     "zones": {}
   }
 }
-

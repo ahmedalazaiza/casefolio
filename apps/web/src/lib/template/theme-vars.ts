@@ -11,6 +11,18 @@ export function buildTemplateThemeStyle(theme?: TemplateTheme): CSSProperties {
     vars[`--tpl-color-${token}`] = hex;
   }
 
+  if (!vars["--tpl-color-surfaceAlt"]) {
+    vars["--tpl-color-surfaceAlt"] =
+      theme.colors.secondary || theme.colors.surface || "#22222D";
+  }
+  if (!vars["--tpl-color-line"]) {
+    vars["--tpl-color-line"] =
+      "color-mix(in oklab, var(--tpl-color-text, #F4F4F6) 14%, transparent)";
+  }
+  if (!vars["--tpl-color-onPrimary"]) {
+    vars["--tpl-color-onPrimary"] = "#FFFFFF";
+  }
+
   if (theme.fonts.heading?.family) {
     vars["--tpl-font-heading"] = `${theme.fonts.heading.family}, var(--font-display)`;
   }

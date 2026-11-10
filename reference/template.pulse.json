@@ -45,10 +45,10 @@
         }
       },
       "typography": {
-        "display": { "font": "heading", "size": 56, "weight": 700, "lineHeight": 1.08 },
-        "h2": { "font": "heading", "size": 36, "weight": 700, "lineHeight": 1.15 },
-        "body": { "font": "body", "size": 17, "weight": 400, "lineHeight": 1.65 },
-        "caption": { "font": "body", "size": 13, "weight": 700, "lineHeight": 1.4 }
+        "display": { "font": "heading", "size": 64, "weight": 600, "lineHeight": 1.04 },
+        "h2": { "font": "heading", "size": 48, "weight": 600, "lineHeight": 1.1 },
+        "body": { "font": "body", "size": 17, "weight": 400, "lineHeight": 1.55 },
+        "caption": { "font": "body", "size": 14, "weight": 500, "lineHeight": 1.4 }
       }
     },
     "slots": {
@@ -82,22 +82,22 @@
           ],
           "layout": "split-right",
           "mockupStyle": "straight",
-          "glow": true,
+          "glow": false,
           "logo": {
             "slot": "hero.logo",
-            "src": "/templates/pulse/logo.svg",
+            "src": "",
             "alt": "Pulse logo",
             "crop": null
           },
           "mockup": {
             "slot": "hero.mockup",
-            "src": "/templates/pulse/hero-workout.svg",
-            "alt": "Pulse 10-minute guided workout screen",
+            "src": "",
+            "alt": "Pulse workout mockup",
             "crop": null,
             "device": "iphone"
           },
           "background": "background",
-          "accent": "primary"
+          "accent": "accent"
         }
       },
       {
@@ -115,12 +115,12 @@
           ],
           "banner": {
             "slot": "overview.banner",
-            "src": "/templates/pulse/overview-banner.svg",
-            "alt": "Pulse habit loop and forgiving streak overview",
+            "src": "",
+            "alt": "Pulse overview banner",
             "crop": null
           },
           "background": "surface",
-          "accent": "primary"
+          "accent": "accent"
         }
       },
       {
@@ -155,7 +155,7 @@
           "eyebrow": "Process",
           "heading": "Designing for the bad day, not the perfect one",
           "layout": "timeline",
-          "accent": "primary",
+          "accent": "accent",
           "steps": [
             {
               "number": "01",
@@ -196,8 +196,8 @@
               "caption": "Welcome",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/pulse/screen-welcome.svg",
-                "alt": "Welcome screen",
+                "src": "",
+                "alt": "Welcome",
                 "crop": null,
                 "device": "iphone"
               }
@@ -206,8 +206,8 @@
               "caption": "Quick setup",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/pulse/screen-welcome.svg",
-                "alt": "Quick 3-question setup",
+                "src": "",
+                "alt": "Quick setup",
                 "crop": null,
                 "device": "iphone"
               }
@@ -216,8 +216,8 @@
               "caption": "Today",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/pulse/hero-workout.svg",
-                "alt": "Today workout overview",
+                "src": "",
+                "alt": "Today",
                 "crop": null,
                 "device": "iphone"
               }
@@ -226,8 +226,8 @@
               "caption": "Live workout",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/pulse/hero-workout.svg",
-                "alt": "Live workout timer",
+                "src": "",
+                "alt": "Live workout",
                 "crop": null,
                 "device": "iphone"
               }
@@ -236,8 +236,8 @@
               "caption": "Rest timer",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/pulse/hero-workout.svg",
-                "alt": "Rest timer screen",
+                "src": "",
+                "alt": "Rest timer",
                 "crop": null,
                 "device": "iphone"
               }
@@ -246,8 +246,8 @@
               "caption": "Streaks",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/pulse/screen-streaks.svg",
-                "alt": "Forgiving streaks screen",
+                "src": "",
+                "alt": "Streaks",
                 "crop": null,
                 "device": "iphone"
               }
@@ -256,8 +256,8 @@
               "caption": "Progress",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/pulse/screen-streaks.svg",
-                "alt": "Weekly progress chart",
+                "src": "",
+                "alt": "Progress",
                 "crop": null,
                 "device": "iphone"
               }
@@ -266,8 +266,8 @@
               "caption": "Profile",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/pulse/screen-welcome.svg",
-                "alt": "Habit profile & preferences",
+                "src": "",
+                "alt": "Profile",
                 "crop": null,
                 "device": "iphone"
               }
@@ -307,12 +307,12 @@
         "type": "Quote",
         "props": {
           "id": "Quote-1",
-          "quote": "“Ten minutes felt doable, so I actually did it — every day for three months.”",
+          "quote": "Ten minutes felt doable, so I actually did it — every day for three months.",
           "author": "Maya Okafor",
           "role": "Beta tester, London",
           "avatar": {
             "slot": "quote.avatar",
-            "src": "/templates/pulse/avatar-maya.svg",
+            "src": "",
             "alt": "Maya Okafor avatar",
             "crop": null
           },
@@ -337,4 +337,3 @@
     "zones": {}
   }
 }
-

@@ -45,17 +45,17 @@ function renderSectionBlock(section: PuckSectionItem, puckCtx: PuckContext) {
     case "Overview":
       return <OverviewSection {...section.props} puck={puckCtx} />;
     case "Problem":
-      return <ProblemSection {...section.props} />;
+      return <ProblemSection {...section.props} puck={puckCtx} />;
     case "Process":
       return <ProcessSection {...section.props} puck={puckCtx} />;
     case "ScreensGallery":
       return <ScreensGallerySection {...section.props} puck={puckCtx} />;
     case "Results":
-      return <ResultsSection {...section.props} />;
+      return <ResultsSection {...section.props} puck={puckCtx} />;
     case "Quote":
       return <QuoteSection {...section.props} puck={puckCtx} />;
     case "CTA":
-      return <CtaSection {...section.props} />;
+      return <CtaSection {...section.props} puck={puckCtx} />;
     case "Custom":
       return <CustomSection {...section.props} puck={puckCtx} />;
     default:
@@ -88,6 +88,7 @@ export function EditorCanvasPreview({
       projectType: effectiveProjectType,
       slots,
       theme,
+      viewport,
     },
   };
 
@@ -143,34 +144,37 @@ export function EditorCanvasPreview({
     return () => observer.disconnect();
   }, [viewport, puckData]);
 
+  const designCanvasWidth = viewport === "mobile" ? 390 : 1440;
   const zoomPercent = Math.round(zoom * 100);
-  const isScaled = Math.abs(zoom - 1) > 0.001;
   const hasMeasuredBox = baseWidth > 0 && naturalHeight > 0;
+  const fitScale = hasMeasuredBox ? Math.min(1, baseWidth / designCanvasWidth) : 1;
+  const effectiveScale = fitScale * zoom;
+  const isScaled = Math.abs(effectiveScale - 1) > 0.001 || hasMeasuredBox;
 
-  const stageStyle: CSSProperties | undefined = isScaled
-    ? hasMeasuredBox
-      ? {
-          width: `${Math.round(baseWidth * zoom)}px`,
-          height: `${Math.round(naturalHeight * zoom)}px`,
-        }
-      : undefined
-    : undefined;
+  const stageStyle: CSSProperties | undefined = hasMeasuredBox
+    ? {
+        width: `${Math.round(designCanvasWidth * effectiveScale)}px`,
+        height: `${Math.round(naturalHeight * effectiveScale)}px`,
+      }
+    : Math.abs(zoom - 1) > 0.001
+      ? undefined
+      : undefined;
 
   const frameStyle: CSSProperties = {
     ...buildTemplateThemeStyle(theme),
-    ...(isScaled
-      ? hasMeasuredBox
+    ...(hasMeasuredBox
+      ? {
+          width: `${designCanvasWidth}px`,
+          maxWidth: "none",
+          transform: `scale(${effectiveScale})`,
+          transformOrigin: "top left",
+        }
+      : Math.abs(zoom - 1) > 0.001
         ? {
-            width: `${baseWidth}px`,
-            maxWidth: "none",
-            transform: `scale(${zoom})`,
-            transformOrigin: "top left",
-          }
-        : {
             transform: `scale(${zoom})`,
             transformOrigin: "top center",
           }
-      : {}),
+        : {}),
   };
 
   return (
@@ -180,7 +184,7 @@ export function EditorCanvasPreview({
         aria-hidden="true"
         className={cn(
           "pointer-events-none mx-auto h-0 w-full shrink-0",
-          viewport === "mobile" ? "max-w-sm" : "max-w-4xl",
+          viewport === "mobile" ? "max-w-[390px]" : "max-w-[1440px]",
         )}
       />
 
@@ -191,7 +195,7 @@ export function EditorCanvasPreview({
         className={cn(
           "mx-auto shrink-0",
           !isScaled && "w-full",
-          !isScaled && (viewport === "mobile" ? "max-w-sm" : "max-w-4xl"),
+          !isScaled && (viewport === "mobile" ? "max-w-[390px]" : "max-w-[1440px]"),
         )}
       >
         <div
@@ -203,8 +207,8 @@ export function EditorCanvasPreview({
           className={cn(
             "shadow-float mx-auto w-full shrink-0 overflow-hidden transition-[border-radius,box-shadow] duration-200",
             viewport === "mobile"
-              ? "border-inverse max-w-sm rounded-3xl border-8"
-              : "border-border/60 max-w-4xl rounded-3xl border",
+              ? "border-border/60 max-w-[390px] rounded-[28px] border"
+              : "border-border/60 max-w-[1440px] rounded-[28px] border",
           )}
         >
           {puckData.content.map((section, index) => {

@@ -84,16 +84,16 @@
           ],
           "layout": "centered",
           "mockupStyle": "straight",
-          "glow": true,
+          "glow": false,
           "logo": {
             "slot": "hero.logo",
-            "src": "/templates/atlas/logo.svg",
+            "src": "",
             "alt": "Atlas logo",
             "crop": null
           },
           "mockup": {
             "slot": "hero.mockup",
-            "src": "/templates/atlas/hero-planner.svg",
+            "src": "",
             "alt": "Atlas cross-platform travel planner",
             "crop": null,
             "device": "browser"
@@ -117,7 +117,7 @@
           ],
           "banner": {
             "slot": "overview.banner",
-            "src": "/templates/atlas/overview-banner.svg",
+            "src": "",
             "alt": "Atlas desktop planner and mobile companion overview",
             "crop": null
           },
@@ -166,7 +166,7 @@
               "body": "Interviewed 20 frequent travellers and split tasks into planning and on-the-go moments.",
               "image": {
                 "slot": "process.step.image",
-                "src": "/templates/atlas/step-journey.svg",
+                "src": "",
                 "alt": "Traveller journey mapping across planning and travel day",
                 "crop": null
               }
@@ -177,7 +177,7 @@
               "body": "Built one set of tokens and components, then tuned layout and density per platform.",
               "image": {
                 "slot": "process.step.image",
-                "src": "/templates/atlas/step-journey.svg",
+                "src": "",
                 "alt": "Shared design system tokens across web and mobile",
                 "crop": null
               }
@@ -188,7 +188,7 @@
               "body": "A field study with 12 travellers across four real trips validated the hand-off.",
               "image": {
                 "slot": "process.step.image",
-                "src": "/templates/atlas/step-journey.svg",
+                "src": "",
                 "alt": "Field validation across 12 travellers",
                 "crop": null
               }
@@ -212,7 +212,7 @@
               "caption": "Trip overview",
               "image": {
                 "slot": "gallery.desktop",
-                "src": "/templates/atlas/hero-planner.svg",
+                "src": "",
                 "alt": "Desktop trip overview",
                 "crop": null,
                 "device": "browser"
@@ -222,7 +222,7 @@
               "caption": "Itinerary builder",
               "image": {
                 "slot": "gallery.desktop",
-                "src": "/templates/atlas/hero-planner.svg",
+                "src": "",
                 "alt": "Desktop itinerary builder",
                 "crop": null,
                 "device": "browser"
@@ -232,7 +232,7 @@
               "caption": "Map & places",
               "image": {
                 "slot": "gallery.desktop",
-                "src": "/templates/atlas/overview-banner.svg",
+                "src": "",
                 "alt": "Interactive map and saved places",
                 "crop": null,
                 "device": "browser"
@@ -242,7 +242,7 @@
               "caption": "Bookings",
               "image": {
                 "slot": "gallery.desktop",
-                "src": "/templates/atlas/overview-banner.svg",
+                "src": "",
                 "alt": "Unified bookings and rail passes",
                 "crop": null,
                 "device": "browser"
@@ -267,7 +267,7 @@
               "caption": "Today's plan",
               "image": {
                 "slot": "gallery.mobile",
-                "src": "/templates/atlas/screen-mobile-today.svg",
+                "src": "",
                 "alt": "Today's plan mobile screen",
                 "crop": null,
                 "device": "iphone"
@@ -277,7 +277,7 @@
               "caption": "Boarding pass",
               "image": {
                 "slot": "gallery.mobile",
-                "src": "/templates/atlas/screen-mobile-today.svg",
+                "src": "",
                 "alt": "Offline QR boarding pass",
                 "crop": null,
                 "device": "iphone"
@@ -287,7 +287,7 @@
               "caption": "Offline map",
               "image": {
                 "slot": "gallery.mobile",
-                "src": "/templates/atlas/screen-mobile-today.svg",
+                "src": "",
                 "alt": "Offline walking map",
                 "crop": null,
                 "device": "iphone"
@@ -297,7 +297,7 @@
               "caption": "Trip journal",
               "image": {
                 "slot": "gallery.mobile",
-                "src": "/templates/atlas/screen-mobile-today.svg",
+                "src": "",
                 "alt": "Mobile trip journal",
                 "crop": null,
                 "device": "iphone"
@@ -324,7 +324,7 @@
           ],
           "image": {
             "slot": "custom.image",
-            "src": "/templates/atlas/screen-mobile-today.svg",
+            "src": "",
             "alt": "Atlas mobile companion lock screen sync",
             "crop": null,
             "device": "iphone"
@@ -368,4 +368,3 @@
     "zones": {}
   }
 }
-

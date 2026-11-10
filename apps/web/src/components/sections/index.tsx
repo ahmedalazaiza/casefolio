@@ -22,6 +22,7 @@ export interface CasefolioRenderMetadata {
   projectType?: TemplateProjectType;
   slots?: Record<string, TemplateSlotDefinition>;
   theme?: TemplateTheme;
+  viewport?: "desktop" | "mobile";
 }
 
 function readRenderMetadata(puck?: PuckContext): CasefolioRenderMetadata {
@@ -40,7 +41,13 @@ function readRenderMetadata(puck?: PuckContext): CasefolioRenderMetadata {
         : undefined,
     theme:
       raw.theme && typeof raw.theme === "object" ? (raw.theme as TemplateTheme) : undefined,
+    viewport:
+      raw.viewport === "desktop" || raw.viewport === "mobile" ? raw.viewport : undefined,
   };
+}
+
+function viewClass(isMobile: boolean, mobileClasses: string, desktopLgClasses: string): string {
+  return isMobile ? mobileClasses : cn(mobileClasses, desktopLgClasses);
 }
 
 function tokenColorVar(token: string | undefined, fallbackVar: string): string {
@@ -49,12 +56,15 @@ function tokenColorVar(token: string | undefined, fallbackVar: string): string {
 }
 
 function buildSectionSurfaceStyle(backgroundToken?: string): CSSProperties {
-  const isAccentFill = backgroundToken === "primary" || backgroundToken === "accent";
+  const isPrimaryFill = backgroundToken === "primary";
+  const isAccentFill = backgroundToken === "accent";
   return {
     backgroundColor: tokenColorVar(backgroundToken, "--background"),
-    color: isAccentFill
-      ? "var(--tpl-color-text, var(--primary-foreground))"
-      : "var(--tpl-color-text, var(--foreground))",
+    color: isPrimaryFill
+      ? "var(--tpl-color-onPrimary, var(--primary-foreground))"
+      : isAccentFill
+        ? "var(--tpl-color-background, var(--primary-foreground))"
+        : "var(--tpl-color-text, var(--foreground))",
     fontFamily: "var(--tpl-font-body, var(--font-sans))",
   };
 }
@@ -77,20 +87,46 @@ function getSlotDefinition(
   return slots[key];
 }
 
-function SectionEyebrow({ text, accent = "primary" }: { text?: string; accent?: string }) {
+function SectionEyebrow({
+  text,
+  accent = "accent",
+  colorOverride,
+  isMobile = false,
+}: {
+  text?: string;
+  accent?: string;
+  colorOverride?: string;
+  isMobile?: boolean;
+}) {
   if (!text) return null;
   return (
     <span
-      style={{ color: tokenColorVar(accent, "--primary") }}
-      className="type-overline inline-flex items-center gap-2 font-semibold tracking-wider uppercase"
+      style={{ color: colorOverride ?? tokenColorVar(accent, "--primary") }}
+      className={viewClass(
+        isMobile,
+        "font-medium uppercase leading-[1.4] text-[0.75rem] tracking-[1.44px]",
+        "lg:text-[0.875rem] lg:tracking-[1.68px]",
+      )}
     >
-      <span
-        aria-hidden="true"
-        style={{ backgroundColor: tokenColorVar(accent, "--primary") }}
-        className="size-1.5 shrink-0 rounded-full"
-      />
       {text}
     </span>
+  );
+}
+
+function QuoteMarkGlyph({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg
+      viewBox="0 0 48 36"
+      fill="none"
+      aria-hidden="true"
+      style={style}
+      className={className}
+    >
+      <path
+        d="M14.4 0C6.24 5.52 1.2 13.44 1.2 22.8C1.2 30.48 6.24 35.52 12.72 35.52C18.72 35.52 23.04 25.44 23.04 25.44C23.04 19.68 18.72 15.84 13.44 15.84C12.24 15.84 10.8 16.08 10.32 16.32C11.28 11.28 15.12 6.72 20.4 3.6L14.4 0ZM38.16 0C30 5.52 24.96 13.44 24.96 22.8C24.96 30.48 30 35.52 36.48 35.52C42.48 35.52 46.8 31.2 46.8 25.44C46.8 19.68 42.48 15.84 37.2 15.84C36 15.84 34.56 16.08 34.08 16.32C35.04 11.28 38.88 6.72 44.16 3.6L38.16 0Z"
+        fill="currentColor"
+      />
+    </svg>
   );
 }
 
@@ -124,12 +160,13 @@ export function HeroSection({
   logo,
   mockup,
   background,
-  accent = "primary",
+  accent = "accent",
   puck,
 }: HeroSectionProps) {
   if (hidden) return null;
 
-  const { projectType = "mobile", slots } = readRenderMetadata(puck);
+  const { projectType = "mobile", slots, viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
   const logoSlot = getSlotDefinition(slots, logo, "hero.logo");
   const mockupSlot = getSlotDefinition(slots, mockup, "hero.mockup");
   const effectiveDevice = mockup?.device ?? mockupSlot?.device;
@@ -149,62 +186,104 @@ export function HeroSection({
       data-variant={resolvedVariant}
       data-hero-layout={effectiveLayout}
       style={buildSectionSurfaceStyle(background)}
-      className="overflow-hidden px-6 py-14 sm:px-10 lg:px-16 lg:py-20"
+      className={viewClass(
+        isMobile,
+        "overflow-hidden px-[24px] pt-[24px] pb-[64px]",
+        "lg:px-[120px] lg:pt-[104px] lg:pb-[120px]",
+      )}
     >
       <div
         className={cn(
-          "mx-auto max-w-6xl",
+          "mx-auto max-w-[1200px]",
           isCentered
-            ? "flex flex-col items-center gap-10 text-center"
-            : "grid items-center gap-10 lg:grid-cols-12",
+            ? viewClass(
+                isMobile,
+                "flex flex-col items-center gap-[40px] text-center",
+                "lg:gap-[56px]",
+              )
+            : viewClass(
+                isMobile,
+                "flex flex-col items-start gap-[40px]",
+                "lg:flex-row lg:items-center lg:gap-[80px]",
+              ),
         )}
       >
         <div
           className={cn(
-            "flex flex-col gap-5",
-            isCentered
-              ? "max-w-3xl items-center"
-              : effectiveLayout === "split-left"
-                ? "lg:order-2 lg:col-span-7"
-                : "lg:col-span-7",
+            viewClass(
+              isMobile,
+              "flex w-full flex-col items-start gap-[16px]",
+              "lg:min-w-0 lg:flex-1 lg:gap-[24px]",
+            ),
+            isCentered && "max-w-[920px] items-center text-center",
+            !isCentered && effectiveLayout === "split-left" && !isMobile && "lg:order-2",
           )}
         >
-          <div className={cn("flex flex-wrap items-center gap-3", isCentered && "justify-center")}>
-            {logo && (
-              <div className="w-12 shrink-0">
-                <ImageSlotFrame
-                  image={logo}
-                  slotDefinition={logoSlot}
-                  fallbackRatio="1:1"
-                  compact
-                  className="rounded-lg"
-                />
-              </div>
-            )}
-            {eyebrow && (
-              <span
-                style={{
-                  backgroundColor: tokenColorVar("surface", "--surface"),
-                  color: tokenColorVar("text", "--foreground"),
-                }}
-                className="border-border/30 type-overline inline-flex items-center gap-2 rounded-full border px-3.5 py-1"
-              >
-                <span
-                  aria-hidden="true"
-                  style={{ backgroundColor: tokenColorVar(accent, "--primary") }}
-                  className="size-1.5 shrink-0 rounded-full"
-                />
-                {eyebrow}
-              </span>
-            )}
-          </div>
+          {(logo || eyebrow) && (
+            <div
+              className={cn(
+                viewClass(
+                  isMobile,
+                  "flex flex-row items-center gap-[12px] pb-[8px]",
+                  "lg:flex-col lg:items-start lg:gap-[24px] lg:pb-0",
+                ),
+                isCentered && "items-center justify-center lg:items-center",
+              )}
+            >
+              {logo && (
+                <div
+                  className={viewClass(
+                    isMobile,
+                    "size-[44px] shrink-0",
+                    "lg:size-[72px]",
+                  )}
+                >
+                  <ImageSlotFrame
+                    image={logo}
+                    slotDefinition={logoSlot}
+                    fallbackRatio="1:1"
+                    compact
+                    className={viewClass(
+                      isMobile,
+                      "size-full rounded-[12px]",
+                      "lg:rounded-[18px]",
+                    )}
+                    innerClassName="size-full"
+                    placeholderIconClassName={viewClass(
+                      isMobile,
+                      "size-[16px]",
+                      "lg:size-[22px]",
+                    )}
+                  />
+                </div>
+              )}
+              <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
+            </div>
+          )}
 
-          <h1 style={HEADING_FONT_STYLE} className="type-display-l">
+          <h1
+            style={HEADING_FONT_STYLE}
+            className={viewClass(
+              isMobile,
+              "font-semibold text-[2.5rem] leading-[1.06] tracking-[-0.02em]",
+              "lg:text-[4rem] lg:leading-[1.04]",
+            )}
+          >
             {title}
           </h1>
 
           {subtitle && (
-            <p style={MUTED_TEXT_STYLE} className="type-body-l max-w-2xl">
+            <p
+              style={MUTED_TEXT_STYLE}
+              className={cn(
+                viewClass(
+                  isMobile,
+                  "font-normal text-[1.125rem] leading-[1.55]",
+                  "lg:text-[1.3125rem] lg:leading-[1.55]",
+                ),
+                isCentered && "max-w-[740px]",
+              )}
+            >
               {subtitle}
             </p>
           )}
@@ -212,16 +291,27 @@ export function HeroSection({
           {tags && tags.length > 0 && (
             <ul
               aria-label="Project highlights"
-              className={cn("flex flex-wrap items-center gap-2 pt-1", isCentered && "justify-center")}
+              className={cn(
+                viewClass(
+                  isMobile,
+                  "flex flex-wrap items-start gap-[8px] pt-[4px]",
+                  "lg:pt-[8px]",
+                ),
+                isCentered && "justify-center",
+              )}
             >
               {tags.map((tag, idx) => (
                 <li
                   key={`${id}-tag-${idx}`}
                   style={{
-                    backgroundColor: tokenColorVar("surface", "--surface"),
-                    color: tokenColorVar("textMuted", "--muted-foreground"),
+                    borderColor: "var(--tpl-color-line, var(--border))",
+                    color: "var(--tpl-color-text, var(--foreground))",
                   }}
-                  className="border-border/30 type-caption rounded-full border px-3 py-1 font-medium"
+                  className={viewClass(
+                    isMobile,
+                    "rounded-full border border-solid px-[12px] py-[6px] font-medium text-[0.8125rem] leading-[1.2]",
+                    "lg:px-[16px] lg:py-[8px] lg:text-[0.875rem]",
+                  )}
                 >
                   {tag.label}
                 </li>
@@ -233,24 +323,65 @@ export function HeroSection({
         {mockup && (
           <div
             className={cn(
-              "w-full",
               isCentered
-                ? "max-w-5xl"
-                : effectiveLayout === "split-left"
-                  ? "lg:order-1 lg:col-span-5"
-                  : "lg:col-span-5",
+                ? "w-full"
+                : isWebVariant
+                  ? viewClass(isMobile, "w-full", "lg:w-[52%] lg:shrink-0")
+                  : viewClass(isMobile, "w-full shrink-0", "lg:w-auto lg:shrink-0"),
+              !isCentered && effectiveLayout === "split-left" && !isMobile && "lg:order-1",
             )}
           >
-            <ImageSlotFrame
-              image={mockup}
-              slotDefinition={mockupSlot}
-              fallbackRatio={isWebVariant ? "16:10" : "9:19.5"}
-              projectType={projectType}
-              preferDeviceChrome
-              presentation={mockupStyle}
-              glow={glow}
-              accentToken={accent}
-            />
+            {isWebVariant ? (
+              <ImageSlotFrame
+                image={mockup}
+                slotDefinition={mockupSlot}
+                fallbackRatio="16:10"
+                projectType={projectType}
+                preferDeviceChrome
+                presentation={mockupStyle}
+                glow={glow}
+                accentToken={accent}
+              />
+            ) : (
+              <div
+                data-slot="hero-mockup-stage"
+                style={{
+                  backgroundColor: "var(--tpl-color-surface, var(--surface))",
+                  borderColor: "var(--tpl-color-line, var(--border))",
+                }}
+                className={viewClass(
+                  isMobile,
+                  "flex w-full items-center justify-center rounded-[28px] border border-solid px-[24px] py-[32px]",
+                  "lg:w-auto lg:rounded-[40px] lg:p-[56px]",
+                )}
+              >
+                <ImageSlotFrame
+                  image={mockup}
+                  slotDefinition={mockupSlot}
+                  fallbackRatio="9:19.5"
+                  projectType={projectType}
+                  preferDeviceChrome
+                  presentation={mockupStyle}
+                  glow={glow}
+                  accentToken={accent}
+                  className={viewClass(
+                    isMobile,
+                    "w-[236px] max-w-none rounded-[35px] p-[8px]",
+                    "lg:w-[340px] lg:rounded-[46px] lg:p-[10px]",
+                  )}
+                  innerClassName={viewClass(
+                    isMobile,
+                    "rounded-[27px]",
+                    "lg:rounded-[36px]",
+                  )}
+                  placeholderIconClassName={viewClass(
+                    isMobile,
+                    "size-[36px]",
+                    "lg:size-[48px]",
+                  )}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -282,12 +413,13 @@ export function OverviewSection({
   meta = [],
   banner,
   background,
-  accent = "primary",
+  accent = "accent",
   puck,
 }: OverviewSectionProps) {
   if (hidden) return null;
 
-  const { projectType, slots } = readRenderMetadata(puck);
+  const { projectType, slots, viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
   const bannerSlot = getSlotDefinition(slots, banner, "overview.banner");
 
   return (
@@ -295,14 +427,43 @@ export function OverviewSection({
       id={id}
       data-section-type="Overview"
       style={buildSectionSurfaceStyle(background)}
-      className="px-6 py-14 sm:px-10 lg:px-16"
+      className={viewClass(
+        isMobile,
+        "px-[24px] py-[64px]",
+        "lg:p-[120px]",
+      )}
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <div className="grid gap-8 lg:grid-cols-12">
-          <div className="flex flex-col gap-4 lg:col-span-7">
-            <SectionEyebrow text={eyebrow} accent={accent} />
+      <div
+        className={viewClass(
+          isMobile,
+          "mx-auto flex max-w-[1200px] flex-col gap-[32px]",
+          "lg:gap-[72px]",
+        )}
+      >
+        <div
+          className={viewClass(
+            isMobile,
+            "flex w-full flex-col items-start gap-[32px]",
+            "lg:flex-row lg:items-start lg:gap-[80px]",
+          )}
+        >
+          <div
+            className={viewClass(
+              isMobile,
+              "flex w-full flex-col items-start gap-[12px]",
+              "lg:w-[420px] lg:shrink-0 lg:gap-[16px]",
+            )}
+          >
+            <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
             <div className="flex flex-col gap-1.5">
-              <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+              <h2
+                style={HEADING_FONT_STYLE}
+                className={viewClass(
+                  isMobile,
+                  "font-semibold text-[1.75rem] leading-[1.12]",
+                  "lg:text-[2.5rem] lg:leading-[1.1]",
+                )}
+              >
                 {heading}
               </h2>
               {highlight && (
@@ -311,36 +472,82 @@ export function OverviewSection({
                     ...HEADING_FONT_STYLE,
                     color: tokenColorVar(accent, "--primary"),
                   }}
-                  className="type-heading-l"
+                  className={viewClass(
+                    isMobile,
+                    "font-semibold text-[1.75rem] leading-[1.12]",
+                    "lg:text-[2.5rem] lg:leading-[1.1]",
+                  )}
                 >
                   {highlight}
                 </p>
               )}
             </div>
+          </div>
+
+          <div
+            className={viewClass(
+              isMobile,
+              "flex w-full flex-col items-start gap-[28px]",
+              "lg:min-w-0 lg:flex-1 lg:gap-[40px]",
+            )}
+          >
             <RichTextView
               value={summary}
               idPrefix={id}
-              style={MUTED_TEXT_STYLE}
-              className="type-body-l"
+              style={{ color: "var(--tpl-color-text, var(--foreground))" }}
+              className={viewClass(
+                isMobile,
+                "font-normal text-[1.125rem] leading-[1.6]",
+                "lg:text-[1.25rem] lg:leading-[1.6]",
+              )}
             />
-          </div>
 
-          {meta.length > 0 && (
-            <dl className="grid grid-cols-2 gap-4 self-start lg:col-span-5">
-              {meta.map((item, idx) => (
-                <div
-                  key={`${id}-meta-${idx}`}
-                  style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-                  className="border-border/25 flex flex-col gap-1 rounded-lg border p-4"
-                >
-                  <dt style={MUTED_TEXT_STYLE} className="type-overline">
-                    {item.label}
-                  </dt>
-                  <dd className="type-body-m-strong">{item.value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
+            {meta.length > 0 && (
+              <dl
+                className={viewClass(
+                  isMobile,
+                  "grid w-full grid-cols-2 gap-x-[20px] gap-y-[24px]",
+                  "lg:grid-cols-4 lg:gap-[24px]",
+                )}
+              >
+                {meta.map((item, idx) => (
+                  <div
+                    key={`${id}-meta-${idx}`}
+                    className={viewClass(
+                      isMobile,
+                      "flex min-w-0 flex-col items-start gap-[8px]",
+                      "lg:gap-[10px]",
+                    )}
+                  >
+                    <div
+                      aria-hidden="true"
+                      style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
+                      className="h-px w-full shrink-0"
+                    />
+                    <dt
+                      style={MUTED_TEXT_STYLE}
+                      className={viewClass(
+                        isMobile,
+                        "font-medium uppercase text-[0.75rem] leading-[1.3] tracking-[0.96px]",
+                        "lg:text-[0.8125rem] lg:tracking-[1.04px]",
+                      )}
+                    >
+                      {item.label}
+                    </dt>
+                    <dd
+                      className={viewClass(
+                        isMobile,
+                        "font-medium text-[1rem] leading-[1.35]",
+                        "lg:text-[1.0625rem] lg:leading-[1.4]",
+                      )}
+                    >
+                      {item.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
         </div>
 
         {banner && (
@@ -349,6 +556,16 @@ export function OverviewSection({
             slotDefinition={bannerSlot}
             fallbackRatio="16:9"
             projectType={projectType}
+            className={viewClass(
+              isMobile,
+              "rounded-[16px]",
+              "lg:rounded-[24px]",
+            )}
+            placeholderIconClassName={viewClass(
+              isMobile,
+              "size-[28px]",
+              "lg:size-[56px]",
+            )}
           />
         )}
       </div>
@@ -365,6 +582,7 @@ export interface ProblemSectionProps {
   columns?: 2 | 3 | 4;
   painPoints: Array<{ title: string; body: string }>;
   background: string;
+  puck?: PuckContext;
 }
 
 export function ProblemSection({
@@ -376,66 +594,133 @@ export function ProblemSection({
   columns = 3,
   painPoints = [],
   background,
+  puck,
 }: ProblemSectionProps) {
   if (hidden) return null;
 
-  const gridClass =
+  const { viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
+
+  const desktopGridClass =
     columns === 2
-      ? "md:grid-cols-2"
+      ? "lg:grid-cols-2"
       : columns === 4
-        ? "sm:grid-cols-2 lg:grid-cols-4"
-        : "md:grid-cols-3";
+        ? "lg:grid-cols-4"
+        : "lg:grid-cols-3";
 
   return (
     <section
       id={id}
       data-section-type="Problem"
       style={buildSectionSurfaceStyle(background)}
-      className="px-6 py-14 sm:px-10 lg:px-16"
+      className={viewClass(
+        isMobile,
+        "px-[24px] py-[64px]",
+        "lg:p-[120px]",
+      )}
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <div className="flex max-w-3xl flex-col gap-3">
+      <div
+        className={viewClass(
+          isMobile,
+          "mx-auto flex max-w-[1200px] flex-col gap-[32px]",
+          "lg:gap-[56px]",
+        )}
+      >
+        <div
+          className={viewClass(
+            isMobile,
+            "flex w-full flex-col items-start gap-[12px]",
+            "lg:gap-[16px]",
+          )}
+        >
           {eyebrow ? (
             <>
-              <SectionEyebrow text={eyebrow} />
-              <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+              <SectionEyebrow text={eyebrow} accent="primary" isMobile={isMobile} />
+              <h2
+                style={HEADING_FONT_STYLE}
+                className={viewClass(
+                  isMobile,
+                  "max-w-[880px] font-semibold text-[1.875rem] leading-[1.12]",
+                  "lg:text-[3rem] lg:leading-[1.1]",
+                )}
+              >
                 {heading}
               </h2>
-              <p style={MUTED_TEXT_STYLE} className="type-body-l">
+              <p
+                style={MUTED_TEXT_STYLE}
+                className={viewClass(
+                  isMobile,
+                  "max-w-[820px] font-normal text-[1.125rem] leading-[1.55]",
+                  "lg:text-[1.375rem] lg:leading-[1.55]",
+                )}
+              >
                 {statement}
               </p>
             </>
           ) : (
             <>
-              <span style={MUTED_TEXT_STYLE} className="type-overline">
-                {heading}
-              </span>
-              <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+              <SectionEyebrow text={heading} accent="primary" isMobile={isMobile} />
+              <h2
+                style={HEADING_FONT_STYLE}
+                className={viewClass(
+                  isMobile,
+                  "max-w-[880px] font-semibold text-[1.875rem] leading-[1.12]",
+                  "lg:text-[3rem] lg:leading-[1.1]",
+                )}
+              >
                 {statement}
               </h2>
             </>
           )}
         </div>
 
-        <div className={cn("grid gap-5", gridClass)}>
+        <div
+          className={viewClass(
+            isMobile,
+            "grid w-full grid-cols-1 gap-[12px]",
+            cn("lg:gap-[24px]", desktopGridClass),
+          )}
+        >
           {painPoints.map((point, idx) => (
             <article
               key={`${id}-pain-${idx}`}
-              style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-              className="border-border/25 flex flex-col gap-2.5 rounded-xl border p-6"
+              style={{
+                backgroundColor: tokenColorVar("surface", "--surface"),
+                borderColor: "var(--tpl-color-line, var(--border))",
+              }}
+              className={viewClass(
+                isMobile,
+                "flex flex-col items-start gap-[12px] rounded-[16px] border border-solid p-[24px]",
+                "lg:gap-[16px] lg:rounded-[20px] lg:p-[36px]",
+              )}
             >
-              <span
-                style={{
-                  color: `color-mix(in oklab, ${tokenColorVar("primary", "--primary")} 68%, ${tokenColorVar("text", "--foreground")})`,
-                }}
-                className="type-overline font-mono"
+              <div
+                aria-hidden="true"
+                style={{ backgroundColor: tokenColorVar("primary", "--primary") }}
+                className={viewClass(
+                  isMobile,
+                  "h-[4px] w-[32px] shrink-0 rounded-[2px]",
+                  "lg:w-[40px]",
+                )}
+              />
+              <h3
+                style={HEADING_FONT_STYLE}
+                className={viewClass(
+                  isMobile,
+                  "font-semibold text-[1.25rem] leading-[1.2]",
+                  "lg:text-[1.5rem] lg:leading-[1.2]",
+                )}
               >
-                {String(idx + 1).padStart(2, "0")}
-              </span>
-              <h3 style={HEADING_FONT_STYLE} className="type-heading-s">
                 {point.title}
               </h3>
-              <p style={MUTED_TEXT_STYLE} className="type-body-s">
+              <p
+                style={MUTED_TEXT_STYLE}
+                className={viewClass(
+                  isMobile,
+                  "font-normal text-[1rem] leading-[1.55]",
+                  "lg:text-[1.0625rem] lg:leading-[1.55]",
+                )}
+              >
                 {point.body}
               </p>
             </article>
@@ -471,14 +756,16 @@ export function ProcessSection({
   heading,
   subtitle,
   layout = "cards",
-  accent = "primary",
+  accent = "accent",
   steps = [],
   background,
   puck,
 }: ProcessSectionProps) {
   if (hidden) return null;
 
-  const { projectType, slots } = readRenderMetadata(puck);
+  const { projectType, slots, viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
+  const hasStepImages = steps.some((step) => Boolean(step.image));
 
   return (
     <section
@@ -486,68 +773,123 @@ export function ProcessSection({
       data-section-type="Process"
       data-process-layout={layout}
       style={buildSectionSurfaceStyle(background)}
-      className="px-6 py-14 sm:px-10 lg:px-16"
+      className={viewClass(
+        isMobile,
+        "px-[24px] py-[64px]",
+        "lg:p-[120px]",
+      )}
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <div className="flex max-w-3xl flex-col gap-3">
-          <SectionEyebrow text={eyebrow} accent={accent} />
-          <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+      <div
+        className={viewClass(
+          isMobile,
+          "mx-auto flex max-w-[1200px] flex-col gap-[32px]",
+          "lg:gap-[56px]",
+        )}
+      >
+        <div
+          className={viewClass(
+            isMobile,
+            "flex w-full flex-col items-start gap-[12px]",
+            "lg:gap-[16px]",
+          )}
+        >
+          <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
+          <h2
+            style={HEADING_FONT_STYLE}
+            className={viewClass(
+              isMobile,
+              "max-w-[880px] font-semibold text-[1.875rem] leading-[1.12]",
+              "lg:text-[3rem] lg:leading-[1.1]",
+            )}
+          >
             {heading}
           </h2>
           {subtitle && (
-            <p style={MUTED_TEXT_STYLE} className="type-body-l">
+            <p
+              style={MUTED_TEXT_STYLE}
+              className={viewClass(
+                isMobile,
+                "max-w-[760px] font-normal text-[1.0625rem] leading-[1.55]",
+                "lg:text-[1.25rem] lg:leading-[1.55]",
+              )}
+            >
               {subtitle}
             </p>
           )}
         </div>
 
-        {layout === "timeline" ? (
-          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((step, idx) => {
-              const isEndpoint = idx === 0 || idx === steps.length - 1;
-              return (
-                <li
-                  key={`${id}-step-${idx}`}
-                  style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-                  className="border-border/25 relative flex flex-col gap-3 rounded-xl border p-5"
+        {layout === "timeline" || !hasStepImages ? (
+          <ol
+            className={viewClass(
+              isMobile,
+              "flex w-full flex-col gap-[28px]",
+              "lg:gap-[40px]",
+            )}
+          >
+            {steps.map((step, idx) => (
+              <li
+                key={`${id}-step-${idx}`}
+                className={viewClass(
+                  isMobile,
+                  "flex w-full flex-col items-start gap-[20px]",
+                  "lg:gap-[32px]",
+                )}
+              >
+                <div
+                  aria-hidden="true"
+                  style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
+                  className="h-px w-full shrink-0"
+                />
+                <div
+                  className={viewClass(
+                    isMobile,
+                    "flex w-full flex-col items-start gap-[8px]",
+                    "lg:flex-row lg:items-start lg:gap-[48px]",
+                  )}
                 >
-                  <div className="flex items-center gap-3">
-                    <span
-                      style={
-                        isEndpoint
-                          ? {
-                              backgroundColor: tokenColorVar(accent, "--primary"),
-                              color: "var(--tpl-color-text, var(--primary-foreground))",
-                            }
-                          : {
-                              backgroundColor: tokenColorVar("background", "--background"),
-                              color: tokenColorVar("text", "--foreground"),
-                            }
-                      }
-                      className="border-border/40 type-caption inline-flex size-8 shrink-0 items-center justify-center rounded-full border font-mono font-semibold"
-                    >
-                      {step.number}
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className="bg-border/30 h-px flex-1"
-                    />
-                  </div>
-                  <h3 style={HEADING_FONT_STYLE} className="type-heading-s">
+                  <span
+                    style={{
+                      ...HEADING_FONT_STYLE,
+                      color: tokenColorVar(accent, "--primary"),
+                    }}
+                    className={viewClass(
+                      isMobile,
+                      "font-semibold text-[2rem] leading-none",
+                      "lg:w-[140px] lg:shrink-0 lg:text-[3rem]",
+                    )}
+                  >
+                    {step.number}
+                  </span>
+                  <h3
+                    style={HEADING_FONT_STYLE}
+                    className={viewClass(
+                      isMobile,
+                      "font-semibold text-[1.25rem] leading-[1.2]",
+                      "lg:w-[320px] lg:shrink-0 lg:text-[1.75rem]",
+                    )}
+                  >
                     {step.title}
                   </h3>
-                  <p style={MUTED_TEXT_STYLE} className="type-body-s">
+                  <p
+                    style={MUTED_TEXT_STYLE}
+                    className={viewClass(
+                      isMobile,
+                      "font-normal text-[1rem] leading-[1.55]",
+                      "lg:flex-1 lg:text-[1.125rem]",
+                    )}
+                  >
                     {step.body}
                   </p>
-                </li>
-              );
-            })}
+                </div>
+              </li>
+            ))}
           </ol>
         ) : (
           <div
-            className={cn(
-              "grid gap-6",
-              layout === "grid-3" ? "sm:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-2",
+            className={viewClass(
+              isMobile,
+              "grid grid-cols-1 gap-6",
+              layout === "grid-3" ? "lg:grid-cols-3" : "lg:grid-cols-2",
             )}
           >
             {steps.map((step, idx) => {
@@ -560,22 +902,24 @@ export function ProcessSection({
                       background === "surface"
                         ? tokenColorVar("background", "--background")
                         : tokenColorVar("surface", "--surface"),
+                    borderColor: "var(--tpl-color-line, var(--border))",
                   }}
-                  className="border-border/25 flex flex-col justify-between gap-5 rounded-xl border p-6"
+                  className="flex flex-col justify-between gap-5 rounded-[20px] border border-solid p-6"
                 >
                   <div className="flex flex-col gap-2">
                     <span
                       style={{
-                        color: `color-mix(in oklab, ${tokenColorVar(accent, "--primary")} 68%, ${tokenColorVar("text", "--foreground")})`,
+                        ...HEADING_FONT_STYLE,
+                        color: tokenColorVar(accent, "--primary"),
                       }}
-                      className="type-overline font-mono"
+                      className="font-semibold text-[1.5rem] leading-none"
                     >
                       {step.number}
                     </span>
-                    <h3 style={HEADING_FONT_STYLE} className="type-heading-s">
+                    <h3 style={HEADING_FONT_STYLE} className="font-semibold text-[1.375rem] leading-[1.2]">
                       {step.title}
                     </h3>
-                    <p style={MUTED_TEXT_STYLE} className="type-body-m">
+                    <p style={MUTED_TEXT_STYLE} className="text-[1rem] leading-[1.55]">
                       {step.body}
                     </p>
                   </div>
@@ -630,15 +974,23 @@ export function ScreensGallerySection({
 }: ScreensGallerySectionProps) {
   if (hidden) return null;
 
-  const { projectType = "mobile", slots } = readRenderMetadata(puck);
-  const gridClass =
+  const { projectType = "mobile", slots, viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
+  const isMobileGallery =
+    projectType === "mobile" &&
+    deviceFrame !== "browser" &&
+    deviceFrame !== "macbook" &&
+    deviceFrame !== "tablet" &&
+    deviceFrame !== "none";
+
+  const desktopGridClass =
     columns === 2
-      ? "sm:grid-cols-2"
+      ? "lg:grid-cols-2"
       : columns === 4
-        ? "sm:grid-cols-2 lg:grid-cols-4"
+        ? "lg:grid-cols-4"
         : columns === 5
-          ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
-          : "sm:grid-cols-2 lg:grid-cols-3";
+          ? "lg:grid-cols-5"
+          : "lg:grid-cols-3";
 
   const isStaggered = showcaseLayout === "staggered";
 
@@ -649,30 +1001,88 @@ export function ScreensGallerySection({
       data-variant={projectType}
       data-showcase-layout={showcaseLayout}
       style={buildSectionSurfaceStyle(background)}
-      className="px-6 py-14 sm:px-10 lg:px-16"
+      className={viewClass(
+        isMobile,
+        "px-[24px] py-[64px]",
+        "lg:p-[120px]",
+      )}
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <div className="flex max-w-3xl flex-col gap-3">
-          <SectionEyebrow text={eyebrow} />
-          <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+      <div
+        className={viewClass(
+          isMobile,
+          "mx-auto flex max-w-[1200px] flex-col gap-[32px]",
+          "lg:gap-[56px]",
+        )}
+      >
+        <div
+          className={viewClass(
+            isMobile,
+            "flex w-full flex-col items-start gap-[12px]",
+            "lg:gap-[16px]",
+          )}
+        >
+          <SectionEyebrow text={eyebrow} accent="accent" isMobile={isMobile} />
+          <h2
+            style={HEADING_FONT_STYLE}
+            className={viewClass(
+              isMobile,
+              "max-w-[880px] font-semibold text-[1.875rem] leading-[1.12]",
+              "lg:text-[3rem] lg:leading-[1.1]",
+            )}
+          >
             {heading}
           </h2>
           {subtitle && (
-            <p style={MUTED_TEXT_STYLE} className="type-body-l">
+            <p
+              style={MUTED_TEXT_STYLE}
+              className={viewClass(
+                isMobile,
+                "max-w-[760px] font-normal text-[1.0625rem] leading-[1.55]",
+                "lg:text-[1.25rem] lg:leading-[1.55]",
+              )}
+            >
               {subtitle}
             </p>
           )}
         </div>
 
-        <div className={cn("grid gap-6 sm:gap-8", gridClass, isStaggered && "lg:pb-8")}>
+        <div
+          className={cn(
+            isMobileGallery
+              ? viewClass(
+                  isMobile,
+                  "flex w-full flex-row items-start gap-[16px] overflow-x-auto",
+                  cn(
+                    "lg:grid lg:gap-x-[32px] lg:gap-y-[56px] lg:overflow-visible",
+                    desktopGridClass,
+                  ),
+                )
+              : viewClass(
+                  isMobile,
+                  "grid w-full grid-cols-1 gap-[24px]",
+                  cn("lg:gap-x-[32px] lg:gap-y-[48px]", desktopGridClass),
+                ),
+            isStaggered && !isMobile && "lg:pb-8",
+          )}
+        >
           {screens.map((item, idx) => {
             const screenSlot = getSlotDefinition(slots, item.image, "gallery.screen");
             return (
               <figure
                 key={`${id}-screen-${idx}`}
                 className={cn(
-                  "flex flex-col items-center gap-3",
-                  isStaggered && idx % 2 === 1 && "lg:translate-y-8",
+                  isMobileGallery
+                    ? viewClass(
+                        isMobile,
+                        "flex w-[200px] shrink-0 flex-col items-center gap-[12px]",
+                        "lg:w-full lg:shrink lg:gap-[16px]",
+                      )
+                    : viewClass(
+                        isMobile,
+                        "flex w-full flex-col items-center gap-[12px]",
+                        "lg:gap-[16px]",
+                      ),
+                  isStaggered && idx % 2 === 1 && !isMobile && "lg:translate-y-8",
                 )}
               >
                 <ImageSlotFrame
@@ -682,9 +1092,43 @@ export function ScreensGallerySection({
                   fallbackRatio={projectType === "web" ? "16:10" : "9:19.5"}
                   projectType={projectType}
                   preferDeviceChrome
+                  className={
+                    isMobileGallery
+                      ? viewClass(
+                          isMobile,
+                          "w-[200px] max-w-none rounded-[30px] p-[8px]",
+                          "lg:w-full lg:max-w-[276px] lg:rounded-[46px] lg:p-[10px]",
+                        )
+                      : undefined
+                  }
+                  innerClassName={
+                    isMobileGallery
+                      ? viewClass(
+                          isMobile,
+                          "rounded-[22px]",
+                          "lg:rounded-[36px]",
+                        )
+                      : undefined
+                  }
+                  placeholderIconClassName={
+                    isMobileGallery
+                      ? viewClass(
+                          isMobile,
+                          "size-[28px]",
+                          "lg:size-[38px]",
+                        )
+                      : undefined
+                  }
                 />
                 {item.caption && (
-                  <figcaption style={MUTED_TEXT_STYLE} className="type-caption text-center">
+                  <figcaption
+                    style={MUTED_TEXT_STYLE}
+                    className={viewClass(
+                      isMobile,
+                      "text-center font-medium text-[0.875rem] leading-[1.4]",
+                      "lg:text-[0.9375rem]",
+                    )}
+                  >
                     {item.caption}
                   </figcaption>
                 )}
@@ -709,6 +1153,7 @@ export interface ResultsSectionProps {
   takeaways?: Array<{ title: string; body: string }>;
   closing?: string;
   background: string;
+  puck?: PuckContext;
 }
 
 export function ResultsSection({
@@ -723,55 +1168,135 @@ export function ResultsSection({
   takeaways,
   closing,
   background,
+  puck,
 }: ResultsSectionProps) {
   if (hidden) return null;
 
-  const gridClass =
+  const { viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
+  const isPrimaryBg = background === "primary";
+
+  const desktopGridClass =
     columns === 2
-      ? "sm:grid-cols-2"
+      ? "lg:grid-cols-2"
       : columns === 4
-        ? "sm:grid-cols-2 lg:grid-cols-4"
-        : "sm:grid-cols-2 lg:grid-cols-3";
+        ? "lg:grid-cols-4"
+        : "lg:grid-cols-3";
+
+  const primaryTextColor = isPrimaryBg
+    ? "var(--tpl-color-onPrimary, var(--primary-foreground))"
+    : "var(--tpl-color-text, var(--foreground))";
+  const secondaryTextColor = isPrimaryBg
+    ? "rgba(255, 255, 255, 0.82)"
+    : "var(--tpl-color-textMuted, var(--muted-foreground))";
 
   return (
     <section
       id={id}
       data-section-type="Results"
       style={buildSectionSurfaceStyle(background)}
-      className="px-6 py-14 sm:px-10 lg:px-16"
+      className={viewClass(
+        isMobile,
+        "px-[24px] py-[64px]",
+        "lg:p-[120px]",
+      )}
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <div className="flex max-w-3xl flex-col gap-3">
-          <SectionEyebrow text={eyebrow} accent={accent || "primary"} />
-          <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+      <div
+        className={viewClass(
+          isMobile,
+          "mx-auto flex max-w-[1200px] flex-col gap-[32px]",
+          "lg:gap-[56px]",
+        )}
+      >
+        <div
+          className={viewClass(
+            isMobile,
+            "flex w-full flex-col items-start gap-[12px]",
+            "lg:gap-[16px]",
+          )}
+        >
+          <SectionEyebrow
+            text={eyebrow}
+            accent={accent || "primary"}
+            colorOverride={isPrimaryBg ? primaryTextColor : undefined}
+            isMobile={isMobile}
+          />
+          <h2
+            style={{ ...HEADING_FONT_STYLE, color: primaryTextColor }}
+            className={viewClass(
+              isMobile,
+              "max-w-[880px] font-semibold text-[1.875rem] leading-[1.12]",
+              "lg:text-[3rem] lg:leading-[1.1]",
+            )}
+          >
             {heading}
           </h2>
           {subtitle && (
-            <p style={MUTED_TEXT_STYLE} className="type-body-l">
+            <p
+              style={{ color: secondaryTextColor }}
+              className={viewClass(
+                isMobile,
+                "max-w-[760px] font-normal text-[1.0625rem] leading-[1.55]",
+                "lg:text-[1.25rem] lg:leading-[1.55]",
+              )}
+            >
               {subtitle}
             </p>
           )}
         </div>
 
-        <div className={cn("grid gap-6", gridClass)}>
+        <div
+          className={viewClass(
+            isMobile,
+            "grid w-full grid-cols-1 gap-[12px]",
+            cn("lg:gap-[24px]", desktopGridClass),
+          )}
+        >
           {metrics.map((metric, idx) => (
             <div
               key={`${id}-metric-${idx}`}
-              style={{
-                backgroundColor: tokenColorVar("surface", "--surface"),
-              }}
-              className="border-border/25 flex flex-col gap-2 rounded-xl border p-6"
+              style={
+                isPrimaryBg
+                  ? { backgroundColor: "rgba(255, 255, 255, 0.12)" }
+                  : {
+                      backgroundColor: tokenColorVar("surface", "--surface"),
+                      borderColor: "var(--tpl-color-line, var(--border))",
+                    }
+              }
+              className={cn(
+                viewClass(
+                  isMobile,
+                  "flex flex-col items-start gap-[8px] rounded-[16px] p-[20px]",
+                  "lg:gap-[12px] lg:rounded-[20px] lg:p-[32px]",
+                ),
+                !isPrimaryBg && "border border-solid",
+              )}
             >
               <span
                 style={{
                   ...HEADING_FONT_STYLE,
-                  ...(accent ? { color: tokenColorVar(accent, "--primary") } : {}),
+                  color: isPrimaryBg
+                    ? primaryTextColor
+                    : accent
+                      ? tokenColorVar(accent, "--primary")
+                      : primaryTextColor,
                 }}
-                className="type-display-l"
+                className={viewClass(
+                  isMobile,
+                  "font-semibold text-[2.5rem] leading-none",
+                  "lg:text-[4rem]",
+                )}
               >
                 {metric.value}
               </span>
-              <span style={MUTED_TEXT_STYLE} className="type-body-m">
+              <span
+                style={{ color: secondaryTextColor }}
+                className={viewClass(
+                  isMobile,
+                  "font-medium text-[0.875rem] leading-[1.35]",
+                  "lg:text-[1.0625rem] lg:leading-[1.4]",
+                )}
+              >
                 {metric.label}
               </span>
             </div>
@@ -780,18 +1305,39 @@ export function ResultsSection({
 
         {takeaways && takeaways.length > 0 && (
           <div
-            style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-            className="border-border/25 grid gap-6 rounded-2xl border p-6 sm:p-8 md:grid-cols-3"
+            className={viewClass(
+              isMobile,
+              "grid w-full grid-cols-1 gap-[24px]",
+              "lg:grid-cols-2 lg:gap-[24px]",
+            )}
           >
             {takeaways.map((item, idx) => (
-              <div key={`${id}-takeaway-${idx}`} className="flex flex-col gap-2">
+              <div
+                key={`${id}-takeaway-${idx}`}
+                className={viewClass(
+                  isMobile,
+                  "flex flex-col items-start gap-[6px]",
+                  "lg:gap-[8px]",
+                )}
+              >
                 <span
-                  style={{ color: tokenColorVar(accent || "primary", "--primary") }}
-                  className="type-overline font-semibold"
+                  style={{ ...HEADING_FONT_STYLE, color: primaryTextColor }}
+                  className={viewClass(
+                    isMobile,
+                    "font-semibold text-[1.125rem] leading-[1.2]",
+                    "lg:text-[1.375rem]",
+                  )}
                 >
                   {item.title}
                 </span>
-                <p style={MUTED_TEXT_STYLE} className="type-body-s">
+                <p
+                  style={{ color: secondaryTextColor }}
+                  className={viewClass(
+                    isMobile,
+                    "font-normal text-[1rem] leading-[1.55]",
+                    "lg:text-[1.0625rem]",
+                  )}
+                >
                   {item.body}
                 </p>
               </div>
@@ -799,7 +1345,18 @@ export function ResultsSection({
           </div>
         )}
 
-        {closing && <p className="type-body-l max-w-3xl opacity-90">{closing}</p>}
+        {closing && (
+          <p
+            style={{ color: primaryTextColor }}
+            className={viewClass(
+              isMobile,
+              "max-w-[820px] font-normal text-[1.125rem] leading-[1.55]",
+              "lg:text-[1.25rem]",
+            )}
+          >
+            {closing}
+          </p>
+        )}
       </div>
     </section>
   );
@@ -828,47 +1385,102 @@ export function QuoteSection({
 }: QuoteSectionProps) {
   if (hidden) return null;
 
-  const { slots } = readRenderMetadata(puck);
+  const { slots, viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
   const avatarSlot = getSlotDefinition(slots, avatar, "quote.avatar");
+  const normalizedQuote = quote.replace(/^[“"]+|[”"]+$/g, "").trim();
 
   return (
     <section
       id={id}
       data-section-type="Quote"
       style={buildSectionSurfaceStyle(background)}
-      className="px-6 py-14 sm:px-10 lg:px-16"
+      className={viewClass(
+        isMobile,
+        "px-[24px] py-[64px]",
+        "lg:p-[120px]",
+      )}
     >
-      <div className="mx-auto max-w-4xl">
-        <blockquote
-          style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-          className="border-border/25 flex flex-col gap-6 rounded-2xl border p-8 sm:p-10"
+      <blockquote
+        className={viewClass(
+          isMobile,
+          "mx-auto flex max-w-[1200px] flex-col items-center gap-[24px] text-center",
+          "lg:gap-[36px]",
+        )}
+      >
+        <QuoteMarkGlyph
+          style={{ color: tokenColorVar("primary", "--primary") }}
+          className={viewClass(
+            isMobile,
+            "h-[24px] w-[32px] shrink-0",
+            "lg:h-[36px] lg:w-[48px]",
+          )}
+        />
+        <p
+          style={HEADING_FONT_STYLE}
+          className={viewClass(
+            isMobile,
+            "max-w-[980px] font-semibold text-[1.5rem] leading-[1.3]",
+            "lg:text-[2.5rem] lg:leading-[1.25]",
+          )}
         >
-          <p style={HEADING_FONT_STYLE} className="type-heading-l">
-            “{quote}”
-          </p>
-          <footer className="flex items-center gap-4">
-            {avatar && (
-              <div className="w-12 shrink-0">
-                <ImageSlotFrame
-                  image={avatar}
-                  slotDefinition={avatarSlot}
-                  fallbackRatio="1:1"
-                  compact
-                  className="rounded-full"
-                />
-              </div>
-            )}
-            <div className="flex flex-col">
-              <cite className="type-body-m-strong not-italic">{author}</cite>
-              {role && (
-                <span style={MUTED_TEXT_STYLE} className="type-caption">
-                  {role}
-                </span>
+          “{normalizedQuote}”
+        </p>
+        <footer
+          className={viewClass(
+            isMobile,
+            "flex items-center justify-center gap-[12px]",
+            "lg:gap-[16px]",
+          )}
+        >
+          {avatar && (
+            <div
+              className={viewClass(
+                isMobile,
+                "size-[48px] shrink-0",
+                "lg:size-[64px]",
               )}
+            >
+              <ImageSlotFrame
+                image={avatar}
+                slotDefinition={avatarSlot}
+                fallbackRatio="1:1"
+                compact
+                className="size-full rounded-full"
+                innerClassName="size-full rounded-full"
+                placeholderIconClassName={viewClass(
+                  isMobile,
+                  "size-[16px]",
+                  "lg:size-[22px]",
+                )}
+              />
             </div>
-          </footer>
-        </blockquote>
-      </div>
+          )}
+          <div className="flex flex-col items-start gap-[2px] text-left">
+            <cite
+              className={viewClass(
+                isMobile,
+                "font-bold not-italic text-[1rem] leading-[1.3]",
+                "lg:text-[1.125rem]",
+              )}
+            >
+              {author}
+            </cite>
+            {role && (
+              <span
+                style={MUTED_TEXT_STYLE}
+                className={viewClass(
+                  isMobile,
+                  "font-normal text-[0.8125rem] leading-[1.4]",
+                  "lg:text-[0.9375rem]",
+                )}
+              >
+                {role}
+              </span>
+            )}
+          </div>
+        </footer>
+      </blockquote>
     </section>
   );
 }
@@ -884,6 +1496,7 @@ export interface CtaSectionProps {
   secondaryHref?: string;
   background: string;
   accent?: string;
+  puck?: PuckContext;
 }
 
 export function CtaSection({
@@ -897,46 +1510,91 @@ export function CtaSection({
   secondaryHref,
   background,
   accent = "primary",
+  puck,
 }: CtaSectionProps) {
   if (hidden) return null;
+
+  const { viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
 
   return (
     <section
       id={id}
       data-section-type="CTA"
       style={buildSectionSurfaceStyle(background)}
-      className="px-6 py-14 sm:px-10 lg:px-16"
+      className={viewClass(
+        isMobile,
+        "px-[24px] pt-[64px] pb-[72px]",
+        "lg:px-[120px] lg:pt-[96px] lg:pb-[120px]",
+      )}
     >
       <div
-        style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-        className="border-border/25 mx-auto flex max-w-5xl flex-col items-start justify-between gap-6 rounded-2xl border p-8 sm:flex-row sm:items-center sm:p-12"
+        style={{
+          backgroundColor: tokenColorVar("surface", "--surface"),
+          borderColor: "var(--tpl-color-line, var(--border))",
+        }}
+        className={viewClass(
+          isMobile,
+          "mx-auto flex w-full max-w-[1200px] flex-col items-center gap-[16px] rounded-[24px] border border-solid px-[24px] py-[48px] text-center",
+          "lg:gap-[24px] lg:rounded-[32px] lg:px-[64px] lg:py-[88px]",
+        )}
       >
-        <div className="flex max-w-xl flex-col gap-2">
-          <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
-            {heading}
-          </h2>
-          {subheading && (
-            <p style={MUTED_TEXT_STYLE} className="type-body-m">
-              {subheading}
-            </p>
+        <h2
+          style={HEADING_FONT_STYLE}
+          className={viewClass(
+            isMobile,
+            "max-w-[780px] font-semibold text-[2rem] leading-[1.1]",
+            "lg:text-[3.5rem] lg:leading-[1.08]",
           )}
-        </div>
+        >
+          {heading}
+        </h2>
+        {subheading && (
+          <p
+            style={MUTED_TEXT_STYLE}
+            className={viewClass(
+              isMobile,
+              "max-w-[620px] font-normal text-[1rem] leading-[1.55]",
+              "lg:text-[1.25rem] lg:leading-[1.55]",
+            )}
+          >
+            {subheading}
+          </p>
+        )}
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div
+          className={viewClass(
+            isMobile,
+            "flex w-full flex-col items-stretch gap-[10px] pt-[12px]",
+            "lg:w-auto lg:flex-row lg:items-center lg:justify-center lg:gap-[12px] lg:pt-[16px]",
+          )}
+        >
           <a
             href={primaryHref}
             style={{
               backgroundColor: tokenColorVar(accent, "--primary"),
-              color: "var(--tpl-color-text, var(--primary-foreground))",
+              color: "var(--tpl-color-onPrimary, var(--primary-foreground))",
             }}
-            className="type-body-s-strong inline-flex h-11 items-center justify-center rounded-full px-6 transition-opacity hover:opacity-90"
+            className={viewClass(
+              isMobile,
+              "inline-flex w-full items-center justify-center rounded-full px-[24px] py-[15px] font-bold text-[0.9375rem] leading-none transition-opacity hover:opacity-90",
+              "lg:w-auto lg:px-[28px] lg:py-[16px] lg:text-[1rem]",
+            )}
           >
             {primaryLabel}
           </a>
           {secondaryLabel && secondaryHref && (
             <a
               href={secondaryHref}
-              className="border-border/40 type-body-s-strong inline-flex h-11 items-center justify-center rounded-full border px-6 transition-colors"
+              style={{
+                borderColor: "var(--tpl-color-line, var(--border))",
+                color: "var(--tpl-color-text, var(--foreground))",
+              }}
+              className={viewClass(
+                isMobile,
+                "inline-flex w-full items-center justify-center rounded-full border border-solid px-[24px] py-[15px] font-medium text-[0.9375rem] leading-none transition-colors",
+                "lg:w-auto lg:px-[28px] lg:py-[16px] lg:text-[1rem]",
+              )}
             >
               {secondaryLabel}
             </a>
@@ -991,7 +1649,8 @@ export function CustomSection({
 }: CustomSectionProps) {
   if (hidden) return null;
 
-  const { projectType, slots, theme } = readRenderMetadata(puck);
+  const { projectType, slots, theme, viewport } = readRenderMetadata(puck);
+  const isMobile = viewport === "mobile";
   const customSlot = getSlotDefinition(slots, image, "custom.image");
 
   if (layout === "split-right" || layout === "split-left") {
@@ -1002,27 +1661,45 @@ export function CustomSection({
         data-section-type="Custom"
         data-custom-layout={layout}
         style={buildSectionSurfaceStyle(background)}
-        className="overflow-hidden px-6 py-14 sm:px-10 lg:px-16"
+        className={viewClass(
+          isMobile,
+          "overflow-hidden px-[24px] py-[64px]",
+          "lg:p-[120px]",
+        )}
       >
         <div
-          style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-          className="border-border/25 mx-auto grid max-w-6xl items-center gap-10 rounded-3xl border p-8 sm:p-12 lg:grid-cols-12"
+          style={{
+            backgroundColor: tokenColorVar("surface", "--surface"),
+            borderColor: "var(--tpl-color-line, var(--border))",
+          }}
+          className={viewClass(
+            isMobile,
+            "mx-auto grid max-w-[1200px] items-center gap-8 rounded-[24px] border border-solid p-6",
+            "lg:grid-cols-12 lg:gap-12 lg:rounded-[32px] lg:p-12",
+          )}
         >
           <div
             className={cn(
               "flex flex-col gap-5",
-              isLeft ? "lg:order-2 lg:col-span-7" : "lg:col-span-7",
+              !isMobile && (isLeft ? "lg:order-2 lg:col-span-7" : "lg:col-span-7"),
             )}
           >
-            <SectionEyebrow text={eyebrow} accent={accent} />
-            <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+            <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
+            <h2
+              style={HEADING_FONT_STYLE}
+              className={viewClass(
+                isMobile,
+                "font-semibold text-[1.75rem] leading-[1.12]",
+                "lg:text-[2.5rem] lg:leading-[1.1]",
+              )}
+            >
               {heading}
             </h2>
             <RichTextView
               value={body}
               idPrefix={`${id}-custom`}
               style={MUTED_TEXT_STYLE}
-              className="type-body-l"
+              className="text-[1.125rem] leading-[1.6]"
             />
             {bullets && bullets.length > 0 && (
               <ul className="flex flex-col gap-2.5 pt-1">
@@ -1034,7 +1711,7 @@ export function CustomSection({
                     >
                       <Check className="size-3" />
                     </span>
-                    <span className="type-body-m">{bullet.text}</span>
+                    <span className="text-[1rem] leading-[1.55]">{bullet.text}</span>
                   </li>
                 ))}
               </ul>
@@ -1045,7 +1722,7 @@ export function CustomSection({
             <div
               className={cn(
                 "w-full",
-                isLeft ? "lg:order-1 lg:col-span-5" : "lg:col-span-5",
+                !isMobile && (isLeft ? "lg:order-1 lg:col-span-5" : "lg:col-span-5"),
               )}
             >
               <ImageSlotFrame
@@ -1055,7 +1732,7 @@ export function CustomSection({
                 projectType={projectType}
                 preferDeviceChrome
                 presentation={mockupStyle}
-                glow
+                glow={false}
                 accentToken={accent}
               />
             </div>
@@ -1072,50 +1749,67 @@ export function CustomSection({
         data-section-type="Custom"
         data-custom-layout="comparison"
         style={buildSectionSurfaceStyle(background)}
-        className="px-6 py-14 sm:px-10 lg:px-16"
+        className={viewClass(
+          isMobile,
+          "px-[24px] py-[64px]",
+          "lg:p-[120px]",
+        )}
       >
-        <div className="mx-auto flex max-w-6xl flex-col gap-10">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-10">
           <div className="flex max-w-3xl flex-col gap-3">
-            <SectionEyebrow text={eyebrow} accent={accent} />
-            <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+            <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
+            <h2
+              style={HEADING_FONT_STYLE}
+              className={viewClass(
+                isMobile,
+                "font-semibold text-[1.875rem] leading-[1.12]",
+                "lg:text-[3rem] lg:leading-[1.1]",
+              )}
+            >
               {heading}
             </h2>
             <RichTextView
               value={body}
               idPrefix={`${id}-custom`}
               style={MUTED_TEXT_STYLE}
-              className="type-body-l"
+              className="text-[1.125rem] leading-[1.6]"
             />
           </div>
 
           {cards && cards.length > 0 && (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div
+              className={viewClass(
+                isMobile,
+                "grid grid-cols-1 gap-4",
+                "lg:grid-cols-4 lg:gap-6",
+              )}
+            >
               {cards.map((card, idx) => (
                 <article
                   key={`${id}-comp-${idx}`}
                   style={{
                     backgroundColor: tokenColorVar("surface", "--surface"),
-                    ...(card.highlighted
-                      ? { borderColor: tokenColorVar(accent, "--primary") }
-                      : {}),
+                    borderColor: card.highlighted
+                      ? tokenColorVar(accent, "--primary")
+                      : "var(--tpl-color-line, var(--border))",
                   }}
                   className={cn(
-                    "flex flex-col justify-between gap-4 rounded-2xl border p-6",
-                    card.highlighted ? "border-2 shadow-card" : "border-border/25",
+                    "flex flex-col justify-between gap-4 rounded-[20px] border p-6",
+                    card.highlighted ? "border-2" : "border-solid",
                   )}
                 >
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 style={HEADING_FONT_STYLE} className="type-heading-s">
+                      <h3 style={HEADING_FONT_STYLE} className="font-semibold text-[1.25rem]">
                         {card.title}
                       </h3>
                       {card.highlighted && (
                         <span
                           style={{
                             backgroundColor: tokenColorVar(accent, "--primary"),
-                            color: "var(--tpl-color-text, var(--primary-foreground))",
+                            color: "var(--tpl-color-onPrimary, var(--primary-foreground))",
                           }}
-                          className="type-overline rounded-full px-2.5 py-0.5 font-semibold"
+                          className="rounded-full px-2.5 py-0.5 font-semibold text-[0.6875rem] uppercase"
                         >
                           Ours
                         </span>
@@ -1128,7 +1822,7 @@ export function CustomSection({
                             ? tokenColorVar(accent, "--primary")
                             : tokenColorVar("textMuted", "--muted-foreground"),
                         }}
-                        className="type-caption font-semibold"
+                        className="font-semibold text-[0.8125rem]"
                       >
                         {card.subtitle}
                       </span>
@@ -1138,11 +1832,11 @@ export function CustomSection({
                       style={{
                         backgroundColor: card.highlighted
                           ? tokenColorVar(accent, "--primary")
-                          : "var(--border)",
+                          : "var(--tpl-color-line, var(--border))",
                       }}
-                      className="h-0.5 w-full rounded-full opacity-50"
+                      className="h-px w-full"
                     />
-                    <p style={MUTED_TEXT_STYLE} className="type-body-s whitespace-pre-line">
+                    <p style={MUTED_TEXT_STYLE} className="whitespace-pre-line text-[0.9375rem] leading-[1.55]">
                       {card.body}
                     </p>
                   </div>
@@ -1162,23 +1856,47 @@ export function CustomSection({
         data-section-type="Custom"
         data-custom-layout="persona"
         style={buildSectionSurfaceStyle(background)}
-        className="px-6 py-14 sm:px-10 lg:px-16"
+        className={viewClass(
+          isMobile,
+          "px-[24px] py-[64px]",
+          "lg:p-[120px]",
+        )}
       >
-        <div className="mx-auto flex max-w-6xl flex-col gap-10">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-10">
           <div className="flex max-w-3xl flex-col gap-3">
-            <SectionEyebrow text={eyebrow} accent={accent} />
-            <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+            <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
+            <h2
+              style={HEADING_FONT_STYLE}
+              className={viewClass(
+                isMobile,
+                "font-semibold text-[1.875rem] leading-[1.12]",
+                "lg:text-[3rem] lg:leading-[1.1]",
+              )}
+            >
               {heading}
             </h2>
           </div>
 
           <div
-            style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-            className="border-border/25 grid gap-6 rounded-2xl border p-6 sm:p-8 lg:grid-cols-12"
+            style={{
+              backgroundColor: tokenColorVar("surface", "--surface"),
+              borderColor: "var(--tpl-color-line, var(--border))",
+            }}
+            className={viewClass(
+              isMobile,
+              "grid gap-6 rounded-[20px] border border-solid p-6",
+              "lg:grid-cols-12 lg:p-8",
+            )}
           >
             <div
-              style={{ backgroundColor: tokenColorVar("background", "--background") }}
-              className="border-border/30 flex flex-col justify-between gap-4 rounded-xl border p-6 lg:col-span-4"
+              style={{
+                backgroundColor: tokenColorVar("background", "--background"),
+                borderColor: "var(--tpl-color-line, var(--border))",
+              }}
+              className={cn(
+                "flex flex-col justify-between gap-4 rounded-[16px] border border-solid p-6",
+                !isMobile && "lg:col-span-4",
+              )}
             >
               <div className="flex flex-col gap-3">
                 {image ? (
@@ -1195,9 +1913,9 @@ export function CustomSection({
                   <span
                     style={{
                       backgroundColor: tokenColorVar(accent, "--primary"),
-                      color: "var(--tpl-color-text, var(--primary-foreground))",
+                      color: "var(--tpl-color-onPrimary, var(--primary-foreground))",
                     }}
-                    className="type-heading-s inline-flex size-12 items-center justify-center rounded-xl font-bold"
+                    className="inline-flex size-12 items-center justify-center rounded-xl font-bold text-[1.125rem]"
                   >
                     UX
                   </span>
@@ -1205,29 +1923,38 @@ export function CustomSection({
                 <RichTextView
                   value={body}
                   idPrefix={`${id}-persona`}
-                  className="type-body-m"
+                  className="text-[1rem] leading-[1.55]"
                 />
               </div>
             </div>
 
             {cards && cards.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-2 lg:col-span-8 lg:grid-cols-3">
+              <div
+                className={viewClass(
+                  isMobile,
+                  "grid grid-cols-1 gap-4",
+                  "lg:col-span-8 lg:grid-cols-3",
+                )}
+              >
                 {cards.map((card, idx) => (
                   <div
                     key={`${id}-persona-card-${idx}`}
-                    style={{ backgroundColor: tokenColorVar("background", "--background") }}
-                    className="border-border/25 flex flex-col gap-2.5 rounded-xl border p-5"
+                    style={{
+                      backgroundColor: tokenColorVar("background", "--background"),
+                      borderColor: "var(--tpl-color-line, var(--border))",
+                    }}
+                    className="flex flex-col gap-2.5 rounded-[16px] border border-solid p-5"
                   >
                     <span
                       style={{ color: tokenColorVar(accent, "--primary") }}
-                      className="type-overline font-semibold"
+                      className="font-semibold text-[0.75rem] uppercase tracking-wider"
                     >
                       {card.title}
                     </span>
                     {card.subtitle && (
-                      <span className="type-body-s-strong">{card.subtitle}</span>
+                      <span className="font-semibold text-[0.9375rem]">{card.subtitle}</span>
                     )}
-                    <p style={MUTED_TEXT_STYLE} className="type-body-s whitespace-pre-line">
+                    <p style={MUTED_TEXT_STYLE} className="whitespace-pre-line text-[0.875rem] leading-[1.55]">
                       {card.body}
                     </p>
                   </div>
@@ -1251,26 +1978,49 @@ export function CustomSection({
         data-section-type="Custom"
         data-custom-layout="design-system"
         style={buildSectionSurfaceStyle(background)}
-        className="px-5 py-14 sm:px-10 lg:px-16"
+        className={viewClass(
+          isMobile,
+          "px-[24px] py-[64px]",
+          "lg:p-[120px]",
+        )}
       >
-        <div className="mx-auto flex min-w-0 max-w-6xl flex-col gap-10">
+        <div className="mx-auto flex min-w-0 max-w-[1200px] flex-col gap-10">
           <div className="flex max-w-3xl flex-col gap-3">
-            <SectionEyebrow text={eyebrow} accent={accent} />
-            <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+            <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
+            <h2
+              style={HEADING_FONT_STYLE}
+              className={viewClass(
+                isMobile,
+                "font-semibold text-[1.875rem] leading-[1.12]",
+                "lg:text-[3rem] lg:leading-[1.1]",
+              )}
+            >
               {heading}
             </h2>
             <RichTextView
               value={body}
               idPrefix={`${id}-ds`}
               style={MUTED_TEXT_STYLE}
-              className="type-body-l"
+              className="text-[1.125rem] leading-[1.6]"
             />
           </div>
 
-          <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-12">
+          <div
+            className={viewClass(
+              isMobile,
+              "grid min-w-0 grid-cols-1 gap-6",
+              "lg:grid-cols-12",
+            )}
+          >
             <div
-              style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-              className="border-border/25 flex min-w-0 flex-col justify-between gap-6 rounded-2xl border p-5 sm:p-8 lg:col-span-5"
+              style={{
+                backgroundColor: tokenColorVar("surface", "--surface"),
+                borderColor: "var(--tpl-color-line, var(--border))",
+              }}
+              className={cn(
+                "flex min-w-0 flex-col justify-between gap-6 rounded-[20px] border border-solid p-6",
+                !isMobile && "lg:col-span-5 lg:p-8",
+              )}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <span
@@ -1278,54 +2028,66 @@ export function CustomSection({
                     ...HEADING_FONT_STYLE,
                     color: tokenColorVar(accent, "--primary"),
                   }}
-                  className="type-display-xl"
+                  className="font-semibold text-[3.5rem] leading-none"
                 >
                   Aa
                 </span>
-                <span style={MUTED_TEXT_STYLE} className="type-overline font-mono">
+                <span style={MUTED_TEXT_STYLE} className="font-mono text-[0.75rem] uppercase">
                   {headingWeights}
                 </span>
               </div>
 
               <div className="flex min-w-0 flex-col gap-2">
-                <span style={HEADING_FONT_STYLE} className="type-heading-m break-words">
+                <span style={HEADING_FONT_STYLE} className="break-words font-semibold text-[1.5rem]">
                   {headingFamily}
                 </span>
-                <span style={MUTED_TEXT_STYLE} className="type-body-s break-words">
+                <span style={MUTED_TEXT_STYLE} className="break-words text-[0.875rem]">
                   Body: {bodyFamily} · Aa Bb Cc Dd Ee Ff Gg 0123456789
                 </span>
               </div>
             </div>
 
             <div
-              style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-              className="border-border/25 flex min-w-0 flex-col justify-between gap-4 rounded-2xl border p-5 sm:p-8 lg:col-span-7"
+              style={{
+                backgroundColor: tokenColorVar("surface", "--surface"),
+                borderColor: "var(--tpl-color-line, var(--border))",
+              }}
+              className={cn(
+                "flex min-w-0 flex-col justify-between gap-4 rounded-[20px] border border-solid p-6",
+                !isMobile && "lg:col-span-7 lg:p-8",
+              )}
             >
-              <span style={MUTED_TEXT_STYLE} className="type-overline">
+              <span style={MUTED_TEXT_STYLE} className="font-medium text-[0.75rem] uppercase tracking-wider">
                 Type hierarchy
               </span>
               <div className="flex min-w-0 flex-col gap-3">
-                <div className="border-border/20 flex min-w-0 flex-col gap-1 border-b pb-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-                  <span style={HEADING_FONT_STYLE} className="type-heading-m sm:type-heading-l min-w-0 break-words">
+                <div
+                  style={{ borderColor: "var(--tpl-color-line, var(--border))" }}
+                  className="flex min-w-0 flex-col gap-1 border-b pb-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
+                >
+                  <span style={HEADING_FONT_STYLE} className="min-w-0 break-words font-semibold text-[1.5rem]">
                     Display Headline
                   </span>
-                  <span style={MUTED_TEXT_STYLE} className="type-caption shrink-0 font-mono">
+                  <span style={MUTED_TEXT_STYLE} className="shrink-0 font-mono text-[0.75rem]">
                     Heading · Bold
                   </span>
                 </div>
-                <div className="border-border/20 flex min-w-0 flex-col gap-1 border-b pb-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-                  <span style={HEADING_FONT_STYLE} className="type-heading-s min-w-0 break-words">
+                <div
+                  style={{ borderColor: "var(--tpl-color-line, var(--border))" }}
+                  className="flex min-w-0 flex-col gap-1 border-b pb-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
+                >
+                  <span style={HEADING_FONT_STYLE} className="min-w-0 break-words font-semibold text-[1.125rem]">
                     Section Title &amp; Card Header
                   </span>
-                  <span style={MUTED_TEXT_STYLE} className="type-caption shrink-0 font-mono">
+                  <span style={MUTED_TEXT_STYLE} className="shrink-0 font-mono text-[0.75rem]">
                     Subhead · Semibold
                   </span>
                 </div>
                 <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-                  <span className="type-body-m min-w-0 break-words">
+                  <span className="min-w-0 break-words text-[0.9375rem]">
                     Body copy designed for high-contrast dark &amp; light legibility.
                   </span>
-                  <span style={MUTED_TEXT_STYLE} className="type-caption shrink-0 font-mono">
+                  <span style={MUTED_TEXT_STYLE} className="shrink-0 font-mono text-[0.75rem]">
                     Body · Regular
                   </span>
                 </div>
@@ -1334,26 +2096,38 @@ export function CustomSection({
           </div>
 
           {swatches && swatches.length > 0 && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <div
+              className={viewClass(
+                isMobile,
+                "grid grid-cols-2 gap-4",
+                "lg:grid-cols-5",
+              )}
+            >
               {swatches.map((swatch, idx) => {
                 const liveHex = theme?.colors[swatch.token]?.toUpperCase();
                 return (
                   <div
                     key={`${id}-swatch-${idx}`}
-                    style={{ backgroundColor: tokenColorVar("surface", "--surface") }}
-                    className="border-border/25 overflow-hidden rounded-xl border"
+                    style={{
+                      backgroundColor: tokenColorVar("surface", "--surface"),
+                      borderColor: "var(--tpl-color-line, var(--border))",
+                    }}
+                    className="overflow-hidden rounded-[16px] border border-solid"
                   >
                     <div
-                      style={{ backgroundColor: tokenColorVar(swatch.token, "--primary") }}
-                      className="border-border/20 h-20 w-full border-b"
+                      style={{
+                        backgroundColor: tokenColorVar(swatch.token, "--primary"),
+                        borderColor: "var(--tpl-color-line, var(--border))",
+                      }}
+                      className="h-20 w-full border-b"
                     />
                     <div className="flex flex-col gap-0.5 p-3.5">
-                      <span className="type-body-s-strong truncate">{swatch.label}</span>
-                      <span style={MUTED_TEXT_STYLE} className="type-caption font-mono uppercase">
+                      <span className="truncate font-semibold text-[0.875rem]">{swatch.label}</span>
+                      <span style={MUTED_TEXT_STYLE} className="font-mono text-[0.75rem] uppercase">
                         {liveHex ?? swatch.token}
                       </span>
                       {swatch.role && (
-                        <span style={MUTED_TEXT_STYLE} className="type-caption truncate">
+                        <span style={MUTED_TEXT_STYLE} className="truncate text-[0.75rem]">
                           {swatch.role}
                         </span>
                       )}
@@ -1374,19 +2148,46 @@ export function CustomSection({
       data-section-type="Custom"
       data-custom-layout="stacked"
       style={buildSectionSurfaceStyle(background)}
-      className="px-6 py-14 sm:px-10 lg:px-16"
+      className={viewClass(
+        isMobile,
+        "px-[24px] py-[64px]",
+        "lg:p-[120px]",
+      )}
     >
-      <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        <div className="flex flex-col gap-4">
-          <SectionEyebrow text={eyebrow} accent={accent} />
-          <h2 style={HEADING_FONT_STYLE} className="type-heading-l">
+      <div
+        className={viewClass(
+          isMobile,
+          "mx-auto flex max-w-[1200px] flex-col gap-[32px]",
+          "lg:gap-[56px]",
+        )}
+      >
+        <div
+          className={viewClass(
+            isMobile,
+            "flex flex-col gap-[12px]",
+            "lg:gap-[16px]",
+          )}
+        >
+          <SectionEyebrow text={eyebrow} accent={accent} isMobile={isMobile} />
+          <h2
+            style={HEADING_FONT_STYLE}
+            className={viewClass(
+              isMobile,
+              "max-w-[880px] font-semibold text-[1.875rem] leading-[1.12]",
+              "lg:text-[3rem] lg:leading-[1.1]",
+            )}
+          >
             {heading}
           </h2>
           <RichTextView
             value={body}
             idPrefix={`${id}-custom`}
             style={MUTED_TEXT_STYLE}
-            className="type-body-l"
+            className={viewClass(
+              isMobile,
+              "max-w-[760px] font-normal text-[1.0625rem] leading-[1.55]",
+              "lg:text-[1.25rem] lg:leading-[1.55]",
+            )}
           />
         </div>
 

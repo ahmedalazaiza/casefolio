@@ -1,4 +1,3 @@
-import { ImageIcon } from "lucide-react";
 import { CdnResponsiveImage } from "@/components/sections/cdn-responsive-image";
 import {
   parseAspectRatio,
@@ -93,6 +92,35 @@ export function resolveDeviceChrome(
   );
 }
 
+function SlotPlaceholderIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className={cn("shrink-0", className)}
+    >
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="2.75"
+        stroke="currentColor"
+        strokeWidth="1.65"
+      />
+      <circle cx="8.5" cy="8.5" r="1.65" stroke="currentColor" strokeWidth="1.65" />
+      <path
+        d="M3.5 17.5L9.5 12L14.5 16.5L17.5 14L20.5 17"
+        stroke="currentColor"
+        strokeWidth="1.65"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export interface ImageSlotFrameProps {
   image?: ImageSlotValue;
   slotDefinition?: TemplateSlotDefinition;
@@ -105,6 +133,8 @@ export interface ImageSlotFrameProps {
   accentToken?: string;
   compact?: boolean;
   className?: string;
+  innerClassName?: string;
+  placeholderIconClassName?: string;
 }
 
 export function ImageSlotFrame({
@@ -119,6 +149,8 @@ export function ImageSlotFrame({
   accentToken = "primary",
   compact = false,
   className,
+  innerClassName,
+  placeholderIconClassName,
 }: ImageSlotFrameProps) {
   const ratioText = slotDefinition?.ratio ?? fallbackRatio;
   const parsedRatio = parseAspectRatio(ratioText) ?? { width: 16, height: 9, numeric: 16 / 9 };
@@ -137,8 +169,14 @@ export function ImageSlotFrame({
     presentation === "tilt-right"
       ? "rotate-3 sm:rotate-6 transition-transform duration-300"
       : presentation === "tilt-left"
-        ? "-rotate-3 sm:-rotate-6 transition-transform duration-300"
+         ? "-rotate-3 sm:-rotate-6 transition-transform duration-300"
         : "";
+
+  const defaultIconSizeClass = compact
+    ? "size-[16px] lg:size-[22px]"
+    : chrome === "mobile"
+      ? "size-[28px] lg:size-[38px]"
+      : "size-[28px] lg:size-[56px]";
 
   const viewportContent = (
     <div
@@ -146,8 +184,14 @@ export function ImageSlotFrame({
       data-slot-key={image?.slot ?? "unbound"}
       data-ratio={ratioText}
       data-cropped={image?.crop ? "true" : "false"}
-      style={{ aspectRatio: `${parsedRatio.width} / ${parsedRatio.height}` }}
-      className="bg-sunken relative flex w-full items-center justify-center overflow-hidden"
+      style={{
+        aspectRatio: `${parsedRatio.width} / ${parsedRatio.height}`,
+        backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))",
+      }}
+      className={cn(
+        "relative flex w-full items-center justify-center overflow-hidden",
+        innerClassName,
+      )}
     >
       {hasSrc ? (
         <CdnResponsiveImage
@@ -159,116 +203,49 @@ export function ImageSlotFrame({
           fallbackAspectWidth={parsedRatio.width}
           fallbackAspectHeight={parsedRatio.height}
         />
-      ) : compact ? (
+      ) : (
         <span
           role="img"
           title={altText}
           aria-label={altText}
-          className="text-muted-foreground inline-flex items-center justify-center"
+          style={{
+            color:
+              "color-mix(in oklab, var(--tpl-color-textMuted, var(--muted-foreground)) 55%, transparent)",
+          }}
+          className="inline-flex items-center justify-center"
         >
-          <ImageIcon className="size-4" />
+          <SlotPlaceholderIcon
+            className={placeholderIconClassName ?? defaultIconSizeClass}
+          />
         </span>
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
-          <span className="bg-elevated/90 text-muted-foreground inline-flex size-10 items-center justify-center rounded-full">
-            <ImageIcon className="size-4" />
-          </span>
-          <span className="text-foreground type-caption font-medium">{altText}</span>
-          <span className="text-tertiary type-overline">
-            {image?.slot ? `${image.slot} · ${ratioText}` : ratioText}
-          </span>
-        </div>
       )}
     </div>
   );
 
   let frameElement: React.ReactNode;
 
-  if (model === "iphone") {
+  if (model === "iphone" || model === "iphone-notch" || model === "android") {
     frameElement = (
       <div
         data-device-frame="mobile"
-        data-device-model="iphone"
+        data-device-model={model}
+        style={{
+          backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))",
+          borderColor: "var(--tpl-color-line, var(--border))",
+        }}
         className={cn(
-          "border-border-strong/60 bg-inverse shadow-modal relative mx-auto w-full max-w-72 rounded-[2.25rem] border-4 p-2",
+          "relative mx-auto flex w-full max-w-[276px] flex-col items-start rounded-[30px] border border-solid p-[8px]",
           presentationClass,
           className,
         )}
       >
-        <span
-          aria-hidden="true"
-          className="bg-border-strong/70 pointer-events-none absolute top-20 -left-1.5 h-7 w-1 rounded-l-sm"
-        />
-        <span
-          aria-hidden="true"
-          className="bg-border-strong/70 pointer-events-none absolute top-30 -left-1.5 h-11 w-1 rounded-l-sm"
-        />
-        <span
-          aria-hidden="true"
-          className="bg-border-strong/70 pointer-events-none absolute top-26 -right-1.5 h-14 w-1 rounded-r-sm"
-        />
-        <div className="relative overflow-hidden rounded-[1.75rem]">
-          <div
-            aria-hidden="true"
-            className="bg-inverse pointer-events-none absolute top-[1.4%] left-1/2 z-10 flex h-[2.6%] w-[28%] -translate-x-1/2 items-center justify-end rounded-full px-1.5 shadow-xs"
-          >
-            <span className="bg-inverse-foreground/25 size-1 rounded-full" />
-          </div>
+        <div
+          className={cn(
+            "relative w-full overflow-hidden rounded-[22px]",
+            innerClassName,
+          )}
+        >
           {viewportContent}
-          <div
-            aria-hidden="true"
-            className="bg-inverse-foreground/35 pointer-events-none absolute bottom-[1.2%] left-1/2 z-10 h-1 w-[34%] -translate-x-1/2 rounded-full"
-          />
-        </div>
-      </div>
-    );
-  } else if (model === "iphone-notch") {
-    frameElement = (
-      <div
-        data-device-frame="mobile"
-        data-device-model="iphone-notch"
-        className={cn(
-          "border-border-strong/60 bg-inverse shadow-modal relative mx-auto w-full max-w-72 rounded-[2.25rem] border-4 p-2",
-          presentationClass,
-          className,
-        )}
-      >
-        <div className="relative overflow-hidden rounded-[1.75rem]">
-          <div
-            aria-hidden="true"
-            className="bg-inverse pointer-events-none absolute top-0 left-1/2 z-10 flex h-[3.2%] w-[42%] -translate-x-1/2 items-center justify-center rounded-b-xl"
-          >
-            <span className="bg-inverse-foreground/25 h-1 w-[34%] rounded-full" />
-          </div>
-          {viewportContent}
-          <div
-            aria-hidden="true"
-            className="bg-inverse-foreground/35 pointer-events-none absolute bottom-[1.2%] left-1/2 z-10 h-1 w-[34%] -translate-x-1/2 rounded-full"
-          />
-        </div>
-      </div>
-    );
-  } else if (model === "android") {
-    frameElement = (
-      <div
-        data-device-frame="mobile"
-        data-device-model="android"
-        className={cn(
-          "border-border-strong/60 bg-inverse shadow-modal relative mx-auto w-full max-w-72 rounded-3xl border-[3px] p-1.5",
-          presentationClass,
-          className,
-        )}
-      >
-        <div className="relative overflow-hidden rounded-[1.25rem]">
-          <span
-            aria-hidden="true"
-            className="bg-inverse ring-inverse-foreground/15 pointer-events-none absolute top-2 left-1/2 z-10 size-2.5 -translate-x-1/2 rounded-full ring-1"
-          />
-          {viewportContent}
-          <div
-            aria-hidden="true"
-            className="bg-inverse-foreground/30 pointer-events-none absolute bottom-1.5 left-1/2 z-10 h-0.5 w-16 -translate-x-1/2 rounded-full"
-          />
         </div>
       </div>
     );
@@ -277,17 +254,17 @@ export function ImageSlotFrame({
       <div
         data-device-frame="web"
         data-device-model="tablet"
+        style={{
+          backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))",
+          borderColor: "var(--tpl-color-line, var(--border))",
+        }}
         className={cn(
-          "border-border-strong/60 bg-inverse shadow-modal relative mx-auto w-full max-w-3xl rounded-3xl border-4 p-3",
+          "relative mx-auto w-full max-w-3xl rounded-[28px] border border-solid p-3",
           presentationClass,
           className,
         )}
       >
-        <div
-          aria-hidden="true"
-          className="bg-inverse-foreground/25 mx-auto mb-1.5 size-1.5 rounded-full"
-        />
-        <div className="overflow-hidden rounded-xl">{viewportContent}</div>
+        <div className="overflow-hidden rounded-[18px]">{viewportContent}</div>
       </div>
     );
   } else if (model === "macbook") {
@@ -301,25 +278,23 @@ export function ImageSlotFrame({
           className,
         )}
       >
-        <div className="border-border-strong/70 bg-inverse shadow-modal w-[92%] overflow-hidden rounded-t-2xl border-x-4 border-t-4 pt-2">
-          <div
-            aria-hidden="true"
-            className="bg-inverse-foreground/25 mx-auto mb-1.5 size-1.5 rounded-full"
-          />
-          <div className="overflow-hidden">{viewportContent}</div>
-          <div
-            aria-hidden="true"
-            className="bg-inverse flex h-4 items-center justify-center"
-          >
-            <span className="bg-inverse-foreground/15 h-1 w-10 rounded-full" />
-          </div>
+        <div
+          style={{
+            backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))",
+            borderColor: "var(--tpl-color-line, var(--border))",
+          }}
+          className="w-[92%] overflow-hidden rounded-t-2xl border-x border-t p-2.5"
+        >
+          <div className="overflow-hidden rounded-lg">{viewportContent}</div>
         </div>
         <div
           aria-hidden="true"
-          className="border-border-strong bg-border-strong shadow-card relative flex h-3.5 w-full items-start justify-center rounded-b-xl border-t"
-        >
-          <span className="bg-inverse/45 h-1.5 w-16 rounded-b-md" />
-        </div>
+          style={{
+            backgroundColor: "var(--tpl-color-surface, var(--surface))",
+            borderColor: "var(--tpl-color-line, var(--border))",
+          }}
+          className="relative flex h-3.5 w-full items-start justify-center rounded-b-xl border"
+        />
       </div>
     );
   } else if (model === "browser") {
@@ -327,21 +302,44 @@ export function ImageSlotFrame({
       <div
         data-device-frame="web"
         data-device-model="browser"
+        style={{
+          backgroundColor: "var(--tpl-color-surface, var(--surface))",
+          borderColor: "var(--tpl-color-line, var(--border))",
+        }}
         className={cn(
-          "border-border bg-elevated shadow-card w-full overflow-hidden rounded-xl border",
+          "w-full overflow-hidden rounded-[16px] border border-solid lg:rounded-[20px]",
           presentationClass,
           className,
         )}
       >
-        <div className="border-border bg-surface flex h-8 items-center gap-2 border-b px-3">
+        <div
+          style={{
+            backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))",
+            borderColor: "var(--tpl-color-line, var(--border))",
+          }}
+          className="flex h-9 items-center gap-2 border-b px-4"
+        >
           <div className="flex items-center gap-1.5" aria-hidden="true">
-            <span className="bg-border-strong size-2.5 rounded-full" />
-            <span className="bg-border-strong size-2.5 rounded-full" />
-            <span className="bg-border-strong size-2.5 rounded-full" />
+            <span
+              style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
+              className="size-2.5 rounded-full"
+            />
+            <span
+              style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
+              className="size-2.5 rounded-full"
+            />
+            <span
+              style={{ backgroundColor: "var(--tpl-color-line, var(--border))" }}
+              className="size-2.5 rounded-full"
+            />
           </div>
-          <div className="bg-sunken text-tertiary type-caption mx-auto max-w-xs truncate rounded-full px-4 py-0.5">
-            {altText}
-          </div>
+          <div
+            style={{
+              backgroundColor: "var(--tpl-color-surface, var(--surface))",
+              color: "var(--tpl-color-textMuted, var(--muted-foreground))",
+            }}
+            className="mx-auto h-5 w-48 max-w-[60%] truncate rounded-md px-3 text-center text-[0.6875rem] leading-5"
+          />
         </div>
         {viewportContent}
       </div>
@@ -352,7 +350,7 @@ export function ImageSlotFrame({
         data-device-frame="plain"
         data-device-model="plain"
         className={cn(
-          "border-border/35 w-full overflow-hidden rounded-xl border",
+          "w-full overflow-hidden rounded-[16px]",
           presentationClass,
           className,
         )}

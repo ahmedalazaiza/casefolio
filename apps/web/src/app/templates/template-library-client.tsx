@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, LayoutTemplate, Lock, RotateCcw, Search, Smartphone, Globe, Layers } from "lucide-react";
+import { Eye, LayoutTemplate, Lock, Monitor, RotateCcw, Search, Smartphone, Globe, Layers } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { trackClientProductEvent } from "@/components/analytics/posthog-provider";
@@ -108,6 +108,7 @@ export function TemplateLibraryClient({
   const [tierFilter, setTierFilter] = useState<"all" | TemplateTier>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [previewItem, setPreviewItem] = useState<PublishedTemplateItem | null>(null);
+  const [previewViewport, setPreviewViewport] = useState<"desktop" | "mobile">("desktop");
   const [upgradeTemplateName, setUpgradeTemplateName] = useState<string | null>(null);
 
   const canUseProTemplates = can(userPlan, "pro_templates");
@@ -429,20 +430,59 @@ export function TemplateLibraryClient({
           if (!open) setPreviewItem(null);
         }}
       >
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[1480px]">
           {previewItem && (
             <>
               <DialogHeader>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <DialogTitle>{previewItem.name}</DialogTitle>
-                  {previewItem.tier === "pro" ? (
-                    <ProBadge />
-                  ) : (
-                    <Badge tone="published">Free</Badge>
-                  )}
-                  <Badge tone="neutral" withDot={false}>
-                    {formatTypeLabel(previewItem.type)}
-                  </Badge>
+                <div className="flex flex-wrap items-center justify-between gap-3 pr-8">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <DialogTitle>{previewItem.name}</DialogTitle>
+                    {previewItem.tier === "pro" ? (
+                      <ProBadge />
+                    ) : (
+                      <Badge tone="published">Free</Badge>
+                    )}
+                    <Badge tone="neutral" withDot={false}>
+                      {formatTypeLabel(previewItem.type)}
+                    </Badge>
+                  </div>
+
+                  <div
+                    role="group"
+                    aria-label="Preview viewport mode"
+                    className="border-border bg-sunken inline-flex items-center gap-1 rounded-lg border p-1"
+                  >
+                    <button
+                      type="button"
+                      data-testid="template-preview-viewport-desktop"
+                      aria-pressed={previewViewport === "desktop"}
+                      onClick={() => setPreviewViewport("desktop")}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-md px-3 py-1 transition-colors",
+                        previewViewport === "desktop"
+                          ? "bg-elevated text-foreground shadow-card type-caption font-semibold"
+                          : "text-muted-foreground hover:text-foreground type-caption",
+                      )}
+                    >
+                      <Monitor className="size-3.5" />
+                      Web View
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="template-preview-viewport-mobile"
+                      aria-pressed={previewViewport === "mobile"}
+                      onClick={() => setPreviewViewport("mobile")}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-md px-3 py-1 transition-colors",
+                        previewViewport === "mobile"
+                          ? "bg-elevated text-foreground shadow-card type-caption font-semibold"
+                          : "text-muted-foreground hover:text-foreground type-caption",
+                      )}
+                    >
+                      <Smartphone className="size-3.5" />
+                      Mobile View
+                    </button>
+                  </div>
                 </div>
                 <DialogDescription>
                   {previewItem.categoryName ?? "Case Study"} · v{previewItem.version} ·{" "}
@@ -451,8 +491,19 @@ export function TemplateLibraryClient({
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="border-border max-h-[65vh] overflow-y-auto rounded-xl border">
-                <TemplatePuckRenderer document={previewItem.document} />
+              <div className="border-border bg-sunken/50 max-h-[72vh] overflow-y-auto rounded-xl border">
+                <div
+                  className={cn(
+                    "mx-auto",
+                    previewViewport === "mobile" ? "w-[390px] max-w-full py-4" : "w-full max-w-[1440px]",
+                  )}
+                >
+                  <TemplatePuckRenderer
+                    document={previewItem.document}
+                    viewport={previewViewport}
+                    className={previewViewport === "mobile" ? "rounded-[24px] shadow-float" : "rounded-none"}
+                  />
+                </div>
               </div>
 
               <DialogFooter>

@@ -205,7 +205,7 @@ describe("Puck section components & TemplatePuckRenderer (C-302)", () => {
     expect(hybridContainer.querySelectorAll('[data-device-model="macbook"]').length).toBe(1);
   });
 
-  it("renders Figma Case Study Set v1 templates (Northwind, Pulse, Atlas) end-to-end", () => {
+  it("renders Figma Case Study Set v1 templates (Northwind, Pulse, Atlas) end-to-end and supports Pulse Web View (1440px) & Mobile View (390px)", () => {
     for (const [fileName, expectedTitle] of [
       ["template.northwind.json", "Northwind: turning freight chaos into a calm control room"],
       ["template.pulse.json", "Pulse: a fitness coach that fits into your day"],
@@ -221,5 +221,24 @@ describe("Puck section components & TemplatePuckRenderer (C-302)", () => {
       expect(screen.getByRole("heading", { level: 1, name: expectedTitle })).toBeInTheDocument();
       unmount();
     }
+
+    const pulseParsed = validateTemplateDocument(
+      JSON.parse(readFileSync(resolveReferencePath("template.pulse.json"), "utf-8")),
+    );
+    expect(pulseParsed.ok).toBe(true);
+    if (!pulseParsed.ok) return;
+
+    const { container: mobileContainer, unmount: unmountMobile } = render(
+      <TemplatePuckRenderer document={pulseParsed.data} viewport="mobile" />,
+    );
+    expect(
+      mobileContainer
+        .querySelector('[data-slot="template-puck-renderer"]')
+        ?.getAttribute("data-viewport"),
+    ).toBe("mobile");
+    expect(mobileContainer.querySelector('[data-slot="hero-mockup-stage"]')).not.toBeNull();
+    // 1 hero iPhone + 8 gallery iPhones = 9 mobile device frames
+    expect(mobileContainer.querySelectorAll('[data-device-frame="mobile"]').length).toBe(9);
+    unmountMobile();
   });
 });
