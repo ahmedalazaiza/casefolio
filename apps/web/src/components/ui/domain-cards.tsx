@@ -1,4 +1,4 @@
-import { Check, Smartphone } from "lucide-react";
+import { Check, Smartphone, X } from "lucide-react";
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -195,10 +195,15 @@ export interface PlanCardProps extends ComponentProps<"section"> {
   price: string;
   period?: string;
   badgeLabel?: string;
+  scopeLabel?: string;
+  billingNote?: string;
   description: string;
   ctaLabel?: string;
   ctaHref?: string;
+  featuresHeading?: string;
   features: readonly string[];
+  excludedFeatures?: readonly string[];
+  icon?: ReactNode;
   highlighted?: boolean;
   onSelectPlan?: () => void;
 }
@@ -208,10 +213,15 @@ export function PlanCard({
   price,
   period = "/mo",
   badgeLabel,
+  scopeLabel,
+  billingNote,
   description,
   ctaLabel = "Choose plan",
   ctaHref,
+  featuresHeading,
   features,
+  excludedFeatures,
+  icon,
   highlighted = false,
   onSelectPlan,
   className,
@@ -224,84 +234,202 @@ export function PlanCard({
       data-slot="plan-card"
       data-highlighted={highlighted ? "true" : "false"}
       className={cn(
-        "flex flex-col gap-6 rounded-3xl border p-9 transition-all duration-500 hover:-translate-y-1",
+        "relative flex h-full min-w-0 flex-col justify-between gap-6 rounded-3xl border p-6 transition-all duration-300 sm:p-8",
         highlighted
-          ? "border-inverse bg-inverse text-inverse-foreground shadow-overlay"
-          : "border-border/70 bg-card text-card-foreground shadow-card",
+          ? "border-inverse bg-inverse text-inverse-foreground shadow-overlay ring-primary/20 ring-4 lg:-translate-y-1.5"
+          : "border-border/80 bg-elevated text-card-foreground shadow-card hover:border-border-strong hover:shadow-float",
         className,
       )}
       {...props}
     >
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="type-heading-s">{name}</h3>
-        <Badge tone={highlighted ? "accent" : "neutral"}>{resolvedBadge}</Badge>
-      </div>
-
-      <div className="flex items-baseline gap-1.5">
-        <span className="type-display-l">{price}</span>
-        {period && (
-          <span
-            className={cn(
-              "type-body-m",
-              highlighted ? "text-inverse-foreground/80" : "text-muted-foreground",
-            )}
-          >
-            {period}
-          </span>
-        )}
-      </div>
-
-      <p
-        className={cn(
-          "type-body-s",
-          highlighted ? "text-inverse-foreground/75" : "text-muted-foreground",
-        )}
-      >
-        {description}
-      </p>
-
-      {ctaHref && !onSelectPlan ? (
-        <Button
-          variant={highlighted ? "accent" : "secondary"}
-          size="lg"
-          className="w-full"
-          asChild
+      <div className="flex flex-col gap-6">
+        {/* Top identity + price panel */}
+        <div
+          className={cn(
+            "flex flex-col gap-3.5 rounded-2xl border p-5",
+            highlighted
+              ? "border-inverse-foreground/15 bg-inverse-foreground/[0.06]"
+              : "border-border/60 bg-surface",
+          )}
         >
-          <Link href={ctaHref}>{ctaLabel}</Link>
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant={highlighted ? "accent" : "secondary"}
-          size="lg"
-          className="w-full"
-          onClick={onSelectPlan}
-        >
-          {ctaLabel}
-        </Button>
-      )}
-
-      <ul className="flex flex-col gap-3 pt-1">
-        {features.map((feature) => (
-          <li key={feature} className="flex items-center gap-2.5">
-            <Check
-              aria-hidden="true"
-              className={cn(
-                "size-4 shrink-0",
-                highlighted ? "text-primary" : "text-success",
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              {icon && (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "inline-flex size-10 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-4.5",
+                    highlighted
+                      ? "border-inverse-foreground/15 bg-primary text-primary-foreground"
+                      : "border-border/70 bg-elevated text-foreground",
+                  )}
+                >
+                  {icon}
+                </span>
               )}
-            />
-            <span
+              <h3 className="type-heading-m truncate">{name}</h3>
+            </div>
+            <Badge tone={highlighted ? "accent" : "neutral"} withDot={highlighted}>
+              {resolvedBadge}
+            </Badge>
+          </div>
+
+          {scopeLabel && (
+            <p
               className={cn(
-                "type-body-s",
-                highlighted ? "text-inverse-foreground/90" : "text-muted-foreground",
+                "type-caption",
+                highlighted ? "text-inverse-foreground/75" : "text-muted-foreground",
               )}
             >
-              {feature}
-            </span>
-          </li>
-        ))}
-      </ul>
+              {scopeLabel}
+            </p>
+          )}
+
+          <div className="flex flex-col gap-1 pt-0.5">
+            <div className="flex flex-wrap items-baseline gap-1.5">
+              <span className="type-display-l">{price}</span>
+              {period && (
+                <span
+                  className={cn(
+                    "type-body-m",
+                    highlighted ? "text-inverse-foreground/80" : "text-muted-foreground",
+                  )}
+                >
+                  {period}
+                </span>
+              )}
+            </div>
+            {billingNote && (
+              <p
+                className={cn(
+                  "type-caption",
+                  highlighted ? "text-inverse-foreground/75" : "text-muted-foreground",
+                )}
+              >
+                {billingNote}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <p
+          className={cn(
+            "type-body-s",
+            highlighted ? "text-inverse-foreground/85" : "text-muted-foreground",
+          )}
+        >
+          {description}
+        </p>
+
+        {ctaHref && !onSelectPlan ? (
+          <Button
+            variant={highlighted ? "accent" : "default"}
+            size="lg"
+            className={cn(
+              "w-full",
+              !highlighted &&
+                "border-border bg-elevated text-foreground hover:bg-surface border shadow-xs",
+            )}
+            asChild
+          >
+            <Link href={ctaHref}>{ctaLabel}</Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant={highlighted ? "accent" : "secondary"}
+            size="lg"
+            className="w-full"
+            onClick={onSelectPlan}
+          >
+            {ctaLabel}
+          </Button>
+        )}
+
+        <div className="flex flex-col gap-3 pt-1">
+          {featuresHeading && (
+            <p
+              className={cn(
+                "type-overline",
+                highlighted ? "text-inverse-foreground/70" : "text-muted-foreground",
+              )}
+            >
+              {featuresHeading}
+            </p>
+          )}
+
+          <ul className="flex flex-col gap-2.5">
+            {features.map((feature) => (
+              <li key={feature} className="flex items-start gap-2.5">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full",
+                    highlighted
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-success-soft text-success",
+                  )}
+                >
+                  <Check className="size-3" />
+                </span>
+                <span
+                  className={cn(
+                    "type-body-s",
+                    highlighted ? "text-inverse-foreground/90" : "text-foreground",
+                  )}
+                >
+                  {feature}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          {excludedFeatures && excludedFeatures.length > 0 && (
+            <div
+              className={cn(
+                "mt-2 flex flex-col gap-2 border-t pt-3.5",
+                highlighted ? "border-inverse-foreground/15" : "border-border/70",
+              )}
+            >
+              <p
+                className={cn(
+                  "type-overline",
+                  highlighted ? "text-inverse-foreground/65" : "text-muted-foreground",
+                )}
+              >
+                Not included
+              </p>
+              <ul className="flex flex-col gap-2">
+                {excludedFeatures.map((item) => (
+                  <li key={item} className="flex items-start gap-2.5">
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full",
+                        highlighted
+                          ? "bg-inverse-foreground/10 text-inverse-foreground/70"
+                          : "bg-sunken text-muted-foreground",
+                      )}
+                    >
+                      <X className="size-3" />
+                    </span>
+                    <span
+                      className={cn(
+                        "type-body-s",
+                        highlighted
+                          ? "text-inverse-foreground/75"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

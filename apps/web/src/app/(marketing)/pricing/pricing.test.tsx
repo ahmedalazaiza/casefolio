@@ -87,6 +87,20 @@ describe("PricingPageClient (C-1002 · Figma 2:8841)", () => {
     expect(
       screen.getByRole("link", { name: "Upgrade to Pro" }),
     ).toHaveAttribute("href", "/sign-up?plan=pro&interval=yearly");
+
+    // Top pricing cards appear above the detailed Included vs Not Included comparison matrix
+    const plansSection = screen.getByRole("region", {
+      name: "Subscription plans",
+    });
+    const comparisonSection = screen.getByTestId("plan-comparison-matrix");
+    expect(
+      plansSection.compareDocumentPosition(comparisonSection) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // Comparison matrix explicitly renders visible Included and Not included pills across plan differences
+    expect(screen.getAllByText("Included").length).toBeGreaterThanOrEqual(8);
+    expect(screen.getAllByText("Not included").length).toBeGreaterThanOrEqual(8);
   });
 
   it("computes Teams Seat Calculator math client-side for 1..25 seats and 26+ capacity review with zero network calls", async () => {

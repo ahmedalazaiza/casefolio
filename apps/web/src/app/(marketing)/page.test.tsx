@@ -72,9 +72,23 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     expect(screen.getAllByText("Meridian").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders crisp light and dark hero editor images, template carousel pager, and public URL state toggle", async () => {
+  it("renders 4 horizontal How It Works cards, up to 6 templates (3 per row) with Browse all templates CTA, and public URL state toggle", async () => {
     const user = userEvent.setup();
-    const snapshot = buildLandingSnapshot();
+    const baseSnapshot = buildLandingSnapshot();
+    const extraTemplates = [
+      ...baseSnapshot.templates,
+      {
+        ...baseSnapshot.templates[0]!,
+        slug: "extra-seven",
+        name: "Extra Seven",
+      },
+      {
+        ...baseSnapshot.templates[1]!,
+        slug: "extra-eight",
+        name: "Extra Eight",
+      },
+    ];
+    const snapshot = buildLandingSnapshot(extraTemplates);
     render(<LandingExperience snapshot={snapshot} />);
 
     // Hero frame renders crisp high-resolution editor images instead of an HTML form mockup
@@ -86,10 +100,22 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     expect(heroImages[0]).toHaveAttribute("src", "/landing/hero-editor-light.png");
     expect(heroImages[1]).toHaveAttribute("src", "/landing/hero-editor-dark.png");
 
-    // Browse the stacked template carousel via its pager dots
-    const orbitDot = screen.getByRole("tab", { name: /^Orbit/ });
-    await user.click(orbitDot);
-    expect(orbitDot).toHaveAttribute("aria-selected", "true");
+    // How it works: 4 horizontal cards in one row (lg:grid-cols-4)
+    const howItWorksStage = screen.getByTestId("how-it-works-stage");
+    expect(howItWorksStage.className).toContain("lg:grid-cols-4");
+    expect(screen.getByTestId("how-it-works-step-1")).toBeInTheDocument();
+    expect(screen.getByTestId("how-it-works-step-2")).toBeInTheDocument();
+    expect(screen.getByTestId("how-it-works-step-3")).toBeInTheDocument();
+    expect(screen.getByTestId("how-it-works-step-4")).toBeInTheDocument();
+
+    // Templates showcase: max 6 cards shown on home page in a 3-column row + Browse all templates link
+    const templateShowcase = screen.getByTestId("landing-template-showcase");
+    expect(templateShowcase.className).toContain("lg:grid-cols-3");
+    expect(templateShowcase.querySelectorAll("[data-stack-card]")).toHaveLength(6);
+    expect(screen.queryByRole("heading", { name: "Extra Seven" })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: /Browse all templates/i }),
+    ).toHaveAttribute("href", "/templates");
 
     // Toggle public URL preview state
     await user.click(

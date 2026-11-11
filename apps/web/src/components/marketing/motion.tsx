@@ -27,6 +27,7 @@ export interface RevealProps {
   y?: number;
   /** ScrollTrigger start position. */
   start?: string;
+  "data-testid"?: string;
 }
 
 /**
@@ -42,6 +43,7 @@ export function Reveal({
   delay = 0,
   y = 22,
   start = "top 92%",
+  "data-testid": dataTestId,
 }: RevealProps) {
   const ref = useRef<HTMLElement>(null);
 
@@ -70,7 +72,7 @@ export function Reveal({
   );
 
   return (
-    <Tag ref={ref} className={className} style={style}>
+    <Tag ref={ref} className={className} style={style} data-testid={dataTestId}>
       {children}
     </Tag>
   );

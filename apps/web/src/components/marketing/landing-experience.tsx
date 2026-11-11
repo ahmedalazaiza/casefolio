@@ -255,14 +255,19 @@ export function LandingExperience({
             description={`${snapshot.publishedTemplatesCount} curated templates with ${snapshot.totalTemplateSections} pre-built sections and ${snapshot.totalTemplateSlots} ratio-locked slots, ready to open today.`}
           />
         </div>
-        <div className="container-page flex w-full flex-col items-center gap-10 sm:gap-14">
+        <div className="container-page flex w-full flex-col items-center gap-12 sm:gap-14">
           <TemplateStack templates={snapshot.templates} />
-          <Button variant="secondary" size="lg" asChild>
-            <Link href="/templates">
-              <span>Browse all templates</span>
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+          <div className="flex flex-col items-center gap-3">
+            <Button variant="default" size="lg" asChild>
+              <Link href="/templates">
+                <span>Browse all templates</span>
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <p className="text-muted-foreground type-caption">
+              Explore the full template library, filter by platform, and inspect live previews
+            </p>
+          </div>
         </div>
       </section>
 
@@ -398,9 +403,9 @@ export function LandingExperience({
           icon={<Tag />}
           eyebrow="Pricing"
           title="Simple plans for every designer"
-          description="Start free with two projects — upgrade anytime for unlimited case studies, unwatermarked PNG & PDF exports, and full analytics."
+          description="Start free with two active projects — upgrade anytime for up to 20 active case studies on Pro, pooled team capacity, unbranded 2x PNG & PDF exports, and full analytics."
         />
-        <LandingPricingSection />
+        <LandingPricingSection showComparisonLink />
       </section>
 
       {/* 9. FAQ */}
