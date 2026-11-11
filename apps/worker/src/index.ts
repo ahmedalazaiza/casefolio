@@ -1,9 +1,11 @@
+import { timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { closeSharedExportBrowser } from "./renderer";
 import { startPgBossExportConsumer, type ExportWorkerConsumerHandle } from "./queue";
+import { resolveExportSigningSecret } from "./token";
 
 export * from "./token";
 export * from "./zip";
@@ -70,6 +72,35 @@ export async function startWorkerServer(options?: {
     }
 
     if (req.method === "POST" && req.url === "/wake") {
+      const configuredWakeSecret =
+        process.env.EXPORT_SIGNING_SECRET?.trim() || process.env.BETTER_AUTH_SECRET?.trim() || "";
+      if (process.env.NODE_ENV === "production" || req.headers.authorization) {
+        let expectedSecret = configuredWakeSecret;
+        if (!expectedSecret && process.env.NODE_ENV === "production") {
+          try {
+            expectedSecret = resolveExportSigningSecret();
+          } catch {
+            res.writeHead(503, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "Worker signing secret not configured." }));
+            return;
+          }
+        }
+        if (expectedSecret) {
+          const authHeader = req.headers.authorization ?? "";
+          const expectedHeader = `Bearer ${expectedSecret}`;
+          const providedBuf = Buffer.from(authHeader, "utf-8");
+          const expectedBuf = Buffer.from(expectedHeader, "utf-8");
+          if (
+            providedBuf.length !== expectedBuf.length ||
+            !timingSafeEqual(providedBuf, expectedBuf)
+          ) {
+            res.writeHead(401, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "Unauthorized wake request." }));
+            return;
+          }
+        }
+      }
+
       consumer.boss.notifyWorker(consumer.workerId);
       res.writeHead(202, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true }));

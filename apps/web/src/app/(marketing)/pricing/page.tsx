@@ -9,7 +9,7 @@ import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 export const metadata: Metadata = {
   title: "Pricing — Casefolio",
   description:
-    "Compare Free, Pro and Team Casefolio plans. Start free with two projects, or upgrade for unlimited case studies and unwatermarked PNG & PDF exports.",
+    "Compare Free, Pro and Team Casefolio plans. Start free with two projects, or upgrade for 20+ active case studies and unwatermarked PNG & PDF exports.",
   alternates: {
     canonical: "/pricing",
   },

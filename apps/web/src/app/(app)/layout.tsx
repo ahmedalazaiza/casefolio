@@ -1,13 +1,13 @@
-import { count, eq } from "@casefolio/db";
+import { and, count, eq, isNull } from "@casefolio/db";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { computeUserInitials, requireSession } from "@/lib/auth/session";
+import { getWorkspaceQuotas } from "@/lib/billing/plans";
 import { getUserBillingOverview } from "@/lib/billing/service";
 import { db, dbSchema } from "@/lib/db";
 import { can } from "@/lib/entitlements";
 import { listNotificationsForUser } from "@/lib/notifications/service";
-import { FREE_PROJECT_LIMIT } from "@/lib/projects/types";
 
 function formatShortDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -17,6 +17,7 @@ function formatShortDate(iso: string | null): string | null {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -32,17 +33,21 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     db
       .select({ total: count() })
       .from(dbSchema.projects)
-      .where(eq(dbSchema.projects.ownerId, user.id)),
+      .where(and(eq(dbSchema.projects.ownerId, user.id), isNull(dbSchema.projects.archivedAt))),
     listNotificationsForUser(user.id, { limit: 6 }),
   ]);
 
   const projectsUsed = Number(projectCountRows[0]?.total ?? 0);
   const initials = computeUserInitials(user.name, user.email);
   const isPaid = can(billing.effectivePlan, "pro_templates");
+  const quotas = getWorkspaceQuotas(
+    billing.effectivePlan,
+    billing.teamBilling?.paidSeats ?? 1,
+  );
   const periodDate = formatShortDate(billing.subscription?.currentPeriodEndIso ?? null);
 
   let planLabel = "Free · Starter";
-  let renewsLabel = "Upgrade to Pro for unlimited case studies";
+  let renewsLabel = "Upgrade to Pro for 20 active case studies";
 
   if (isPaid) {
     const tierTitle = billing.effectivePlan === "team" ? "Team" : "Pro";
@@ -72,7 +77,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       showProBadge={isPaid}
       planLabel={planLabel}
       projectsUsed={projectsUsed}
-      projectsLimit={isPaid ? null : FREE_PROJECT_LIMIT}
+      projectsLimit={quotas.activeProjectsLimit}
       renewsLabel={renewsLabel}
       failedPaymentPauseDateLabel={failedPaymentPauseDateLabel}
       initialUnreadNotifications={notificationsSummary.unreadCount}

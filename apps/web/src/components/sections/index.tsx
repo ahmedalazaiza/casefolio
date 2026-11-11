@@ -2,6 +2,7 @@ import type { PuckContext } from "@puckeditor/core";
 import type { CSSProperties } from "react";
 import { ImageSlotFrame } from "@/components/sections/image-slot-frame";
 import { RichTextView } from "@/components/sections/rich-text-view";
+import { isSafeRichTextHref } from "@/lib/template/rich-text";
 import type {
   CustomSectionLayout,
   GalleryDeviceFrame,
@@ -1660,36 +1661,51 @@ export function CtaSection({
             "lg:w-auto lg:flex-row lg:items-center lg:justify-center lg:gap-[12px] lg:pt-[16px]",
           )}
         >
-          <a
-            href={primaryHref}
-            style={{
-              backgroundColor: tokenColorVar(accent, "--primary"),
-              color: "var(--tpl-color-onPrimary, var(--primary-foreground))",
-            }}
-            className={viewClass(
-              isMobile,
-              "inline-flex w-full items-center justify-center rounded-full px-[24px] py-[16px] font-medium text-[1rem] leading-[1.2] transition-opacity hover:opacity-90",
-              "lg:w-auto lg:px-[32px] lg:py-[18px] lg:text-[1.0625rem]",
-            )}
-          >
-            {primaryLabel}
-          </a>
-          {secondaryLabel && secondaryHref && (
-            <a
-              href={secondaryHref}
-              style={{
-                borderColor: "var(--tpl-color-line, var(--border))",
-                color: "var(--tpl-color-text, var(--foreground))",
-              }}
-              className={viewClass(
-                isMobile,
-                "inline-flex w-full items-center justify-center rounded-full border-[1.5px] border-solid px-[24px] py-[16px] font-medium text-[1rem] leading-[1.2] transition-colors",
-                "lg:w-auto lg:px-[32px] lg:py-[18px] lg:text-[1.0625rem]",
-              )}
-            >
-              {secondaryLabel}
-            </a>
-          )}
+          {(() => {
+            const safePrimaryHref = isSafeRichTextHref(primaryHref) ? primaryHref.trim() : "#";
+            const primaryIsExternal = /^https?:\/\//i.test(safePrimaryHref);
+            const safeSecondaryHref =
+              secondaryHref && isSafeRichTextHref(secondaryHref) ? secondaryHref.trim() : null;
+            const secondaryIsExternal = safeSecondaryHref
+              ? /^https?:\/\//i.test(safeSecondaryHref)
+              : false;
+            return (
+              <>
+                <a
+                  href={safePrimaryHref}
+                  rel={primaryIsExternal ? "noopener noreferrer" : undefined}
+                  style={{
+                    backgroundColor: tokenColorVar(accent, "--primary"),
+                    color: "var(--tpl-color-onPrimary, var(--primary-foreground))",
+                  }}
+                  className={viewClass(
+                    isMobile,
+                    "inline-flex w-full items-center justify-center rounded-full px-[24px] py-[16px] font-medium text-[1rem] leading-[1.2] transition-opacity hover:opacity-90",
+                    "lg:w-auto lg:px-[32px] lg:py-[18px] lg:text-[1.0625rem]",
+                  )}
+                >
+                  {primaryLabel}
+                </a>
+                {secondaryLabel && safeSecondaryHref && (
+                  <a
+                    href={safeSecondaryHref}
+                    rel={secondaryIsExternal ? "noopener noreferrer" : undefined}
+                    style={{
+                      borderColor: "var(--tpl-color-line, var(--border))",
+                      color: "var(--tpl-color-text, var(--foreground))",
+                    }}
+                    className={viewClass(
+                      isMobile,
+                      "inline-flex w-full items-center justify-center rounded-full border-[1.5px] border-solid px-[24px] py-[16px] font-medium text-[1rem] leading-[1.2] transition-colors",
+                      "lg:w-auto lg:px-[32px] lg:py-[18px] lg:text-[1.0625rem]",
+                    )}
+                  >
+                    {secondaryLabel}
+                  </a>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
     </section>

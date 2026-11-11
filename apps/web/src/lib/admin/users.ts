@@ -325,7 +325,7 @@ export async function getAdminUserDetail(
       renewsAtIso:
         livePaddle?.renewsAtIso ??
         (dbSub.currentPeriodEnd ? dbSub.currentPeriodEnd.toISOString() : null),
-      paymentSummary: livePaddle?.paymentSummary ?? "Paddle Billing · Visa •• 4242",
+      paymentSummary: livePaddle?.paymentSummary ?? "Paddle Billing · Card on file",
     };
   }
 

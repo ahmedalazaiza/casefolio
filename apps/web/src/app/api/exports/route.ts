@@ -4,6 +4,34 @@ import {
   enqueueProjectExportForUser,
   getProjectExportsOverviewForUser,
 } from "@/lib/exports/service";
+import { resolvePublicAppBaseUrl } from "@/lib/projects/publish";
+
+function resolveSafeExportAppOrigin(requestUrl: string): string {
+  const configured = resolvePublicAppBaseUrl();
+  try {
+    const parsedConfigured = new URL(configured);
+    const parsedReq = new URL(requestUrl);
+    const isLoopback = (h: string) =>
+      h === "localhost" || h === "127.0.0.1" || h === "[::1]";
+    const cfgPort =
+      parsedConfigured.port || (parsedConfigured.protocol === "https:" ? "443" : "80");
+    const reqPort =
+      parsedReq.port || (parsedReq.protocol === "https:" ? "443" : "80");
+    // In local dev / CI Playwright, allow 127.0.0.1 <-> localhost on the exact configured port;
+    // in production, strictly pin to NEXT_PUBLIC_APP_URL so Host headers can never hijack worker SSRF.
+    if (
+      parsedReq.protocol === parsedConfigured.protocol &&
+      cfgPort === reqPort &&
+      isLoopback(parsedConfigured.hostname.toLowerCase()) &&
+      isLoopback(parsedReq.hostname.toLowerCase())
+    ) {
+      return parsedReq.origin;
+    }
+  } catch {
+    // Fall back to configured app URL
+  }
+  return configured;
+}
 
 export async function GET(request: Request): Promise<Response> {
   const ctx = await getServerSession();
@@ -68,7 +96,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const reqOrigin = new URL(request.url).origin;
+  const safeOrigin = resolveSafeExportAppOrigin(request.url);
   const result = await enqueueProjectExportForUser(
     body,
     {
@@ -77,7 +105,7 @@ export async function POST(request: Request): Promise<Response> {
       plan: ctx.user.plan,
     },
     {
-      appUrl: reqOrigin,
+      appUrl: safeOrigin,
     },
   );
 

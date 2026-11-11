@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   if (!result.recorded && result.reason === "rate_limited") {
     return NextResponse.json(
-      { ok: false, recorded: false, reason: result.reason },
+      { ok: false, recorded: false },
       { status: 429 },
     );
   }
@@ -42,6 +42,5 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     recorded: result.recorded,
-    reason: result.recorded ? undefined : result.reason,
   });
 }

@@ -6,6 +6,43 @@ import {
   writeStoredObject,
   type LocalPutTokenPayload,
 } from "@/lib/storage/r2";
+import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+
+async function readStreamWithLimit(
+  request: Request,
+  maxBytes: number,
+): Promise<{ ok: true; bytes: Uint8Array } | { ok: false; reason: "too_large" }> {
+  if (!request.body) {
+    return { ok: true, bytes: new Uint8Array(0) };
+  }
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || value.byteLength === 0) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, reason: "too_large" };
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const combined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { ok: true, bytes: combined };
+}
 
 export async function PUT(request: Request): Promise<NextResponse> {
   const url = new URL(request.url);
@@ -25,17 +62,16 @@ export async function PUT(request: Request): Promise<NextResponse> {
     );
   }
 
-  const buffer = await request.arrayBuffer();
-  const rawBytes = new Uint8Array(buffer);
-
-  if (rawBytes.byteLength === 0) {
+  const keyRate = consumeUploadRateLimit(`local-put:${payload.r2Key}`, 4, 300_000);
+  if (!keyRate.allowed) {
     return NextResponse.json(
-      { ok: false, code: "EMPTY_UPLOAD", error: "Uploaded file is empty." },
-      { status: 400 },
+      { ok: false, code: "RATE_LIMITED", error: "Too many upload attempts for this signed URL." },
+      { status: 429, headers: { "Retry-After": String(keyRate.retryAfterSeconds) } },
     );
   }
 
-  if (rawBytes.byteLength > payload.maxBytes) {
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > payload.maxBytes) {
     return NextResponse.json(
       {
         ok: false,
@@ -43,6 +79,26 @@ export async function PUT(request: Request): Promise<NextResponse> {
         error: `Uploaded file exceeds the signed limit of ${formatBytesHuman(payload.maxBytes)}.`,
       },
       { status: 413 },
+    );
+  }
+
+  const streamRead = await readStreamWithLimit(request, payload.maxBytes);
+  if (!streamRead.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "FILE_TOO_LARGE",
+        error: `Uploaded file exceeds the signed limit of ${formatBytesHuman(payload.maxBytes)}.`,
+      },
+      { status: 413 },
+    );
+  }
+  const rawBytes = streamRead.bytes;
+
+  if (rawBytes.byteLength === 0) {
+    return NextResponse.json(
+      { ok: false, code: "EMPTY_UPLOAD", error: "Uploaded file is empty." },
+      { status: 400 },
     );
   }
 

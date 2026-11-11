@@ -1,4 +1,4 @@
-import { and, eq, type PlanTier, type UserRole } from "@casefolio/db";
+import { and, eq, sql, type PlanTier, type UserRole } from "@casefolio/db";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { evaluateQuotaUsage, getWorkspaceQuotas } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
@@ -222,26 +222,73 @@ export async function createProjectFromTemplate({
   const initialTheme = structuredClone(docCheck.data.template.theme);
   const now = new Date();
 
-  const [created] = await db
-    .insert(dbSchema.projects)
-    .values({
-      ownerId: userId,
-      orgId: targetOrgId,
-      workspaceId: targetWorkspaceId,
-      spaceId: targetSpaceId,
-      createdByUserId: userId,
-      templateVersionId: tplRow.version.id,
-      name: valid.name,
-      type: valid.type,
-      puckData: initialPuckData as unknown as Record<string, unknown>,
-      theme: initialTheme as unknown as Record<string, unknown>,
-      revision: 1,
-      visibility: "private",
-      brandingRemoved: false,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+  const txCreate = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM workspaces WHERE id = ${targetWorkspaceId} FOR UPDATE`);
+    const countsRes = await tx.execute<{
+      active_count: string | number;
+      retained_count: string | number;
+    }>(sql`
+      SELECT
+        count(*) FILTER (WHERE archived_at IS NULL)::int AS active_count,
+        count(*)::int AS retained_count
+      FROM projects
+      WHERE workspace_id = ${targetWorkspaceId}
+    `);
+    const activeCount = Number(countsRes.rows[0]?.active_count ?? 0);
+    const retainedCount = Number(countsRes.rows[0]?.retained_count ?? 0);
+
+    if (activeCount >= maxActiveProjects) {
+      const decision = evaluateEntitlement(effectivePlan, "create_project", {
+        projectsCount: activeCount,
+        paidSeats: targetOrgId ? Math.max(1, Math.round(maxActiveProjects / 20)) : 1,
+      });
+      return {
+        ok: false as const,
+        code: "PLAN_LIMIT_REACHED" as const,
+        error:
+          decision.allowed === false
+            ? decision.message
+            : `You have reached the limit of ${maxActiveProjects} active case studies in this workspace.`,
+      };
+    }
+
+    if (retainedCount >= maxRetainedProjects) {
+      return {
+        ok: false as const,
+        code: "PLAN_LIMIT_REACHED" as const,
+        error: `This workspace has reached its limit of ${maxRetainedProjects} total retained projects (including archives).`,
+      };
+    }
+
+    const [inserted] = await tx
+      .insert(dbSchema.projects)
+      .values({
+        ownerId: userId,
+        orgId: targetOrgId,
+        workspaceId: targetWorkspaceId,
+        spaceId: targetSpaceId,
+        createdByUserId: userId,
+        templateVersionId: tplRow.version.id,
+        name: valid.name,
+        type: valid.type,
+        puckData: initialPuckData as unknown as Record<string, unknown>,
+        theme: initialTheme as unknown as Record<string, unknown>,
+        revision: 1,
+        visibility: "private",
+        brandingRemoved: false,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    return { ok: true as const, created: inserted };
+  });
+
+  if (!txCreate.ok) {
+    return txCreate;
+  }
+
+  const created = txCreate.created;
 
   if (!created) {
     return {

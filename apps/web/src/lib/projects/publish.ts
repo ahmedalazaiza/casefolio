@@ -2,6 +2,7 @@ import {
   and,
   eq,
   ne,
+  sql,
   type PlanTier,
   type SpaceVisibility,
   type UserRole,
@@ -517,20 +518,29 @@ export async function publishProjectForUser(
     };
   }
 
+  // Block re-publishing if an active moderation takedown exists on this project
+  const [activeTakedown] = await db
+    .select({ id: dbSchema.reports.id })
+    .from(dbSchema.reports)
+    .where(
+      and(
+        eq(dbSchema.reports.projectId, existing.id),
+        eq(dbSchema.reports.status, "takedown"),
+      ),
+    )
+    .limit(1);
+  if (activeTakedown) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      error:
+        "This case study was unpublished following a moderation policy takedown and cannot be re-published until cleared by support.",
+    };
+  }
+
   const currentlyPublished =
     (existing.visibility === "public" || existing.visibility === "unlisted") &&
     existing.publishedAt !== null;
-
-  if (!currentlyPublished) {
-    const counts = await getWorkspaceProjectCounts(auth.workspace.id);
-    if (counts.publishedProjects >= auth.entitlement.quotas.publishedProjectsLimit) {
-      return {
-        ok: false,
-        code: "PUBLISH_LIMIT_REACHED",
-        error: `This workspace has reached its simultaneous published case-study limit (${auth.entitlement.quotas.publishedProjectsLimit}). Unpublish another case study or upgrade your plan.`,
-      };
-    }
-  }
 
   const availability = await checkProjectSlugAvailability(valid.slug, existing.id);
   if (!availability.available) {
@@ -555,68 +565,104 @@ export async function publishProjectForUser(
     .from(dbSchema.assets)
     .where(eq(dbSchema.assets.projectId, existing.id));
 
-  const referencedIds = collectReferencedAssetIds(existing.puckData);
-  const publishedAssetIds = Array.from(
-    new Set([...projectAssets.map((a) => a.id.toLowerCase()), ...referencedIds]),
-  );
+  const referencedSet = new Set(collectReferencedAssetIds(existing.puckData));
+  const publishedAssetIds = projectAssets
+    .map((a) => a.id.toLowerCase())
+    .filter((id) => referencedSet.has(id));
 
   try {
-    const [updated] = await db
-      .update(dbSchema.projects)
-      .set({
-        slug: availability.normalizedSlug,
-        visibility: valid.visibility,
-        brandingRemoved: effectiveBrandingRemoved,
-        publicAcknowledgedAt,
-        publishedAt,
-        updatedAt: now,
-      })
-      .where(eq(dbSchema.projects.id, existing.id))
-      .returning();
+    const txOutcome = await db.transaction(async (tx) => {
+      // Serialize simultaneous publish quota checks per workspace (`FOR UPDATE`)
+      await tx.execute(
+        sql`SELECT id FROM workspaces WHERE id = ${auth.workspace.id} FOR UPDATE`,
+      );
 
-    if (!updated || !updated.slug || !updated.publishedAt) {
-      return {
-        ok: false,
-        code: "NOT_FOUND",
-        error: "Failed to publish project.",
-      };
-    }
+      if (!currentlyPublished) {
+        const publishedCountRes = await tx.execute<{ total: string | number }>(sql`
+          SELECT count(*)::int AS total
+          FROM projects
+          WHERE workspace_id = ${auth.workspace.id}
+            AND archived_at IS NULL
+            AND published_at IS NOT NULL
+            AND visibility IN ('public', 'unlisted')
+        `);
+        const publishedCount = Number(publishedCountRes.rows[0]?.total ?? 0);
+        if (publishedCount >= auth.entitlement.quotas.publishedProjectsLimit) {
+          return {
+            ok: false as const,
+            code: "PUBLISH_LIMIT_REACHED" as const,
+            error: `This workspace has reached its simultaneous published case-study limit (${auth.entitlement.quotas.publishedProjectsLimit}). Unpublish another case study or upgrade your plan.`,
+          };
+        }
+      }
 
-    // Isolate public rendering to `published_snapshots` (`Spec §10.3`)
-    await db
-      .insert(dbSchema.publishedSnapshots)
-      .values({
-        projectId: updated.id,
-        workspaceId: auth.workspace.id,
-        spaceId: auth.space.id,
-        revision: updated.revision,
-        puckData: structuredClone(updated.puckData),
-        theme: structuredClone(updated.theme),
-        publishedAssetIds,
-        brandingRemoved: effectiveBrandingRemoved,
-        suspendedReason: null,
-        publishedByUserId: user.id,
-        publicAcknowledgedAt,
-        publishedAt: updated.publishedAt,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: dbSchema.publishedSnapshots.projectId,
-        set: {
+      const [updatedRow] = await tx
+        .update(dbSchema.projects)
+        .set({
+          slug: availability.normalizedSlug,
+          visibility: valid.visibility,
+          brandingRemoved: effectiveBrandingRemoved,
+          publicAcknowledgedAt,
+          publishedAt,
+          updatedAt: now,
+        })
+        .where(eq(dbSchema.projects.id, existing.id))
+        .returning();
+
+      if (!updatedRow || !updatedRow.slug || !updatedRow.publishedAt) {
+        return {
+          ok: false as const,
+          code: "NOT_FOUND" as const,
+          error: "Failed to publish project.",
+        };
+      }
+
+      // Isolate public rendering strictly to `published_snapshots` & referenced project assets (`Spec §10.3`)
+      await tx
+        .insert(dbSchema.publishedSnapshots)
+        .values({
+          projectId: updatedRow.id,
           workspaceId: auth.workspace.id,
           spaceId: auth.space.id,
-          revision: updated.revision,
-          puckData: structuredClone(updated.puckData),
-          theme: structuredClone(updated.theme),
+          revision: updatedRow.revision,
+          puckData: structuredClone(updatedRow.puckData),
+          theme: structuredClone(updatedRow.theme),
           publishedAssetIds,
           brandingRemoved: effectiveBrandingRemoved,
           suspendedReason: null,
           publishedByUserId: user.id,
           publicAcknowledgedAt,
-          publishedAt: updated.publishedAt,
+          publishedAt: updatedRow.publishedAt,
           updatedAt: now,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: dbSchema.publishedSnapshots.projectId,
+          set: {
+            workspaceId: auth.workspace.id,
+            spaceId: auth.space.id,
+            revision: updatedRow.revision,
+            puckData: structuredClone(updatedRow.puckData),
+            theme: structuredClone(updatedRow.theme),
+            publishedAssetIds,
+            brandingRemoved: effectiveBrandingRemoved,
+            suspendedReason: null,
+            publishedByUserId: user.id,
+            publicAcknowledgedAt,
+            publishedAt: updatedRow.publishedAt,
+            updatedAt: now,
+          },
+        });
+
+      return { ok: true as const, updated: updatedRow };
+    });
+
+    if (!txOutcome.ok) {
+      return txOutcome;
+    }
+
+    const updated = txOutcome.updated;
+    const resolvedSlug = updated.slug ?? valid.slug;
+    const resolvedPublishedAt = updated.publishedAt ?? now;
 
     const isFirstPublish = existing.publishedAt === null;
 
@@ -635,19 +681,19 @@ export async function publishProjectForUser(
         userId: updated.ownerId,
         projectId: updated.id,
         projectName: updated.name,
-        slug: updated.slug,
+        slug: resolvedSlug,
       }).catch(() => undefined);
     }
 
     return {
       ok: true,
       projectId: updated.id,
-      slug: updated.slug,
+      slug: resolvedSlug,
       visibility: valid.visibility,
       brandingRemoved: effectiveBrandingRemoved,
-      publishedAtIso: updated.publishedAt.toISOString(),
-      publicPath: `/p/${updated.slug}`,
-      publicUrl: buildPublicCaseStudyUrl(updated.slug),
+      publishedAtIso: resolvedPublishedAt.toISOString(),
+      publicPath: `/p/${resolvedSlug}`,
+      publicUrl: buildPublicCaseStudyUrl(resolvedSlug),
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "";

@@ -14,8 +14,7 @@ if (existsSync(envPath)) {
   process.loadEnvFile(envPath);
 }
 
-const ARTIFACT_DIR =
-  "/Users/apple/.gemini/antigravity/brain/289549fa-2861-4b0a-807a-bf94aa1bca6b";
+const ARTIFACT_DIR = process.env.CASEFOLIO_E2E_ARTIFACT_DIR ?? "";
 
 async function maybeSaveScreenshot(
   target: {
@@ -29,7 +28,7 @@ async function maybeSaveScreenshot(
   filename: string,
   fullPage = false,
 ) {
-  if (existsSync(ARTIFACT_DIR)) {
+  if (ARTIFACT_DIR && existsSync(ARTIFACT_DIR)) {
     await target.screenshot({
       path: resolve(ARTIFACT_DIR, filename),
       fullPage,

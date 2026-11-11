@@ -32,6 +32,8 @@ import type {
   SaveProjectEditorInput,
   SaveProjectEditorResult,
 } from "@/lib/projects/types";
+import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+import { authorizeProjectAccess } from "@/lib/workspaces/acl";
 
 export async function createProjectAction(input: CreateProjectInput): Promise<CreateProjectResult> {
   const ctx = await getServerSession();
@@ -105,6 +107,15 @@ export async function checkProjectSlugAction(
     };
   }
 
+  const rate = consumeUploadRateLimit(`slug-check:${ctx.user.id}`, 60, 60_000);
+  if (!rate.allowed) {
+    return {
+      available: false,
+      normalizedSlug: slug.trim().toLowerCase(),
+      reason: "Too many slug availability checks. Please wait a moment.",
+    };
+  }
+
   const parsed = checkSlugActionSchema.safeParse({ slug, projectId });
   if (!parsed.success) {
     return {
@@ -114,7 +125,12 @@ export async function checkProjectSlugAction(
     };
   }
 
-  return checkProjectSlugAvailability(parsed.data.slug, parsed.data.projectId);
+  // Verify caller has read access to `projectId` before allowing it as `excludeProjectId`,
+  // preventing cross-tenant slug-to-projectId enumeration.
+  const access = await authorizeProjectAccess(parsed.data.projectId, ctx.user.id, "read");
+  const safeExcludeProjectId = access.ok ? parsed.data.projectId : undefined;
+
+  return checkProjectSlugAvailability(parsed.data.slug, safeExcludeProjectId);
 }
 
 export async function publishProjectAction(

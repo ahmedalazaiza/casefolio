@@ -326,48 +326,62 @@ export async function recordAndCheckWorkspaceBandwidth(args: {
   const calendarMonth = getUtcCalendarMonth(now);
   const bytes = Math.max(0, Math.floor(args.bytes));
 
-  const current = await getWorkspaceMonthlyMeterUsage(
-    args.workspaceId,
-    "bandwidth_bytes",
-    now,
-  );
-  const evalCheck = evaluateQuotaUsage({
-    used: current.total,
-    adding: bytes,
-    limit: args.limit,
-    isPaid: args.isPaid,
-    graceUsedAt: args.graceUsedAt,
-    graceExpiresAt: args.graceExpiresAt,
-    now,
-  });
-
-  if (!evalCheck.allowed) {
-    return { allowed: false, usedAfter: current.total };
-  }
-
-  await db
-    .insert(dbSchema.usageBuckets)
-    .values({
-      workspaceId: args.workspaceId,
-      calendarMonth,
-      meter: "bandwidth_bytes",
-      usedValue: bytes,
-      reservedValue: 0,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: [
-        dbSchema.usageBuckets.workspaceId,
-        dbSchema.usageBuckets.calendarMonth,
-        dbSchema.usageBuckets.meter,
-      ],
-      set: {
-        usedValue: sql`${dbSchema.usageBuckets.usedValue} + ${bytes}`,
+  return db.transaction(async (tx) => {
+    await tx
+      .insert(dbSchema.usageBuckets)
+      .values({
+        workspaceId: args.workspaceId,
+        calendarMonth,
+        meter: "bandwidth_bytes",
+        usedValue: 0,
+        reservedValue: 0,
         updatedAt: now,
-      },
+      })
+      .onConflictDoNothing();
+
+    const lockedRes = await tx.execute<{
+      used_value: string | number;
+      reserved_value: string | number;
+    }>(sql`
+      SELECT used_value, reserved_value
+      FROM usage_buckets
+      WHERE workspace_id = ${args.workspaceId}
+        AND calendar_month = ${calendarMonth}
+        AND meter = 'bandwidth_bytes'
+      FOR UPDATE
+    `);
+
+    const usedBefore = Number(lockedRes.rows[0]?.used_value ?? 0);
+    const reservedBefore = Number(lockedRes.rows[0]?.reserved_value ?? 0);
+    const currentTotal = usedBefore + reservedBefore;
+
+    const evalCheck = evaluateQuotaUsage({
+      used: currentTotal,
+      adding: bytes,
+      limit: args.limit,
+      isPaid: args.isPaid,
+      graceUsedAt: args.graceUsedAt,
+      graceExpiresAt: args.graceExpiresAt,
+      now,
     });
 
-  return { allowed: true, usedAfter: current.total + bytes };
+    if (!evalCheck.allowed) {
+      return { allowed: false, usedAfter: currentTotal };
+    }
+
+    if (bytes > 0) {
+      await tx.execute(sql`
+        UPDATE usage_buckets
+        SET used_value = used_value + ${bytes},
+            updated_at = ${now}
+        WHERE workspace_id = ${args.workspaceId}
+          AND calendar_month = ${calendarMonth}
+          AND meter = 'bandwidth_bytes'
+      `);
+    }
+
+    return { allowed: true, usedAfter: currentTotal + bytes };
+  });
 }
 
 /**

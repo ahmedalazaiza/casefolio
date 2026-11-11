@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,15 +70,28 @@ function formatProjectTypeLabel(type: TemplateProjectType): string {
   return "Mobile + Web";
 }
 
-function formatRelativeUpdated(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
+function formatRelativeUpdated(iso: string, nowMs: number | null): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return "Recently";
+  if (nowMs === null) {
+    return parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  }
+  const diffMs = Math.max(0, nowMs - parsed.getTime());
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   if (diffHours < 24) return "Today";
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) return `${diffDays}d ago`;
   const diffWeeks = Math.floor(diffDays / 7);
   if (diffWeeks < 5) return `${diffWeeks}w ago`;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function StatusBadge({ status }: { status: TemplateStatus }) {
@@ -137,6 +150,11 @@ export function AdminTemplatesList({
   const [deleteTarget, setDeleteTarget] = useState<AdminTemplateSummary | null>(null);
   const [confirmNameInput, setConfirmNameInput] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [mountedNowMs, setMountedNowMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    setMountedNowMs(Date.now());
+  }, []);
 
   const categoryOptions = useMemo(() => {
     const bySlug = new Map<string, string>();
@@ -467,7 +485,7 @@ export function AdminTemplatesList({
                     </td>
                     <td className="text-muted-foreground type-body-s px-4 py-4">{item.slotCount}</td>
                     <td className="text-tertiary type-caption px-4 py-4">
-                      {formatRelativeUpdated(item.updatedAtIso)}
+                      {formatRelativeUpdated(item.updatedAtIso, mountedNowMs)}
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="inline-flex items-center gap-2">

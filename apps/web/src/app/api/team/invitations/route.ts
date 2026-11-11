@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/session";
 import { createGatedTeamInvitation } from "@/lib/entitlements/team-invitations";
+import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
 
 export async function POST(request: Request) {
   const ctx = await getServerSession();
@@ -8,6 +9,14 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { ok: false, code: "UNAUTHORIZED", error: "Authentication required." },
       { status: 401 },
+    );
+  }
+
+  const rate = consumeUploadRateLimit(`team-invite:${ctx.user.id}`, 15, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, code: "RATE_LIMITED", error: "Too many invitations sent. Please wait a minute and try again." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
 

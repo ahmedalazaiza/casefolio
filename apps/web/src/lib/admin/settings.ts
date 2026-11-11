@@ -1,4 +1,4 @@
-import { desc, eq, ilike, inArray, type UserRole } from "@casefolio/db";
+import { desc, eq, inArray, sql, type UserRole } from "@casefolio/db";
 import {
   classifyAuditAction,
   DEFAULT_PLATFORM_SETTINGS,
@@ -136,7 +136,7 @@ export async function promoteAdminByEmail(args: {
   const [target] = await db
     .select()
     .from(dbSchema.users)
-    .where(ilike(dbSchema.users.email, normalizedEmail))
+    .where(sql`lower(${dbSchema.users.email}) = ${normalizedEmail}`)
     .limit(1);
 
   if (!target) {

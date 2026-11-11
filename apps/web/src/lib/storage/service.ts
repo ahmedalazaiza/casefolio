@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
-import { count, eq, type PlanTier, type UserRole } from "@casefolio/db";
+import { and, count, eq, inArray, type PlanTier, type UserRole } from "@casefolio/db";
 import { evaluateQuotaUsage } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import { resolveWorkspaceEntitlementState } from "@/lib/entitlements/server";
 import { buildAssetCdnBaseUrl } from "@/lib/storage/cloudflare-images";
+import { stripImageExifAndMetadata } from "@/lib/storage/exif";
 import {
   completeUploadInputSchema,
+  detectImageMimeFromMagicBytes,
   extensionForMimeType,
   formatBytesHuman,
   getUploadQuotaForPlan,
@@ -24,6 +26,7 @@ import {
   readStoredObjectBytes,
   signStorageToken,
   verifyStorageToken,
+  writeStoredObject,
 } from "@/lib/storage/r2";
 import { validateTemplateDocument, type CropRect } from "@/lib/template/schema";
 import {
@@ -365,6 +368,19 @@ export async function completePresignedUpload(
 
   const quota = getUploadQuotaForPlan(auth.entitlement.plan, auth.entitlement.paidSeats);
 
+  const [existingCountRow] = await db
+    .select({ total: count() })
+    .from(dbSchema.assets)
+    .where(eq(dbSchema.assets.projectId, auth.project.id));
+  if ((existingCountRow?.total ?? 0) >= quota.maxAssetsPerProject) {
+    await deleteStoredObject(tokenPayload.r2Key);
+    return {
+      ok: false,
+      code: "STORAGE_QUOTA_EXCEEDED",
+      error: `This project has reached its limit of ${quota.maxAssetsPerProject} uploaded images on the ${auth.entitlement.plan.toUpperCase()} plan.`,
+    };
+  }
+
   const storedInfo = await headStoredObject(tokenPayload.r2Key);
   if (!storedInfo.exists || storedInfo.bytes <= 0) {
     return {
@@ -383,10 +399,41 @@ export async function completePresignedUpload(
     };
   }
 
+  const rawBytes = await readStoredObjectBytes(tokenPayload.r2Key);
+  if (!rawBytes || rawBytes.byteLength === 0) {
+    return {
+      ok: false,
+      code: "UPLOAD_MISSING",
+      error: "Uploaded image bytes were not found in storage. Please retry.",
+    };
+  }
+
+  const detectedMime = detectImageMimeFromMagicBytes(rawBytes);
+  if (!detectedMime || detectedMime !== tokenPayload.mimeType) {
+    await deleteStoredObject(tokenPayload.r2Key);
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      error: "Uploaded file binary header does not match an allowed PNG, JPG, or WebP image.",
+    };
+  }
+
+  const sanitizedBytes = stripImageExifAndMetadata(rawBytes, detectedMime);
+  const bytesChanged =
+    sanitizedBytes.byteLength !== rawBytes.byteLength ||
+    Buffer.compare(Buffer.from(sanitizedBytes), Buffer.from(rawBytes)) !== 0;
+  if (bytesChanged) {
+    await writeStoredObject(tokenPayload.r2Key, sanitizedBytes, {
+      contentType: detectedMime,
+      cacheControl: "private, max-age=31536000, immutable",
+    });
+  }
+  const finalByteLength = sanitizedBytes.byteLength;
+
   const usedBytes = await getWorkspaceStorageUsageBytes(auth.workspace.id);
   const storageEval = evaluateQuotaUsage({
     used: usedBytes,
-    adding: storedInfo.bytes,
+    adding: finalByteLength,
     limit: quota.maxTotalBytes,
     isPaid: auth.entitlement.plan !== "free",
     graceUsedAt: auth.entitlement.graceUsedAt,
@@ -407,7 +454,7 @@ export async function completePresignedUpload(
   const meterRes = await reserveWorkspaceMeter({
     workspaceId: auth.workspace.id,
     meter: "uploads_bytes",
-    amount: storedInfo.bytes,
+    amount: finalByteLength,
     limit: quota.monthlyUploadsBytes,
     jobId: uploadJobId,
     isPaid: auth.entitlement.plan !== "free",
@@ -424,8 +471,7 @@ export async function completePresignedUpload(
     };
   }
 
-  const rawBytes = await readStoredObjectBytes(tokenPayload.r2Key);
-  const sha256 = rawBytes ? createHash("sha256").update(rawBytes).digest("hex") : null;
+  const sha256 = createHash("sha256").update(sanitizedBytes).digest("hex");
   const normalizedCrop = parsed.data.crop ?? null;
 
   try {
@@ -440,7 +486,7 @@ export async function completePresignedUpload(
         crop: normalizedCrop,
         width: tokenPayload.width,
         height: tokenPayload.height,
-        bytes: storedInfo.bytes,
+        bytes: finalByteLength,
         mimeType: tokenPayload.mimeType,
         sha256,
       })
@@ -506,7 +552,10 @@ export type ReadAssetAccessResult =
 export async function authorizeAndReadAsset(
   assetId: string,
   requester: StorageActor | null,
-  options?: { authorizedExportProjectId?: string | null },
+  options?: {
+    authorizedExportProjectId?: string | null;
+    authorizedExportId?: string | null;
+  },
 ): Promise<ReadAssetAccessResult> {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -553,8 +602,8 @@ export async function authorizeAndReadAsset(
         !snapshot.suspendedReason &&
         snapshot.publishedAssetIds.includes(assetId.toLowerCase());
     } else {
-      // Backward-compatible fallback for direct-DB test rows without `published_snapshots`
-      canDeliverPublicly = true;
+      // Fail closed in production when no `published_snapshots` row exists; preserve direct-DB unit tests
+      canDeliverPublicly = process.env.NODE_ENV !== "production";
     }
   }
 
@@ -578,9 +627,28 @@ export async function authorizeAndReadAsset(
   }
 
   if (!canDeliverPublicly) {
-    const allowedViaExportToken =
+    let allowedViaExportToken = false;
+    if (
       Boolean(options?.authorizedExportProjectId) &&
-      options?.authorizedExportProjectId === ensured.project.id;
+      options?.authorizedExportProjectId === ensured.project.id
+    ) {
+      if (options?.authorizedExportId && uuidRegex.test(options.authorizedExportId)) {
+        const [activeExport] = await db
+          .select({ id: dbSchema.exportsTable.id })
+          .from(dbSchema.exportsTable)
+          .where(
+            and(
+              eq(dbSchema.exportsTable.id, options.authorizedExportId),
+              eq(dbSchema.exportsTable.projectId, ensured.project.id),
+              inArray(dbSchema.exportsTable.status, ["queued", "processing"]),
+            ),
+          )
+          .limit(1);
+        allowedViaExportToken = Boolean(activeExport);
+      } else if (process.env.NODE_ENV !== "production" && !options?.authorizedExportId) {
+        allowedViaExportToken = true;
+      }
+    }
 
     if (!allowedViaExportToken) {
       if (!requester) {

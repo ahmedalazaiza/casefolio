@@ -5,11 +5,13 @@ import {
   inArray,
   isNull,
   or,
+  sql,
   type PlanTier,
   type UserRole,
 } from "@casefolio/db";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { db, dbSchema } from "@/lib/db";
+import { can } from "@/lib/entitlements";
 import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
@@ -19,7 +21,7 @@ import {
   authorizeProjectAccess,
   ensureProjectWorkspaceAndSpace,
 } from "@/lib/workspaces/acl";
-import { revokeUserWorkspaceLeases } from "@/lib/workspaces/leases";
+import { inspectProjectEditLease, revokeUserWorkspaceLeases } from "@/lib/workspaces/leases";
 import {
   getWorkspaceProjectCounts,
   listVisibleSpacesForWorkspace,
@@ -204,6 +206,16 @@ export async function renameProjectForUser(
     };
   }
 
+  const now = new Date();
+  const activeLease = await inspectProjectEditLease(projectId, actor.id, now);
+  if (activeLease && !activeLease.isHeldByCurrentUser) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      error: `${activeLease.holderName} is currently editing this project. Try renaming once they finish.`,
+    };
+  }
+
   const clonedPuck = structuredClone(auth.project.puckData ?? {});
   if (
     clonedPuck &&
@@ -220,8 +232,7 @@ export async function renameProjectForUser(
     rootObj.props = { ...existingProps, title: name };
   }
 
-  const now = new Date();
-  await db
+  const [updated] = await db
     .update(dbSchema.projects)
     .set({
       name,
@@ -229,7 +240,21 @@ export async function renameProjectForUser(
       revision: auth.project.revision + 1,
       updatedAt: now,
     })
-    .where(eq(dbSchema.projects.id, projectId));
+    .where(
+      and(
+        eq(dbSchema.projects.id, projectId),
+        eq(dbSchema.projects.revision, auth.project.revision),
+      ),
+    )
+    .returning({ id: dbSchema.projects.id });
+
+  if (!updated) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      error: "This project was updated concurrently. Refresh and try renaming again.",
+    };
+  }
 
   return {
     ok: true,
@@ -283,6 +308,19 @@ export async function duplicateProjectForUser(
     return { ok: false, code: "NOT_FOUND", error: "Project not found." };
   }
 
+  const effectivePlan: PlanTier =
+    auth.workspace.kind === "personal" && userPlan === "pro" && auth.entitlement.plan === "free"
+      ? "pro"
+      : auth.entitlement.plan;
+
+  if (row.templateTier === "pro" && !can(effectivePlan, "pro_templates")) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      error: "Upgrade to Pro or Teams to duplicate case studies built on Pro templates.",
+    };
+  }
+
   const effectiveMaxActive =
     auth.workspace.kind === "personal" && userPlan === "pro" && auth.entitlement.plan === "free"
       ? 20
@@ -291,23 +329,6 @@ export async function duplicateProjectForUser(
     auth.workspace.kind === "personal" && userPlan === "pro" && auth.entitlement.plan === "free"
       ? 100
       : auth.entitlement.quotas.retainedProjectsLimit;
-
-  const counts = await getWorkspaceProjectCounts(auth.workspace.id);
-  if (counts.activeProjects >= effectiveMaxActive) {
-    return {
-      ok: false,
-      code: "PLAN_LIMIT_REACHED",
-      error: `This workspace has reached its limit of ${effectiveMaxActive} active case studies. Archive an existing project or upgrade your plan.`,
-    };
-  }
-
-  if (counts.retainedProjects >= effectiveMaxRetained) {
-    return {
-      ok: false,
-      code: "PLAN_LIMIT_REACHED",
-      error: `This workspace has reached its limit of ${effectiveMaxRetained} total retained projects.`,
-    };
-  }
 
   const copyName = `${auth.project.name} (Copy)`.slice(0, 120);
   const clonedPuck = structuredClone(auth.project.puckData ?? {});
@@ -327,30 +348,70 @@ export async function duplicateProjectForUser(
   }
 
   const now = new Date();
-  const [created] = await db
-    .insert(dbSchema.projects)
-    .values({
-      ownerId: actor.id,
-      orgId: auth.workspace.organizationId,
-      workspaceId: auth.workspace.id,
-      spaceId: auth.space.id,
-      createdByUserId: actor.id,
-      templateVersionId: auth.project.templateVersionId,
-      name: copyName,
-      type: auth.project.type,
-      puckData: clonedPuck,
-      theme: structuredClone(auth.project.theme ?? {}),
-      revision: 1,
-      visibility: "private",
-      slug: null,
-      brandingRemoved: false,
-      publicAcknowledgedAt: null,
-      publishedAt: null,
-      archivedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+  const txDup = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM workspaces WHERE id = ${auth.workspace.id} FOR UPDATE`);
+    const countsRes = await tx.execute<{
+      active_count: string | number;
+      retained_count: string | number;
+    }>(sql`
+      SELECT
+        count(*) FILTER (WHERE archived_at IS NULL)::int AS active_count,
+        count(*)::int AS retained_count
+      FROM projects
+      WHERE workspace_id = ${auth.workspace.id}
+    `);
+    const activeCount = Number(countsRes.rows[0]?.active_count ?? 0);
+    const retainedCount = Number(countsRes.rows[0]?.retained_count ?? 0);
+
+    if (activeCount >= effectiveMaxActive) {
+      return {
+        ok: false as const,
+        code: "PLAN_LIMIT_REACHED" as const,
+        error: `This workspace has reached its limit of ${effectiveMaxActive} active case studies. Archive an existing project or upgrade your plan.`,
+      };
+    }
+
+    if (retainedCount >= effectiveMaxRetained) {
+      return {
+        ok: false as const,
+        code: "PLAN_LIMIT_REACHED" as const,
+        error: `This workspace has reached its limit of ${effectiveMaxRetained} total retained projects.`,
+      };
+    }
+
+    const [inserted] = await tx
+      .insert(dbSchema.projects)
+      .values({
+        ownerId: actor.id,
+        orgId: auth.workspace.organizationId,
+        workspaceId: auth.workspace.id,
+        spaceId: auth.space.id,
+        createdByUserId: actor.id,
+        templateVersionId: auth.project.templateVersionId,
+        name: copyName,
+        type: auth.project.type,
+        puckData: clonedPuck,
+        theme: structuredClone(auth.project.theme ?? {}),
+        revision: 1,
+        visibility: "private",
+        slug: null,
+        brandingRemoved: false,
+        publicAcknowledgedAt: null,
+        publishedAt: null,
+        archivedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    return { ok: true as const, created: inserted };
+  });
+
+  if (!txDup.ok) {
+    return txDup;
+  }
+
+  const created = txDup.created;
 
   if (!created) {
     return {

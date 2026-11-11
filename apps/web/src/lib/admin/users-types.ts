@@ -128,15 +128,20 @@ export function formatRelativeActivity(iso: string): string {
   if (days < 7) return `${days}d ago`;
   const weeks = Math.floor(days / 7);
   if (weeks < 5) return `${weeks}w ago`;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
-function escapeCsvCell(value: string | number | boolean): string {
+export function escapeCsvCell(value: string | number | boolean): string {
   const str = String(value);
-  if (/[",\n\r]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`;
+  const formulaPrefixNeutralized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+  if (/[",\n\r]/.test(formulaPrefixNeutralized)) {
+    return `"${formulaPrefixNeutralized.replace(/"/g, '""')}"`;
   }
-  return str;
+  return formulaPrefixNeutralized;
 }
 
 export function serializeAdminUsersCsv(users: readonly AdminUserListItem[]): string {

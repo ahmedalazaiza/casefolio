@@ -571,11 +571,11 @@ export async function completeSandboxCheckoutForUser(
       error: string;
     }
 > {
-  if (env.PADDLE_ENV !== "sandbox") {
+  if (env.PADDLE_ENV !== "sandbox" || isRealPaddleApiKeyConfigured()) {
     return {
       ok: false,
       code: "SANDBOX_ONLY",
-      error: "Simulated sandbox checkout is strictly disabled in production.",
+      error: "Simulated sandbox checkout is strictly disabled when live Paddle credentials or production mode are active.",
     };
   }
 
@@ -587,6 +587,14 @@ export async function completeSandboxCheckoutForUser(
   const prepared = await prepareCheckoutSessionForUser(actor, rawInput);
   if (!prepared.ok) {
     return prepared;
+  }
+
+  if (prepared.session.mode === "paddle") {
+    return {
+      ok: false,
+      code: "SANDBOX_ONLY",
+      error: "Simulated sandbox checkout is disabled when Paddle Checkout overlay is configured.",
+    };
   }
 
   const { session } = prepared;
@@ -1191,12 +1199,18 @@ export async function cancelUserSubscription(
     }
   }
 
+  // When talking to real Paddle API, avoid advancing `lastEventOccurredAt` ahead of Paddle's clock
+  const syntheticEventDate =
+    isRealPaddleApiKeyConfigured() && subRow.lastEventOccurredAt
+      ? new Date(Math.min(now.getTime(), subRow.lastEventOccurredAt.getTime() + 1))
+      : now;
+
   const eventId = `evt_cancel_${randomUUID().replace(/-/g, "").slice(0, 22)}`;
   const webhookPayload = parsed.data.immediate
     ? {
         event_id: eventId,
         event_type: "subscription.canceled",
-        occurred_at: now.toISOString(),
+        occurred_at: syntheticEventDate.toISOString(),
         data: {
           id: subRow.paddleSubscriptionId ?? `sub_local_${subRow.id}`,
           customer_id: subRow.paddleCustomerId ?? `ctm_local_${actor.id.slice(0, 8)}`,
@@ -1214,7 +1228,7 @@ export async function cancelUserSubscription(
     : {
         event_id: eventId,
         event_type: "subscription.updated",
-        occurred_at: now.toISOString(),
+        occurred_at: syntheticEventDate.toISOString(),
         data: {
           id: subRow.paddleSubscriptionId ?? `sub_local_${subRow.id}`,
           customer_id: subRow.paddleCustomerId ?? `ctm_local_${actor.id.slice(0, 8)}`,
@@ -1313,7 +1327,33 @@ export async function resumeUserSubscription(
     };
   }
 
+  if (subRow.paddleSubscriptionId && isRealPaddleApiKeyConfigured()) {
+    const res = await fetch(
+      `${getPaddleApiBaseUrl()}/subscriptions/${encodeURIComponent(subRow.paddleSubscriptionId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${env.PADDLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          scheduled_change: null,
+        }),
+      },
+    );
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: "Paddle could not resume your subscription right now. Please try again.",
+      };
+    }
+  }
+
   const now = new Date();
+  const syntheticResumeDate =
+    isRealPaddleApiKeyConfigured() && subRow.lastEventOccurredAt
+      ? new Date(Math.min(now.getTime(), subRow.lastEventOccurredAt.getTime() + 1))
+      : now;
   const periodEnd =
     subRow.currentPeriodEnd ?? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const eventId = `evt_resume_${randomUUID().replace(/-/g, "").slice(0, 22)}`;
@@ -1321,7 +1361,7 @@ export async function resumeUserSubscription(
   const rawBody = JSON.stringify({
     event_id: eventId,
     event_type: "subscription.updated",
-    occurred_at: now.toISOString(),
+    occurred_at: syntheticResumeDate.toISOString(),
     data: {
       id: subRow.paddleSubscriptionId ?? `sub_local_${subRow.id}`,
       customer_id: subRow.paddleCustomerId ?? `ctm_local_${actor.id.slice(0, 8)}`,

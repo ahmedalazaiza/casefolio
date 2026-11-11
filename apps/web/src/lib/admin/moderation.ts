@@ -181,7 +181,8 @@ export async function resolveModerationForProject(args: {
     return { ok: true, slug: project.slug, decision: "dismiss" };
   }
 
-  // Takedown: unpublish project immediately so /p/[slug] returns 404, keep owner draft, mark reports "takedown", notify owner & audit log
+  // Takedown: unpublish project & purge published snapshot immediately so /p/[slug] and /cdn/images/[assetId] return 404,
+  // keep owner draft, mark reports "takedown", notify owner & audit log
   const now = new Date();
   await db
     .update(dbSchema.projects)
@@ -191,6 +192,10 @@ export async function resolveModerationForProject(args: {
       updatedAt: now,
     })
     .where(eq(dbSchema.projects.id, project.id));
+
+  await db
+    .delete(dbSchema.publishedSnapshots)
+    .where(eq(dbSchema.publishedSnapshots.projectId, project.id));
 
   if (matchingReports.length > 0) {
     await db
@@ -218,7 +223,7 @@ export async function resolveModerationForProject(args: {
     title: `"${project.name}" was unpublished`,
     message:
       "Our moderation team unpublished your public link following a policy review. Your draft remains safe in your editor.",
-    href: `/projects/${project.id}/edit`,
+    href: `/editor/${project.id}`,
     meta: {
       projectId: project.id,
       slug: project.slug,

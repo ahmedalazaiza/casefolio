@@ -26,6 +26,7 @@ export async function GET(request: Request, context: CdnRouteContext): Promise<R
       : null,
     {
       authorizedExportProjectId: verifiedExport?.projectId ?? null,
+      authorizedExportId: verifiedExport?.exportId ?? null,
     },
   );
 

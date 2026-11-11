@@ -140,6 +140,7 @@ function stripPngMetadata(bytes: Uint8Array): Uint8Array {
 
   const keptChunks: Uint8Array[] = [bytes.subarray(0, 8)]; // 8-byte PNG signature
   let offset = 8;
+  let strippedAny = false;
 
   while (offset + 12 <= bytes.length) {
     const dataLength = readUint32BE(bytes, offset);
@@ -148,10 +149,13 @@ function stripPngMetadata(bytes: Uint8Array): Uint8Array {
 
     if (offset + totalChunkLength > bytes.length) {
       keptChunks.push(bytes.subarray(offset));
+      offset = bytes.length;
       break;
     }
 
-    if (!PNG_STRIP_CHUNKS.has(chunkType)) {
+    if (PNG_STRIP_CHUNKS.has(chunkType)) {
+      strippedAny = true;
+    } else {
       keptChunks.push(bytes.subarray(offset, offset + totalChunkLength));
     }
 
@@ -159,6 +163,13 @@ function stripPngMetadata(bytes: Uint8Array): Uint8Array {
     if (chunkType === "IEND") {
       break;
     }
+  }
+
+  if (!strippedAny) {
+    return bytes;
+  }
+  if (offset < bytes.length) {
+    keptChunks.push(bytes.subarray(offset));
   }
 
   return concatUint8Arrays(keptChunks);

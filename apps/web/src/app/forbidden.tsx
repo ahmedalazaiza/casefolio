@@ -14,8 +14,8 @@ export default function ForbiddenPage() {
         <Eyebrow className="w-fit font-mono">403</Eyebrow>
         <h1 className="text-foreground type-display-m">Access restricted</h1>
         <p className="text-muted-foreground type-body-m">
-          Your account doesn&apos;t have administrator permissions to view this area. Switch to an
-          authorized admin account or return to your workspace.
+          Your account doesn&apos;t have permission to access this resource or workspace area.
+          Switch to an authorized account or return to your dashboard.
         </p>
 
         <div className="mt-2 flex flex-wrap items-center justify-center gap-3">

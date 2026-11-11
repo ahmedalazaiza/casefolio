@@ -1,11 +1,14 @@
 "use server";
 
-import { and, eq, ne } from "@casefolio/db";
+import { and, eq, inArray, isNull, ne, normalizeMembershipRole } from "@casefolio/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { isSafeAvatarUrl } from "@/lib/auth/schemas";
 import { getServerSession } from "@/lib/auth/session";
 import { cancelUserSubscription } from "@/lib/billing/service";
 import { db, dbSchema } from "@/lib/db";
+import { executeMemberDepartureSideEffects } from "@/lib/entitlements/team-invitations";
+import { deleteStoredObject } from "@/lib/storage/r2";
 
 const updateProfileSchema = z.object({
   name: z
@@ -18,11 +21,8 @@ const updateProfileSchema = z.object({
   imageUrl: z
     .string()
     .trim()
-    .max(500, "Avatar URL is too long.")
-    .refine(
-      (val) => val.length === 0 || /^https?:\/\//i.test(val) || val.startsWith("/"),
-      "Avatar URL must start with https:// or http://.",
-    )
+    .max(500_000, "Avatar URL is too long.")
+    .refine(isSafeAvatarUrl, "Avatar must be a valid https:// URL, /path, or raster image upload.")
     .optional(),
 });
 
@@ -151,10 +151,120 @@ export async function deleteUserAccountAction(
     };
   }
 
+  // 1. Prevent sole Team Owners from orphaning live Team subscriptions or destroying shared workspaces
+  const userMemberships = await db
+    .select()
+    .from(dbSchema.memberships)
+    .where(eq(dbSchema.memberships.userId, ctx.user.id));
+
+  for (const membership of userMemberships) {
+    const role = normalizeMembershipRole(membership.role);
+    if (role === "owner") {
+      const orgMembers = await db
+        .select({
+          userId: dbSchema.memberships.userId,
+          role: dbSchema.memberships.role,
+        })
+        .from(dbSchema.memberships)
+        .where(eq(dbSchema.memberships.orgId, membership.orgId));
+
+      const hasOtherOwner = orgMembers.some(
+        (m) => m.userId !== ctx.user.id && normalizeMembershipRole(m.role) === "owner",
+      );
+      const hasOtherMembers = orgMembers.some((m) => m.userId !== ctx.user.id);
+
+      const [liveTeamSub] = await db
+        .select({ id: dbSchema.subscriptions.id, status: dbSchema.subscriptions.status })
+        .from(dbSchema.subscriptions)
+        .where(
+          and(
+            eq(dbSchema.subscriptions.orgId, membership.orgId),
+            inArray(dbSchema.subscriptions.status, [
+              "active",
+              "trialing",
+              "past_due",
+              "paused",
+              "cancel_at_period_end",
+            ]),
+          ),
+        )
+        .limit(1);
+
+      if (!hasOtherOwner && (hasOtherMembers || Boolean(liveTeamSub))) {
+        return {
+          ok: false,
+          error:
+            "You are the sole Owner of an active Team workspace. Transfer workspace ownership or cancel and dissolve the Team workspace before deleting your account.",
+        };
+      }
+    }
+  }
+
+  // 2. Run clean departure side effects & preserve shared team projects (`ownerId` -> org Owner)
+  for (const membership of userMemberships) {
+    const orgMembers = await db
+      .select({
+        userId: dbSchema.memberships.userId,
+        role: dbSchema.memberships.role,
+      })
+      .from(dbSchema.memberships)
+      .where(eq(dbSchema.memberships.orgId, membership.orgId));
+
+    const survivingOwner = orgMembers.find(
+      (m) => m.userId !== ctx.user.id && normalizeMembershipRole(m.role) === "owner",
+    );
+
+    if (survivingOwner) {
+      await executeMemberDepartureSideEffects({
+        organizationId: membership.orgId,
+        departedUserId: ctx.user.id,
+        actorUserId: ctx.user.id,
+      }).catch(() => undefined);
+
+      // Reassign `ownerId` on team projects so ON DELETE CASCADE on `users` never wipes shared team work
+      await db
+        .update(dbSchema.projects)
+        .set({ ownerId: survivingOwner.userId })
+        .where(
+          and(
+            eq(dbSchema.projects.orgId, membership.orgId),
+            eq(dbSchema.projects.ownerId, ctx.user.id),
+          ),
+        );
+    }
+  }
+
+  // 3. Cancel personal subscription immediately
   await cancelUserSubscription(
     { id: ctx.user.id, email: ctx.user.email, name: ctx.user.name },
     { reason: "other", feedback: "Account deleted by user", immediate: true },
   ).catch(() => null);
+
+  // 4. Purge stored R2/local asset & export objects belonging to personal projects before cascading DB rows
+  const personalProjects = await db
+    .select({ id: dbSchema.projects.id })
+    .from(dbSchema.projects)
+    .where(and(eq(dbSchema.projects.ownerId, ctx.user.id), isNull(dbSchema.projects.orgId)));
+
+  if (personalProjects.length > 0) {
+    const personalIds = personalProjects.map((p) => p.id);
+    const [personalAssets, personalExports] = await Promise.all([
+      db
+        .select({ r2Key: dbSchema.assets.r2Key })
+        .from(dbSchema.assets)
+        .where(inArray(dbSchema.assets.projectId, personalIds)),
+      db
+        .select({ r2Key: dbSchema.exportsTable.r2Key })
+        .from(dbSchema.exportsTable)
+        .where(inArray(dbSchema.exportsTable.projectId, personalIds)),
+    ]);
+
+    const r2Keys = [
+      ...personalAssets.map((a) => a.r2Key),
+      ...personalExports.map((e) => e.r2Key).filter((k): k is string => Boolean(k)),
+    ];
+    await Promise.all(r2Keys.map((key) => deleteStoredObject(key).catch(() => undefined)));
+  }
 
   await db.delete(dbSchema.users).where(eq(dbSchema.users.id, ctx.user.id));
 

@@ -1145,7 +1145,8 @@ export async function requestOwnerTransfer(args: {
       ),
     );
 
-  const expiresAt = new Date(now.getTime() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const OWNER_TRANSFER_TTL_HOURS = 48;
+  const expiresAt = new Date(now.getTime() + OWNER_TRANSFER_TTL_HOURS * 60 * 60 * 1000);
   const [reqRow] = await db
     .insert(dbSchema.ownerTransferRequests)
     .values({

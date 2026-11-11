@@ -3,11 +3,11 @@ import { NextResponse } from "next/server";
 import { submitPublicProjectReport } from "@/lib/admin/moderation";
 import { createCaseStudyReportSchema } from "@/lib/admin/moderation-types";
 import { getServerSession } from "@/lib/auth/session";
+import { extractClientIp } from "@/lib/security/auth-rate-limit";
 import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
 
 export async function POST(request: Request) {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const clientIp = forwardedFor?.split(",")[0]?.trim() || "127.0.0.1";
+  const clientIp = extractClientIp(request.headers);
 
   const rateCheck = consumeUploadRateLimit(`report:${clientIp}`, 10, 60_000);
   if (!rateCheck.allowed) {

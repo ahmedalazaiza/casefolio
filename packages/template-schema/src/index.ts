@@ -81,10 +81,60 @@ export const cropRectSchema = z.object({
 
 export type CropRect = z.infer<typeof cropRectSchema>;
 
+const SAFE_RASTER_DATA_IMAGE_REGEX =
+  /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=\s]+$/i;
+
+export function isSafeActionHref(rawHref: string): boolean {
+  const href = rawHref.trim();
+  if (!href || href.length > 2048) return false;
+  if (/\p{Cc}/u.test(href)) return false;
+
+  if (href.startsWith("#")) return true;
+  if (href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/\\")) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(href);
+    const protocol = parsed.protocol.toLowerCase();
+    return protocol === "https:" || protocol === "http:" || protocol === "mailto:";
+  } catch {
+    return false;
+  }
+}
+
+export function isSafeImageSlotSrc(rawSrc: string): boolean {
+  const src = rawSrc.trim();
+  if (src.length === 0) return true;
+  if (src.length > 500_000) return false;
+  if (/\p{Cc}/u.test(src)) return false;
+
+  if (src.startsWith("/") && !src.startsWith("//") && !src.startsWith("/\\")) {
+    return true;
+  }
+  if (src.startsWith("blob:")) {
+    return true;
+  }
+  if (src.toLowerCase().startsWith("data:")) {
+    return SAFE_RASTER_DATA_IMAGE_REGEX.test(src);
+  }
+
+  try {
+    const parsed = new URL(src);
+    const protocol = parsed.protocol.toLowerCase();
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export const imageSlotValueSchema = z.object({
   slot: z.string().trim().min(1, "Slot key is required."),
-  src: z.string(),
-  alt: z.string(),
+  src: z.string().refine(isSafeImageSlotSrc, {
+    message:
+      "Invalid image source: expected an uploaded asset path, https:// URL, or raster data:image/(png|jpeg|webp) URI.",
+  }),
+  alt: z.string().max(1000),
   assetId: z.string().uuid().nullish(),
   crop: cropRectSchema.nullable(),
   device: z.enum(SLOT_DEVICES).optional(),
@@ -93,10 +143,10 @@ export const imageSlotValueSchema = z.object({
 export type ImageSlotValue = z.infer<typeof imageSlotValueSchema>;
 
 export const richTextValueSchema = z.union([
-  z.string(),
+  z.string().max(100_000),
   z.object({
     type: z.literal("doc"),
-    content: z.array(z.record(z.string(), z.unknown())).optional(),
+    content: z.array(z.record(z.string(), z.unknown())).max(500).optional(),
   }),
 ]);
 
@@ -384,9 +434,21 @@ export const ctaSectionSchema = z.object({
     heading: z.string().min(1),
     subheading: z.string().optional(),
     primaryLabel: z.string().min(1),
-    primaryHref: z.string().min(1),
+    primaryHref: z
+      .string()
+      .min(1)
+      .refine(isSafeActionHref, {
+        message:
+          "Invalid CTA primaryHref: expected an https://, http://, mailto:, #anchor, or /relative URL.",
+      }),
     secondaryLabel: z.string().optional(),
-    secondaryHref: z.string().optional(),
+    secondaryHref: z
+      .string()
+      .refine((val) => val.trim().length === 0 || isSafeActionHref(val), {
+        message:
+          "Invalid CTA secondaryHref: expected an https://, http://, mailto:, #anchor, or /relative URL.",
+      })
+      .optional(),
     accent: z.string().trim().min(1).optional(),
   }),
 });
@@ -457,8 +519,11 @@ export const puckDocumentSchema = z.object({
       })
       .catchall(z.unknown()),
   }),
-  content: z.array(puckSectionSchema).min(1, "At least one section is required in puck.content."),
-  zones: z.record(z.string(), z.array(puckSectionSchema)).default({}),
+  content: z
+    .array(puckSectionSchema)
+    .min(1, "At least one section is required in puck.content.")
+    .max(100, "At most 100 sections are allowed in puck.content."),
+  zones: z.record(z.string(), z.array(puckSectionSchema).max(50)).default({}),
 });
 
 export type PuckDocument = z.infer<typeof puckDocumentSchema>;

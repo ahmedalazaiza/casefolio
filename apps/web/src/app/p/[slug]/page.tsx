@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
+import { cache } from "react";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
 import { ReportCaseStudyButton } from "@/components/public/report-case-study-button";
 import { CasefolioWatermark } from "@/components/sections/casefolio-watermark";
@@ -13,6 +15,10 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const getCachedPublishedProjectBySlug = cache((slug: string) =>
+  getPublishedProjectBySlug(slug),
+);
+
 interface PublicCaseStudyPageProps {
   params: Promise<{ slug: string }>;
 }
@@ -21,7 +27,7 @@ export async function generateMetadata({
   params,
 }: PublicCaseStudyPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const published = await getPublishedProjectBySlug(slug);
+  const published = await getCachedPublishedProjectBySlug(slug);
 
   if (!published) {
     return {
@@ -83,17 +89,23 @@ export async function generateMetadata({
 
 export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPageProps) {
   const { slug } = await params;
-  const published = await getPublishedProjectBySlug(slug);
+  const published = await getCachedPublishedProjectBySlug(slug);
 
   if (!published) {
     notFound();
   }
 
   const requestHeaders = await headers();
-  await recordPublishedProjectView({
+  const trackPromise = recordPublishedProjectView({
     projectId: published.project.id,
     headers: requestHeaders,
   }).catch(() => undefined);
+
+  try {
+    after(() => trackPromise);
+  } catch {
+    await trackPromise;
+  }
 
   return (
     <main

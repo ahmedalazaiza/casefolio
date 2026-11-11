@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import type { UserRole } from "@casefolio/db";
 import { z } from "zod";
 import { hasAdminRole } from "@/lib/auth/guards";
+import { stripImageExifAndMetadata } from "@/lib/storage/exif";
 import {
+  detectImageMimeFromMagicBytes,
   extensionForMimeType,
   formatBytesHuman,
   isAllowedUploadMimeType,
@@ -15,6 +17,7 @@ import {
   readStoredObjectBytes,
   signStorageToken,
   verifyStorageToken,
+  writeStoredObject,
 } from "@/lib/storage/r2";
 
 export const MAX_TEMPLATE_COVER_BYTES = 10 * 1024 * 1024; // 10 MiB
@@ -222,13 +225,43 @@ export async function completeAdminTemplateCoverUpload(
     };
   }
 
+  const rawBytes = await readStoredObjectBytes(tokenPayload.r2Key);
+  if (!rawBytes || rawBytes.byteLength === 0) {
+    return {
+      ok: false,
+      code: "UPLOAD_MISSING",
+      error: "Cover image bytes were not found in storage. Please try uploading again.",
+    };
+  }
+
+  const detectedMime = detectImageMimeFromMagicBytes(rawBytes);
+  if (!detectedMime || detectedMime !== tokenPayload.mimeType) {
+    await deleteStoredObject(tokenPayload.r2Key);
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      error: "Uploaded cover file header does not match an allowed PNG, JPG, or WebP image.",
+    };
+  }
+
+  const sanitizedBytes = stripImageExifAndMetadata(rawBytes, detectedMime);
+  const bytesChanged =
+    sanitizedBytes.byteLength !== rawBytes.byteLength ||
+    Buffer.compare(Buffer.from(sanitizedBytes), Buffer.from(rawBytes)) !== 0;
+  if (bytesChanged) {
+    await writeStoredObject(tokenPayload.r2Key, sanitizedBytes, {
+      contentType: detectedMime,
+      cacheControl: "public, max-age=31536000, immutable",
+    });
+  }
+
   return {
     ok: true,
     coverUrl: `/cdn/covers/${tokenPayload.fileNameOnCdn}`,
     r2Key: tokenPayload.r2Key,
     width: tokenPayload.width,
     height: tokenPayload.height,
-    bytes: storedInfo.bytes,
+    bytes: sanitizedBytes.byteLength,
     mimeType: tokenPayload.mimeType,
   };
 }

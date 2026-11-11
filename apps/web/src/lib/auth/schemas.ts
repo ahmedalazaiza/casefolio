@@ -74,6 +74,27 @@ export const DESIGNER_ROLE_IDS = [
 
 export type DesignerRoleId = (typeof DESIGNER_ROLE_IDS)[number];
 
+const SAFE_AVATAR_RASTER_DATA_URI_REGEX =
+  /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=\s]+$/i;
+
+export function isSafeAvatarUrl(rawVal: string): boolean {
+  const val = rawVal.trim();
+  if (val === "") return true;
+  if (/\p{Cc}/u.test(val)) return false;
+  if (val.startsWith("/") && !val.startsWith("//") && !val.startsWith("/\\")) {
+    return true;
+  }
+  if (val.toLowerCase().startsWith("data:")) {
+    return SAFE_AVATAR_RASTER_DATA_URI_REGEX.test(val);
+  }
+  try {
+    const parsed = new URL(val);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export const completeOnboardingSchema = z.object({
   name: z.string().trim().min(2, "Display name must be at least 2 characters.").max(80),
   jobTitle: z.string().trim().min(2, "Enter a short headline or role.").max(100),
@@ -82,14 +103,7 @@ export const completeOnboardingSchema = z.object({
     .string()
     .trim()
     .max(500_000, "Avatar image is too large.")
-    .refine(
-      (val) =>
-        val === "" ||
-        val.startsWith("https://") ||
-        val.startsWith("http://") ||
-        val.startsWith("data:image/"),
-      "Avatar must be a valid image URL or uploaded photo.",
-    )
+    .refine(isSafeAvatarUrl, "Avatar must be a valid image URL or uploaded photo.")
     .optional()
     .nullable(),
 });

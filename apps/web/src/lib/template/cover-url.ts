@@ -31,6 +31,31 @@ export function isLegacyPlaceholderCoverUrl(url: string | null | undefined): boo
   }
 }
 
+const SAFE_COVER_RASTER_DATA_URI_REGEX =
+  /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=\s]+$/i;
+
+export function isSafeTemplateCoverUrl(rawUrl: string): boolean {
+  const trimmed = rawUrl.trim();
+  if (!trimmed || trimmed.length > 500_000) return false;
+  if (/\p{Cc}/u.test(trimmed)) return false;
+
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.startsWith("/\\")) {
+    return true;
+  }
+  if (trimmed.startsWith("blob:")) {
+    return true;
+  }
+  if (trimmed.toLowerCase().startsWith("data:")) {
+    return SAFE_COVER_RASTER_DATA_URI_REGEX.test(trimmed);
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolves a template's `coverUrl` into a renderable image source across all UI surfaces:
  * - Uploaded admin covers (`/cdn/covers/<uuid>.<ext>`) and local public assets (`/templates/...`, `/landing/...`)
@@ -53,7 +78,7 @@ export function resolveTemplateCoverUrl(
         return LEGACY_LANDING_COVER_REDIRECTS[trimmed]!;
       }
 
-      if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+      if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.startsWith("/\\")) {
         return trimmed;
       }
 
@@ -65,7 +90,7 @@ export function resolveTemplateCoverUrl(
         trimmed.startsWith("https://") ||
         trimmed.startsWith("http://") ||
         trimmed.startsWith("blob:") ||
-        trimmed.startsWith("data:image/")
+        SAFE_COVER_RASTER_DATA_URI_REGEX.test(trimmed)
       ) {
         return trimmed;
       }

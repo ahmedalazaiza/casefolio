@@ -34,21 +34,25 @@ function isPlaceholderToken(value: string | undefined): boolean {
 }
 
 export function readCloudflareImagesConfig(
-  envSource: Record<string, string | undefined> = typeof process !== "undefined" ? process.env : {},
+  envSource?: Record<string, string | undefined>,
 ): CloudflareImagesConfig {
+  // When called with default runtime env (including inside `"use client"` components),
+  // ONLY read `NEXT_PUBLIC_*` keys so SSR and CSR hydrate identically and never leak
+  // server-only `CF_IMAGES_ACCOUNT_HASH` when Cloudflare Images client delivery isn't enabled.
+  const accountHash = envSource
+    ? (envSource.NEXT_PUBLIC_CF_IMAGES_ACCOUNT_HASH ?? envSource.CF_IMAGES_ACCOUNT_HASH ?? "")
+    : (process.env.NEXT_PUBLIC_CF_IMAGES_ACCOUNT_HASH ?? "");
+  const rawDeliveryOrigin = envSource
+    ? envSource.NEXT_PUBLIC_CF_IMAGES_DELIVERY_ORIGIN
+    : process.env.NEXT_PUBLIC_CF_IMAGES_DELIVERY_ORIGIN;
+  const rawZoneOrigin = envSource
+    ? envSource.NEXT_PUBLIC_CF_ZONE_ORIGIN
+    : process.env.NEXT_PUBLIC_CF_ZONE_ORIGIN;
+
   return {
-    accountHash:
-      envSource.NEXT_PUBLIC_CF_IMAGES_ACCOUNT_HASH ??
-      envSource.CF_IMAGES_ACCOUNT_HASH ??
-      "",
-    deliveryOrigin:
-      (envSource.NEXT_PUBLIC_CF_IMAGES_DELIVERY_ORIGIN || "https://imagedelivery.net").replace(
-        /\/+$/,
-        "",
-      ),
-    zoneOrigin: envSource.NEXT_PUBLIC_CF_ZONE_ORIGIN
-      ? envSource.NEXT_PUBLIC_CF_ZONE_ORIGIN.replace(/\/+$/, "")
-      : undefined,
+    accountHash,
+    deliveryOrigin: (rawDeliveryOrigin || "https://imagedelivery.net").replace(/\/+$/, ""),
+    zoneOrigin: rawZoneOrigin ? rawZoneOrigin.replace(/\/+$/, "") : undefined,
   };
 }
 

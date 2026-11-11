@@ -18,5 +18,7 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/.next/**", "**/dist/**", "tests/e2e/**"],
     environment: "jsdom",
     setupFiles: ["./apps/web/vitest.setup.ts"],
+    clearMocks: true,
+    restoreMocks: true,
   },
 });

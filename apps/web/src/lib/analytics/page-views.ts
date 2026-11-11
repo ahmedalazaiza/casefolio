@@ -32,6 +32,7 @@ const UUID_REGEX =
 
 const TRACK_WINDOW_MS = 60_000;
 const TRACK_MAX_PER_WINDOW = 30;
+const MAX_TRACK_RATE_BUCKETS = 10_000;
 
 interface RateBucket {
   count: number;
@@ -49,6 +50,22 @@ function getTrackRateBuckets(): Map<string, RateBucket> {
   return globalRateStore.__casefolioTrackRateBuckets;
 }
 
+function pruneTrackRateBuckets(buckets: Map<string, RateBucket>, nowMs: number): void {
+  if (buckets.size < MAX_TRACK_RATE_BUCKETS) {
+    return;
+  }
+  for (const [key, entry] of buckets.entries()) {
+    if (entry.resetAt <= nowMs) {
+      buckets.delete(key);
+    }
+  }
+  while (buckets.size >= MAX_TRACK_RATE_BUCKETS) {
+    const oldestKey = buckets.keys().next().value;
+    if (oldestKey === undefined) break;
+    buckets.delete(oldestKey);
+  }
+}
+
 export function resetTrackingRateLimitsForTests(): void {
   getTrackRateBuckets().clear();
 }
@@ -60,9 +77,11 @@ function consumeTrackingRateLimit(
 ): boolean {
   const key = `${projectId}:${visitorHash}`;
   const buckets = getTrackRateBuckets();
+  pruneTrackRateBuckets(buckets, nowMs);
   const existing = buckets.get(key);
 
   if (!existing || existing.resetAt <= nowMs) {
+    buckets.delete(key);
     buckets.set(key, { count: 1, resetAt: nowMs + TRACK_WINDOW_MS });
     return true;
   }
@@ -254,29 +273,57 @@ export async function getProjectAnalyticsForActor(args: {
   const periodStart = addUtcDays(todayUtc, -(rangeDays - 1));
   const prevPeriodStart = addUtcDays(periodStart, -rangeDays);
 
-  const allProjectViews = await db
-    .select({
-      visitorHash: dbSchema.pageViews.visitorHash,
-      referrer: dbSchema.pageViews.referrer,
-      country: dbSchema.pageViews.country,
-      at: dbSchema.pageViews.at,
-    })
-    .from(dbSchema.pageViews)
-    .where(eq(dbSchema.pageViews.projectId, auth.project.id))
-    .orderBy(desc(dbSchema.pageViews.at));
+  const chartDaysCount = effectiveRange === "7d" ? 7 : 14;
+  const bucketSpanDays =
+    effectiveRange === "7d"
+      ? 1
+      : effectiveRange === "30d"
+        ? 2
+        : effectiveRange === "90d"
+          ? 6
+          : 7;
+  const earliestChartStart = addUtcDays(
+    todayUtc,
+    1 - (chartDaysCount - 1) * bucketSpanDays - bucketSpanDays,
+  );
+  const minWindowDate =
+    prevPeriodStart.getTime() <= earliestChartStart.getTime()
+      ? prevPeriodStart
+      : earliestChartStart;
 
-  const [exportsRow] = await db
-    .select({ total: count() })
-    .from(dbSchema.exportsTable)
-    .where(
-      and(
-        eq(dbSchema.exportsTable.projectId, auth.project.id),
-        eq(dbSchema.exportsTable.status, "completed"),
+  const [windowViews, [allTimeViewsRow], [exportsRow]] = await Promise.all([
+    db
+      .select({
+        visitorHash: dbSchema.pageViews.visitorHash,
+        referrer: dbSchema.pageViews.referrer,
+        country: dbSchema.pageViews.country,
+        at: dbSchema.pageViews.at,
+      })
+      .from(dbSchema.pageViews)
+      .where(
+        and(
+          eq(dbSchema.pageViews.projectId, auth.project.id),
+          gte(dbSchema.pageViews.at, minWindowDate),
+        ),
+      )
+      .orderBy(desc(dbSchema.pageViews.at)),
+    db
+      .select({ total: count() })
+      .from(dbSchema.pageViews)
+      .where(eq(dbSchema.pageViews.projectId, auth.project.id)),
+    db
+      .select({ total: count() })
+      .from(dbSchema.exportsTable)
+      .where(
+        and(
+          eq(dbSchema.exportsTable.projectId, auth.project.id),
+          eq(dbSchema.exportsTable.status, "completed"),
+        ),
       ),
-    );
+  ]);
 
-  const currentViews = allProjectViews.filter((v) => v.at >= periodStart);
-  const previousViews = allProjectViews.filter(
+  const currentViews = windowViews.filter((v) => v.at >= periodStart);
+  const previousViews = windowViews.filter(
     (v) => v.at >= prevPeriodStart && v.at < periodStart,
   );
 
@@ -303,21 +350,11 @@ export async function getProjectAnalyticsForActor(args: {
     }
   }
 
-  const chartDaysCount = effectiveRange === "7d" ? 7 : 14;
-  const bucketSpanDays =
-    effectiveRange === "7d"
-      ? 1
-      : effectiveRange === "30d"
-        ? 2
-        : effectiveRange === "90d"
-          ? 6
-          : 7;
-
   const chartBuckets: AnalyticsDailyBucket[] = [];
   for (let i = chartDaysCount - 1; i >= 0; i -= 1) {
     const bucketEndExclusive = addUtcDays(todayUtc, 1 - i * bucketSpanDays);
     const bucketStart = addUtcDays(bucketEndExclusive, -bucketSpanDays);
-    const slice = allProjectViews.filter(
+    const slice = windowViews.filter(
       (v) => v.at >= bucketStart && v.at < bucketEndExclusive,
     );
     const visitorsInSlice = new Set(slice.map((v) => v.visitorHash));
@@ -381,7 +418,7 @@ export async function getProjectAnalyticsForActor(args: {
           viewsCount > 0 ? (viewsCount / Math.max(1, uniqueVisitorsCount)).toFixed(1) : "0.0",
         topCountry,
         completedExports: exportsRow?.total ?? 0,
-        allTimeViews: allProjectViews.length,
+        allTimeViews: allTimeViewsRow?.total ?? 0,
       },
       chartBuckets,
       topSources,

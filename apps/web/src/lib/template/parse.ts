@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSafeTemplateCoverUrl } from "@/lib/template/cover-url";
 import {
   aspectRatioSchema,
   TEMPLATE_PROJECT_TYPES,
@@ -20,7 +21,11 @@ export const wizardMetadataInputSchema = z.object({
   type: z.enum(TEMPLATE_PROJECT_TYPES),
   category: z.string().trim().min(1, "Category is required.").max(60),
   tier: z.enum(TEMPLATE_TIERS),
-  coverUrl: z.string().trim().min(1, "Cover image URL is required."),
+  coverUrl: z
+    .string()
+    .trim()
+    .min(1, "Cover image URL is required.")
+    .refine(isSafeTemplateCoverUrl, "Cover image URL must be an uploaded /cdn/covers path or https:// URL."),
   coverRatio: aspectRatioSchema,
   changelog: z.string().trim().max(500).optional(),
 });

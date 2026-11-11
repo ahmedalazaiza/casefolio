@@ -16,6 +16,10 @@ import { COLOR_TOKENS, RADIUS_TOKENS, TYPE_SCALE_TOKENS } from "@/lib/design-tok
 export const metadata: Metadata = {
   title: "Design System — Casefolio /dev/ui",
   description: "Figma-synced design tokens and shadcn/ui component showcase for Casefolio.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const PLAN_FEATURES = [

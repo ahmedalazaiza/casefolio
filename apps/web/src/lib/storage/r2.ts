@@ -48,18 +48,28 @@ function looksLikePlaceholder(value: string | undefined): boolean {
   );
 }
 
+const DEV_FALLBACK_STORAGE_SECRET = "casefolio-dev-storage-signing-secret-32chars";
+
 export function readStorageEnvConfig(
   envSource: Record<string, string | undefined> = process.env,
 ): StorageEnvConfig {
+  const configuredSecret =
+    envSource.STORAGE_SIGNING_SECRET?.trim() ||
+    envSource.BETTER_AUTH_SECRET?.trim() ||
+    envSource.EXPORT_SIGNING_SECRET?.trim() ||
+    "";
+
   return {
     accountId: envSource.R2_ACCOUNT_ID ?? "",
     accessKeyId: envSource.R2_ACCESS_KEY_ID ?? "",
     secretAccessKey: envSource.R2_SECRET_ACCESS_KEY ?? "",
     bucket: envSource.R2_BUCKET || "casefolio-assets",
     signingSecret:
-      envSource.BETTER_AUTH_SECRET ||
-      envSource.EXPORT_SIGNING_SECRET ||
-      "casefolio-dev-storage-signing-secret-32chars",
+      configuredSecret.length >= 16
+        ? configuredSecret
+        : envSource.NODE_ENV === "production"
+          ? ""
+          : DEV_FALLBACK_STORAGE_SECRET,
     appUrl: envSource.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   };
 }
@@ -140,6 +150,11 @@ export function signStorageToken<TPayload extends { exp: number }>(
   payload: TPayload,
   secret = readStorageEnvConfig().signingSecret,
 ): string {
+  if (!secret || secret.trim().length < 16) {
+    throw new Error(
+      "Storage signing secret (>= 16 chars) is required in production via BETTER_AUTH_SECRET or STORAGE_SIGNING_SECRET.",
+    );
+  }
   const encodedPayload = Buffer.from(JSON.stringify(payload), "utf-8").toString("base64url");
   const mac = createHmac("sha256", `casefolio:storage:v1:${secret}`)
     .update(encodedPayload)
@@ -152,6 +167,9 @@ export function verifyStorageToken<TPayload extends { exp: number }>(
   secret = readStorageEnvConfig().signingSecret,
   nowMs = Date.now(),
 ): TPayload | null {
+  if (!secret || secret.trim().length < 16) {
+    return null;
+  }
   const dotIdx = token.indexOf(".");
   if (dotIdx <= 0 || dotIdx === token.length - 1) {
     return null;

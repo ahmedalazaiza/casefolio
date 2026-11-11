@@ -62,15 +62,28 @@ export function CdnResponsiveImage({
   const intrinsicHeight =
     naturalDims?.height ?? Math.max(360, Math.round(fallbackAspectHeight * 100));
 
+  const trimmedSrc = src.trim();
+  const isSafeRasterDataUri =
+    /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(trimmedSrc);
+  const isUnsafeSchemeOrProtocolRelative =
+    trimmedSrc.startsWith("//") ||
+    trimmedSrc.startsWith("/\\") ||
+    (trimmedSrc.toLowerCase().startsWith("data:") && !isSafeRasterDataUri) ||
+    /^(?:javascript|vbscript|file):/i.test(trimmedSrc);
+
+  if (isUnsafeSchemeOrProtocolRelative) {
+    return null;
+  }
+
   if (
-    src.startsWith("data:") ||
-    src.startsWith("blob:") ||
-    src.endsWith(".svg") ||
-    src.includes(".svg?")
+    isSafeRasterDataUri ||
+    trimmedSrc.startsWith("blob:") ||
+    trimmedSrc.endsWith(".svg") ||
+    trimmedSrc.includes(".svg?")
   ) {
     return (
       <img
-        src={src}
+        src={trimmedSrc}
         alt={alt}
         style={cropFramingStyle ?? undefined}
         className={cn(!cropFramingStyle && "size-full object-cover", className)}

@@ -1,10 +1,50 @@
 import type { PlanTier, UserRole } from "@casefolio/db";
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/session";
-import { completeQueuedExportFromClient } from "@/lib/exports/service";
+import {
+  completeQueuedExportFromClient,
+  MAX_CLIENT_EXPORT_BYTES,
+} from "@/lib/exports/service";
+import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
 
 interface ExportCompleteContext {
   params: Promise<{ exportId: string }>;
+}
+
+async function readExportStreamWithLimit(
+  request: Request,
+  maxBytes: number,
+): Promise<{ ok: true; bytes: Uint8Array } | { ok: false }> {
+  if (!request.body) {
+    return { ok: true, bytes: new Uint8Array(0) };
+  }
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || value.byteLength === 0) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false };
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const combined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { ok: true, bytes: combined };
 }
 
 export async function POST(
@@ -19,9 +59,31 @@ export async function POST(
     );
   }
 
+  const rate = consumeUploadRateLimit(`export-complete:${session.user.id}`, 12, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, code: "RATE_LIMITED", error: "Too many export completion requests." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
+  }
+
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_CLIENT_EXPORT_BYTES) {
+    return NextResponse.json(
+      { ok: false, code: "VALIDATION_ERROR", error: "Rendered export payload exceeds maximum size." },
+      { status: 413 },
+    );
+  }
+
   const { exportId } = await context.params;
-  const rawBuffer = await request.arrayBuffer();
-  const bytes = new Uint8Array(rawBuffer);
+  const streamRead = await readExportStreamWithLimit(request, MAX_CLIENT_EXPORT_BYTES);
+  if (!streamRead.ok) {
+    return NextResponse.json(
+      { ok: false, code: "VALIDATION_ERROR", error: "Rendered export payload exceeds maximum size." },
+      { status: 413 },
+    );
+  }
+  const bytes = streamRead.bytes;
 
   const result = await completeQueuedExportFromClient(exportId, bytes, {
     id: session.user.id,

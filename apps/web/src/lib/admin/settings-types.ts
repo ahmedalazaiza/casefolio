@@ -224,11 +224,12 @@ export function filterAuditLogs(
   });
 }
 
-function escapeCsvCell(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+export function escapeCsvCell(value: string): string {
+  const formulaPrefixNeutralized = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  if (/[",\n\r]/.test(formulaPrefixNeutralized)) {
+    return `"${formulaPrefixNeutralized.replace(/"/g, '""')}"`;
   }
-  return value;
+  return formulaPrefixNeutralized;
 }
 
 export function serializeAuditLogsCsv(logs: readonly AdminAuditLogItem[]): string {

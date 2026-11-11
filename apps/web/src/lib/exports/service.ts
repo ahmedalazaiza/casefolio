@@ -65,13 +65,36 @@ async function getPgBossPublisher(): Promise<PgBoss> {
   return globalForExportQueue.casefolioBossPublisherPromise;
 }
 
+function isDedicatedProductionWorkerConfigured(): boolean {
+  if (process.env.NODE_ENV !== "production") {
+    return false;
+  }
+  if (process.env.CASEFOLIO_ENABLE_EMBEDDED_WORKER === "1") {
+    return false;
+  }
+  const workerUrl = (env.EXPORT_WORKER_URL || "").trim().toLowerCase();
+  return (
+    workerUrl.length > 0 &&
+    !workerUrl.includes("localhost") &&
+    !workerUrl.includes("127.0.0.1") &&
+    !workerUrl.includes("[::1]")
+  );
+}
+
 async function tryWakeExternalWorker(workerBaseUrl: string): Promise<boolean> {
   const cleanUrl = workerBaseUrl.replace(/\/+$/, "");
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 350);
+    const wakeSecret =
+      env.EXPORT_SIGNING_SECRET?.trim() || env.BETTER_AUTH_SECRET?.trim() || "";
+    const headers: Record<string, string> = {};
+    if (wakeSecret) {
+      headers.Authorization = `Bearer ${wakeSecret}`;
+    }
     const res = await fetch(`${cleanUrl}/wake`, {
       method: "POST",
+      headers,
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
     return res.ok;
@@ -142,7 +165,7 @@ function serializeExportRow(
   now: Date = new Date(),
 ): ExportHistoryItem {
   let renderUrl: string | null = null;
-  if (row.status === "queued") {
+  if (row.status === "queued" && !isDedicatedProductionWorkerConfigured()) {
     const token = signExportRenderToken(
       {
         exportId: row.id,
@@ -623,12 +646,13 @@ export async function authorizeAndReadExportFile(
   };
 }
 
-const MAX_CLIENT_EXPORT_BYTES = 35 * 1024 * 1024; // 35 MiB
+export const MAX_CLIENT_EXPORT_BYTES = 35 * 1024 * 1024; // 35 MiB
 
-function hasValidExportBinaryHeader(format: ExportFormatOption, bytes: Uint8Array): boolean {
-  if (bytes.byteLength < 8) return false;
+function hasValidExportBinaryStructure(format: ExportFormatOption, bytes: Uint8Array): boolean {
+  if (bytes.byteLength < 20) return false;
   if (format === "png_long") {
-    return (
+    const hasPngSigAndIhdr =
+      bytes.byteLength >= 33 &&
       bytes[0] === 0x89 &&
       bytes[1] === 0x50 &&
       bytes[2] === 0x4e &&
@@ -636,20 +660,50 @@ function hasValidExportBinaryHeader(format: ExportFormatOption, bytes: Uint8Arra
       bytes[4] === 0x0d &&
       bytes[5] === 0x0a &&
       bytes[6] === 0x1a &&
-      bytes[7] === 0x0a
+      bytes[7] === 0x0a &&
+      bytes[12] === 0x49 &&
+      bytes[13] === 0x48 &&
+      bytes[14] === 0x44 &&
+      bytes[15] === 0x52;
+    if (!hasPngSigAndIhdr) return false;
+    // Verify trailing IEND chunk marker (`IEND` at len - 8 .. len - 5)
+    const iendOffset = bytes.byteLength - 8;
+    return (
+      bytes[iendOffset] === 0x49 &&
+      bytes[iendOffset + 1] === 0x45 &&
+      bytes[iendOffset + 2] === 0x4e &&
+      bytes[iendOffset + 3] === 0x44
     );
   }
   if (format === "pdf") {
-    return (
+    const hasPdfHeader =
       bytes[0] === 0x25 &&
       bytes[1] === 0x50 &&
       bytes[2] === 0x44 &&
       bytes[3] === 0x46 &&
-      bytes[4] === 0x2d
-    );
+      bytes[4] === 0x2d;
+    if (!hasPdfHeader) return false;
+    const tailSlice = bytes.subarray(Math.max(0, bytes.byteLength - 1024));
+    const tailText = new TextDecoder("latin1").decode(tailSlice);
+    return tailText.includes("%%EOF");
   }
   if (format === "behance") {
-    return bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
+    const hasLocalHeader =
+      bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
+    if (!hasLocalHeader || bytes.byteLength < 22) return false;
+    // Scan trailing 65 KiB + 22 bytes for End of Central Directory (`PK\x05\x06`)
+    const minPos = Math.max(0, bytes.byteLength - 65_558);
+    for (let i = bytes.byteLength - 22; i >= minPos; i -= 1) {
+      if (
+        bytes[i] === 0x50 &&
+        bytes[i + 1] === 0x4b &&
+        bytes[i + 2] === 0x05 &&
+        bytes[i + 3] === 0x06
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
   return false;
 }
@@ -666,6 +720,12 @@ export async function completeQueuedExportFromClient(
 > {
   if (!UUID_REGEX.test(exportId)) {
     return { status: "not_found" };
+  }
+
+  // When a dedicated external Playwright worker is configured in production, strictly disable
+  // browser-uploaded completion so watermarks, resolution limits, and server rendering cannot be bypassed.
+  if (isDedicatedProductionWorkerConfigured()) {
+    return { status: "forbidden" };
   }
 
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_CLIENT_EXPORT_BYTES) {
@@ -697,11 +757,18 @@ export async function completeQueuedExportFromClient(
     };
   }
 
-  const format = exportJob.format;
-  if (!hasValidExportBinaryHeader(format, bytes)) {
+  if (exportJob.status !== "queued") {
     return {
       status: "invalid_payload",
-      error: `Binary payload header does not match expected ${format} format.`,
+      error: `Export job cannot be finalized from status '${exportJob.status}'.`,
+    };
+  }
+
+  const format = exportJob.format;
+  if (!hasValidExportBinaryStructure(format, bytes)) {
+    return {
+      status: "invalid_payload",
+      error: `Binary payload structure does not match expected ${format} format.`,
     };
   }
 
@@ -717,38 +784,55 @@ export async function completeQueuedExportFromClient(
     cacheControl: "private, no-store, max-age=0",
   });
 
+  // Never populate workspace-shared `cacheKey` from client-uploaded fallback artifacts so a member
+  // cannot poison cached exports served to teammates, and require atomic `status = 'queued'` transition.
   const [updated] = await db
     .update(dbSchema.exportsTable)
     .set({
       status: "completed",
       r2Key,
       bytes: bytes.byteLength,
+      cacheKey: null,
       expiresAt,
       error: null,
     })
-    .where(eq(dbSchema.exportsTable.id, exportId))
+    .where(
+      and(
+        eq(dbSchema.exportsTable.id, exportId),
+        eq(dbSchema.exportsTable.status, "queued"),
+      ),
+    )
     .returning();
+
+  if (!updated) {
+    const [latest] = await db
+      .select()
+      .from(dbSchema.exportsTable)
+      .where(eq(dbSchema.exportsTable.id, exportId))
+      .limit(1);
+    if (latest?.status === "completed" && latest.r2Key) {
+      return {
+        status: "ok",
+        exportJob: serializeExportRow(latest, now),
+      };
+    }
+    return {
+      status: "invalid_payload",
+      error: "Export job state changed concurrently and could not be finalized.",
+    };
+  }
 
   await commitWorkspaceReservation(`export:${exportId}`, now).catch(() => undefined);
 
-  const finalRow = updated ?? {
-    ...exportJob,
-    status: "completed" as const,
-    r2Key,
-    bytes: bytes.byteLength,
-    expiresAt,
-    error: null,
-  };
-
   await notifyExportFinished({
-    exportId: finalRow.id,
-    projectId: finalRow.projectId,
-    format: finalRow.format,
+    exportId: updated.id,
+    projectId: updated.projectId,
+    format: updated.format,
     status: "completed",
   }).catch(() => undefined);
 
   return {
     status: "ok",
-    exportJob: serializeExportRow(finalRow, now),
+    exportJob: serializeExportRow(updated, now),
   };
 }

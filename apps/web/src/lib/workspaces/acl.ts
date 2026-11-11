@@ -302,7 +302,10 @@ export async function authorizeSpaceAccess(
       };
     }
 
-    if ((entitlement.isFrozen || space.recoveryState !== "active") && action === "create_project") {
+    if (
+      (entitlement.isFrozen || space.recoveryState !== "active") &&
+      (action === "create_project" || action === "rename" || action === "delete")
+    ) {
       return {
         ok: false,
         status: 403,

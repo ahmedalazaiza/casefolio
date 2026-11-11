@@ -110,7 +110,13 @@ export function isAllowedExportWorkerRequestUrl(
 
   // Exact match to the configured Casefolio application origin (supports localhost in dev/test while blocking any other port/host)
   if (parsedRequest.origin === parsedAllowed.origin) {
-    if (BLOCKED_INTERNAL_HOSTS.has(parsedRequest.hostname.toLowerCase())) {
+    const reqHost = parsedRequest.hostname.toLowerCase();
+    if (BLOCKED_INTERNAL_HOSTS.has(reqHost)) {
+      return false;
+    }
+    const isExplicitLoopbackAllowed =
+      reqHost === "localhost" || reqHost === "127.0.0.1" || reqHost === "[::1]";
+    if (!isExplicitLoopbackAllowed && isPrivateOrMetadataHost(reqHost)) {
       return false;
     }
     return true;

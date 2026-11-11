@@ -120,10 +120,18 @@ function formatBytesCompact(bytes: number): string {
   return `${Math.max(0, Math.round(bytes / 1024))} KB`;
 }
 
-function formatRelativeEdited(iso: string): string {
-  const updatedMs = new Date(iso).getTime();
+function formatRelativeEdited(iso: string, nowMs: number | null): string {
+  const parsed = new Date(iso);
+  const updatedMs = parsed.getTime();
   if (Number.isNaN(updatedMs)) return "Edited recently";
-  const diffSec = Math.max(0, Math.floor((Date.now() - updatedMs) / 1000));
+  if (nowMs === null) {
+    return `Edited ${parsed.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      timeZone: "UTC",
+    })}`;
+  }
+  const diffSec = Math.max(0, Math.floor((nowMs - updatedMs) / 1000));
   if (diffSec < 60) return "Edited just now";
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `Edited ${diffMin}m ago`;
@@ -132,9 +140,10 @@ function formatRelativeEdited(iso: string): string {
   const diffDays = Math.floor(diffHr / 24);
   if (diffDays === 1) return "Edited yesterday";
   if (diffDays < 30) return `Edited ${diffDays} days ago`;
-  return `Edited ${new Date(iso).toLocaleDateString("en-GB", {
+  return `Edited ${parsed.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
+    timeZone: "UTC",
   })}`;
 }
 
@@ -270,6 +279,11 @@ export function DashboardProjectsClient({
         return new Date(b.updatedAtIso).getTime() - new Date(a.updatedAtIso).getTime();
       });
   }, [projects, searchQuery, sortMode, spaceFilter, statusFilter, typeFilter]);
+
+  const [mountedNowMs, setMountedNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    setMountedNowMs(Date.now());
+  }, []);
 
   async function handleSwitchWorkspace(nextOrgId: string | null) {
     setSwitchingWorkspace(true);
@@ -1251,7 +1265,7 @@ export function DashboardProjectsClient({
               project.spaceName && (spaces.length > 1 || project.workspaceKind === "team")
                 ? ` · ${project.spaceVisibility === "shared" ? "Shared" : "Private"}: ${project.spaceName}`
                 : "";
-            const subtitle = `${formatProjectTypeLabel(project.type)} · ${formatRelativeEdited(project.updatedAtIso)}${spaceLabel}`;
+            const subtitle = `${formatProjectTypeLabel(project.type)} · ${formatRelativeEdited(project.updatedAtIso, mountedNowMs)}${spaceLabel}`;
             const isBusy = busyProjectId === project.id;
 
             return (

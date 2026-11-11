@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/guards";
+import { isSafeTemplateCoverUrl } from "@/lib/template/cover-url";
 import { semverSchema } from "@/lib/template/schema";
 import {
   archiveTemplate,
@@ -20,8 +21,13 @@ import {
   type UpdateTemplateCoverActionResult,
 } from "@/lib/template/service";
 
+const MAX_TEMPLATE_RAW_JSON_CHARS = 512_000;
+
 const createDraftActionPayloadSchema = z.object({
-  rawJson: z.string().min(1, "Template JSON is required."),
+  rawJson: z
+    .string()
+    .min(1, "Template JSON is required.")
+    .max(MAX_TEMPLATE_RAW_JSON_CHARS, "Template JSON exceeds the 512 KB size limit."),
   metadata: wizardMetadataInputSchema,
 });
 
@@ -29,8 +35,18 @@ const createVersionActionPayloadSchema = z.object({
   templateId: z.string().uuid("Invalid template ID."),
   version: semverSchema,
   changelog: z.string().trim().max(500).default(""),
-  rawJson: z.string().min(1, "Template JSON is required."),
-  coverUrl: z.string().trim().optional(),
+  rawJson: z
+    .string()
+    .min(1, "Template JSON is required.")
+    .max(MAX_TEMPLATE_RAW_JSON_CHARS, "Template JSON exceeds the 512 KB size limit."),
+  coverUrl: z
+    .string()
+    .trim()
+    .refine(
+      (val) => val.length === 0 || isSafeTemplateCoverUrl(val),
+      "Cover image URL must be an uploaded /cdn/covers path or https:// URL.",
+    )
+    .optional(),
   coverRatio: z.string().trim().optional(),
   publishImmediately: z.boolean().default(false),
 });
@@ -46,12 +62,19 @@ const templateIdPayloadSchema = z.object({
 
 const deleteTemplatePayloadSchema = z.object({
   templateId: z.string().uuid("Invalid template ID."),
-  confirmName: z.string().trim().min(1, "Confirmation name is required."),
+  confirmName: z.string().trim().min(1, "Confirmation name is required.").max(120),
 });
 
 const updateTemplateCoverPayloadSchema = z.object({
   templateId: z.string().uuid("Invalid template ID."),
-  coverUrl: z.string().trim().min(1, "A cover / thumbnail image is required."),
+  coverUrl: z
+    .string()
+    .trim()
+    .min(1, "A cover / thumbnail image is required.")
+    .refine(
+      isSafeTemplateCoverUrl,
+      "Cover image URL must be an uploaded /cdn/covers path or https:// URL.",
+    ),
   coverRatio: z.string().trim().default("4:3"),
 });
 

@@ -9,14 +9,22 @@ export interface ExportRenderTokenPayload {
 
 export const DEFAULT_EXPORT_TOKEN_TTL_MS = 5 * 60 * 1000;
 
+const DEV_FALLBACK_EXPORT_SECRET = "casefolio-dev-export-signing-secret-32chars";
+
 export function resolveExportSigningSecret(
   envSource: Record<string, string | undefined> = process.env,
 ): string {
-  return (
-    envSource.EXPORT_SIGNING_SECRET ||
-    envSource.BETTER_AUTH_SECRET ||
-    "casefolio-dev-export-signing-secret-32chars"
-  );
+  const configured =
+    envSource.EXPORT_SIGNING_SECRET?.trim() || envSource.BETTER_AUTH_SECRET?.trim() || "";
+  if (configured.length >= 16) {
+    return configured;
+  }
+  if (envSource.NODE_ENV === "production") {
+    throw new Error(
+      "EXPORT_SIGNING_SECRET (or BETTER_AUTH_SECRET >= 16 chars) is required in production.",
+    );
+  }
+  return DEV_FALLBACK_EXPORT_SECRET;
 }
 
 export function signExportRenderToken(
@@ -62,7 +70,12 @@ export function verifyExportRenderToken(
     return null;
   }
 
-  const secret = options?.secret ?? resolveExportSigningSecret();
+  let secret: string;
+  try {
+    secret = options?.secret ?? resolveExportSigningSecret();
+  } catch {
+    return null;
+  }
   const nowMs = options?.nowMs ?? Date.now();
   const encodedPayload = token.slice(0, dotIdx);
   const signature = token.slice(dotIdx + 1);

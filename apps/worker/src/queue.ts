@@ -294,6 +294,44 @@ export function buildExportStorageKey(
   return `exports/${projectId}/${exportId}.${ext}`;
 }
 
+function isLoopbackHost(hostname: string): boolean {
+  const clean = hostname.toLowerCase();
+  return clean === "localhost" || clean === "127.0.0.1" || clean === "[::1]";
+}
+
+function resolveTrustedWorkerAppUrl(
+  payloadAppUrl: string | undefined,
+  configuredAppUrl: string,
+): string {
+  const cleanConfigured = configuredAppUrl.replace(/\/+$/, "");
+  if (!payloadAppUrl) {
+    return cleanConfigured;
+  }
+
+  try {
+    const parsedConfigured = new URL(cleanConfigured);
+    const parsedPayload = new URL(payloadAppUrl.replace(/\/+$/, ""));
+    if (parsedPayload.origin === parsedConfigured.origin) {
+      return parsedPayload.origin;
+    }
+    // Allow 127.0.0.1 <-> localhost equivalence ONLY on the exact same configured port in local/test runs
+    const configuredPort = parsedConfigured.port || (parsedConfigured.protocol === "https:" ? "443" : "80");
+    const payloadPort = parsedPayload.port || (parsedPayload.protocol === "https:" ? "443" : "80");
+    if (
+      parsedPayload.protocol === parsedConfigured.protocol &&
+      configuredPort === payloadPort &&
+      isLoopbackHost(parsedConfigured.hostname) &&
+      isLoopbackHost(parsedPayload.hostname)
+    ) {
+      return parsedPayload.origin;
+    }
+  } catch {
+    // Fall back to configured worker appUrl
+  }
+
+  return cleanConfigured;
+}
+
 export async function processExportJob(
   payload: ExportQueueJobPayload,
   deps: ProcessExportJobDependencies,
@@ -305,7 +343,7 @@ export async function processExportJob(
 }> {
   const renderFn = deps.renderFn ?? renderExportWithPlaywright;
   const storeFn = deps.storeFn ?? storeRenderedExportArtifact;
-  const appUrl = (payload.appUrl || deps.appUrl).replace(/\/+$/, "");
+  const appUrl = resolveTrustedWorkerAppUrl(payload.appUrl, deps.appUrl);
   const reservationJobId = payload.reservationJobId ?? `export:${payload.exportId}`;
 
   // 1. Pre-execution ACL & membership check (`Spec §10.7`)
