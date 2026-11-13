@@ -110,7 +110,9 @@ export function ResetPasswordForm({ token }: { token?: string }) {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1.5">
           <h1 className="type-heading-l text-foreground">Choose a new password</h1>
-          <p className="text-muted-foreground type-body-m">Make it strong and unique.</p>
+          <p className="text-muted-foreground type-body-m">
+            Use a strong password you don’t share elsewhere.
+          </p>
         </div>
 
         {error && (
@@ -179,7 +181,7 @@ export function ResetPasswordForm({ token }: { token?: string }) {
         <div className="flex flex-col gap-1.5">
           <h1 className="type-heading-l text-foreground">Reset link sent</h1>
           <p className="text-muted-foreground type-body-m">
-            If an account exists for <strong className="text-foreground">{email}</strong>, we sent a password reset link.
+            If an account matches <strong className="text-foreground">{email}</strong>, we’ve sent a password reset link.
           </p>
         </div>
         <Button asChild variant="secondary" size="lg" className="w-full">
@@ -202,7 +204,7 @@ export function ResetPasswordForm({ token }: { token?: string }) {
       <div className="flex flex-col gap-1.5">
         <h1 className="type-heading-l text-foreground">Reset your password</h1>
         <p className="text-muted-foreground type-body-m">
-          Enter the email you signed up with and we&apos;ll send a reset link.
+          Enter the email address for your account and we&apos;ll send a reset link.
         </p>
       </div>
 
@@ -222,7 +224,7 @@ export function ResetPasswordForm({ token }: { token?: string }) {
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="ahmed@example.com"
+          placeholder="you@studio.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={submitting}

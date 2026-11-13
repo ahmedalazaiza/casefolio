@@ -23,9 +23,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Casefolio — Polished UI Case Studies in Minutes",
+  title: "Casefolio — UI/UX Case Study Builder for Product Designers",
   description:
-    "Pick a professionally designed template, fill constrained content and media slots, and publish or export your UI case study.",
+    "Build portfolio-ready UI/UX case studies in minutes. Start with curated templates, frame your screens in realistic mockups, and publish live or export for Behance and PDF.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -293,8 +293,8 @@ export function SecuritySettingsPanel({
         <div className="flex flex-col gap-1.5">
           <h2 className="text-foreground type-heading-m">Delete account</h2>
           <p className="text-muted-foreground type-body-s">
-            Permanently deletes your projects, published pages and exports. Active
-            subscriptions are cancelled immediately.
+            Permanently deletes your projects, published pages, and exports. Active
+            subscriptions are canceled immediately.
           </p>
         </div>
 

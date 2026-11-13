@@ -8,8 +8,9 @@ import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 import { listPublishedLibraryTemplates, listTemplateCategories } from "@/lib/template/service";
 
 export const metadata: Metadata = {
-  title: "Template Library · Casefolio",
-  description: "Explore curated Mobile app and Website case-study templates built for designers.",
+  title: "UI/UX Case Study Templates — Casefolio",
+  description:
+    "Browse curated mobile app and web product case study templates with structured storytelling sections and aspect-ratio-locked device mockups.",
 };
 
 export default async function TemplatesLibraryPage() {

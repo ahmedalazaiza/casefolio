@@ -146,8 +146,9 @@ export function TemplateLibraryClient({
             <span className="text-tertiary type-overline">Case Study Templates</span>
             <h1 className="text-foreground type-display-m">Template library</h1>
             <p className="text-muted-foreground type-body-m max-w-2xl">
-              Curated, slot-locked layouts built by the Casefolio team. Pick a template, drop in
-              your screens, and publish or export in minutes.
+              Ready-made UI/UX case study layouts crafted by designers. Choose a
+              template, place your screens in ratio-locked mockups, and publish
+              or export in minutes.
             </p>
           </div>
 
@@ -160,8 +161,9 @@ export function TemplateLibraryClient({
           <Eyebrow icon={<LayoutTemplate />}>Case Study Templates</Eyebrow>
           <h1 className="text-foreground type-section text-balance">Template library</h1>
           <p className="text-muted-foreground type-lead max-w-xl text-pretty">
-            Curated, slot-locked layouts built by the Casefolio team. Pick a template, drop in your
-            screens, and publish or export in minutes.
+            Ready-made UI/UX case study layouts crafted by designers. Choose a
+            template, place your screens in ratio-locked mockups, and publish or
+            export in minutes.
           </p>
           <Badge tone={canUseProTemplates ? "pro" : "neutral"} className="w-fit">
             {canUseProTemplates ? `${userPlan.toUpperCase()} plan` : "Free plan"}
@@ -178,7 +180,7 @@ export function TemplateLibraryClient({
             <Search className="text-tertiary pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               aria-label="Search templates"
-              placeholder="Search templates..."
+              placeholder="Search templates by name or category..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className="pl-9"
@@ -294,7 +296,8 @@ export function TemplateLibraryClient({
         <div className="border-border bg-card flex flex-col items-center justify-center gap-3 rounded-xl border p-12 text-center">
           <h2 className="text-foreground type-heading-s">No matching templates</h2>
           <p className="text-muted-foreground type-body-s max-w-md">
-            Try adjusting or resetting your type, category, and plan filters.
+            No templates match your current search or filters. Try resetting the
+            platform, category, or plan selection.
           </p>
           {hasActiveFilters && (
             <Button type="button" variant="secondary" size="sm" onClick={resetFilters}>
@@ -487,7 +490,7 @@ export function TemplateLibraryClient({
                 </div>
                 <DialogDescription>
                   {previewItem.categoryName ?? "Case Study"} · v{previewItem.version} ·{" "}
-                  {previewItem.sectionCount} sections · {previewItem.slotCount} ratio-locked image
+                  {previewItem.sectionCount} sections · {previewItem.slotCount} ratio-locked screen
                   slots
                 </DialogDescription>
               </DialogHeader>
@@ -565,7 +568,7 @@ export function TemplateLibraryClient({
             ? `Unlock the ${upgradeTemplateName} Pro template`
             : "Unlock Pro templates"
         }
-        featureDescription="Upgrade to Casefolio Pro to build with every curated Pro layout, create unlimited projects, and export watermark-free PDFs."
+        featureDescription="Upgrade to Casefolio Pro to unlock all Pro and Premium templates, build unlimited Case Studies, and export high-resolution PNG, Behance, and PDF files without watermarks."
       />
     </div>
   );

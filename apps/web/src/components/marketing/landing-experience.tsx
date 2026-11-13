@@ -106,30 +106,30 @@ export function LandingExperience({
   const metrics = [
     {
       value: snapshot.publishedTemplatesCount,
-      label: "Live templates",
+      label: "Curated templates",
       detail: snapshot.templates.map((t) => t.name).join(" · "),
     },
     {
       value: snapshot.deviceFramesCount,
-      label: "Hardware frames",
+      label: "Device frames",
       detail: "iPhone · Android · iPad · MacBook",
     },
     {
       value: snapshot.sectionPresetsCount,
-      label: "Section presets",
-      detail: `${snapshot.sectionTypesCount} core section types`,
+      label: "Story sections",
+      detail: `${snapshot.sectionTypesCount} modular section types`,
     },
     {
       value: snapshot.exportFormatsCount,
       label: "Export formats",
-      detail: "PNG · Behance 1400 · A4 PDF",
+      detail: "PNG · Behance 1400px · A4 PDF",
     },
   ] as const;
 
   const liveCounts = [
-    { value: snapshot.liveProjectsCount, label: "Projects created" },
-    { value: snapshot.livePageViewsCount, label: "Public page views" },
-    { value: snapshot.liveExportsCount, label: "Exports completed" },
+    { value: snapshot.liveProjectsCount, label: "Case studies created" },
+    { value: snapshot.livePageViewsCount, label: "Published page views" },
+    { value: snapshot.liveExportsCount, label: "Exports generated" },
   ] as const;
 
   return (
@@ -144,21 +144,22 @@ export function LandingExperience({
           }
         >
           <Eyebrow icon={<Sparkles className="text-primary" />}>
-            {snapshot.publishedTemplatesCount} live templates ·{" "}
-            {snapshot.deviceFramesCount} hardware frames · Free to start
+            {snapshot.publishedTemplatesCount} curated templates ·{" "}
+            {snapshot.deviceFramesCount} device mockups · Free to start
           </Eyebrow>
 
           <WordReveal
             as="h1"
-            text="Turn finished projects into publishable case studies"
+            text="Turn finished UI screens into published case studies"
             delay={0.1}
             className="type-hero text-foreground max-w-6xl text-balance"
           />
 
           <p className="text-muted-foreground type-lead max-w-2xl text-pretty">
-            Pick a template crafted by the Casefolio team, snap your UI screens
-            into ratio-locked device frames, tune your tokens — then publish a
-            live URL or export PNG &amp; PDF in minutes.
+            Start with a structured case study template crafted by designers,
+            snap your screens into realistic device mockups, and customize your
+            brand colors and fonts — then publish a live link or export PNG,
+            Behance, and PDF files in minutes.
           </p>
 
           <div className="flex w-full flex-col items-stretch justify-center gap-3 pt-1 sm:w-auto sm:flex-row sm:items-center sm:pt-2">
@@ -175,8 +176,8 @@ export function LandingExperience({
 
           <p className="text-muted-foreground type-caption">
             {snapshot.freeProjectsIncluded} free case{" "}
-            {snapshot.freeProjectsIncluded === 1 ? "study" : "studies"} included · No
-            credit card required
+            {snapshot.freeProjectsIncluded === 1 ? "study" : "studies"} forever ·
+            No credit card required
           </p>
         </LandingHeroMotion>
       </section>
@@ -212,7 +213,7 @@ export function LandingExperience({
       {/* 3. Statement */}
       <section className="container-page pb-[var(--section-space)]">
         <ScrollWords
-          text="Designers finish the product, then lose weeks rebuilding grids, framing mockups by hand and re-slicing exports. Casefolio keeps your layout rhythm unbreakable, so a finished project becomes a published case study in minutes."
+          text="You finish designing the product — then spend weeks rebuilding grids, faking device mockups, and slicing exports. Casefolio locks in the editorial layout so your finished UI becomes a published case study in minutes."
           className="type-heading-l text-foreground mx-auto max-w-4xl text-center text-balance lg:text-[2.75rem] lg:leading-[1.2]"
         />
       </section>
@@ -225,8 +226,8 @@ export function LandingExperience({
         <SectionIntro
           icon={<BookOpen />}
           eyebrow="How it works"
-          title="From finished UI to case study in four steps"
-          description="Pick a type, choose a template, customize it, then publish or export. Every decision stays editable."
+          title="From finished UI to published case study in four steps"
+          description="Choose a project format, pick a proven story template, drop in your screens and brand styling, then publish or export. Everything stays editable anytime."
         />
         <HowItWorksStage snapshot={snapshot} />
       </section>
@@ -239,8 +240,8 @@ export function LandingExperience({
         <SectionIntro
           icon={<Layers />}
           eyebrow="The editor"
-          title="A full editor, without the busywork"
-          description="Structured flexibility: customize tokens, mockups, and narrative blocks while your layout rhythm stays unbreakable."
+          title="Structured editing, without formatting busywork"
+          description="Customize your colors, typography, device mockups, and narrative blocks while Casefolio keeps spacing, visual balance, and responsive rhythm locked."
         />
         <FeatureColumns snapshot={snapshot} />
         <FeatureList />
@@ -252,8 +253,8 @@ export function LandingExperience({
           <SectionIntro
             icon={<LayoutTemplate />}
             eyebrow="Templates"
-            title="Start from a layout that already works"
-            description={`${snapshot.publishedTemplatesCount} curated templates with ${snapshot.totalTemplateSections} pre-built sections and ${snapshot.totalTemplateSlots} ratio-locked slots, ready to open today.`}
+            title="Start from a case study structure that already works"
+            description={`${snapshot.publishedTemplatesCount} designer-crafted templates with ${snapshot.totalTemplateSections} guided storytelling sections and ${snapshot.totalTemplateSlots} ratio-locked screen frames, ready to customize today.`}
           />
         </div>
         <div className="container-page flex w-full flex-col items-center gap-12 sm:gap-14">
@@ -266,7 +267,7 @@ export function LandingExperience({
               </Link>
             </Button>
             <p className="text-muted-foreground type-caption">
-              Explore the full template library, filter by platform, and inspect live previews
+              Explore the full UI/UX template library, filter by mobile or web, and preview layouts live
             </p>
           </div>
         </div>
@@ -280,8 +281,8 @@ export function LandingExperience({
         <SectionIntro
           icon={<Rocket />}
           eyebrow="Publish & export"
-          title="One case study, everywhere you need it"
-          description="Publish an indexed public URL on casefolio.app, or export crisp files for Behance, Dribbble, and recruiter PDF decks."
+          title="One case study, ready for live links, Behance, and PDFs"
+          description="Publish an indexed portfolio link on casefolio.app or export pixel-sharp files sized for Behance, Dribbble, and recruiter A4 PDF decks."
         />
 
         <Reveal stagger className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -291,11 +292,12 @@ export function LandingExperience({
                 {simulatedPublished ? "Published · Live" : "Draft preview"}
               </StatusPill>
               <h3 className="type-heading-l text-foreground">
-                A public page on casefolio.app
+                Host on casefolio.app or your own domain
               </h3>
               <p className="text-muted-foreground type-body-m max-w-md">
-                Choose Public, Unlisted, or Private visibility, customize your
-                slug, and ship with automatic OpenGraph social cards.
+                Switch between Public, Unlisted, and Private visibility, claim
+                a clean custom slug, and share links with automatic OpenGraph
+                social preview cards.
               </p>
             </div>
 
@@ -356,11 +358,11 @@ export function LandingExperience({
                 {snapshot.exportFormatsCount} export formats
               </StatusPill>
               <h3 className="type-heading-l text-foreground">
-                PNG &amp; PDF that match the preview
+                Pixel-accurate PNG, Behance, and PDF exports
               </h3>
               <p className="text-muted-foreground type-body-m max-w-md">
-                Exports render from the exact same headless Chromium canvas as
-                the editor — zero broken fonts or shifted frames.
+                Every download renders directly from the live Casefolio canvas,
+                so typography, contrast, and device frames never shift or clip.
               </p>
             </div>
 
@@ -390,8 +392,7 @@ export function LandingExperience({
           ))}
         </Reveal>
         <p className="text-tertiary type-caption mt-4 text-center">
-          Live counts from the Casefolio platform · privacy-safe analytics, zero
-          third-party ad cookies
+          Live platform totals · privacy-first analytics with zero third-party ad cookies
         </p>
       </section>
 
@@ -403,8 +404,8 @@ export function LandingExperience({
         <SectionIntro
           icon={<Tag />}
           eyebrow="Pricing"
-          title="Simple plans for every designer, studio & agency"
-          description="Start free forever with 1 active Case Study — or choose Pro, Team (2–10 seats), or Plus (up to 20 seats, custom domain & white-labeling) with 20% off annual billing."
+          title="Clear plans for solo designers, teams, and agencies"
+          description="Start free forever with 1 active Case Study — or choose Pro, Team (2–10 seats), or Plus (up to 20 seats, custom domain, and white-labeling) with 20% off annual billing."
         />
         <LandingPricingSection showComparisonLink />
       </section>
@@ -417,8 +418,8 @@ export function LandingExperience({
         <SectionIntro
           icon={<MessageCircleQuestion />}
           eyebrow="FAQ"
-          title="Questions, answered"
-          description="Everything you need to know about templates, device mockups, exports, and plans."
+          title="Common questions, answered"
+          description="Straight answers on templates, device mockups, export formats, team seats, and plan changes."
         />
         <Reveal>
           <LandingFaqAccordion />
@@ -433,12 +434,12 @@ export function LandingExperience({
               C
             </span>
             <h2 className="type-section text-foreground text-balance">
-              Your next case study is one template away
+              Ready to publish your next case study?
             </h2>
             <p className="text-muted-foreground type-lead max-w-md">
               Start free with {snapshot.freeProjectsIncluded} full case{" "}
               {snapshot.freeProjectsIncluded === 1 ? "study" : "studies"} — pick
-              Cinema, Orbit, or Northwind and publish today.
+              Cinema, Orbit, or Northwind and share your work today.
             </p>
             <Button size="lg" asChild>
               <Link href="/sign-up">

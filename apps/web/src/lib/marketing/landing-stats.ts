@@ -58,9 +58,9 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     slotCount: 8,
     coverSrc: "/templates/cinema/cover.svg",
     previewSecondarySrc: "/templates/cinema/screen-seats.svg",
-    headline: ".Cinema — Movie Ticket Booking Experience",
+    headline: "Cinema — Mobile Movie Ticket Booking Case Study",
     summary:
-      "End-to-end dark-room booking narrative with 5-column staggered iPhone Pro gallery, live design system, and auditorium seat map.",
+      "Dark-mode ticketing UX narrative featuring a 5-column staggered iPhone Pro showcase, live design tokens, and interactive auditorium seat selection.",
   },
   {
     slug: "orbit",
@@ -73,9 +73,9 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     slotCount: 5,
     coverSrc: "/templates/orbit/cover.svg",
     previewSecondarySrc: "/landing/orbit-plan.svg",
-    headline: "Orbit — Calm Personal Debt & Wallet App",
+    headline: "Orbit — Personal Debt & Wallet Mobile App",
     summary:
-      "Focused mobile fintech flow spanning onboarding, payoff snowball milestones, and quantified conversion outcomes.",
+      "Focused fintech case study walking through calm onboarding, payoff snowball milestones, and quantified conversion outcomes.",
   },
   {
     slug: "meridian-pro",
@@ -87,9 +87,9 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     sectionCount: 6,
     slotCount: 5,
     coverSrc: "/templates/meridian-pro/cover.svg",
-    headline: "Meridian — B2B Revenue OS Workspace",
+    headline: "Meridian — B2B Revenue Operations SaaS Platform",
     summary:
-      "Widescreen browser & MacBook case study crafted for enterprise SaaS dashboards, cohort builders, and executive KPIs.",
+      "Widescreen browser and MacBook case study crafted for enterprise SaaS dashboards, cohort builders, and executive KPIs.",
   },
   {
     slug: "northwind",
@@ -102,9 +102,9 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     slotCount: 6,
     coverSrc: "/templates/northwind/cover.svg",
     previewSecondarySrc: "/templates/northwind/screen-split.svg",
-    headline: "Northwind: turning freight chaos into a calm control room",
+    headline: "Northwind — Real-Time Freight & Dispatch Workspace",
     summary:
-      "Redesigning the dispatch console that 1,200 operators use to move 40,000 shipments a day.",
+      "Redesigning the logistics dispatch console used by 1,200 operators to route 40,000 daily shipments calmly.",
   },
   {
     slug: "pulse",
@@ -117,9 +117,9 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     slotCount: 5,
     coverSrc: "/templates/pulse/cover.svg",
     previewSecondarySrc: "/templates/pulse/screen-streaks.svg",
-    headline: "Pulse: a fitness coach that fits into your day",
+    headline: "Pulse — Habit-First Mobile Fitness & Coaching App",
     summary:
-      "Designing a habit-first workout app that helps busy people train ten minutes at a time.",
+      "Designing a focused workout companion that helps busy schedules fit ten minutes of daily training.",
   },
   {
     slug: "atlas",
@@ -132,9 +132,9 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     slotCount: 7,
     coverSrc: "/templates/atlas/cover.svg",
     previewSecondarySrc: "/templates/atlas/screen-mobile-today.svg",
-    headline: "Atlas: plan on your laptop, live it on your phone",
+    headline: "Atlas — Cross-Platform Travel & Itinerary Planner",
     summary:
-      "A cross-platform travel planner that keeps itineraries, bookings and maps in sync — from first idea to final boarding pass.",
+      "A hybrid desktop-and-mobile travel product story keeping itineraries, bookings, and maps in sync from planning to boarding pass.",
   },
 ] as const;
 

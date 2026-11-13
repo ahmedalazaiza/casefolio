@@ -498,7 +498,7 @@ export function OnboardingWizard({
                     setDisplayName(next);
                     setPublicHandle(`casefolio.app/${toHandleSlug(next, initialEmail)}`);
                   }}
-                  placeholder="Ahmed Al-Azaiza"
+                  placeholder="Alex Rivera"
                   required
                 />
 

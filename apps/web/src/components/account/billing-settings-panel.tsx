@@ -423,10 +423,10 @@ export function BillingSettingsPanel({
         return;
       }
 
-      toast.success("Cancelled pending seat decrease.");
+      toast.success("Canceled pending seat decrease.");
       router.refresh();
     } catch {
-      setSeatError("Network error while cancelling pending decrease.");
+      setSeatError("Network error while canceling pending decrease.");
     } finally {
       setBusyAction(null);
     }
@@ -564,7 +564,7 @@ export function BillingSettingsPanel({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-foreground type-body-s-strong">
-                Subscription cancelled
+                Subscription canceled
               </span>
               <p className="text-muted-foreground type-body-s max-w-xl">
                 {planTitle} stays active until {periodEndFormatted}, then your personal

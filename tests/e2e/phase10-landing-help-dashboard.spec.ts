@@ -95,7 +95,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await page.goto("/");
     await expect(
       page.getByRole("heading", {
-        name: /Turn finished projects into publishable case studies/i,
+        name: /Turn finished UI screens into published case studies/i,
       }),
     ).toBeVisible();
     await assertNoHorizontalOverflow(page, "/ at 1440px");
@@ -119,7 +119,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await page.goto("/");
     await expect(
       page.getByRole("heading", {
-        name: /Turn finished projects into publishable case studies/i,
+        name: /Turn finished UI screens into published case studies/i,
       }),
     ).toBeVisible();
     await assertNoHorizontalOverflow(page, "/ at 375px");
@@ -133,7 +133,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await page.goto("/pricing");
     await expect(
       page.getByRole("heading", {
-        name: /Unlock the full builder/i,
+        name: /Simple pricing for solo designers, studios, and agencies/i,
       }),
     ).toBeVisible();
     await expect(

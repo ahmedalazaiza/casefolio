@@ -517,7 +517,7 @@ export function CreateProjectWizard({
                   </Badge>
                 </div>
                 <p className="text-muted-foreground type-body-l max-w-xl">
-                  Templates are designed by the Casefolio team — you choose, then customise.
+                  Templates are designed by the Casefolio team — you choose the layout, then customize.
                 </p>
               </div>
 

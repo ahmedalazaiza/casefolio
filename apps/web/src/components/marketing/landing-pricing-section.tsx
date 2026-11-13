@@ -293,10 +293,10 @@ export function LandingPricingSection({
                 <span className="text-foreground type-body-s-strong">
                   {freePlan.name} — $0 / forever
                 </span>
-                <Badge tone="neutral">Default on signup</Badge>
+                <Badge tone="neutral">Included at signup</Badge>
               </div>
               <p className="text-muted-foreground type-caption">
-                1 personal seat · 1 active Case Study · Standard templates · PNG &amp; PDF export
+                1 personal seat · 1 active Case Study · Standard templates · PNG &amp; PDF exports
                 with subtle Casefolio watermark + Live Shareable Link.
               </p>
             </div>
@@ -320,10 +320,10 @@ export function LandingPricingSection({
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-center sm:justify-start sm:text-left">
               <span className="text-foreground type-body-s-strong inline-flex items-center gap-2">
                 <ShieldCheck className="text-success size-4 shrink-0" />
-                <span>Need a side-by-side breakdown of every plan &amp; feature?</span>
+                <span>Need a side-by-side breakdown of all plans?</span>
               </span>
               <span className="text-muted-foreground type-caption">
-                Compare Free, Pro, Team, and Plus side by side, plus the live per-seat calculator.
+                Compare Free, Pro, Team, and Plus features, limits, and the interactive per-seat calculator.
               </span>
             </div>
             <Button variant="secondary" size="sm" asChild>

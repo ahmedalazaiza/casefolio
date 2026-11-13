@@ -112,7 +112,9 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
         <h1 className="type-heading-l text-foreground">Welcome back</h1>
-        <p className="text-muted-foreground type-body-m">Log in to continue your case studies.</p>
+        <p className="text-muted-foreground type-body-m">
+          Log in to edit, publish, and export your UI/UX case studies.
+        </p>
       </div>
 
       <Button
@@ -160,7 +162,7 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="ahmed@example.com"
+              placeholder="you@studio.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={fieldErrors.email}
@@ -230,10 +232,10 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
                 name="magicEmail"
                 type="email"
                 autoComplete="email"
-                placeholder="ahmed@example.com"
+                placeholder="you@studio.com"
                 value={magicEmail}
                 onChange={(e) => setMagicEmail(e.target.value)}
-                helperText="We will email you a passwordless sign-in link."
+                helperText="We’ll email you a one-click, passwordless sign-in link."
                 error={fieldErrors.magicEmail}
                 disabled={submitting}
               />

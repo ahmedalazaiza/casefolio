@@ -69,17 +69,17 @@ const EMPTY_STATE_HINTS = [
   {
     step: "01",
     title: "Pick a template",
-    description: "Mobile app or Website, built by the Casefolio team.",
+    description: "Mobile app, Website, or hybrid layouts crafted by the Casefolio team.",
   },
   {
     step: "02",
     title: "Fill the slots",
-    description: "Edit colours, fonts and text. Upload screenshots.",
+    description: "Customize colors, fonts, and copy, then drop screens into device frames.",
   },
   {
     step: "03",
     title: "Publish or export",
-    description: "Public page on Casefolio, or download PNG / PDF.",
+    description: "Share a live link on Casefolio or download PNG, Behance, and PDF files.",
   },
 ] as const;
 
@@ -1106,8 +1106,8 @@ export function DashboardProjectsClient({
                 Your first case study starts here
               </h2>
               <p className="text-muted-foreground type-body-m">
-                Create a project, pick a Casefolio template and drop in your screens. Publish it on
-                Casefolio or export it as PNG / PDF.
+                Create a project, pick a curated Casefolio template, and drop in your screens.
+                Publish a live link or export high-resolution PNG and PDF files.
               </p>
             </div>
 

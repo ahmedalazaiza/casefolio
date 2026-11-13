@@ -165,7 +165,7 @@ export function VerifyEmailForm({
             label="Email"
             name="email"
             type="email"
-            placeholder="ahmed@example.com"
+            placeholder="you@studio.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={submitting}

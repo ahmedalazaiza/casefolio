@@ -4,7 +4,7 @@ test("home page renders Casefolio heading and toggles dark/light theme class", a
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "Turn finished projects into publishable case studies",
+      name: "Turn finished UI screens into published case studies",
     }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Start free" }).first()).toBeVisible();

@@ -161,7 +161,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                   <SheetHeader className="p-0 text-left">
                     <SheetTitle>Casefolio menu</SheetTitle>
                     <SheetDescription>
-                      Explore templates, pricing, and account access.
+                      Browse templates, compare plans, or sign in to your workspace.
                     </SheetDescription>
                   </SheetHeader>
                   <nav
@@ -242,7 +242,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                 ))}
               </nav>
               <p className="text-muted-foreground type-caption text-center">
-                © 2026 Casefolio · Made for designers
+                © 2026 Casefolio · Built for UI/UX &amp; product designers
               </p>
             </div>
 

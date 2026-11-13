@@ -8,7 +8,7 @@ import { db, dbSchema } from "@/lib/db";
 export const metadata: Metadata = {
   title: "Contact Support — Casefolio",
   description:
-    "Send a support message to the Casefolio team — we reply by email within 1 business day.",
+    "Get direct help from the Casefolio team. Send a question about your projects, exports, or billing and expect an email reply within one business day.",
   alternates: {
     canonical: "/help/contact",
   },

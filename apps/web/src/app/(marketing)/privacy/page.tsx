@@ -4,7 +4,8 @@ import { MarketingPageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Casefolio",
-  description: "How Casefolio collects, protects and processes your data.",
+  description:
+    "Learn how Casefolio protects your uploads, processes privacy-first analytics without third-party trackers, and lets you export or delete your data anytime.",
 };
 
 export default function PrivacyPage() {
@@ -18,13 +19,23 @@ export default function PrivacyPage() {
       />
       <div className="text-muted-foreground type-body-l flex flex-col gap-6">
         <p>
-          Casefolio strips camera/GPS EXIF metadata from uploaded screenshots,
-          hashes visitor identifiers with daily rotating salts for privacy-safe
-          analytics, and never stores payment card numbers on Casefolio servers.
+          Casefolio only collects the account details and project assets needed to
+          host, render, and export your case studies. When you upload UI screens
+          or supporting imagery, camera and GPS EXIF metadata is stripped
+          automatically so hidden location or device data is never exposed on
+          published pages.
         </p>
         <p>
-          You can export or permanently delete your projects and account at any
-          time from Account Settings.
+          Public case study analytics use daily rotating salts to measure views
+          and engagement without cross-site tracking cookies or third-party ad
+          profiles. All subscription billing and card details are processed
+          exclusively by Paddle, our Merchant of Record — Casefolio servers never
+          receive or store payment card numbers.
+        </p>
+        <p>
+          You remain in full control of your workspace data. You can download
+          your work or permanently delete your projects and account at any time
+          from Account Settings.
         </p>
       </div>
     </div>

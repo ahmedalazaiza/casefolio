@@ -63,10 +63,10 @@ export function TeamsSeatCalculator({
             <span className="type-overline">Team &amp; Agency Seat Calculator</span>
           </div>
           <h3 className="text-foreground type-heading-m">
-            Estimate dynamic per-seat pricing ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats) or Plus flat rate
+            Estimate per-seat Team pricing ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats) or Plus flat rate
           </h3>
           <p className="text-muted-foreground type-body-s max-w-2xl">
-            Team scales dynamically from {TEAMS_MIN_SEATS} to {TEAMS_MAX_SELF_SERVE_SEATS} seats (seats × seat price). Need 11–{PLUS_INCLUDED_SEATS} seats, a custom domain, or white-labeling? Casefolio Plus covers up to {PLUS_INCLUDED_SEATS} seats at one flat rate.
+            Team scales flexibly from {TEAMS_MIN_SEATS} to {TEAMS_MAX_SELF_SERVE_SEATS} seats (seats × seat price). Need 11–{PLUS_INCLUDED_SEATS} seats, a custom domain, or full white-labeling? Casefolio Plus covers up to {PLUS_INCLUDED_SEATS} seats for one predictable flat price.
           </p>
         </div>
 

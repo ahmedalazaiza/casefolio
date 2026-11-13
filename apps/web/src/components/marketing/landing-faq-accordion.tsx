@@ -10,29 +10,29 @@ export interface FaqItem {
 
 export const LANDING_FAQ_ITEMS: readonly FaqItem[] = [
   {
-    question: "Who designs the templates?",
+    question: "Who designs Casefolio templates?",
     answer:
-      "The Casefolio team designs, versions, and uploads every template so layouts stay consistent, responsive, and ready for live pages and exports. Free includes standard templates; Pro, Team, and Plus unlock all Pro & Premium templates.",
+      "The Casefolio team designs, maintains, and versions every template in-house so layouts stay responsive, cohesive, and export-ready. Free includes standard templates; Pro, Team, and Plus unlock the full Pro and Premium template library.",
   },
   {
     question: "Can I use my own colors, fonts, and custom domain?",
     answer:
-      "Yes. Pro, Team, and Plus unlock full customization including custom fonts, color palettes, and custom sections. Plus also includes custom domains (e.g. work.youragency.com) and complete white-labeling.",
+      "Yes. Pro, Team, and Plus unlock custom fonts, brand color palettes, and custom section layouts. Plus also includes custom domains (such as work.youragency.com) and complete white-labeling.",
   },
   {
-    question: "What can I export on each plan?",
+    question: "What export formats and sharing options do I get on each plan?",
     answer:
-      "Free includes PNG and PDF Case Study exports with a subtle Casefolio watermark plus a Live Shareable Link. Pro ($9.99/mo or $7.99/mo annually) and Team ($6.99/seat/mo or $5.59/seat/mo annually) unlock high-res PNG, PDF, and Behance exports without watermarks. Plus ($99/mo or $79/mo annually) removes all Casefolio branding from PDF metadata and live links.",
+      "Free includes a Live Shareable Link plus PNG and PDF exports with a subtle Casefolio watermark. Pro ($9.99/mo or $7.99/mo billed annually) and Team ($6.99/seat/mo or $5.59/seat/mo billed annually) unlock watermark-free high-res PNG, PDF, and Behance 1400px exports. Plus ($99/mo or $79/mo billed annually) removes all Casefolio branding from PDF metadata, live links, and custom domains.",
   },
   {
     question: "How do seats work on Team vs. Plus?",
     answer:
-      "Team supports 2 to 10 seats dynamically priced per seat, with role-based permissions, Shared Brand Kit, and private member spaces hidden from Admins. Need 11 to 20 seats? Plus includes up to 20 seats at a flat rate with zero per-seat math.",
+      "Team supports 2 to 10 seats with dynamic per-seat billing, role-based permissions, a Shared Brand Kit, and private member workspaces hidden from Admins. Need 11 to 20 seats? Plus covers up to 20 seats at a flat monthly or annual rate with no per-seat math.",
   },
   {
     question: "What happens if I downgrade to Free or leave a team?",
     answer:
-      "Your Case Studies are never deleted. When downgrading to Free with more than 1 Case Study, you select 1 active Case Study to keep live and editable while extra Case Studies remain safely stored and locked until you upgrade again. Departing team members retain a ≥90-day private Recovery Portal.",
+      "Your Case Studies are never deleted. When downgrading to Free with more than 1 Case Study, you choose which 1 active Case Study stays live and editable while the rest remain safely archived until you upgrade again. Departing team members retain access to a 90+ day private Recovery Portal.",
   },
 ];
 

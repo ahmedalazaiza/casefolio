@@ -4,7 +4,8 @@ import { MarketingPageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Terms of Service — Casefolio",
-  description: "Terms of Service governing your use of Casefolio.",
+  description:
+    "Read the Terms of Service governing your Casefolio workspace, case study content ownership, published links, and subscription billing.",
 };
 
 export default function TermsPage() {
@@ -18,15 +19,25 @@ export default function TermsPage() {
       />
       <div className="text-muted-foreground type-body-l flex flex-col gap-6">
         <p>
-          Casefolio provides a curated template-based builder for creating,
-          publishing and exporting design case studies. You retain full
-          intellectual property ownership of all screenshots, copy and brand
-          assets uploaded to your workspace.
+          Casefolio gives designers, studios, and teams a structured template
+          builder to create, publish, and export UI/UX case studies. You retain
+          100% intellectual property ownership of every screenshot, headline,
+          metric, and brand asset you upload to your workspace, as well as the
+          finished case studies you publish or export.
         </p>
         <p>
-          Paid subscriptions are billed via Paddle (Merchant of Record) on a
-          recurring monthly or yearly basis and may be cancelled at any time
-          from Billing settings.
+          You agree to publish only content you own or have permission to share
+          and not to misuse Casefolio infrastructure, rate limits, or export
+          pipelines. Templates, layout engines, and hardware mockups provided by
+          Casefolio remain licensed solely for building and presenting your case
+          studies on or exported from the platform.
+        </p>
+        <p>
+          Paid plans are billed through Paddle (Merchant of Record) on a
+          recurring monthly or annual cycle. You can upgrade, switch billing
+          intervals, or cancel your subscription at any time from Billing
+          settings, and your paid access continues through the end of the current
+          billing period.
         </p>
       </div>
     </div>

@@ -93,7 +93,7 @@ export function HeroFloaters({
           <FloatCard>
             <CardLabel>
               <ShieldCheck className="text-success size-3.5" />
-              Pre-publish check
+              Publish readiness
             </CardLabel>
             <p className="type-heading-m text-foreground mt-2">6 / 6 ready</p>
             <div className="bg-sunken mt-3 h-1.5 overflow-hidden rounded-full">
@@ -112,7 +112,7 @@ export function HeroFloaters({
           <FloatCard>
             <CardLabel>
               <Globe className="text-primary size-3.5" />
-              Public page
+              Live link
             </CardLabel>
             <p className="text-foreground type-body-s-strong mt-2 truncate font-mono">
               casefolio.app/p/cinema
@@ -217,8 +217,8 @@ export function HowItWorksStage({
     sectionCount: 14,
     slotCount: 8,
     coverSrc: "/templates/cinema/cover.svg",
-    headline: ".Cinema — Movie Ticket Booking Experience",
-    summary: "End-to-end dark-room booking narrative.",
+    headline: "Cinema — Mobile Movie Ticket Booking Case Study",
+    summary: "Dark-mode ticketing UX narrative.",
   };
 
   return (
@@ -235,8 +235,8 @@ export function HowItWorksStage({
         <FeatureHead
           icon={<Smartphone />}
           stepLabel="Step 01"
-          title="Pick a type"
-          description="Choose Mobile app, Website, or Mobile + Web to lock the right frames and ratios."
+          title="Pick a format"
+          description="Select Mobile app, Website, or Mobile + Web so every device mockup fits your UI."
         />
         <Panel className="h-64">
           <FloatCard className="absolute top-6 left-1/2 w-[calc(100%-1.5rem)] -translate-x-1/2 -rotate-2 p-3">
@@ -284,7 +284,7 @@ export function HowItWorksStage({
             </ul>
           </FloatCard>
           <span className="bg-elevated border-border/60 shadow-float type-caption text-foreground absolute bottom-3.5 left-3.5 rounded-full border px-2.5 py-1">
-            {snapshot.deviceFramesCount} hardware frames
+            {snapshot.deviceFramesCount} device frames
           </span>
         </Panel>
       </article>
@@ -297,8 +297,8 @@ export function HowItWorksStage({
         <FeatureHead
           icon={<LayoutTemplate />}
           stepLabel="Step 02"
-          title="Pick a template"
-          description="Start from a version-pinned template with cover art and pre-built narrative sections."
+          title="Choose a template"
+          description="Open a layout crafted by designers with cover art and guided storytelling blocks."
         />
         <Panel className="h-64">
           <div className="border-border/60 bg-elevated shadow-float absolute top-6 left-1/2 w-[calc(100%-1.5rem)] -translate-x-1/2 rotate-2 overflow-hidden rounded-2xl border p-1.5">
@@ -320,7 +320,7 @@ export function HowItWorksStage({
             </div>
           </div>
           <span className="bg-elevated border-border/60 shadow-float type-caption text-foreground absolute bottom-3.5 left-3.5 rounded-full border px-2.5 py-1">
-            {snapshot.publishedTemplatesCount} live templates
+            {snapshot.publishedTemplatesCount} curated templates
           </span>
         </Panel>
       </article>
@@ -333,13 +333,13 @@ export function HowItWorksStage({
         <FeatureHead
           icon={<Palette />}
           stepLabel="Step 03"
-          title="Customize"
-          description="Drop UI screens into ratio-locked slots and switch curated colors and fonts."
+          title="Add screens & style"
+          description="Drop screens into ratio-locked mockups and apply contrast-checked colors and fonts."
         />
         <Panel className="h-64">
           <FloatCard className="absolute top-6 left-1/2 w-[calc(100%-1.5rem)] -translate-x-1/2 -rotate-1 p-3">
             <div className="flex items-center justify-between gap-2">
-              <CardLabel>Slots &amp; tokens</CardLabel>
+              <CardLabel>Frames &amp; styling</CardLabel>
               <span className="bg-success-soft text-foreground type-caption inline-flex items-center gap-1 rounded-full px-2 py-0.5">
                 <Check className="text-success size-3 shrink-0" />
                 <span>Locked</span>
@@ -369,7 +369,7 @@ export function HowItWorksStage({
             </ul>
           </FloatCard>
           <span className="bg-elevated border-border/60 shadow-float type-caption text-foreground absolute bottom-3.5 left-3.5 rounded-full border px-2.5 py-1">
-            {snapshot.totalTemplateSlots} ratio-locked slots
+            {snapshot.totalTemplateSlots} locked screen slots
           </span>
         </Panel>
       </article>
@@ -383,13 +383,13 @@ export function HowItWorksStage({
           icon={<Rocket />}
           stepLabel="Step 04"
           title="Publish or export"
-          description="Go live on casefolio.app or export crisp PNG, Behance 1400px, and A4 PDF files."
+          description="Share a live casefolio.app URL or download Behance 1400px, PNG, and A4 PDF assets."
         />
         <Panel className="h-64">
           <FloatCard className="absolute top-6 left-1/2 w-[calc(100%-1.5rem)] -translate-x-1/2 rotate-2 p-3">
             <CardLabel>
               <Globe className="text-primary size-3.5 shrink-0" />
-              <span className="truncate">Live &amp; export ready</span>
+              <span className="truncate">Ready to share</span>
             </CardLabel>
             <div className="bg-surface border-border/60 mt-2.5 flex items-center justify-between gap-1.5 rounded-xl border px-2.5 py-1.5">
               <span className="text-foreground type-caption truncate font-mono">
@@ -442,8 +442,8 @@ export function FeatureColumns({
       <div className="flex flex-col gap-8">
         <FeatureHead
           icon={<ImageIcon />}
-          title="Drop screens into slots"
-          description={`Ratio-locked slots and ${snapshot.deviceFramesCount} hardware frames keep every screenshot perfectly framed.`}
+          title="Drop screens into exact frames"
+          description={`Ratio-locked placeholders and ${snapshot.deviceFramesCount} device mockups keep every screen sharp without manual cropping.`}
         />
         <Panel>
           <div className="absolute top-8 left-1/2 w-40 -translate-x-1/2 -rotate-6">
@@ -464,12 +464,12 @@ export function FeatureColumns({
       <div className="flex flex-col gap-8">
         <FeatureHead
           icon={<Palette />}
-          title="Your colors and fonts"
-          description={`${snapshot.curatedPalettesCount} curated palettes and ${snapshot.curatedFontPairsCount} font pairs, always contrast-checked.`}
+          title="Brand colors and typography"
+          description={`${snapshot.curatedPalettesCount} curated palettes and ${snapshot.curatedFontPairsCount} font pairings, automatically checked for readable contrast.`}
         />
         <Panel>
           <FloatCard className="absolute top-10 left-1/2 w-[min(16rem,calc(100%-2rem))] -translate-x-1/2 rotate-3">
-            <CardLabel>Theme tokens</CardLabel>
+            <CardLabel>Brand styling</CardLabel>
             <ul className="mt-3 flex flex-col gap-2">
               {[
                 { name: "Primary", className: "bg-primary" },
@@ -485,7 +485,7 @@ export function FeatureColumns({
                     <span className={cn("size-4 rounded-full", token.className)} />
                     {token.name}
                   </span>
-                  <span className="text-tertiary font-mono">token</span>
+                  <span className="text-tertiary font-mono">palette</span>
                 </li>
               ))}
             </ul>
@@ -496,8 +496,8 @@ export function FeatureColumns({
       <div className="flex flex-col gap-8">
         <FeatureHead
           icon={<Layers />}
-          title="Sections your way"
-          description={`${snapshot.sectionPresetsCount} narrative presets. Reorder, duplicate, or hide what you do not need.`}
+          title="Modular narrative sections"
+          description={`${snapshot.sectionPresetsCount} storytelling presets. Reorder, duplicate, or hide sections without breaking your grid.`}
         />
         <Panel>
           <FloatCard className="absolute top-8 left-1/2 w-[min(16rem,calc(100%-2rem))] -translate-x-1/2 -rotate-2 p-3">
@@ -529,21 +529,21 @@ export function FeatureList() {
   const items = [
     {
       icon: <Eye />,
-      title: "Live preview",
+      title: "Responsive live preview",
       description:
-        "Switch between 375px and 1440px with the exact renderer used for publish and export.",
+        "Toggle between 375px mobile and 1440px desktop using the exact engine that powers your published page and exports.",
     },
     {
       icon: <History />,
-      title: "Autosave and versions",
+      title: "Autosave and version safety",
       description:
-        "Undo, redo, and autosave while every project stays pinned to its template version.",
+        "Edit with instant undo, redo, and autosave while your case study remains pinned to a stable template layout.",
     },
     {
       icon: <ShieldCheck />,
-      title: "Pre-publish check",
+      title: "Automatic pre-publish checks",
       description:
-        "Empty required slots and low-contrast tokens are caught before your page goes public.",
+        "Missing required screens and low-contrast color combinations are flagged before you publish or share.",
     },
   ] as const;
 
@@ -757,7 +757,7 @@ export function CtaStage({
           <FloatCard className="rotate-6">
             <CardLabel>
               <ShieldCheck className="text-success size-3.5" />
-              Pre-publish check
+              Publish readiness
             </CardLabel>
             <p className="type-heading-m text-foreground mt-2">6 / 6 ready</p>
           </FloatCard>
@@ -771,7 +771,7 @@ export function CtaStage({
       >
         <Float amplitude={9} duration={3.9}>
           <FloatCard className="rotate-3">
-            <CardLabel>Export</CardLabel>
+            <CardLabel>Exports</CardLabel>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {["PNG long", "Behance 1400", "A4 PDF"].map((format) => (
                 <span
@@ -795,7 +795,7 @@ export function CtaStage({
           <FloatCard className="-rotate-3">
             <CardLabel>
               <Globe className="text-primary size-3.5" />
-              Public page
+              Live URL
             </CardLabel>
             <p className="text-foreground type-body-s-strong mt-2 truncate font-mono">
               casefolio.app/p/you

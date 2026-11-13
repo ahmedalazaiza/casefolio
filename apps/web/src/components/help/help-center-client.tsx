@@ -64,8 +64,8 @@ export function HelpCenterClient({ articles, initialQuery = "" }: HelpCenterClie
         <div className="border-border bg-card flex flex-col items-center justify-center gap-3 rounded-xl border p-10 text-center">
           <p className="text-foreground type-heading-s">No articles match “{query.trim()}”</p>
           <p className="text-muted-foreground type-body-s max-w-md">
-            Try a broader keyword like “PDF”, “slug”, “tokens” or “Paddle”, or send a message
-            directly to our support team.
+            Try a broader keyword like “PDF”, “slug”, “branding”, or “Paddle”,
+            or send a message directly to our support team.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => setQuery("")}>
@@ -114,7 +114,7 @@ export function HelpCenterClient({ articles, initialQuery = "" }: HelpCenterClie
               <div className="flex flex-col gap-1.5">
                 <h2 className="text-foreground type-heading-s">Still stuck?</h2>
                 <p className="text-muted-foreground type-body-s">
-                  Our team usually replies within 1 business day by email.
+                  Our support team typically replies by email within 1 business day.
                 </p>
               </div>
             </div>

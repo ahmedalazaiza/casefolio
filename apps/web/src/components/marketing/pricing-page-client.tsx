@@ -87,14 +87,14 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
   {
     id: "workspace",
     title: "Workspace, Seats & Case Studies",
-    description: "How seats, Case Studies, and personal vs. shared workspaces scale.",
+    description: "Compare seat allocations, active project limits, and shared vs. personal workspaces.",
     icon: <FolderKanban className="size-4" />,
     rows: [
       {
         feature: "Seats & workspace scope",
         free: "1 seat · Personal workspace",
         pro: "1 seat · Personal workspace",
-        team: `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats · Per-seat Team workspace`,
+        team: `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats · Shared Team workspace`,
         plus: `Up to ${PLUS_INCLUDED_SEATS} seats included · Flat-rate Agency workspace`,
       },
       {
@@ -106,7 +106,7 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
       },
       {
         feature: "Shared Team Workspace & Brand Kit",
-        hint: "Shared logos, colors, reusable components, commenting & review mode",
+        hint: "Centralized logos, brand colors, reusable blocks, commenting, and review mode",
         free: false,
         pro: false,
         team: true,
@@ -123,12 +123,12 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
   },
   {
     id: "templates",
-    title: "Templates & Customization",
-    description: "Standard vs. Pro & Premium templates, fonts, color palettes, and custom sections.",
+    title: "Templates & Styling Control",
+    description: "Standard vs. Pro and Premium templates, custom typography, color palettes, and modular sections.",
     icon: <LayoutTemplate className="size-4" />,
     rows: [
       {
-        feature: "Standard templates",
+        feature: "Standard case study templates",
         free: true,
         pro: true,
         team: true,
@@ -142,8 +142,8 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
         plus: true,
       },
       {
-        feature: "Full customization (custom fonts, palettes & custom sections)",
-        free: { included: false, detail: "Basic customization" },
+        feature: "Full styling control (custom fonts, palettes & custom sections)",
+        free: { included: false, detail: "Essential styling" },
         pro: true,
         team: true,
         plus: true,
@@ -159,8 +159,8 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
   },
   {
     id: "publishing",
-    title: "Live Links, Custom Domain & White-Labeling",
-    description: "Shareable links, branding removal, custom agency domains, and white-label output.",
+    title: "Live Links, Custom Domains & White-Labeling",
+    description: "Shareable web URLs, watermark removal, custom agency domains, and full white-label branding.",
     icon: <Globe className="size-4" />,
     rows: [
       {
@@ -178,7 +178,7 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
         plus: true,
       },
       {
-        feature: "Custom Domain (e.g. work.youragency.com)",
+        feature: "Custom Domain (e.g., work.youragency.com)",
         free: false,
         pro: false,
         team: false,
@@ -186,7 +186,7 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
       },
       {
         feature: "Complete White-Labeling (live links & PDF metadata)",
-        hint: "Zero Casefolio branding in page titles, OpenGraph cards, or PDF metadata",
+        hint: "Zero Casefolio branding in page titles, OpenGraph social cards, or PDF metadata",
         free: false,
         pro: false,
         team: false,
@@ -196,15 +196,15 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
   },
   {
     id: "exports",
-    title: "PNG, PDF & Behance Exports",
-    description: "Pixel-identical exports for portfolios, PDF presentations, and Behance.",
+    title: "PNG, Behance & A4 PDF Exports",
+    description: "Pixel-accurate exports formatted for Behance showcases, client presentations, and hiring decks.",
     icon: <FileDown className="size-4" />,
     rows: [
       {
         feature: "PNG & PDF Case Study export",
         free: "Included (with watermark)",
-        pro: "High-res without watermark",
-        team: "High-res without watermark",
+        pro: "High-res, no watermark",
+        team: "High-res, no watermark",
         plus: "High-res white-label PDF & PNG",
       },
       {
@@ -226,13 +226,13 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
   {
     id: "storage-analytics",
     title: "Analytics, Storage & Support",
-    description: "Live link view analytics, asset storage, recovery portal, and support SLA.",
+    description: "Live portfolio view insights, asset storage quotas, recovery protection, and support SLA.",
     icon: <BarChart3 className="size-4" />,
     rows: [
       {
         feature: "View analytics on live links",
         free: { included: false, detail: "7-day summary" },
-        pro: "Basic view analytics (90d)",
+        pro: "Standard view analytics (90d)",
         team: "Team analytics (365d)",
         plus: "Agency analytics (365d)",
       },
@@ -244,7 +244,7 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
         plus: "200 GB · 50 MB/file",
       },
       {
-        feature: `${PAID_GRACE_DURATION_DAYS}-day paid quota burst buffer & private member recovery`,
+        feature: `${PAID_GRACE_DURATION_DAYS}-day paid quota grace buffer & private member recovery`,
         free: false,
         pro: true,
         team: true,
@@ -262,19 +262,19 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
   {
     id: "governance",
     title: "Privacy & Downgrade Protection",
-    description: "Private member spaces and non-destructive downgrade safeguards.",
+    description: "Isolated personal member drafts and non-destructive downgrade safeguards.",
     icon: <Users className="size-4" />,
     rows: [
       {
         feature: "Non-destructive Free downgrade protection",
-        hint: "Never deletes Case Studies; select 1 active Case Study while extras stay safely stored",
+        hint: "Your Case Studies are never deleted — choose 1 active Case Study while extras remain safely stored",
         free: true,
         pro: true,
         team: true,
         plus: true,
       },
       {
-        feature: "404-isolated member private spaces (hidden from Admins)",
+        feature: "Isolated private member drafts (hidden from Admins)",
         free: false,
         pro: false,
         team: true,
@@ -286,19 +286,19 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
 
 const PRICING_FAQ_STRIP = [
   {
-    question: "How do Pro, Team, and Plus differ?",
+    question: "How do Pro, Team, and Plus compare?",
     answer:
-      "Pro ($9.99/mo or $7.99/mo billed annually) is built for individual creators with unlimited Case Studies and unwatermarked exports. Team ($6.99/seat/mo or $5.59/seat/mo annually, 2–10 seats) adds shared workspaces, Brand Kit, and review tools. Plus ($99/mo or $79/mo annually flat) includes up to 20 seats, custom domains, white-labeling, and 24/7 priority support.",
+      "Pro ($9.99/mo or $7.99/mo billed annually) gives solo designers unlimited Case Studies and watermark-free exports. Team ($6.99/seat/mo or $5.59/seat/mo annually, 2–10 seats) adds shared workspaces, a Brand Kit, and team review. Plus ($99/mo or $79/mo annually flat) includes up to 20 seats, custom domains, complete white-labeling, and 24/7 priority support.",
   },
   {
-    question: "What happens if my Team grows past 10 seats?",
+    question: "What happens if our team grows past 10 seats?",
     answer:
-      "Team supports 2 to 10 seats dynamically. As soon as you invite an 11th member, you can upgrade seamlessly to Casefolio Plus for flat-rate pricing covering up to 20 seats with zero per-seat math.",
+      "Team scales smoothly from 2 to 10 seats. When you invite an 11th collaborator, you can upgrade directly to Casefolio Plus for flat-rate agency pricing covering up to 20 seats with zero per-seat math.",
   },
   {
     question: "What happens if I downgrade to Free with multiple Case Studies?",
     answer:
-      "Your Case Studies are never deleted. Extra Case Studies are unpublished and locked for editing while you pick 1 active Case Study to keep live and editable until you upgrade again.",
+      "Nothing is deleted. You pick which 1 Case Study stays active and live, while additional Case Studies remain safely archived and locked until you upgrade again.",
   },
 ] as const;
 
@@ -401,17 +401,19 @@ export function PricingPageClient({
         {/* 1. Header */}
         <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center sm:gap-6">
           <Eyebrow icon={<Sparkles />}>Pricing &amp; Plans</Eyebrow>
-          <h1 className="text-foreground type-section text-balance">Unlock the full builder</h1>
+          <h1 className="text-foreground type-section text-balance">
+            Simple pricing for solo designers, studios, and agencies
+          </h1>
           <p className="text-muted-foreground type-lead max-w-2xl">
-            Transparent plans for solo creators, design studios, and agencies. Start free forever
-            with {FREE_PROJECT_LIMIT} active Case Study — or choose Pro, Team, or Plus and save 20%
-            on annual billing.
+            Start free forever with {FREE_PROJECT_LIMIT} active Case Study — or
+            choose Pro, Team, or Plus as your portfolio or client practice grows
+            and save 20% with annual billing.
           </p>
           <a
             href="#plan-comparison"
             className="text-muted-foreground hover:text-foreground type-caption inline-flex items-center gap-1.5 transition-colors"
           >
-            <span>Jump to full plan comparison &amp; what’s included</span>
+            <span>Compare all plans &amp; features below</span>
             <ArrowDown className="size-3.5" />
           </a>
           {isAuthenticated && currentTier && (
@@ -450,8 +452,8 @@ export function PricingPageClient({
           >
             <ShieldCheck className="text-warning size-4 shrink-0" aria-hidden="true" />
             <span className="type-caption">
-              Secure checkout via Paddle ({paddlePriceMap.environment} environment) · Instant VAT
-              receipts · Cancel anytime.
+              Secure checkout powered by Paddle ({paddlePriceMap.environment} environment) · Instant
+              tax &amp; VAT receipts · Cancel anytime.
             </span>
           </div>
         </section>
@@ -469,8 +471,9 @@ export function PricingPageClient({
               Compare every feature &amp; quota
             </h2>
             <p className="text-muted-foreground type-body-m">
-              See the exact difference between Free, Pro, Team, and Plus — with every included
-              capability, quota limit, and excluded feature side by side.
+              Review the exact difference between Free, Pro, Team, and Plus —
+              every included feature, usage allowance, and upgrade threshold side
+              by side.
             </p>
 
             {/* Included vs Not Included Legend */}

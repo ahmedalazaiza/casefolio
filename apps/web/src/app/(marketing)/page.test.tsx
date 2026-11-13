@@ -13,7 +13,7 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Turn finished projects into publishable case studies",
+        name: "Turn finished UI screens into published case studies",
       }),
     ).toBeInTheDocument();
 
@@ -25,44 +25,44 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
 
     expect(
       screen.getByRole("figure", {
-        name: /Casefolio editor preview/i,
+        name: /Interactive preview of the Casefolio/i,
       }),
     ).toBeInTheDocument();
 
     // Core section headings
     expect(
       screen.getByRole("heading", {
-        name: "From finished UI to case study in four steps",
+        name: "From finished UI to published case study in four steps",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "Start from a layout that already works",
+        name: "Start from a case study structure that already works",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "A full editor, without the busywork",
+        name: "Structured editing, without formatting busywork",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "One case study, everywhere you need it",
+        name: "One case study, ready for live links, Behance, and PDFs",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "Simple plans for every designer, studio & agency",
+        name: "Clear plans for solo designers, teams, and agencies",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "Questions, answered",
+        name: "Common questions, answered",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "Your next case study is one template away",
+        name: "Ready to publish your next case study?",
       }),
     ).toBeInTheDocument();
 
@@ -93,7 +93,7 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
 
     // Hero frame renders crisp high-resolution editor images instead of an HTML form mockup
     const heroFigure = screen.getByRole("figure", {
-      name: /Casefolio editor preview/i,
+      name: /Interactive preview of the Casefolio/i,
     });
     const heroImages = heroFigure.querySelectorAll("img");
     expect(heroImages.length).toBe(2);
@@ -165,7 +165,7 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
 
     expect(
       screen.getByText(
-        /The Casefolio team designs, versions, and uploads every template/i,
+        /The Casefolio team designs, maintains, and versions every template/i,
       ),
     ).toBeInTheDocument();
 

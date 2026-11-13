@@ -7,9 +7,9 @@ import { resolveServerPaddlePriceId } from "@/lib/billing/server-config";
 import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 
 export const metadata: Metadata = {
-  title: "Pricing — Casefolio",
+  title: "Pricing & Plans — Casefolio",
   description:
-    "Compare Pro, Team, and Plus Casefolio plans — or start free forever with 1 active Case Study. Save 20% with annual billing.",
+    "Start free forever with 1 active UI/UX case study, or upgrade to Pro, Team, or Plus for unlimited projects, Behance and PDF exports, team seats, and custom domains. Save 20% annually.",
   alternates: {
     canonical: "/pricing",
   },

@@ -81,7 +81,9 @@ export function SignUpForm() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
         <h1 className="type-heading-l text-foreground">Create your account</h1>
-        <p className="text-muted-foreground type-body-m">Start building case studies in minutes.</p>
+        <p className="text-muted-foreground type-body-m">
+          Publish your first UI/UX case study for free in minutes.
+        </p>
       </div>
 
       <Button
@@ -117,7 +119,7 @@ export function SignUpForm() {
           label="Full name"
           name="name"
           autoComplete="name"
-          placeholder="Ahmed Al-Azaiza"
+          placeholder="Alex Rivera"
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={fieldErrors.name}
@@ -129,7 +131,7 @@ export function SignUpForm() {
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="ahmed@example.com"
+          placeholder="you@studio.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={fieldErrors.email}

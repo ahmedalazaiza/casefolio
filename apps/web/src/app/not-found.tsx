@@ -14,8 +14,7 @@ export default function NotFoundPage() {
         <Eyebrow className="w-fit font-mono">404</Eyebrow>
         <h1 className="text-foreground type-display-m">Page not found</h1>
         <p className="text-muted-foreground type-body-m">
-          The page or case study you&apos;re looking for may have been moved, unpublished, or
-          removed.
+          This case study or page may have been moved, switched back to draft, or removed.
         </p>
 
         <div className="mt-2 flex flex-wrap items-center justify-center gap-3">

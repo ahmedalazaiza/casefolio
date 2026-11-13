@@ -27,8 +27,8 @@ export default function RootErrorBoundary({
         <Eyebrow className="w-fit font-mono">ERROR</Eyebrow>
         <h1 className="text-foreground type-display-m">Something went wrong</h1>
         <p className="text-muted-foreground type-body-m">
-          An unexpected error interrupted this page. Your saved work is safe — try reloading this
-          view or return home.
+          An unexpected error interrupted this page. Any saved project progress is intact — reload
+          this view or return home.
         </p>
         {error.digest ? (
           <p className="text-tertiary type-caption font-mono">Ref: {error.digest}</p>

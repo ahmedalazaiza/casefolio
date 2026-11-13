@@ -22,11 +22,11 @@ export function AuthSplitShell({ children }: { children: ReactNode }) {
 
           <div className="flex flex-col gap-5 py-12">
             <h2 className="type-section text-foreground text-balance">
-              Your work deserves a better story.
+              Your work deserves a clearer story.
             </h2>
             <p className="text-muted-foreground type-lead max-w-sm">
-              Turn finished projects into polished case studies — templates, live preview,
-              publish or export.
+              Choose a curated case study template, frame your screens in device mockups, and
+              publish live or export for Behance and PDF in minutes.
             </p>
           </div>
 

@@ -104,7 +104,7 @@ export function ContactSupportClient({
         <div className="flex flex-col gap-1.5">
           <h1 className="text-foreground type-display-m">Message sent</h1>
           <p className="text-muted-foreground type-body-m">
-            Ticket #{sentTicket.ticketCode} · we’ll reply to{" "}
+            Ticket #{sentTicket.ticketCode} · We’ll reply to{" "}
             <span className="text-foreground font-medium">
               {sentTicket.replyToEmail}
             </span>
@@ -131,7 +131,7 @@ export function ContactSupportClient({
         <p className="text-accent-foreground type-overline">Support</p>
         <h1 className="text-foreground type-display-m">Contact support</h1>
         <p className="text-muted-foreground type-body-m">
-          Tell us what’s happening and we’ll get back to you by email.
+          Tell us what you’re running into and our team will reply by email within one business day.
         </p>
       </header>
 
@@ -206,7 +206,7 @@ export function ContactSupportClient({
               minLength={4}
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
-              placeholder="PDF export stuck on processing"
+              placeholder="e.g., PDF export is taking longer than expected"
             />
           </div>
 
@@ -219,7 +219,7 @@ export function ContactSupportClient({
               rows={5}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
-              placeholder="My A4 PDF export has been processing for 20 minutes…"
+              placeholder="Describe what happened, the project or template involved, and any steps that help us reproduce it…"
               className="border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/40 type-body-m w-full rounded-md border p-3 outline-none focus-visible:ring-2"
             />
           </div>
@@ -292,9 +292,9 @@ export function ContactSupportClient({
         <aside className="border-border bg-sunken flex flex-col gap-3 rounded-xl border p-6 lg:col-span-4">
           <h2 className="text-foreground type-heading-s">Before you send</h2>
           <ul className="text-muted-foreground type-body-s flex list-disc flex-col gap-2 pl-4">
-            <li>Check Exports for retry options</li>
-            <li>Include your public slug for live-page issues</li>
-            <li>Billing questions? Include invoice date</li>
+            <li>Check your Exports tab first for one-click retry options</li>
+            <li>Include your live page URL or custom slug for publishing issues</li>
+            <li>Billing question? Share your Paddle receipt email or invoice date</li>
           </ul>
         </aside>
       </div>
