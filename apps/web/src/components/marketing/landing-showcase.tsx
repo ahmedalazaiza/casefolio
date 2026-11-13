@@ -368,13 +368,13 @@ export function TemplateStack({
             </span>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="secondary" size="sm" asChild>
                 <Link href={`/templates?preview=${template.slug}`}>
                   <Eye className="size-3.5" />
                   <span>Preview</span>
                 </Link>
               </Button>
-              <Button variant="secondary" size="sm" asChild>
+              <Button variant="default" size="sm" asChild>
                 <Link href={`/new?template=${template.slug}`}>
                   <span>Use template</span>
                   <ArrowUpRight className="size-3.5" />

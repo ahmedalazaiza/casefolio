@@ -407,7 +407,7 @@ export function LandingExperience({
                   UI screens, and share a live link today.
                 </p>
 
-                <div className="flex w-full flex-col items-stretch gap-3 pt-2 sm:w-auto sm:flex-row sm:items-center">
+                <div className="flex w-full flex-col items-stretch gap-2.5 pt-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                   <Button size="lg" asChild>
                     <Link href="/sign-up">
                       <span>Start free</span>
@@ -417,18 +417,10 @@ export function LandingExperience({
                   <Button variant="secondary" size="lg" asChild>
                     <Link href="/templates">Choose a template</Link>
                   </Button>
+                  <Button variant="secondary" size="lg" asChild>
+                    <Link href="/pricing">View pricing plans</Link>
+                  </Button>
                 </div>
-
-                <p className="text-muted-foreground type-caption pt-1">
-                  Comparing Pro, Team, or Plus for unlimited projects and custom
-                  domains?{" "}
-                  <Link
-                    href="/pricing"
-                    className="text-accent-foreground hover:text-foreground underline underline-offset-4 transition-colors"
-                  >
-                    View pricing plans
-                  </Link>
-                </p>
               </div>
 
               <div
@@ -478,19 +470,16 @@ export function LandingExperience({
               Straight answers on templates, device mockups, export formats,
               team seats, and plan changes.
             </p>
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <Link
-                href="/help"
-                className="text-accent-foreground hover:text-foreground type-body-s-strong underline underline-offset-4 transition-colors"
-              >
-                Visit Help Center
-              </Link>
-              <Link
-                href="/pricing"
-                className="text-muted-foreground hover:text-foreground type-body-s underline underline-offset-4 transition-colors"
-              >
-                Compare plans
-              </Link>
+            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/help">
+                  <span>Visit Help Center</span>
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </Button>
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/pricing">Compare plans</Link>
+              </Button>
             </div>
           </div>
 

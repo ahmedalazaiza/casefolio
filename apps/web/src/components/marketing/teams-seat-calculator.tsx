@@ -1,8 +1,10 @@
 "use client";
 
-import { Building2, Calculator, Minus, Plus, ShieldAlert, Users } from "lucide-react";
+import { ArrowRight, Building2, Calculator, Minus, Plus, ShieldAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   BILLING_PLAN_CATALOG,
   computeTeamsPrice,
@@ -54,15 +56,14 @@ export function TeamsSeatCalculator({
   return (
     <div
       data-testid="teams-seat-calculator"
-      className="border-border bg-card flex w-full min-w-0 flex-col gap-6 rounded-3xl border p-5 sm:p-8"
+      className="border-border bg-elevated flex w-full min-w-0 flex-col gap-6 rounded-2xl border p-6 sm:p-8"
     >
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-        <div className="flex flex-col gap-1.5">
-          <div className="text-accent-foreground inline-flex items-center gap-2">
-            <Calculator className="size-4 shrink-0" aria-hidden="true" />
-            <span className="type-overline">Team &amp; Agency Seat Calculator</span>
-          </div>
-          <h3 className="text-foreground type-heading-m">
+        <div className="flex flex-col items-start gap-2">
+          <Eyebrow icon={<Calculator className="text-primary" />}>
+            Team &amp; Agency Seat Calculator
+          </Eyebrow>
+          <h3 className="font-display text-foreground text-xl leading-[1.2] font-medium tracking-tight sm:text-2xl">
             Estimate per-seat Team pricing ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats) or Plus flat rate
           </h3>
           <p className="text-muted-foreground type-body-s max-w-2xl">
@@ -74,16 +75,16 @@ export function TeamsSeatCalculator({
           <div
             role="group"
             aria-label="Calculator billing interval"
-            className="bg-sunken border-border inline-flex shrink-0 self-start rounded-full border p-1"
+            className="border-border bg-surface inline-flex shrink-0 self-start rounded-full border p-1"
           >
             <button
               type="button"
               aria-pressed={interval === "monthly"}
               onClick={() => onIntervalChange("monthly")}
               className={cn(
-                "type-caption rounded-full px-3 py-1.5 font-medium transition-colors",
+                "type-caption rounded-full px-3.5 py-1.5 font-medium transition-colors",
                 interval === "monthly"
-                  ? "bg-elevated text-foreground shadow-xs"
+                  ? "bg-elevated border-border text-foreground border shadow-xs"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -94,9 +95,9 @@ export function TeamsSeatCalculator({
               aria-pressed={interval === "yearly"}
               onClick={() => onIntervalChange("yearly")}
               className={cn(
-                "type-caption rounded-full px-3 py-1.5 font-medium transition-colors",
+                "type-caption rounded-full px-3.5 py-1.5 font-medium transition-colors",
                 interval === "yearly"
-                  ? "bg-elevated text-foreground shadow-xs"
+                  ? "bg-elevated border-border text-foreground border shadow-xs"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -122,13 +123,13 @@ export function TeamsSeatCalculator({
                 data-testid="teams-calc-decrement"
                 disabled={seats <= TEAMS_MIN_SEATS}
                 onClick={() => updateSeats(seats - 1)}
-                className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-9 items-center justify-center rounded-full border transition-colors disabled:opacity-40"
+                className="border-border bg-surface text-foreground hover:bg-sunken inline-flex size-9 items-center justify-center rounded-lg border transition-colors disabled:opacity-40"
               >
                 <Minus className="size-4" aria-hidden="true" />
               </button>
               <span
                 data-testid="teams-calc-seat-count"
-                className="border-border bg-surface text-foreground type-body-m-strong inline-flex min-w-14 items-center justify-center rounded-xl border px-3 py-1.5 tabular-nums"
+                className="border-border bg-surface text-foreground type-body-m-strong inline-flex min-w-14 items-center justify-center rounded-lg border px-3 py-1.5 tabular-nums"
               >
                 {seats}
               </span>
@@ -138,7 +139,7 @@ export function TeamsSeatCalculator({
                 data-testid="teams-calc-increment"
                 disabled={seats >= 25}
                 onClick={() => updateSeats(seats + 1)}
-                className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-9 items-center justify-center rounded-full border transition-colors disabled:opacity-40"
+                className="border-border bg-surface text-foreground hover:bg-sunken inline-flex size-9 items-center justify-center rounded-lg border transition-colors disabled:opacity-40"
               >
                 <Plus className="size-4" aria-hidden="true" />
               </button>
@@ -171,7 +172,7 @@ export function TeamsSeatCalculator({
                   className={cn(
                     "type-caption rounded-full border px-3 py-1.5 font-medium transition-colors",
                     active
-                      ? "border-foreground bg-inverse text-inverse-foreground"
+                      ? "border-primary bg-accent text-accent-foreground"
                       : "border-border bg-surface text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -187,7 +188,7 @@ export function TeamsSeatCalculator({
               className={cn(
                 "type-caption rounded-full border px-3 py-1.5 font-medium transition-colors",
                 seats > TEAMS_MAX_SELF_SERVE_SEATS && seats <= PLUS_INCLUDED_SEATS
-                  ? "border-foreground bg-inverse text-inverse-foreground"
+                  ? "border-primary bg-accent text-accent-foreground"
                   : "border-border bg-surface text-muted-foreground hover:text-foreground",
               )}
             >
@@ -211,7 +212,7 @@ export function TeamsSeatCalculator({
 
           {/* Pooled workspace quotas preview */}
           {seats <= PLUS_INCLUDED_SEATS && (
-            <dl className="border-border bg-surface grid grid-cols-2 gap-3 rounded-2xl border p-4 sm:grid-cols-4">
+            <dl className="border-border bg-surface grid grid-cols-2 gap-3 rounded-xl border p-4 sm:grid-cols-4">
               <div className="flex flex-col gap-0.5">
                 <dt className="text-muted-foreground type-caption">Case Studies</dt>
                 <dd className="text-foreground type-body-s-strong">Unlimited</dd>
@@ -239,7 +240,7 @@ export function TeamsSeatCalculator({
         </div>
 
         {/* Price breakdown card */}
-        <div className="border-border bg-surface flex flex-col justify-between gap-5 rounded-2xl border p-5 lg:col-span-5">
+        <div className="border-border bg-surface flex flex-col justify-between gap-5 rounded-xl border p-5 sm:p-6 lg:col-span-5">
           {priceResult.ok ? (
             <>
               <div className="flex flex-col gap-2">
@@ -250,7 +251,7 @@ export function TeamsSeatCalculator({
                 <div className="flex items-baseline gap-2">
                   <span
                     data-testid="teams-calc-headline-price"
-                    className="text-foreground type-heading-xl tabular-nums"
+                    className="font-display text-foreground text-3xl leading-none font-medium tracking-tight tabular-nums sm:text-4xl"
                   >
                     {formatUsdFromCents(
                       interval === "yearly"
@@ -287,22 +288,27 @@ export function TeamsSeatCalculator({
 
               <div className="flex flex-col gap-3">
                 {onStartTeamsCheckout ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="accent"
+                    size="lg"
                     data-testid="teams-calc-cta"
                     onClick={() => onStartTeamsCheckout(priceResult.seats, interval, "team")}
-                    className="bg-inverse text-inverse-foreground hover:bg-inverse/90 type-body-s-strong inline-flex w-full items-center justify-center rounded-full px-5 py-3 transition-colors"
+                    className="w-full"
                   >
-                    Start Team ({priceResult.seats} seats)
-                  </button>
+                    <span>Start Team ({priceResult.seats} seats)</span>
+                    <ArrowRight className="size-4" />
+                  </Button>
                 ) : (
-                  <Link
-                    href={`/sign-up?plan=team&interval=${interval}&seats=${priceResult.seats}`}
-                    data-testid="teams-calc-cta"
-                    className="bg-inverse text-inverse-foreground hover:bg-inverse/90 type-body-s-strong inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-center transition-colors"
-                  >
-                    Start Team ({priceResult.seats} seats)
-                  </Link>
+                  <Button variant="accent" size="lg" className="w-full" asChild>
+                    <Link
+                      href={`/sign-up?plan=team&interval=${interval}&seats=${priceResult.seats}`}
+                      data-testid="teams-calc-cta"
+                    >
+                      <span>Start Team ({priceResult.seats} seats)</span>
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
                 )}
 
                 <p
@@ -328,7 +334,7 @@ export function TeamsSeatCalculator({
                 <div className="flex items-baseline gap-2">
                   <span
                     data-testid="teams-calc-headline-price"
-                    className="text-foreground type-heading-xl tabular-nums"
+                    className="font-display text-foreground text-3xl leading-none font-medium tracking-tight tabular-nums sm:text-4xl"
                   >
                     {formatUsdFromCents(
                       interval === "yearly"
@@ -344,24 +350,28 @@ export function TeamsSeatCalculator({
                     : `Flat rate with zero per-seat math — or ${formatUsdFromCents(plusPlan.yearlyMonthlyEquivalentCents)}/mo billed annually (${formatUsdFromCents(plusPlan.yearlyTotalCents)}/yr).`}
                 </p>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 {onStartTeamsCheckout ? (
-                  <button
+                  <Button
                     type="button"
+                    size="lg"
                     data-testid="teams-calc-cta"
                     onClick={() => onStartTeamsCheckout(1, interval, "plus")}
-                    className="bg-inverse text-inverse-foreground hover:bg-inverse/90 type-body-s-strong inline-flex w-full items-center justify-center rounded-full px-5 py-3 transition-colors"
+                    className="w-full"
                   >
-                    Upgrade to Plus (up to {PLUS_INCLUDED_SEATS} seats)
-                  </button>
+                    <span>Upgrade to Plus (up to {PLUS_INCLUDED_SEATS} seats)</span>
+                    <ArrowRight className="size-4" />
+                  </Button>
                 ) : (
-                  <Link
-                    href={`/sign-up?plan=plus&interval=${interval}`}
-                    data-testid="teams-calc-cta"
-                    className="bg-inverse text-inverse-foreground hover:bg-inverse/90 type-body-s-strong inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-center transition-colors"
-                  >
-                    Upgrade to Plus (up to {PLUS_INCLUDED_SEATS} seats)
-                  </Link>
+                  <Button size="lg" className="w-full" asChild>
+                    <Link
+                      href={`/sign-up?plan=plus&interval=${interval}`}
+                      data-testid="teams-calc-cta"
+                    >
+                      <span>Upgrade to Plus (up to {PLUS_INCLUDED_SEATS} seats)</span>
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
                 )}
                 <p
                   data-testid="teams-calc-disclaimer"
@@ -385,13 +395,13 @@ export function TeamsSeatCalculator({
                 </div>
                 <p className="text-muted-foreground type-body-s">{priceResult.message}</p>
               </div>
-              <div className="flex flex-col gap-2">
-                <Link
-                  href="/help/billing-and-plans"
-                  className="border-border bg-elevated text-foreground hover:bg-sunken type-body-s-strong inline-flex w-full items-center justify-center rounded-full border px-5 py-2.5 text-center transition-colors"
-                >
-                  Contact dedicated onboarding
-                </Link>
+              <div className="flex flex-col gap-2.5">
+                <Button variant="secondary" size="lg" className="w-full" asChild>
+                  <Link href="/help/billing-and-plans">
+                    <span>Contact dedicated onboarding</span>
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
                 <p
                   data-testid="teams-calc-disclaimer"
                   className="text-muted-foreground type-caption text-center"
@@ -406,4 +416,3 @@ export function TeamsSeatCalculator({
     </div>
   );
 }
-

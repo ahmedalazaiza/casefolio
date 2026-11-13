@@ -3,12 +3,16 @@
 import type { PlanTier } from "@casefolio/db";
 import {
   ArrowDown,
+  ArrowRight,
   BarChart3,
+  Calculator,
   Check,
   FileDown,
   FolderKanban,
   Globe,
   LayoutTemplate,
+  MessageCircleQuestion,
+  Rocket,
   ShieldCheck,
   Sparkles,
   Users,
@@ -20,6 +24,7 @@ import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal"
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
 import { TeamsSeatCalculator } from "@/components/marketing/teams-seat-calculator";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   BILLING_PLAN_CATALOG,
@@ -396,81 +401,104 @@ export function PricingPageClient({
   );
 
   return (
-    <div className="min-w-0 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
-      <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-16 lg:gap-24">
-        {/* 1. Header */}
-        <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center sm:gap-6">
-          <Eyebrow icon={<Sparkles />}>Pricing &amp; Plans</Eyebrow>
-          <h1 className="text-foreground type-section text-balance">
-            Simple pricing for solo designers, studios, and agencies
-          </h1>
-          <p className="text-muted-foreground type-lead max-w-2xl">
-            Start free forever with {FREE_PROJECT_LIMIT} active Case Study — or
-            choose Pro, Team, or Plus as your portfolio or client practice grows
-            and save 20% with annual billing.
-          </p>
-          <a
-            href="#plan-comparison"
-            className="text-muted-foreground hover:text-foreground type-caption inline-flex items-center gap-1.5 transition-colors"
-          >
-            <span>Compare all plans &amp; features below</span>
-            <ArrowDown className="size-3.5" />
-          </a>
-          {isAuthenticated && currentTier && (
-            <p className="text-muted-foreground type-caption pt-1">
-              Signed in on <strong className="text-foreground capitalize">{currentTier}</strong>{" "}
-              plan ·{" "}
-              <Link
-                href="/account/billing"
-                className="text-accent-foreground underline underline-offset-4"
-              >
-                Manage billing &amp; seats
-              </Link>
+    <div className="relative flex min-w-0 flex-col overflow-x-clip">
+      {/* 1. Header + Top Subscription Plans (bg-background) */}
+      <div className="bg-background py-10 sm:py-16 lg:py-20">
+        <div className="container-page flex min-w-0 flex-col gap-10 sm:gap-14">
+          <header className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+            <Eyebrow icon={<Sparkles className="text-primary" />}>
+              Pricing &amp; Plans
+            </Eyebrow>
+            <h1 className="font-display text-foreground text-3xl leading-[1.12] font-medium tracking-tight text-balance sm:text-4xl lg:text-[2.75rem]">
+              Simple pricing for solo designers, studios, and agencies
+            </h1>
+            <p className="text-muted-foreground type-body-l max-w-xl text-pretty">
+              Start free forever with {FREE_PROJECT_LIMIT} active Case Study — or
+              choose Pro, Team, or Plus as your portfolio or client practice grows
+              and save 20% with annual billing.
             </p>
-          )}
-        </header>
 
-        {/* 2. Top Pricing Cards + Monthly/Annual toggle */}
-        <section aria-label="Subscription plans" className="flex flex-col gap-6">
-          <LandingPricingSection
-            interval={selectedInterval}
-            onIntervalChange={setSelectedInterval}
-            currentTier={currentTier}
-            onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
-          />
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+              <Button variant="secondary" size="sm" asChild>
+                <a href="#plan-comparison">
+                  <span>Compare all plans &amp; features</span>
+                  <ArrowDown className="size-3.5" />
+                </a>
+              </Button>
+              <Button variant="secondary" size="sm" asChild>
+                <a href="#seat-calculator">
+                  <Calculator className="size-3.5" />
+                  <span>Seat calculator</span>
+                </a>
+              </Button>
+            </div>
 
-          {/* Merchant of Record note */}
-          <div
-            data-testid="paddle-config-summary"
-            data-pro-monthly={paddlePriceMap.pro_monthly}
-            data-pro-yearly={paddlePriceMap.pro_yearly}
-            data-team-monthly={paddlePriceMap.team_monthly}
-            data-team-yearly={paddlePriceMap.team_yearly}
-            data-plus-monthly={paddlePriceMap.plus_monthly}
-            data-plus-yearly={paddlePriceMap.plus_yearly}
-            className="bg-warning-soft text-foreground mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2.5 rounded-2xl px-4 py-2 text-center sm:rounded-full"
-          >
-            <ShieldCheck className="text-warning size-4 shrink-0" aria-hidden="true" />
-            <span className="type-caption">
-              Secure checkout powered by Paddle ({paddlePriceMap.environment} environment) · Instant
-              tax &amp; VAT receipts · Cancel anytime.
-            </span>
-          </div>
-        </section>
+            {isAuthenticated && currentTier && (
+              <div className="border-border bg-surface mt-1 flex flex-wrap items-center justify-center gap-3 rounded-xl border px-4 py-2">
+                <span className="text-muted-foreground type-caption">
+                  Signed in on{" "}
+                  <strong className="text-foreground capitalize">
+                    {currentTier}
+                  </strong>{" "}
+                  plan
+                </span>
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href="/account/billing">
+                    <span>Manage billing &amp; seats</span>
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </header>
 
-        {/* 3. Plan Differences: What's Included & What's Not */}
-        <section
-          id="plan-comparison"
-          data-testid="plan-comparison-matrix"
-          aria-labelledby="plan-comparison-heading"
-          className="scroll-mt-24 flex min-w-0 flex-col gap-8"
-        >
-          <div className="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
-            <p className="text-accent-foreground type-overline">Plan comparison</p>
-            <h2 id="plan-comparison-heading" className="text-foreground type-heading-l">
+          {/* 2. Top Pricing Cards + Monthly/Annual toggle */}
+          <section aria-label="Subscription plans" className="flex flex-col gap-6">
+            <LandingPricingSection
+              interval={selectedInterval}
+              onIntervalChange={setSelectedInterval}
+              currentTier={currentTier}
+              onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
+            />
+
+            {/* Merchant of Record note */}
+            <div
+              data-testid="paddle-config-summary"
+              data-pro-monthly={paddlePriceMap.pro_monthly}
+              data-pro-yearly={paddlePriceMap.pro_yearly}
+              data-team-monthly={paddlePriceMap.team_monthly}
+              data-team-yearly={paddlePriceMap.team_yearly}
+              data-plus-monthly={paddlePriceMap.plus_monthly}
+              data-plus-yearly={paddlePriceMap.plus_yearly}
+              className="border-border bg-surface text-muted-foreground mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-center"
+            >
+              <ShieldCheck className="text-success size-4 shrink-0" aria-hidden="true" />
+              <span className="type-caption">
+                Secure checkout powered by Paddle ({paddlePriceMap.environment} environment) · Instant
+                tax &amp; VAT receipts · Cancel anytime.
+              </span>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {/* 3. Plan Differences: What's Included & What's Not (bg-surface band) */}
+      <section
+        id="plan-comparison"
+        data-testid="plan-comparison-matrix"
+        aria-labelledby="plan-comparison-heading"
+        className="border-border bg-surface scroll-mt-20 border-y py-16 sm:py-20 lg:py-24"
+      >
+        <div className="container-page flex min-w-0 flex-col gap-8">
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-3.5 text-center">
+            <Eyebrow icon={<FolderKanban />}>Plan comparison</Eyebrow>
+            <h2
+              id="plan-comparison-heading"
+              className="font-display text-foreground text-2xl leading-[1.15] font-medium tracking-tight text-balance sm:text-3xl lg:text-[2.25rem]"
+            >
               Compare every feature &amp; quota
             </h2>
-            <p className="text-muted-foreground type-body-m">
+            <p className="text-muted-foreground type-body-l max-w-xl text-pretty">
               Review the exact difference between Free, Pro, Team, and Plus —
               every included feature, usage allowance, and upgrade threshold side
               by side.
@@ -482,18 +510,18 @@ export function PricingPageClient({
                 <Check className="text-success size-3.5 shrink-0" aria-hidden="true" />
                 <span>Included in plan</span>
               </span>
-              <span className="bg-sunken text-muted-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-3 py-1">
+              <span className="border-border bg-elevated text-muted-foreground type-caption inline-flex items-center gap-1.5 rounded-full border px-3 py-1">
                 <X className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
                 <span>Not included</span>
               </span>
-              <span className="bg-surface border-border text-muted-foreground type-caption inline-flex items-center rounded-full border px-3 py-1 font-mono">
+              <span className="border-border bg-elevated text-muted-foreground type-caption inline-flex items-center rounded-full border px-3 py-1 font-mono">
                 Team: {TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats · Plus: up to {PLUS_INCLUDED_SEATS} seats
               </span>
             </div>
           </div>
 
           {/* Desktop aligned 4-tier plan summary strip */}
-          <div className="border-border/80 bg-surface shadow-card hidden items-center rounded-2xl border px-6 py-4 md:grid md:grid-cols-[32%_17%_17%_17%_17%]">
+          <div className="border-border bg-elevated hidden items-center rounded-2xl border px-6 py-4 md:grid md:grid-cols-[32%_17%_17%_17%_17%]">
             <div className="pr-4">
               <p className="text-foreground type-body-s-strong">Capability &amp; quota breakdown</p>
               <p className="text-muted-foreground type-caption">
@@ -506,21 +534,21 @@ export function PricingPageClient({
               </p>
               <p className="text-muted-foreground type-caption">$0 / forever</p>
             </div>
+            <div className="px-2">
+              <p className="text-foreground type-body-s-strong">
+                {BILLING_PLAN_CATALOG.pro.name}
+              </p>
+              <p className="text-muted-foreground type-caption">{proDisplayedLabel}/mo</p>
+            </div>
             <div className="flex flex-col gap-0.5 px-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-foreground type-body-s-strong">
-                  {BILLING_PLAN_CATALOG.pro.name}
+                  {BILLING_PLAN_CATALOG.team.name}
                 </span>
                 <Badge tone="accent" withDot={false}>
                   Popular
                 </Badge>
               </div>
-              <p className="text-muted-foreground type-caption">{proDisplayedLabel}/mo</p>
-            </div>
-            <div className="px-2">
-              <p className="text-foreground type-body-s-strong">
-                {BILLING_PLAN_CATALOG.team.name}
-              </p>
               <p className="text-muted-foreground type-caption">{teamDisplayedLabel}/seat/mo</p>
             </div>
             <div className="px-2">
@@ -532,18 +560,18 @@ export function PricingPageClient({
           </div>
 
           {/* Categorized Comparison Cards */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-5">
             {COMPARISON_GROUPS.map((group) => (
               <div
                 key={group.id}
-                className="border-border/80 bg-card shadow-card overflow-hidden rounded-3xl border"
+                className="border-border bg-elevated overflow-hidden rounded-2xl border"
               >
                 {/* Category header with aligned plan column labels on desktop */}
-                <div className="border-border/70 bg-surface border-b px-5 py-4 sm:px-6 md:grid md:grid-cols-[32%_17%_17%_17%_17%] md:items-center">
+                <div className="border-border bg-surface border-b px-5 py-4 sm:px-6 md:grid md:grid-cols-[32%_17%_17%_17%_17%] md:items-center">
                   <div className="flex items-center gap-3 pr-4">
                     <span
                       aria-hidden="true"
-                      className="border-border/70 bg-elevated text-foreground inline-flex size-9 shrink-0 items-center justify-center rounded-xl border"
+                      className="border-border bg-elevated text-foreground inline-flex size-9 shrink-0 items-center justify-center rounded-lg border"
                     >
                       {group.icon}
                     </span>
@@ -555,10 +583,10 @@ export function PricingPageClient({
                   <span className="text-muted-foreground type-overline hidden px-2 md:block">
                     {BILLING_PLAN_CATALOG.free.name}
                   </span>
-                  <span className="text-accent-foreground type-overline hidden px-2 md:block">
+                  <span className="text-muted-foreground type-overline hidden px-2 md:block">
                     {BILLING_PLAN_CATALOG.pro.name}
                   </span>
-                  <span className="text-muted-foreground type-overline hidden px-2 md:block">
+                  <span className="text-accent-foreground type-overline hidden px-2 md:block">
                     {BILLING_PLAN_CATALOG.team.name}
                   </span>
                   <span className="text-muted-foreground type-overline hidden px-2 md:block">
@@ -579,7 +607,7 @@ export function PricingPageClient({
                       <th scope="col">{BILLING_PLAN_CATALOG.plus.name}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-border/70 flex flex-col divide-y md:table-row-group">
+                  <tbody className="divide-border flex flex-col divide-y md:table-row-group">
                     {group.rows.map((row) => (
                       <tr
                         key={row.feature}
@@ -599,13 +627,13 @@ export function PricingPageClient({
                         </td>
                         <td
                           data-label={BILLING_PLAN_CATALOG.pro.name}
-                          className="before:text-accent-foreground md:bg-accent/25 flex items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
+                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
                         >
                           {renderCellValue(row.pro)}
                         </td>
                         <td
                           data-label={BILLING_PLAN_CATALOG.team.name}
-                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
+                          className="before:text-accent-foreground md:bg-accent/20 flex items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
                         >
                           {renderCellValue(row.team)}
                         </td>
@@ -622,10 +650,16 @@ export function PricingPageClient({
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* 4. Interactive Teams Seat Calculator (Spec §6 & §14) */}
-        <section id="seat-calculator" aria-label="Teams seat calculator" className="min-w-0">
+      {/* 4. Interactive Teams Seat Calculator (bg-background band) */}
+      <section
+        id="seat-calculator"
+        aria-label="Teams seat calculator"
+        className="bg-background scroll-mt-20 py-16 sm:py-20 lg:py-24"
+      >
+        <div className="container-page min-w-0">
           <TeamsSeatCalculator
             interval={selectedInterval}
             onIntervalChange={setSelectedInterval}
@@ -633,21 +667,63 @@ export function PricingPageClient({
               isAuthenticated ? handleStartCalculatorCheckout : undefined
             }
           />
-        </section>
+        </div>
+      </section>
 
-        {/* 5. Bottom 3-column FAQ strip */}
-        <section
-          aria-label="Billing questions"
-          className="border-border grid grid-cols-1 gap-8 border-t pt-10 md:grid-cols-3"
-        >
-          {PRICING_FAQ_STRIP.map((item) => (
-            <div key={item.question} className="flex flex-col gap-2">
-              <h3 className="text-foreground type-heading-s">{item.question}</h3>
-              <p className="text-muted-foreground type-body-s">{item.answer}</p>
+      {/* 5. Billing FAQ Cards + Action CTA Bar (bg-surface band) */}
+      <section
+        aria-label="Billing questions"
+        className="border-border bg-surface border-t py-16 sm:py-20 lg:py-24"
+      >
+        <div className="container-page flex flex-col gap-10">
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
+            <Eyebrow icon={<MessageCircleQuestion />}>Billing FAQ</Eyebrow>
+            <h2 className="font-display text-foreground text-2xl leading-[1.15] font-medium tracking-tight text-balance sm:text-3xl">
+              Questions about plans, seats, or downgrades
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {PRICING_FAQ_STRIP.map((item) => (
+              <article
+                key={item.question}
+                className="border-border bg-elevated flex flex-col gap-2.5 rounded-2xl border p-6"
+              >
+                <h3 className="text-foreground type-heading-s">{item.question}</h3>
+                <p className="text-muted-foreground type-body-s">{item.answer}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="border-border bg-elevated flex flex-col items-start justify-between gap-5 rounded-2xl border p-6 sm:flex-row sm:items-center sm:px-8">
+            <div className="flex items-start gap-3.5">
+              <span className="border-border bg-surface text-primary inline-flex size-10 shrink-0 items-center justify-center rounded-lg border">
+                <Rocket className="size-4" />
+              </span>
+              <div className="flex flex-col gap-1">
+                <h3 className="text-foreground type-heading-s">
+                  Not ready to pick a paid plan yet?
+                </h3>
+                <p className="text-muted-foreground type-body-s">
+                  Start free forever with {FREE_PROJECT_LIMIT} active Case Study — no credit card required.
+                </p>
+              </div>
             </div>
-          ))}
-        </section>
-      </div>
+
+            <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
+              <Button size="default" asChild>
+                <Link href="/sign-up">
+                  <span>Start free</span>
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button variant="secondary" size="default" asChild>
+                <Link href="/help/billing-and-plans">Billing guide</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {isAuthenticated && (
         <PaddleCheckoutModal

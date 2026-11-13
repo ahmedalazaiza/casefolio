@@ -236,40 +236,33 @@ export function PlanCard({
       data-slot="plan-card"
       data-highlighted={highlighted ? "true" : "false"}
       className={cn(
-        "relative flex h-full min-w-0 flex-col justify-between gap-6 rounded-3xl border p-6 transition-all duration-300 sm:p-8",
+        "bg-elevated text-card-foreground relative flex h-full min-w-0 flex-col justify-between gap-6 rounded-2xl border p-6 transition-colors duration-200 sm:p-7",
         highlighted
-          ? "border-inverse bg-inverse text-inverse-foreground shadow-overlay ring-primary/20 ring-4 lg:-translate-y-1.5"
-          : "border-border/80 bg-elevated text-card-foreground shadow-card hover:border-border-strong hover:shadow-float",
+          ? "border-primary shadow-card ring-primary/20 ring-1"
+          : "border-border hover:border-border-strong",
         className,
       )}
       {...props}
     >
-      <div className="flex flex-col gap-6">
-        {/* Top identity + price panel */}
-        <div
-          className={cn(
-            "flex flex-col gap-3.5 rounded-2xl border p-5",
-            highlighted
-              ? "border-inverse-foreground/15 bg-inverse-foreground/[0.06]"
-              : "border-border/60 bg-surface",
-          )}
-        >
+      <div className="flex flex-col gap-5">
+        {/* Top identity + price header */}
+        <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
               {icon && (
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "inline-flex size-10 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-4.5",
+                    "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border [&_svg]:size-4",
                     highlighted
-                      ? "border-inverse-foreground/15 bg-primary text-primary-foreground"
-                      : "border-border/70 bg-elevated text-foreground",
+                      ? "border-primary/30 bg-accent text-accent-foreground"
+                      : "border-border bg-surface text-foreground",
                   )}
                 >
                   {icon}
                 </span>
               )}
-              <h3 className="type-heading-m truncate">{name}</h3>
+              <h3 className="type-heading-m text-foreground truncate">{name}</h3>
             </div>
             <Badge tone={highlighted ? "accent" : "neutral"} withDot={highlighted}>
               {resolvedBadge}
@@ -277,62 +270,34 @@ export function PlanCard({
           </div>
 
           {scopeLabel && (
-            <p
-              className={cn(
-                "type-caption",
-                highlighted ? "text-inverse-foreground/75" : "text-muted-foreground",
-              )}
-            >
-              {scopeLabel}
-            </p>
+            <p className="text-muted-foreground type-caption">{scopeLabel}</p>
           )}
 
-          <div className="flex flex-col gap-1 pt-0.5">
+          <div className="flex flex-col gap-1 pt-1">
             <div className="flex flex-wrap items-baseline gap-1.5">
-              <span className="type-display-l">{price}</span>
+              <span className="font-display text-foreground text-3xl leading-none font-medium tracking-tight sm:text-4xl">
+                {price}
+              </span>
               {period && (
-                <span
-                  className={cn(
-                    "type-body-m",
-                    highlighted ? "text-inverse-foreground/80" : "text-muted-foreground",
-                  )}
-                >
+                <span className="text-muted-foreground type-body-s">
                   {period}
                 </span>
               )}
             </div>
             {billingNote && (
-              <p
-                className={cn(
-                  "type-caption",
-                  highlighted ? "text-inverse-foreground/75" : "text-muted-foreground",
-                )}
-              >
-                {billingNote}
-              </p>
+              <p className="text-muted-foreground type-caption">{billingNote}</p>
             )}
             {priceExtra}
           </div>
         </div>
 
-        <p
-          className={cn(
-            "type-body-s",
-            highlighted ? "text-inverse-foreground/85" : "text-muted-foreground",
-          )}
-        >
-          {description}
-        </p>
+        <p className="text-muted-foreground type-body-s">{description}</p>
 
         {ctaHref && !onSelectPlan ? (
           <Button
             variant={highlighted ? "accent" : "default"}
             size="lg"
-            className={cn(
-              "w-full",
-              !highlighted &&
-                "border-border bg-elevated text-foreground hover:bg-surface border shadow-xs",
-            )}
+            className="w-full"
             asChild
           >
             <Link href={ctaHref}>{ctaLabel}</Link>
@@ -340,7 +305,7 @@ export function PlanCard({
         ) : (
           <Button
             type="button"
-            variant={highlighted ? "accent" : "secondary"}
+            variant={highlighted ? "accent" : "default"}
             size="lg"
             className="w-full"
             onClick={onSelectPlan}
@@ -349,14 +314,9 @@ export function PlanCard({
           </Button>
         )}
 
-        <div className="flex flex-col gap-3 pt-1">
+        <div className="border-border flex flex-col gap-3 border-t pt-5">
           {featuresHeading && (
-            <p
-              className={cn(
-                "type-overline",
-                highlighted ? "text-inverse-foreground/70" : "text-muted-foreground",
-              )}
-            >
+            <p className="text-muted-foreground type-overline">
               {featuresHeading}
             </p>
           )}
@@ -369,37 +329,20 @@ export function PlanCard({
                   className={cn(
                     "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full",
                     highlighted
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-accent text-accent-foreground"
                       : "bg-success-soft text-success",
                   )}
                 >
                   <Check className="size-3" />
                 </span>
-                <span
-                  className={cn(
-                    "type-body-s",
-                    highlighted ? "text-inverse-foreground/90" : "text-foreground",
-                  )}
-                >
-                  {feature}
-                </span>
+                <span className="text-foreground type-body-s">{feature}</span>
               </li>
             ))}
           </ul>
 
           {excludedFeatures && excludedFeatures.length > 0 && (
-            <div
-              className={cn(
-                "mt-2 flex flex-col gap-2 border-t pt-3.5",
-                highlighted ? "border-inverse-foreground/15" : "border-border/70",
-              )}
-            >
-              <p
-                className={cn(
-                  "type-overline",
-                  highlighted ? "text-inverse-foreground/65" : "text-muted-foreground",
-                )}
-              >
+            <div className="border-border mt-2 flex flex-col gap-2 border-t pt-4">
+              <p className="text-muted-foreground type-overline">
                 Not included
               </p>
               <ul className="flex flex-col gap-2">
@@ -407,23 +350,11 @@ export function PlanCard({
                   <li key={item} className="flex items-start gap-2.5">
                     <span
                       aria-hidden="true"
-                      className={cn(
-                        "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full",
-                        highlighted
-                          ? "bg-inverse-foreground/10 text-inverse-foreground/70"
-                          : "bg-sunken text-muted-foreground",
-                      )}
+                      className="bg-sunken text-muted-foreground mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full"
                     >
                       <X className="size-3" />
                     </span>
-                    <span
-                      className={cn(
-                        "type-body-s",
-                        highlighted
-                          ? "text-inverse-foreground/75"
-                          : "text-muted-foreground",
-                      )}
-                    >
+                    <span className="text-muted-foreground type-body-s">
                       {item}
                     </span>
                   </li>
