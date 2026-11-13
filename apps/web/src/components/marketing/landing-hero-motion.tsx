@@ -33,15 +33,17 @@ export function LandingHeroMotion({ children, visual }: LandingHeroMotionProps) 
   return (
     <div
       ref={scopeRef}
-      className="mx-auto flex max-w-7xl flex-col items-center gap-10 text-center sm:gap-16 lg:gap-24"
+      className="container-page grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12"
     >
-      <div data-hero-copy="" className="flex max-w-6xl flex-col items-center gap-5 sm:gap-8">
+      <div
+        data-hero-copy=""
+        className="flex min-w-0 flex-col items-start gap-5 text-left sm:gap-6 lg:col-span-5"
+      >
         {children}
       </div>
-      <div data-hero-visual="" className="w-full">
+      <div data-hero-visual="" className="min-w-0 w-full lg:col-span-7">
         {visual}
       </div>
     </div>
   );
 }
-

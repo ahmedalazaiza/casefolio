@@ -1,11 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { LandingExperience } from "@/components/marketing/landing-experience";
-import { BILLING_PLAN_CATALOG, formatUsdFromCents } from "@/lib/billing/plans";
 import { buildLandingSnapshot } from "@/lib/marketing/landing-stats";
 
-describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
+describe("HomePage — Minimalist Split-Hero Experience & App-Launch CTAs", () => {
   it("renders all landing sections with real numbers and removes 'Trusted by designers from'", () => {
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
@@ -52,17 +51,12 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "Clear plans for solo designers, teams, and agencies",
+        name: "Ready to publish your next case study?",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
         name: "Common questions, answered",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
-        name: "Ready to publish your next case study?",
       }),
     ).toBeInTheDocument();
 
@@ -124,38 +118,36 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     expect(screen.getByText(/Published · Live/i)).toBeInTheDocument();
   });
 
-  it("toggles pricing between monthly and annual prices from BILLING_PLAN_CATALOG across Pro, Team, and Plus", async () => {
-    const user = userEvent.setup();
+  it("replaces home-page pricing cards with direct CTA actions driving into the app while linking to separate /pricing", () => {
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
 
-    expect(
-      screen.getByText(formatUsdFromCents(BILLING_PLAN_CATALOG.pro.monthlyPriceCents)),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(formatUsdFromCents(BILLING_PLAN_CATALOG.team.monthlyPriceCents)),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(formatUsdFromCents(BILLING_PLAN_CATALOG.plus.monthlyPriceCents)),
-    ).toBeInTheDocument();
+    // Pricing plan cards live separately on /pricing — never rendered on /
+    expect(screen.queryByTestId("paid-plan-cards-grid")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Annual/i })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: /^Annual/i }));
+    const startCtaSection = screen.getByTestId("landing-start-cta");
+    expect(
+      within(startCtaSection).getByRole("link", { name: /^Start free/i }),
+    ).toHaveAttribute("href", "/sign-up");
+    expect(
+      within(startCtaSection).getByRole("link", { name: /Choose a template/i }),
+    ).toHaveAttribute("href", "/templates");
+    expect(
+      within(startCtaSection).getByRole("link", { name: /View pricing plans/i }),
+    ).toHaveAttribute("href", "/pricing");
 
+    const startActions = screen.getByTestId("landing-start-actions");
     expect(
-      screen.getByText(
-        formatUsdFromCents(BILLING_PLAN_CATALOG.pro.yearlyMonthlyEquivalentCents),
-      ),
-    ).toBeInTheDocument();
+      within(startActions).getByRole("link", {
+        name: /Create your free workspace/i,
+      }),
+    ).toHaveAttribute("href", "/sign-up");
     expect(
-      screen.getByText(
-        formatUsdFromCents(BILLING_PLAN_CATALOG.team.yearlyMonthlyEquivalentCents),
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        formatUsdFromCents(BILLING_PLAN_CATALOG.plus.yearlyMonthlyEquivalentCents),
-      ),
-    ).toBeInTheDocument();
+      within(startActions).getByRole("link", {
+        name: /Start with the Cinema template/i,
+      }),
+    ).toHaveAttribute("href", "/new?template=cinema");
   });
 
   it("expands and collapses FAQ accordion items", async () => {

@@ -2,6 +2,7 @@
 
 import { Minus, Plus } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export interface FaqItem {
   question: string;
@@ -44,7 +45,7 @@ export function LandingFaqAccordion({
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-3">
       {items.map((item, idx) => {
         const isOpen = openIndex === idx;
         const panelId = `faq-panel-${idx}`;
@@ -53,7 +54,12 @@ export function LandingFaqAccordion({
         return (
           <div
             key={item.question}
-            className={`overflow-hidden rounded-3xl border transition-all duration-500 ${isOpen ? "border-border/70 bg-card shadow-card" : "border-transparent bg-surface hover:bg-sunken"}`}
+            className={cn(
+              "bg-elevated overflow-hidden rounded-xl border transition-colors duration-200",
+              isOpen
+                ? "border-border-strong shadow-xs"
+                : "border-border hover:border-border-strong",
+            )}
           >
             <h3 className="m-0">
               <button
@@ -62,12 +68,17 @@ export function LandingFaqAccordion({
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 onClick={() => setOpenIndex(isOpen ? null : idx)}
-                className="text-foreground type-heading-s focus-visible:ring-ring/40 flex w-full items-center justify-between gap-4 px-5 py-5 text-left transition-colors outline-none focus-visible:ring-2 sm:gap-6 sm:px-7 sm:py-6"
+                className="text-foreground type-heading-s focus-visible:ring-ring/40 flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors outline-none focus-visible:ring-2 sm:px-6 sm:py-5"
               >
                 <span>{item.question}</span>
                 <span
                   aria-hidden="true"
-                  className={`inline-flex size-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${isOpen ? "bg-inverse text-inverse-foreground rotate-180" : "bg-elevated text-foreground shadow-xs"}`}
+                  className={cn(
+                    "inline-flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                    isOpen
+                      ? "border-primary bg-accent text-accent-foreground"
+                      : "border-border bg-surface text-muted-foreground",
+                  )}
                 >
                   {isOpen ? (
                     <Minus className="size-4" />
@@ -82,7 +93,7 @@ export function LandingFaqAccordion({
                 id={panelId}
                 role="region"
                 aria-labelledby={triggerId}
-                className="text-muted-foreground type-body-m max-w-2xl px-5 pt-0 pb-5 sm:px-7 sm:pb-7"
+                className="text-muted-foreground type-body-m max-w-2xl px-5 pt-0 pb-5 sm:px-6 sm:pb-6"
               >
                 {item.answer}
               </div>
