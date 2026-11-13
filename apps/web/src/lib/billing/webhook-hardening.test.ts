@@ -141,13 +141,24 @@ afterAll(async () => {
 });
 
 describe("Paddle price → plan mapping is exact (P0-3)", () => {
-  it("maps only the four configured price ids and never guesses from substrings", () => {
+  it("maps only the six configured price ids (Pro, Team, Plus × Monthly/Yearly) and never guesses from substrings", () => {
     expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_PRO_MONTHLY)).toEqual({ plan: "pro", interval: "monthly" });
     expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_PRO_YEARLY)).toEqual({ plan: "pro", interval: "yearly" });
     expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_TEAM_MONTHLY)).toEqual({ plan: "team", interval: "monthly" });
     expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_TEAM_YEARLY)).toEqual({ plan: "team", interval: "yearly" });
+    expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_PLUS_MONTHLY)).toEqual({ plan: "plus", interval: "monthly" });
+    expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_PLUS_YEARLY)).toEqual({ plan: "plus", interval: "yearly" });
 
-    for (const unknown of ["pri_01proxxxxxxxxxxxxxxxxxxxx", "pri_01teamyearlyxxxxxxxxxxxx", "pro", "team_year", "", "  "]) {
+    for (const unknown of [
+      "pri_01proxxxxxxxxxxxxxxxxxxxx",
+      "pri_01teamyearlyxxxxxxxxxxxx",
+      "pri_01plusyearlyxxxxxxxxxxxx",
+      "pro",
+      "team_year",
+      "plus_month",
+      "",
+      "  ",
+    ]) {
       expect(resolvePlanFromServerPriceId(unknown)).toBeNull();
     }
     expect(resolvePlanFromServerPriceId(null)).toBeNull();
@@ -372,6 +383,34 @@ describe("Right plan, right interval, right scope", () => {
       .where(eq(dbSchema.subscriptions.orgId, session.orgId!));
     expect(sub?.plan).toBe("team");
     expect(sub?.userId).toBeNull();
+  });
+
+  it("provisions flat-rate Plus agency workspace with 20 included seats and custom domain entitlement", async () => {
+    const owner = await createUser("plus-owner");
+    const session = await openCheckout(owner, { plan: "plus", interval: "monthly" });
+    expect(session.orgId).toBeTruthy();
+    expect(session.seats).toBe(1); // Flat-rate Paddle item quantity = 1 (covers 20 workspace seats)
+
+    const result = await post(
+      "subscription.activated",
+      subscriptionData({
+        priceId: env.PADDLE_PRICE_PLUS_MONTHLY,
+        quantity: 1,
+        customData: session.customData,
+      }),
+    );
+    expect(result.effectivePlan).toBe("plus");
+    expect(result.currentPaidCapacity).toBe(20);
+    expect(await planOf(owner.id)).toBe("free"); // Plus scopes to the agency org workspace
+
+    const [sub] = await db
+      .select()
+      .from(dbSchema.subscriptions)
+      .where(eq(dbSchema.subscriptions.orgId, session.orgId!));
+    expect(sub?.plan).toBe("plus");
+    expect(sub?.maxSeats).toBe(20);
+    expect(sub?.customDomainEnabled).toBe(true);
+    expect(sub?.watermarkEnabled).toBe(false);
   });
 });
 
@@ -614,7 +653,7 @@ describe("Customer-facing billing data is truthful and private", () => {
         subscription_id: subId,
         customer_id: customerId,
         items: [{ quantity: 1, price: { id: session.priceId, billing_cycle: { interval: "year", frequency: 1 } } }],
-        details: { totals: { currency_code: "USD", grand_total: "12000" } },
+        details: { totals: { currency_code: "USD", grand_total: "9588" } },
         payments: [
           {
             status: "captured",
@@ -629,7 +668,7 @@ describe("Customer-facing billing data is truthful and private", () => {
     expect(overview.invoices).toHaveLength(1);
     expect(overview.invoices[0]).toMatchObject({
       invoiceNumber: "1042-10001",
-      amountUsd: 120,
+      amountUsd: 95.88,
       status: "paid",
     });
     expect(overview.subscription).toMatchObject({

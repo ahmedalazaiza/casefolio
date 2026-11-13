@@ -1,7 +1,7 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
-export const SERVER_ENV_SCHEMA = {
+export const REQUIRED_SERVER_ENV_SCHEMA = {
   DATABASE_URL: z.string().url(),
   BETTER_AUTH_SECRET: z.string().min(16),
   BETTER_AUTH_URL: z.string().url(),
@@ -26,6 +26,12 @@ export const SERVER_ENV_SCHEMA = {
   SENTRY_DSN: z.string().url(),
 } as const;
 
+export const SERVER_ENV_SCHEMA = {
+  ...REQUIRED_SERVER_ENV_SCHEMA,
+  PADDLE_PRICE_PLUS_MONTHLY: z.string().min(1).default("pri_plus_monthly_id"),
+  PADDLE_PRICE_PLUS_YEARLY: z.string().min(1).default("pri_plus_yearly_id"),
+} as const;
+
 export const CLIENT_ENV_SCHEMA = {
   NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: z.string().min(1),
   NEXT_PUBLIC_POSTHOG_KEY: z.string().min(1),
@@ -34,7 +40,7 @@ export const CLIENT_ENV_SCHEMA = {
 } as const;
 
 export const REQUIRED_ENV_KEYS = [
-  ...Object.keys(SERVER_ENV_SCHEMA),
+  ...Object.keys(REQUIRED_SERVER_ENV_SCHEMA),
   ...Object.keys(CLIENT_ENV_SCHEMA),
 ] as const;
 
@@ -66,6 +72,8 @@ export function createValidatedEnv(
       PADDLE_PRICE_PRO_YEARLY: source.PADDLE_PRICE_PRO_YEARLY,
       PADDLE_PRICE_TEAM_MONTHLY: source.PADDLE_PRICE_TEAM_MONTHLY,
       PADDLE_PRICE_TEAM_YEARLY: source.PADDLE_PRICE_TEAM_YEARLY,
+      PADDLE_PRICE_PLUS_MONTHLY: source.PADDLE_PRICE_PLUS_MONTHLY,
+      PADDLE_PRICE_PLUS_YEARLY: source.PADDLE_PRICE_PLUS_YEARLY,
       EXPORT_WORKER_URL: source.EXPORT_WORKER_URL,
       EXPORT_SIGNING_SECRET: source.EXPORT_SIGNING_SECRET,
       NEXT_PUBLIC_POSTHOG_KEY: source.NEXT_PUBLIC_POSTHOG_KEY,

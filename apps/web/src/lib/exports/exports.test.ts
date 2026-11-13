@@ -5,6 +5,7 @@ import { eq } from "@casefolio/db";
 import { processExportJob } from "@casefolio/worker";
 import { afterAll, describe, expect, it } from "vitest";
 import { db, dbSchema } from "@/lib/db";
+import { buildMultiPageJpegPdf } from "@/lib/exports/client-renderer";
 import {
   authorizeAndReadExportFile,
   enqueueProjectExportForUser,
@@ -112,15 +113,15 @@ describe("exports service, plan gating & worker job lifecycle (C-602)", () => {
       expect(proProj.ok).toBe(true);
       if (!proProj.ok) return;
 
-      // 1. Free user blocked from PDF & Behance
+      // 1. Free user gets PDF export with watermark, while Behance requires Pro+
       const freePdf = await enqueueProjectExportForUser(
         { projectId: freeProj.projectId, format: "pdf" },
         { id: freeUser!.id, role: "user", plan: "free" },
         { enqueueJobFn: async () => undefined },
       );
-      expect(freePdf.ok).toBe(false);
-      if (!freePdf.ok) {
-        expect(freePdf.code).toBe("PLAN_UPGRADE_REQUIRED");
+      expect(freePdf.ok).toBe(true);
+      if (freePdf.ok) {
+        expect(freePdf.hasWatermark).toBe(true);
       }
 
       const freeBehance = await enqueueProjectExportForUser(
@@ -133,8 +134,8 @@ describe("exports service, plan gating & worker job lifecycle (C-602)", () => {
         expect(freeBehance.code).toBe("PLAN_UPGRADE_REQUIRED");
       }
 
-      // 2. Free user allowed up to FREE_MONTHLY_EXPORT_LIMIT PNG exports (with watermark)
-      for (let i = 0; i < FREE_MONTHLY_EXPORT_LIMIT; i++) {
+      // 2. Free user allowed up to FREE_MONTHLY_EXPORT_LIMIT total exports (1 PDF above + remaining PNG exports, all watermarked)
+      for (let i = 1; i < FREE_MONTHLY_EXPORT_LIMIT; i++) {
         const res = await enqueueProjectExportForUser(
           { projectId: freeProj.projectId, format: "png_long" },
           { id: freeUser!.id, role: "user", plan: "free" },
@@ -236,6 +237,27 @@ describe("exports service, plan gating & worker job lifecycle (C-602)", () => {
         await db.delete(dbSchema.templates).where(eq(dbSchema.templates.id, createdTemplateId));
       }
     }
+  });
+
+  it("strips Casefolio Creator/Producer metadata from Plus white-label PDFs while retaining it on non-Plus PDFs", () => {
+    const samplePage = {
+      jpegBytes: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      pixelWidth: 1440,
+      pixelHeight: 900,
+      pageWidthPt: 864,
+      pageHeightPt: 540,
+    };
+
+    const brandedPdfText = new TextDecoder().decode(
+      buildMultiPageJpegPdf([samplePage], { title: "Agency Deck", whiteLabel: false }),
+    );
+    expect(brandedPdfText).toContain("Casefolio");
+
+    const whiteLabelPdfText = new TextDecoder().decode(
+      buildMultiPageJpegPdf([samplePage], { title: "Agency Deck", whiteLabel: true }),
+    );
+    expect(whiteLabelPdfText).not.toContain("Casefolio");
+    expect(whiteLabelPdfText).toContain("/Title (Agency Deck)");
   });
 });
 

@@ -1,12 +1,14 @@
-import { and, desc, eq, inArray, isNull, ne, type PlanTier } from "@casefolio/db";
+import { and, desc, eq, inArray, isNull, type PlanTier } from "@casefolio/db";
 import { z } from "zod";
 import { env } from "@/env";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import {
   evaluateSubscriptionLifecycle,
   PLAN_CATALOG_VERSION,
+  PLUS_INCLUDED_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
+  UNLIMITED_CASE_STUDIES,
   type BillingInterval,
   type PaidPlanTier,
   type SubscriptionLifecycleStatus,
@@ -237,7 +239,11 @@ function extractPaddleEventDetails(
   if (!resolvedInterval) {
     const customInterval = asNonEmptyString(customData?.interval);
     resolvedInterval =
-      customInterval === "yearly" || customInterval === "monthly" ? customInterval : null;
+      customInterval === "yearly" || customInterval === "annual"
+        ? "yearly"
+        : customInterval === "monthly"
+          ? "monthly"
+          : null;
   }
   if (seats === null && typeof customData?.seats === "number" && customData.seats >= 1) {
     seats = Math.floor(customData.seats);
@@ -357,17 +363,22 @@ export async function applyPersonalDowngradePublicationRules(
 
   if (!ws) return;
 
-  const publishedProjects = await db
-    .select({ id: dbSchema.projects.id })
+  const nonArchivedProjects = await db
+    .select({
+      id: dbSchema.projects.id,
+      visibility: dbSchema.projects.visibility,
+      updatedAt: dbSchema.projects.updatedAt,
+    })
     .from(dbSchema.projects)
     .where(
       and(
         eq(dbSchema.projects.workspaceId, workspaceId),
-        ne(dbSchema.projects.visibility, "private"),
+        isNull(dbSchema.projects.archivedAt),
       ),
-    );
+    )
+    .orderBy(desc(dbSchema.projects.updatedAt), desc(dbSchema.projects.createdAt));
 
-  // Free plan requires branding (`Spec §11.7`)
+  // Free plan requires Casefolio branding/watermark (`watermark_enabled = true`)
   await db
     .update(dbSchema.projects)
     .set({ brandingRemoved: false, updatedAt: now })
@@ -378,8 +389,23 @@ export async function applyPersonalDowngradePublicationRules(
     .set({ brandingRemoved: false, updatedAt: now })
     .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
 
-  if (publishedProjects.length <= 1) {
-    // At most 1 published project -> keep it live with Free branding
+  if (nonArchivedProjects.length <= 1) {
+    const singleId = nonArchivedProjects[0]?.id ?? null;
+    await db
+      .update(dbSchema.workspaces)
+      .set({
+        maxSeats: 1,
+        maxCaseStudies: 1,
+        customDomainEnabled: false,
+        watermarkEnabled: true,
+        keepPublicProjectId:
+          ws.keepPublicProjectId && ws.keepPublicProjectId === singleId
+            ? ws.keepPublicProjectId
+            : singleId,
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.workspaces.id, workspaceId));
+
     await db
       .update(dbSchema.publishedSnapshots)
       .set({ suspendedReason: null, updatedAt: now })
@@ -387,37 +413,73 @@ export async function applyPersonalDowngradePublicationRules(
     return;
   }
 
-  const validKeepId =
-    ws.keepPublicProjectId && publishedProjects.some((p) => p.id === ws.keepPublicProjectId)
+  // Edge Case 3 (Downgrade Protection): never delete existing Case Studies.
+  // Keep 1 selected active Case Study live/editable and lock + unpublish extra Case Studies.
+  const activeId =
+    ws.keepPublicProjectId && nonArchivedProjects.some((p) => p.id === ws.keepPublicProjectId)
       ? ws.keepPublicProjectId
-      : null;
+      : (nonArchivedProjects.find((p) => p.visibility !== "private")?.id ??
+          nonArchivedProjects[0]!.id);
 
-  if (!validKeepId) {
-    // `Spec §11.7`: If > 1 published and user hasn't chosen one, suspend all paid publications rather than guessing
+  await db
+    .update(dbSchema.workspaces)
+    .set({
+      maxSeats: 1,
+      maxCaseStudies: 1,
+      customDomainEnabled: false,
+      watermarkEnabled: true,
+      keepPublicProjectId: activeId,
+      updatedAt: now,
+    })
+    .where(eq(dbSchema.workspaces.id, workspaceId));
+
+  const extraIds = nonArchivedProjects.filter((p) => p.id !== activeId).map((p) => p.id);
+
+  const [activeSnap] = await db
+    .select({
+      projectId: dbSchema.publishedSnapshots.projectId,
+      suspendedReason: dbSchema.publishedSnapshots.suspendedReason,
+      publishedAt: dbSchema.publishedSnapshots.publishedAt,
+    })
+    .from(dbSchema.publishedSnapshots)
+    .where(eq(dbSchema.publishedSnapshots.projectId, activeId))
+    .limit(1);
+
+  if (activeSnap) {
     await db
       .update(dbSchema.publishedSnapshots)
-      .set({
-        suspendedReason: "downgraded_pro_to_free_select_one",
-        updatedAt: now,
-      })
-      .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
-    return;
+      .set({ suspendedReason: null, updatedAt: now })
+      .where(eq(dbSchema.publishedSnapshots.projectId, activeSnap.projectId));
+
+    if (activeSnap.suspendedReason === "downgraded_pro_to_free_select_one") {
+      await db
+        .update(dbSchema.projects)
+        .set({
+          visibility: "public",
+          publishedAt: activeSnap.publishedAt ?? now,
+          updatedAt: now,
+        })
+        .where(eq(dbSchema.projects.id, activeId));
+    }
   }
 
-  const suspendIds = publishedProjects.filter((p) => p.id !== validKeepId).map((p) => p.id);
-  await db
-    .update(dbSchema.publishedSnapshots)
-    .set({ suspendedReason: null, updatedAt: now })
-    .where(eq(dbSchema.publishedSnapshots.projectId, validKeepId));
+  if (extraIds.length > 0) {
+    await db
+      .update(dbSchema.projects)
+      .set({
+        visibility: "private",
+        publishedAt: null,
+        updatedAt: now,
+      })
+      .where(inArray(dbSchema.projects.id, extraIds));
 
-  if (suspendIds.length > 0) {
     await db
       .update(dbSchema.publishedSnapshots)
       .set({
         suspendedReason: "downgraded_pro_to_free_select_one",
         updatedAt: now,
       })
-      .where(inArray(dbSchema.publishedSnapshots.projectId, suspendIds));
+      .where(inArray(dbSchema.publishedSnapshots.projectId, extraIds));
   }
 }
 
@@ -504,7 +566,8 @@ async function loadCheckoutIntent(
 
   const meta = asRecord(op.meta);
   const orgId = asNonEmptyString(meta?.orgId);
-  const plan = meta?.plan === "pro" || meta?.plan === "team" ? meta.plan : null;
+  const plan =
+    meta?.plan === "pro" || meta?.plan === "team" || meta?.plan === "plus" ? meta.plan : null;
 
   return {
     operationId: op.id,
@@ -735,10 +798,14 @@ async function processValidatedPaddleWebhookOnce(
       }
     }
 
-    // 2c. Scope/plan consistency: Pro belongs to exactly one personal workspace, Teams to one organization.
+    // 2c. Scope/plan consistency: Pro belongs to a personal workspace; Team and Plus belong to an organization.
     const scopeIsOrg = existingSub ? Boolean(existingSub.orgId) : Boolean(intent?.orgId);
-    const expectedPlan: PaidPlanTier = scopeIsOrg ? "team" : "pro";
-    if (details.plan && details.plan !== expectedPlan) {
+    const scopeMatches = details.plan
+      ? scopeIsOrg
+        ? details.plan === "team" || details.plan === "plus"
+        : details.plan === "pro"
+      : true;
+    if (!scopeMatches) {
       if (intent) {
         await tx
           .update(dbSchema.billingOperations)
@@ -750,7 +817,7 @@ async function processValidatedPaddleWebhookOnce(
         reason: "plan_scope_mismatch",
         subscriptionId: existingSub?.id ?? null,
         alert: {
-          message: `Paddle price maps to "${details.plan}" but the owning scope requires "${expectedPlan}".`,
+          message: `Paddle price maps to "${details.plan}" which does not match the ${scopeIsOrg ? "organization" : "personal"} scope.`,
           context: {
             eventId: envelope.event_id,
             paddleSubscriptionId: details.paddleSubscriptionId,
@@ -760,7 +827,8 @@ async function processValidatedPaddleWebhookOnce(
     }
 
     // 2d. One live subscription per scope. A second purchase must never overwrite (and thereby
-    // orphan) the first, which would keep billing the customer with no way to manage it.
+    // orphan) the first, EXCEPT an explicit organization upgrade from Team -> Plus.
+    let replacedPaddleSubToCancel: string | null = null;
     if (!existingSub && intent) {
       const [scopeRow] = intent.orgId
         ? await tx
@@ -781,11 +849,17 @@ async function processValidatedPaddleWebhookOnce(
             .orderBy(desc(dbSchema.subscriptions.updatedAt))
             .limit(1);
 
+      const isOrgTierUpgrade =
+        Boolean(intent.orgId) &&
+        scopeRow?.plan === "team" &&
+        (details.plan === "plus" || intent.plan === "plus");
+
       if (
         scopeRow &&
         scopeRow.paddleSubscriptionId &&
         scopeRow.paddleSubscriptionId !== details.paddleSubscriptionId &&
-        LIVE_SUBSCRIPTION_STATUSES.has(scopeRow.status)
+        LIVE_SUBSCRIPTION_STATUSES.has(scopeRow.status) &&
+        !isOrgTierUpgrade
       ) {
         await tx
           .update(dbSchema.billingOperations)
@@ -819,7 +893,16 @@ async function processValidatedPaddleWebhookOnce(
         };
       }
 
-      // Ended / never-paid rows are safely reused for the new subscription.
+      if (
+        isOrgTierUpgrade &&
+        scopeRow?.paddleSubscriptionId &&
+        scopeRow.paddleSubscriptionId !== details.paddleSubscriptionId &&
+        LIVE_SUBSCRIPTION_STATUSES.has(scopeRow.status)
+      ) {
+        replacedPaddleSubToCancel = scopeRow.paddleSubscriptionId;
+      }
+
+      // Ended / never-paid / upgraded rows are safely reused for the new subscription.
       existingSub = scopeRow;
     }
 
@@ -912,7 +995,11 @@ async function processValidatedPaddleWebhookOnce(
     }
 
     const storedPlan: PlanTier = resolvedOrgId
-      ? "team"
+      ? details.plan === "plus" || details.plan === "team"
+        ? details.plan
+        : existingSub?.plan === "plus"
+          ? "plus"
+          : "team"
       : (details.plan ??
           (existingSub?.plan && existingSub.plan !== "free" ? existingSub.plan : "pro"));
 
@@ -939,7 +1026,16 @@ async function processValidatedPaddleWebhookOnce(
     let nextRenewalQuantity: number | null = null;
     let nextPendingOpId: string | null = existingSub?.pendingOperationId ?? null;
 
-    if (storedPlan === "team") {
+    if (storedPlan === "plus") {
+      const isFailedPayment =
+        details.lifecycleStatus === "past_due" ||
+        envelope.event_type === "transaction.payment_failed";
+      nextPaidCapacity = isFailedPayment
+        ? (existingSub?.currentPaidCapacity ?? PLUS_INCLUDED_SEATS)
+        : PLUS_INCLUDED_SEATS;
+      nextRenewalQuantity = null;
+      nextPendingOpId = null;
+    } else if (storedPlan === "team") {
       const requestedSeats = details.seats !== null ? clampTeamSeats(details.seats) : null;
       const isFailedPayment =
         details.lifecycleStatus === "past_due" ||
@@ -1055,6 +1151,13 @@ async function processValidatedPaddleWebhookOnce(
           ? null
           : (details.scheduledChangeAction ?? null);
 
+    const subMaxSeats =
+      storedPlan === "plus"
+        ? PLUS_INCLUDED_SEATS
+        : storedPlan === "team"
+          ? nextPaidCapacity
+          : 1;
+
     let savedSubscriptionId: string;
 
     if (existingSub) {
@@ -1071,6 +1174,10 @@ async function processValidatedPaddleWebhookOnce(
           interval: nextInterval,
           status: details.lifecycleStatus,
           currentPaidCapacity: nextPaidCapacity,
+          maxSeats: subMaxSeats,
+          maxCaseStudies: UNLIMITED_CASE_STUDIES,
+          customDomainEnabled: storedPlan === "plus",
+          watermarkEnabled: false,
           renewalQuantity: nextRenewalQuantity,
           pastDueSince: nextPastDueSince,
           lastEventOccurredAt: occurredAt,
@@ -1096,6 +1203,10 @@ async function processValidatedPaddleWebhookOnce(
           interval: nextInterval,
           status: details.lifecycleStatus,
           currentPaidCapacity: nextPaidCapacity,
+          maxSeats: subMaxSeats,
+          maxCaseStudies: UNLIMITED_CASE_STUDIES,
+          customDomainEnabled: storedPlan === "plus",
+          watermarkEnabled: false,
           renewalQuantity: nextRenewalQuantity,
           pastDueSince: nextPastDueSince,
           lastEventOccurredAt: occurredAt,
@@ -1146,11 +1257,22 @@ async function processValidatedPaddleWebhookOnce(
         .where(eq(dbSchema.users.id, resolvedUserId));
     }
 
+    const wsMaxSeats =
+      effectivePlan === "plus"
+        ? PLUS_INCLUDED_SEATS
+        : effectivePlan === "team"
+          ? nextPaidCapacity
+          : 1;
+    const wsMaxCaseStudies = effectivePlan === "free" ? 1 : UNLIMITED_CASE_STUDIES;
+    const wsCustomDomainEnabled = effectivePlan === "plus";
+    const wsWatermarkEnabled = effectivePlan === "free";
+
     if (resolvedOrgId) {
       await tx
         .update(dbSchema.organizations)
         .set({
-          seats: effectivePlan === "team" ? nextPaidCapacity : 0,
+          seats:
+            effectivePlan === "team" || effectivePlan === "plus" ? nextPaidCapacity : 0,
         })
         .where(eq(dbSchema.organizations.id, resolvedOrgId));
 
@@ -1159,6 +1281,10 @@ async function processValidatedPaddleWebhookOnce(
           await tx
             .update(dbSchema.workspaces)
             .set({
+              maxSeats: wsMaxSeats,
+              maxCaseStudies: wsMaxCaseStudies,
+              customDomainEnabled: wsCustomDomainEnabled,
+              watermarkEnabled: wsWatermarkEnabled,
               frozenAt: now,
               frozenReason:
                 details.lifecycleStatus === "past_due"
@@ -1179,6 +1305,10 @@ async function processValidatedPaddleWebhookOnce(
           await tx
             .update(dbSchema.workspaces)
             .set({
+              maxSeats: wsMaxSeats,
+              maxCaseStudies: wsMaxCaseStudies,
+              customDomainEnabled: wsCustomDomainEnabled,
+              watermarkEnabled: wsWatermarkEnabled,
               frozenAt: null,
               frozenReason: null,
               updatedAt: now,
@@ -1198,6 +1328,10 @@ async function processValidatedPaddleWebhookOnce(
       await tx
         .update(dbSchema.workspaces)
         .set({
+          maxSeats: wsMaxSeats,
+          maxCaseStudies: wsMaxCaseStudies,
+          customDomainEnabled: wsCustomDomainEnabled,
+          watermarkEnabled: wsWatermarkEnabled,
           frozenAt: null,
           frozenReason: null,
           updatedAt: now,
@@ -1215,7 +1349,7 @@ async function processValidatedPaddleWebhookOnce(
 
     const previousEffectivePlan: PlanTier = existingSub ? existingSub.plan : previousUserPlan;
     const isUpgradeEvent =
-      (effectivePlan === "pro" || effectivePlan === "team") &&
+      (effectivePlan === "pro" || effectivePlan === "team" || effectivePlan === "plus") &&
       (envelope.event_type === "subscription.activated" ||
         envelope.event_type === "subscription.created" ||
         previousEffectivePlan !== effectivePlan);
@@ -1253,6 +1387,7 @@ async function processValidatedPaddleWebhookOnce(
       resolvedOrgId,
       resolvedUserId,
       hasWorkspaceId: Boolean(targetWorkspaceId),
+      duplicateSubscriptionToCancel: replacedPaddleSubToCancel,
       postDowngradePersonalWorkspaceId:
         !resolvedOrgId && (!lifecycle.grantsPaidAccess || lifecycle.isPastDueReadOnly)
           ? targetWorkspaceId

@@ -19,17 +19,22 @@ export function resolveServerPaddlePriceId(
       ? env.PADDLE_PRICE_PRO_YEARLY
       : env.PADDLE_PRICE_PRO_MONTHLY;
   }
+  if (plan === "plus") {
+    return interval === "yearly"
+      ? env.PADDLE_PRICE_PLUS_YEARLY
+      : env.PADDLE_PRICE_PLUS_MONTHLY;
+  }
   return interval === "yearly"
     ? env.PADDLE_PRICE_TEAM_YEARLY
     : env.PADDLE_PRICE_TEAM_MONTHLY;
 }
 
 /**
- * Maps a Paddle price id to a Casefolio plan using **exact** matches against the four
+ * Maps a Paddle price id to a Casefolio plan using **exact** matches against the six
  * configured `PADDLE_PRICE_*` ids only.
  *
  * There is intentionally no fuzzy / substring fallback: an unknown price id must never be
- * guessed into a paid plan (a random Paddle id can contain "pro" or "team"). Callers treat
+ * guessed into a paid plan (a random Paddle id can contain "pro", "team", or "plus"). Callers treat
  * `null` as "not one of our products" and must not grant entitlements.
  */
 export function resolvePlanFromServerPriceId(
@@ -50,6 +55,12 @@ export function resolvePlanFromServerPriceId(
   }
   if (trimmed === env.PADDLE_PRICE_TEAM_YEARLY) {
     return { plan: "team", interval: "yearly" };
+  }
+  if (trimmed === env.PADDLE_PRICE_PLUS_MONTHLY) {
+    return { plan: "plus", interval: "monthly" };
+  }
+  if (trimmed === env.PADDLE_PRICE_PLUS_YEARLY) {
+    return { plan: "plus", interval: "yearly" };
   }
 
   return null;
@@ -101,6 +112,8 @@ export interface BillingConfigInput {
   PADDLE_PRICE_PRO_YEARLY?: string;
   PADDLE_PRICE_TEAM_MONTHLY?: string;
   PADDLE_PRICE_TEAM_YEARLY?: string;
+  PADDLE_PRICE_PLUS_MONTHLY?: string;
+  PADDLE_PRICE_PLUS_YEARLY?: string;
 }
 
 /**
@@ -130,6 +143,8 @@ export function evaluateBillingConfig(input: BillingConfigInput): BillingConfigS
     ["PADDLE_PRICE_PRO_YEARLY", input.PADDLE_PRICE_PRO_YEARLY ?? ""],
     ["PADDLE_PRICE_TEAM_MONTHLY", input.PADDLE_PRICE_TEAM_MONTHLY ?? ""],
     ["PADDLE_PRICE_TEAM_YEARLY", input.PADDLE_PRICE_TEAM_YEARLY ?? ""],
+    ["PADDLE_PRICE_PLUS_MONTHLY", input.PADDLE_PRICE_PLUS_MONTHLY ?? ""],
+    ["PADDLE_PRICE_PLUS_YEARLY", input.PADDLE_PRICE_PLUS_YEARLY ?? ""],
   ];
   for (const [name, value] of priceIds) {
     if (!isRealPaddlePriceId(value)) {
@@ -137,7 +152,7 @@ export function evaluateBillingConfig(input: BillingConfigInput): BillingConfigS
     }
   }
   if (new Set(priceIds.map(([, value]) => value.trim())).size !== priceIds.length) {
-    problems.push("PADDLE_PRICE_* ids must be four distinct prices.");
+    problems.push("PADDLE_PRICE_* ids must be six distinct prices.");
   }
 
   if (environment === "production") {
@@ -168,6 +183,8 @@ export function getBillingConfigStatus(): BillingConfigStatus {
     PADDLE_PRICE_PRO_YEARLY: env.PADDLE_PRICE_PRO_YEARLY,
     PADDLE_PRICE_TEAM_MONTHLY: env.PADDLE_PRICE_TEAM_MONTHLY,
     PADDLE_PRICE_TEAM_YEARLY: env.PADDLE_PRICE_TEAM_YEARLY,
+    PADDLE_PRICE_PLUS_MONTHLY: env.PADDLE_PRICE_PLUS_MONTHLY,
+    PADDLE_PRICE_PLUS_YEARLY: env.PADDLE_PRICE_PLUS_YEARLY,
   });
 }
 

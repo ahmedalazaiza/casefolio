@@ -4,6 +4,7 @@ import {
   evaluateSubscriptionLifecycle,
   getWorkspaceQuotas,
   isSubscriptionGrantingAccess,
+  PLUS_INCLUDED_SEATS,
   type SubscriptionLifecycleEvaluation,
   type WorkspacePlanQuotas,
 } from "@/lib/billing/plans";
@@ -25,6 +26,10 @@ export interface WorkspaceEntitlementState {
   graceUsedAt: Date | null;
   graceExpiresAt: Date | null;
   keepPublicProjectId: string | null;
+  customDomain: string | null;
+  customDomainEnabled: boolean;
+  watermarkEnabled: boolean;
+  whiteLabelEnabled: boolean;
 }
 
 export async function ensurePersonalWorkspaceForUser(userId: string): Promise<{
@@ -56,7 +61,7 @@ export async function ensurePersonalWorkspaceForUser(userId: string): Promise<{
         name: wsName,
         slug: `personal-${userId}`,
       })
-      .onConflictDoNothing({ target: dbSchema.workspaces.personalOwnerId });
+      .onConflictDoNothing();
 
     const [createdWs] = await db
       .select({ id: dbSchema.workspaces.id })
@@ -136,7 +141,7 @@ export async function ensureTeamWorkspaceForOrganization(
       name: orgRow.name,
       slug: `team-${orgId}`,
     })
-    .onConflictDoNothing({ target: dbSchema.workspaces.organizationId });
+    .onConflictDoNothing();
 
   const [ws] = await db
     .select({ id: dbSchema.workspaces.id })
@@ -278,15 +283,20 @@ export async function resolveWorkspaceEntitlementState(
     if (lifecycle.grantsPaidAccess) {
       effectivePlan =
         ws.kind === "team"
-          ? subRow.plan === "team"
-            ? "team"
-            : "free"
+          ? subRow.plan === "plus"
+            ? "plus"
+            : subRow.plan === "team"
+              ? "team"
+              : "free"
           : subRow.plan === "pro"
             ? "pro"
             : "free";
     }
 
-    if (effectivePlan === "team") {
+    if (effectivePlan === "plus") {
+      paidSeats = PLUS_INCLUDED_SEATS;
+      renewalQuantity = null;
+    } else if (effectivePlan === "team") {
       paidSeats = clampTeamsSeats(subRow.currentPaidCapacity);
       renewalQuantity =
         typeof subRow.renewalQuantity === "number"
@@ -321,11 +331,15 @@ export async function resolveWorkspaceEntitlementState(
         : null);
 
   const admissionCeiling =
-    effectivePlan === "team"
-      ? renewalQuantity !== null
-        ? Math.min(paidSeats, renewalQuantity)
-        : paidSeats
-      : 1;
+    effectivePlan === "plus"
+      ? PLUS_INCLUDED_SEATS
+      : effectivePlan === "team"
+        ? renewalQuantity !== null
+          ? Math.min(paidSeats, renewalQuantity)
+          : paidSeats
+        : 1;
+
+  const quotas = getWorkspaceQuotas(effectivePlan, paidSeats);
 
   return {
     workspaceId: ws.id,
@@ -336,13 +350,17 @@ export async function resolveWorkspaceEntitlementState(
     paidSeats,
     renewalQuantity,
     admissionCeiling,
-    quotas: getWorkspaceQuotas(effectivePlan, paidSeats),
+    quotas,
     lifecycle,
     isFrozen,
     frozenReason,
     graceUsedAt: ws.graceUsedAt,
     graceExpiresAt: ws.graceExpiresAt,
     keepPublicProjectId: ws.keepPublicProjectId,
+    customDomain: quotas.customDomainEnabled ? (ws.customDomain ?? null) : null,
+    customDomainEnabled: quotas.customDomainEnabled,
+    watermarkEnabled: quotas.watermarkEnabled,
+    whiteLabelEnabled: quotas.whiteLabelEnabled,
   };
 }
 
@@ -393,8 +411,8 @@ export async function resolveEffectivePlanForUser(
         .set({ plan: resolvedPersonalPlan, updatedAt: now })
         .where(eq(dbSchema.users.id, userId));
     }
-  } else if (userRow.plan === "team") {
-    // Clean up any legacy unioned `team` value on `users.plan`
+  } else if (userRow.plan === "team" || userRow.plan === "plus") {
+    // Clean up any legacy unioned `team`/`plus` value on `users.plan`
     resolvedPersonalPlan = "free";
     await db
       .update(dbSchema.users)
@@ -423,7 +441,7 @@ export async function resolveEffectivePlanForOrganization(
 
   if (
     orgSub &&
-    orgSub.plan === "team" &&
+    (orgSub.plan === "team" || orgSub.plan === "plus") &&
     isSubscriptionGrantingAccess(
       orgSub.status,
       orgSub.currentPeriodEnd,
@@ -431,7 +449,7 @@ export async function resolveEffectivePlanForOrganization(
       orgSub.pastDueSince,
     )
   ) {
-    return "team";
+    return orgSub.plan;
   }
 
   return "free";

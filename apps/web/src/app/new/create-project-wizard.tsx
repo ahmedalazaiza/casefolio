@@ -1,5 +1,6 @@
 "use client";
 
+import type { PlanTier } from "@casefolio/db";
 import {
   AlertCircle,
   ArrowLeft,
@@ -34,6 +35,7 @@ import { TemplateTypeCard } from "@/components/ui/domain-cards";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isUnlimitedProjectsLimit } from "@/lib/billing/plans";
 import { can } from "@/lib/entitlements";
 import {
   FREE_PROJECT_LIMIT,
@@ -64,7 +66,7 @@ function formatProjectTypeLabel(type: TemplateProjectType): string {
 
 export interface CreateProjectWizardProps {
   templates: PublishedTemplateItem[];
-  userPlan: "free" | "pro" | "team";
+  userPlan: PlanTier;
   existingProjectCount: number;
   activeProjectsLimit?: number;
   spaces?: SpaceSummaryItem[];
@@ -99,12 +101,16 @@ export function CreateProjectWizard({
   } | null>(null);
 
   const canUseProTemplates = can(userPlan, "pro_templates");
-  const effectiveActiveLimit =
-    activeProjectsLimit ?? (userPlan === "free" ? FREE_PROJECT_LIMIT : 20);
+  const isUnlimitedQuota =
+    typeof activeProjectsLimit === "number"
+      ? isUnlimitedProjectsLimit(activeProjectsLimit)
+      : userPlan !== "free";
+  const effectiveActiveLimit = activeProjectsLimit ?? FREE_PROJECT_LIMIT;
   const isFreeQuotaReached =
     !can(userPlan, "create_project", {
       projectsCount: existingProjectCount,
-    }) || existingProjectCount >= effectiveActiveLimit;
+    }) ||
+    (!isUnlimitedQuota && existingProjectCount >= effectiveActiveLimit);
 
   const defaultSpaceId = useMemo(() => {
     if (initialSpaceId && spaces.some((s) => s.id === initialSpaceId)) {
@@ -361,13 +367,14 @@ export function CreateProjectWizard({
               <AlertCircle className="text-warning mt-0.5 size-5 shrink-0" />
               <div className="flex flex-col gap-0.5">
                 <p className="type-body-s-strong">
-                  You&apos;ve reached your active project limit ({existingProjectCount} of{" "}
-                  {effectiveActiveLimit} active projects).
+                  You&apos;ve reached your {userPlan === "free" ? "Free plan" : "active"} Case Study
+                  limit ({existingProjectCount} of {effectiveActiveLimit} active{" "}
+                  {effectiveActiveLimit === 1 ? "Case Study" : "Case Studies"}).
                 </p>
                 <p className="text-muted-foreground type-body-s">
                   {userPlan === "free"
-                    ? "Archive an existing project or upgrade to Pro for up to 20 active case studies, Pro templates, and unbranded exports."
-                    : "Archive a finished draft to free an active project slot, or add seats on Casefolio Teams."}
+                    ? "Free includes 1 active Case Study. Upgrade to Casefolio Pro ($9.99/mo or $7.99/mo billed annually) for Unlimited Case Studies, all Pro & Premium templates, and watermark-free exports."
+                    : "Archive a finished draft to free an active project slot."}
                 </p>
               </div>
             </div>
@@ -376,10 +383,11 @@ export function CreateProjectWizard({
                 type="button"
                 size="sm"
                 className="w-fit shrink-0"
+                data-testid="plan-limit-upgrade-btn"
                 onClick={() =>
                   setUpgradePrompt({
-                    title: "Unlock 20 active case studies",
-                    description: `Free plan includes up to ${FREE_PROJECT_LIMIT} active projects. Upgrade to Casefolio Pro for up to 20 active projects, Pro templates, and unbranded PDF & 2x PNG exports.`,
+                    title: "Unlock Unlimited Case Studies",
+                    description: `Free includes ${FREE_PROJECT_LIMIT} active Case Study. Upgrade to Casefolio Pro for Unlimited Case Studies, all Pro & Premium templates, and watermark-free high-res PNG, PDF & Behance exports.`,
                   })
                 }
               >

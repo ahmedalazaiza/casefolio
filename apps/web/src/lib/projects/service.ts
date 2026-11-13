@@ -66,6 +66,7 @@ export async function createProjectFromTemplate({
   let targetSpaceId: string;
   let targetOrgId: string | null;
   let effectivePlan: PlanTier;
+  let paidSeats = 1;
   let maxActiveProjects: number;
   let maxRetainedProjects: number;
 
@@ -82,6 +83,7 @@ export async function createProjectFromTemplate({
     targetSpaceId = spaceAuth.space.id;
     targetOrgId = spaceAuth.workspace.organizationId;
     effectivePlan = spaceAuth.entitlement.plan;
+    paidSeats = spaceAuth.entitlement.paidSeats;
     maxActiveProjects = spaceAuth.entitlement.quotas.activeProjectsLimit;
     maxRetainedProjects = spaceAuth.entitlement.quotas.retainedProjectsLimit;
   } else if (orgId) {
@@ -127,6 +129,7 @@ export async function createProjectFromTemplate({
     targetSpaceId = selectedSpaceId;
     targetOrgId = orgId;
     effectivePlan = spaceAuth.entitlement.plan;
+    paidSeats = spaceAuth.entitlement.paidSeats;
     maxActiveProjects = spaceAuth.entitlement.quotas.activeProjectsLimit;
     maxRetainedProjects = spaceAuth.entitlement.quotas.retainedProjectsLimit;
   } else {
@@ -144,7 +147,7 @@ export async function createProjectFromTemplate({
     targetSpaceId = personal.defaultSpaceId;
     targetOrgId = null;
     effectivePlan =
-      ent && ent.plan !== "free" ? ent.plan : userPlan === "pro" ? "pro" : "free";
+      ent && ent.plan !== "free" ? ent.plan : userPlan !== "free" ? userPlan : "free";
     const personalQuotas = getWorkspaceQuotas(effectivePlan, 1);
     maxActiveProjects = personalQuotas.activeProjectsLimit;
     maxRetainedProjects = personalQuotas.retainedProjectsLimit;
@@ -154,7 +157,7 @@ export async function createProjectFromTemplate({
   if (counts.activeProjects >= maxActiveProjects) {
     const decision = evaluateEntitlement(effectivePlan, "create_project", {
       projectsCount: counts.activeProjects,
-      paidSeats: targetOrgId ? Math.max(1, Math.round(maxActiveProjects / 20)) : 1,
+      paidSeats,
     });
     return {
       ok: false,
@@ -240,7 +243,7 @@ export async function createProjectFromTemplate({
     if (activeCount >= maxActiveProjects) {
       const decision = evaluateEntitlement(effectivePlan, "create_project", {
         projectsCount: activeCount,
-        paidSeats: targetOrgId ? Math.max(1, Math.round(maxActiveProjects / 20)) : 1,
+        paidSeats,
       });
       return {
         ok: false as const,

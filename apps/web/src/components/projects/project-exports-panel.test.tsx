@@ -47,8 +47,12 @@ describe("ProjectExportsPanel & ExportCaseStudyDialog (C-603)", () => {
       "/api/exports/11111111-1111-4111-8111-111111111111/download",
     );
 
-    // Selecting PDF on Free plan replaces export button with Upgrade CTA
+    // Selecting PDF on Free plan is included (with subtle watermark), so Start Export remains enabled
     await user.click(screen.getByTestId("export-preset-pdf"));
+    expect(screen.getByTestId("start-export-button")).toBeInTheDocument();
+
+    // Selecting Behance on Free plan replaces export button with Upgrade CTA
+    await user.click(screen.getByTestId("export-preset-behance"));
     expect(screen.getByTestId("upgrade-export-cta")).toHaveAttribute("href", "/account");
 
     // Export modal dialog opens and shows all 3 presets

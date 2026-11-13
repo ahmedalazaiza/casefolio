@@ -165,29 +165,14 @@ describe("createProjectFromTemplate (C-401)", () => {
         .where(eq(dbSchema.projects.id, created1.projectId));
       expect(recheckedProject1?.templateVersionId).toBe(freeDraft.versionId);
 
-      // 3. Free user creates Project #2 (now pinned to v1.1.0)
-      const created2 = await createProjectFromTemplate({
-        userId: createdUserId,
-        userPlan: "free",
-        input: {
-          type: "mobile",
-          templateId: freeDraft.templateId,
-          name: "Second Free Case Study",
-        },
-      });
-      expect(created2.ok).toBe(true);
-      if (created2.ok && v11.ok) {
-        expect(created2.templateVersionId).toBe(v11.versionId);
-      }
-
-      // 4. Free user blocked on Project #3 (FREE_PROJECT_LIMIT = 2)
+      // 3. Free user blocked on Case Study #2 (FREE_PROJECT_LIMIT = 1)
       const limitBlocked = await createProjectFromTemplate({
         userId: createdUserId,
         userPlan: "free",
         input: {
           type: "mobile",
           templateId: freeDraft.templateId,
-          name: "Third Project Over Limit",
+          name: "Second Free Case Study Blocked",
         },
       });
       expect(limitBlocked).toMatchObject({
@@ -195,7 +180,26 @@ describe("createProjectFromTemplate (C-401)", () => {
         code: "PLAN_LIMIT_REACHED",
       });
 
-      // 5. Upgrading to Pro unlocks both unlimited projects and Pro templates
+      // 4. Upgrading to Pro unlocks unlimited Case Studies (pinned to latest v1.1.0) and Pro templates
+      await db
+        .update(dbSchema.users)
+        .set({ plan: "pro" })
+        .where(eq(dbSchema.users.id, createdUserId));
+
+      const created2OnPro = await createProjectFromTemplate({
+        userId: createdUserId,
+        userPlan: "pro",
+        input: {
+          type: "mobile",
+          templateId: freeDraft.templateId,
+          name: "Second Case Study On Pro",
+        },
+      });
+      expect(created2OnPro.ok).toBe(true);
+      if (created2OnPro.ok && v11.ok) {
+        expect(created2OnPro.templateVersionId).toBe(v11.versionId);
+      }
+
       const proSuccess = await createProjectFromTemplate({
         userId: createdUserId,
         userPlan: "pro",

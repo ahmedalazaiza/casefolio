@@ -304,7 +304,7 @@ export async function enqueueProjectExportForUser(
     return {
       ok: false,
       code: "PLAN_UPGRADE_REQUIRED",
-      error: `${formatLabel} export requires a Pro or Teams plan. Free plan supports branded 1× PNG exports up to 1,440px.`,
+      error: `${formatLabel} export requires a Pro, Team, or Plus plan. Free plan supports watermarked PNG and PDF exports.`,
     };
   }
 
@@ -312,7 +312,8 @@ export async function enqueueProjectExportForUser(
     return {
       ok: false,
       code: "PLAN_UPGRADE_REQUIRED",
-      error: "2× PNG exports (2,880px) require a Pro or Teams plan. Free plan supports 1× PNG up to 1,440px.",
+      error:
+        "High-res 2× PNG exports (2,880px) require a Pro, Team, or Plus plan. Free plan supports 1× PNG and PDF exports with Casefolio branding.",
     };
   }
 

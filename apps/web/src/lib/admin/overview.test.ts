@@ -64,12 +64,14 @@ describe("admin overview & analytics metrics (C-901)", () => {
     expect(adminAnalyticsRangeSchema.parse("bad")).toBe("30d");
 
     expect(computeSubscriptionMrrUsd("free", "monthly")).toBe(0);
-    expect(computeSubscriptionMrrUsd("pro", "monthly")).toBe(12);
-    expect(computeSubscriptionMrrUsd("pro", "yearly")).toBe(10);
-    expect(computeSubscriptionMrrUsd("team", "monthly")).toBe(18);
-    expect(computeSubscriptionMrrUsd("team", "monthly", 3)).toBe(54);
-    expect(computeSubscriptionMrrUsd("team", "yearly")).toBe(15);
-    expect(computeSubscriptionMrrUsd("team", "yearly", 3)).toBe(45);
+    expect(computeSubscriptionMrrUsd("pro", "monthly")).toBe(9.99);
+    expect(computeSubscriptionMrrUsd("pro", "yearly")).toBe(7.99);
+    expect(computeSubscriptionMrrUsd("team", "monthly")).toBe(6.99);
+    expect(computeSubscriptionMrrUsd("team", "monthly", 3)).toBe(20.97);
+    expect(computeSubscriptionMrrUsd("team", "yearly")).toBe(5.59);
+    expect(computeSubscriptionMrrUsd("team", "yearly", 3)).toBe(16.77);
+    expect(computeSubscriptionMrrUsd("plus", "monthly", 20)).toBe(99);
+    expect(computeSubscriptionMrrUsd("plus", "yearly", 20)).toBe(79);
 
     const created = new Date("2026-01-01T00:00:00Z");
     expect(
@@ -309,7 +311,7 @@ describe("admin overview & analytics metrics (C-901)", () => {
       beforeSql.activeSubs,
       afterSql.activeSubs,
     );
-    expect(metrics.mrrUsd).toBeGreaterThanOrEqual(15 + 12);
+    expect(metrics.mrrUsd).toBeGreaterThanOrEqual(9.99 + 5.59);
     expectMatchesConcurrentSql(
       metrics.publishedCaseStudies,
       beforeSql.publishedProjects,

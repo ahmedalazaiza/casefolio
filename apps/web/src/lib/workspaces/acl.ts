@@ -1,6 +1,8 @@
 import {
   and,
+  desc,
   eq,
+  isNull,
   normalizeMembershipRole,
   type CanonicalMembershipRole,
   type TemplateTier,
@@ -39,7 +41,8 @@ export type AccessDeniedCode =
   | "FORBIDDEN"
   | "WORKSPACE_FROZEN"
   | "PROJECT_ARCHIVED"
-  | "PRO_TEMPLATE_READ_ONLY";
+  | "PRO_TEMPLATE_READ_ONLY"
+  | "FREE_TIER_EXTRA_PROJECT_LOCKED";
 
 export interface AuthorizedSpaceContext {
   workspace: typeof dbSchema.workspaces.$inferSelect;
@@ -572,19 +575,46 @@ export async function authorizeProjectAccess(
     };
   }
 
-  // Downgraded Pro-template projects on Free stay read-only (`Spec §11.7`)
+  // Edge Case 3 (Downgrade Protection — Free Tier):
+  // When a personal workspace on Free has >1 non-archived Case Studies, only the 1 selected
+  // active Case Study stays editable/publishable; extra Case Studies are locked without deletion.
   if (
+    spaceAuth.workspace.kind === "personal" &&
     spaceAuth.entitlement.plan === "free" &&
-    templateTier === "pro" &&
     (action === "edit" || action === "upload_asset" || action === "publish")
   ) {
-    return {
-      ok: false,
-      status: 403,
-      code: "PRO_TEMPLATE_READ_ONLY",
-      error:
-        "Projects created from Pro templates are read-only on the Free plan. Upgrade to edit or publish.",
-    };
+    const nonArchivedProjects = await db
+      .select({
+        id: dbSchema.projects.id,
+        visibility: dbSchema.projects.visibility,
+      })
+      .from(dbSchema.projects)
+      .where(
+        and(
+          eq(dbSchema.projects.workspaceId, spaceAuth.workspace.id),
+          isNull(dbSchema.projects.archivedAt),
+        ),
+      )
+      .orderBy(desc(dbSchema.projects.updatedAt), desc(dbSchema.projects.createdAt));
+
+    if (nonArchivedProjects.length > 1) {
+      const keepId = spaceAuth.workspace.keepPublicProjectId;
+      const activeProjectId =
+        keepId && nonArchivedProjects.some((p) => p.id === keepId)
+          ? keepId
+          : (nonArchivedProjects.find((p) => p.visibility !== "private")?.id ??
+              nonArchivedProjects[0]!.id);
+
+      if (project.id !== activeProjectId) {
+        return {
+          ok: false,
+          status: 403,
+          code: "FREE_TIER_EXTRA_PROJECT_LOCKED",
+          error:
+            "Free accounts allow 1 active Case Study. Select this Case Study as your active project in Billing settings or upgrade to Pro to unlock all Case Studies.",
+        };
+      }
+    }
   }
 
   // Team shared-space role checks (`Spec §9`)

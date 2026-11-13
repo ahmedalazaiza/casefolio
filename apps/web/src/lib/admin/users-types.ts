@@ -2,7 +2,14 @@ import type { PlanTier, UserRole } from "@casefolio/db";
 import { z } from "zod";
 import type { BillingInterval } from "@/lib/billing/plans";
 
-export const ADMIN_USER_PLAN_FILTERS = ["all", "free", "pro", "team", "suspended"] as const;
+export const ADMIN_USER_PLAN_FILTERS = [
+  "all",
+  "free",
+  "pro",
+  "team",
+  "plus",
+  "suspended",
+] as const;
 export type AdminUserPlanFilter = (typeof ADMIN_USER_PLAN_FILTERS)[number];
 
 export const suspendUserInputSchema = z.object({

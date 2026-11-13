@@ -59,6 +59,8 @@ export interface DashboardProjectItem {
   spaceName?: string;
   spaceVisibility?: SpaceVisibility;
   isCreator?: boolean;
+  isLockedByDowngrade?: boolean;
+  isKeptActiveProject?: boolean;
 }
 
 export type DashboardProjectMutationCode =

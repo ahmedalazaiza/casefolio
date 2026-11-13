@@ -7,6 +7,7 @@ import {
   previewTeamSeatIncrease,
   scheduleTeamSeatDecrease,
   selectPersonalKeepPublicProject,
+  updateTeamCustomDomain,
 } from "@/lib/billing/service";
 
 export const runtime = "nodejs";
@@ -34,6 +35,11 @@ const seatActionSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("keep_public_project"),
     projectId: z.string().uuid().nullable(),
+  }),
+  z.object({
+    action: z.literal("set_custom_domain"),
+    organizationId: z.string().uuid(),
+    customDomain: z.string().max(253).nullable(),
   }),
 ]);
 
@@ -82,7 +88,9 @@ export async function POST(request: Request): Promise<NextResponse> {
           ? 403
           : res.code === "QUANTITY_LOCKED" || res.code === "PENDING_DECREASE_CONFLICT"
             ? 409
-            : 400;
+            : res.code === "PLUS_UPGRADE_REQUIRED"
+              ? 402
+              : 400;
       return NextResponse.json(res, { status });
     }
     return NextResponse.json(res);
@@ -137,6 +145,24 @@ export async function POST(request: Request): Promise<NextResponse> {
           ? 403
           : res.code === "NO_PENDING_DECREASE" || res.code === "QUANTITY_LOCKED"
             ? 409
+            : 400;
+      return NextResponse.json(res, { status });
+    }
+    return NextResponse.json(res);
+  }
+
+  if (data.action === "set_custom_domain") {
+    const res = await updateTeamCustomDomain({
+      actorUserId: ctx.user.id,
+      organizationId: data.organizationId,
+      customDomain: data.customDomain,
+    });
+    if (!res.ok) {
+      const status =
+        res.code === "FORBIDDEN"
+          ? 403
+          : res.code === "PLUS_UPGRADE_REQUIRED"
+            ? 402
             : 400;
       return NextResponse.json(res, { status });
     }

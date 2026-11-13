@@ -13,10 +13,15 @@ import {
   confirmTeamSeatIncrease,
   previewTeamSeatIncrease,
   scheduleTeamSeatDecrease,
+  selectPersonalKeepPublicProject,
 } from "@/lib/billing/service";
+import { UNLIMITED_PROJECTS_LIMIT } from "@/lib/billing/plans";
 import { resolveServerPaddlePriceId } from "@/lib/billing/server-config";
 import { signPaddleWebhookPayload } from "@/lib/billing/signature";
-import { handleSignedPaddleWebhookRequest } from "@/lib/billing/webhooks";
+import {
+  applyPersonalDowngradePublicationRules,
+  handleSignedPaddleWebhookRequest,
+} from "@/lib/billing/webhooks";
 import { db, dbSchema } from "@/lib/db";
 import {
   ensurePersonalWorkspaceForUser,
@@ -944,10 +949,11 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
     expect(scheduled.currentPaidSeats).toBe(3);
     expect(scheduled.renewalSeats).toBe(2);
 
-    // Mid-period pooled quotas still reflect 3 paid seats (`activeProjectsLimit = 60`), while admissionCeiling = 2!
+    // Mid-period pooled quotas still reflect 3 paid seats (`monthlyExportsLimit = 300`, unlimited Case Studies), while admissionCeiling = 2!
     const midPeriodEnt = await resolveWorkspaceEntitlementState(team.workspaceId, now);
     expect(midPeriodEnt?.paidSeats).toBe(3);
-    expect(midPeriodEnt?.quotas.activeProjectsLimit).toBe(60);
+    expect(midPeriodEnt?.quotas.activeProjectsLimit).toBe(UNLIMITED_PROJECTS_LIMIT);
+    expect(midPeriodEnt?.quotas.monthlyExportsLimit).toBe(300);
     expect(midPeriodEnt?.admissionCeiling).toBe(2);
 
     // Inviting a 3rd member is blocked by `admissionCeiling = 2`
@@ -1033,7 +1039,8 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
     );
     expect(postRenewalEnt?.paidSeats).toBe(2);
     expect(postRenewalEnt?.renewalQuantity).toBeNull();
-    expect(postRenewalEnt?.quotas.activeProjectsLimit).toBe(40);
+    expect(postRenewalEnt?.quotas.activeProjectsLimit).toBe(UNLIMITED_PROJECTS_LIMIT);
+    expect(postRenewalEnt?.quotas.monthlyExportsLimit).toBe(200);
   });
 
   it("9. enforces expectedRevision CAS conflict detection and 120s single-writer edit leases on shared projects", async () => {
@@ -1251,5 +1258,122 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
     expect(scopedPersonalWsAfter.length).toBe(scopedPersonalWsBefore.length);
     expect(scopedTeamWsAfter.length).toBe(scopedTeamWsBefore.length);
     expect(spAfter).toBe(spBefore);
+  });
+
+  it("11. enforces Free downgrade protection without deleting Case Studies: locks & unpublishes extras while keeping 1 selected active Case Study editable and live", async () => {
+    const proUser = await createVerifiedUser("downgrade-guard");
+    const checkout = await completeSandboxCheckoutForUser(
+      { id: proUser.id, email: proUser.email, name: proUser.name },
+      { plan: "pro", interval: "monthly" },
+    );
+    expect(checkout.ok).toBe(true);
+
+    const personal = await ensurePersonalWorkspaceForUser(proUser.id);
+
+    const studyA = await createProjectFromTemplate({
+      userId: proUser.id,
+      userPlan: "pro",
+      input: {
+        type: "mobile",
+        templateId: starterTemplateId,
+        name: "Downgrade Study A",
+      },
+    });
+    const studyB = await createProjectFromTemplate({
+      userId: proUser.id,
+      userPlan: "pro",
+      input: {
+        type: "mobile",
+        templateId: starterTemplateId,
+        name: "Downgrade Study B",
+      },
+    });
+    const studyC = await createProjectFromTemplate({
+      userId: proUser.id,
+      userPlan: "pro",
+      input: {
+        type: "mobile",
+        templateId: starterTemplateId,
+        name: "Downgrade Study C",
+      },
+    });
+    expect(studyA.ok && studyB.ok && studyC.ok).toBe(true);
+    if (!studyA.ok || !studyB.ok || !studyC.ok) return;
+
+    const slugA = `dg-study-a-${randomUUID().slice(0, 8)}`;
+    const slugB = `dg-study-b-${randomUUID().slice(0, 8)}`;
+    const pubA = await publishProjectForUser(
+      { projectId: studyA.projectId, slug: slugA, visibility: "public" },
+      { id: proUser.id, role: "user" },
+    );
+    const pubB = await publishProjectForUser(
+      { projectId: studyB.projectId, slug: slugB, visibility: "public" },
+      { id: proUser.id, role: "user" },
+    );
+    expect(pubA.ok && pubB.ok).toBe(true);
+
+    // Pre-select Study A as the 1 active Case Study to keep upon downgrade
+    await selectPersonalKeepPublicProject({
+      actorUserId: proUser.id,
+      projectId: studyA.projectId,
+    });
+
+    // Simulate subscription expiration -> Free tier downgrade
+    const pastEnd = new Date(Date.now() - 60_000);
+    await db
+      .update(dbSchema.subscriptions)
+      .set({ status: "canceled", currentPeriodEnd: pastEnd })
+      .where(eq(dbSchema.subscriptions.userId, proUser.id));
+    await db
+      .update(dbSchema.users)
+      .set({ plan: "free" })
+      .where(eq(dbSchema.users.id, proUser.id));
+
+    await applyPersonalDowngradePublicationRules(personal.workspaceId, new Date());
+
+    // 1. Zero Case Studies deleted
+    const storedProjects = await db
+      .select({ id: dbSchema.projects.id })
+      .from(dbSchema.projects)
+      .where(eq(dbSchema.projects.workspaceId, personal.workspaceId));
+    expect(storedProjects).toHaveLength(3);
+
+    // 2. Study A stays editable and live; Study B & Study C are read-only locked & unpublished
+    const editA = await authorizeProjectAccess(studyA.projectId, proUser.id, "edit");
+    expect(editA.ok).toBe(true);
+
+    const editB = await authorizeProjectAccess(studyB.projectId, proUser.id, "edit");
+    expect(editB).toMatchObject({
+      ok: false,
+      status: 403,
+      code: "FREE_TIER_EXTRA_PROJECT_LOCKED",
+    });
+
+    const editorAccessB = await getProjectEditorAccess(studyB.projectId, {
+      id: proUser.id,
+      role: "user",
+    });
+    expect(editorAccessB.status).toBe("ok");
+    if (editorAccessB.status === "ok") {
+      expect(editorAccessB.payload.isReadOnly).toBe(true);
+    }
+
+    expect(await getPublishedProjectBySlug(slugA)).not.toBeNull();
+    expect(await getPublishedProjectBySlug(slugB)).toBeNull();
+
+    // 3. Switching active Free Case Study to Study B unlocks & republishes B while locking & unpublishing A
+    const switched = await selectPersonalKeepPublicProject({
+      actorUserId: proUser.id,
+      projectId: studyB.projectId,
+    });
+    expect(switched).toEqual({ ok: true, keepPublicProjectId: studyB.projectId });
+
+    expect((await authorizeProjectAccess(studyB.projectId, proUser.id, "edit")).ok).toBe(true);
+    expect(await authorizeProjectAccess(studyA.projectId, proUser.id, "edit")).toMatchObject({
+      ok: false,
+      code: "FREE_TIER_EXTRA_PROJECT_LOCKED",
+    });
+    expect(await getPublishedProjectBySlug(slugB)).not.toBeNull();
+    expect(await getPublishedProjectBySlug(slugA)).toBeNull();
   });
 });

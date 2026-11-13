@@ -215,11 +215,11 @@ test("Phase 7 E2E: Free gating -> Paddle Sandbox checkout upgrades to Pro -> Mer
     await maybeSaveScreenshot(page, "account-billing-pro-375.png");
     await page.setViewportSize({ width: 1440, height: 920 });
 
-    // 7. Verify /account/invoices shows Paid $12 invoice + downloadable receipt
+    // 7. Verify /account/invoices shows Paid $9.99 invoice + downloadable receipt
     await page.goto("/account/invoices");
     await expect(page.getByTestId("invoices-table")).toBeVisible();
     await expect(page.getByTestId("invoice-row").first()).toContainText("Pro · Monthly");
-    await expect(page.getByTestId("invoice-row").first()).toContainText("$12");
+    await expect(page.getByTestId("invoice-row").first()).toContainText("$9.99");
     await maybeSaveScreenshot(page, "account-invoices-1440.png");
 
     const receiptHref = await page

@@ -310,8 +310,8 @@ export async function getAdminUserDetail(
     const effectivePlan = livePaddle?.plan ?? fallbackPlan;
     const effectiveInterval = livePaddle?.interval ?? fallbackInterval;
     const amountUsd =
-      effectivePlan === "pro" || effectivePlan === "team"
-        ? getChargeAmountUsd(effectivePlan, effectiveInterval)
+      effectivePlan === "pro" || effectivePlan === "team" || effectivePlan === "plus"
+        ? getChargeAmountUsd(effectivePlan, effectiveInterval, dbSub.currentPaidCapacity ?? 1)
         : 0;
 
     subscription = {
@@ -527,7 +527,7 @@ export async function getAdminSubscriptionsOverview(
     if (recentSubscriptions.length < 25) {
       const owner = sub.userId ? userById.get(sub.userId) : undefined;
       const amountUsd =
-        sub.plan === "pro" || sub.plan === "team"
+        sub.plan === "pro" || sub.plan === "team" || sub.plan === "plus"
           ? getChargeAmountUsd(sub.plan, interval, subSeats)
           : 0;
 

@@ -23,9 +23,12 @@ import { Badge } from "@/components/ui/badge";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   BILLING_PLAN_CATALOG,
+  formatUsdFromCents,
   PAID_GRACE_DURATION_DAYS,
+  PLUS_INCLUDED_SEATS,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
+  TEAMS_MIN_SEATS,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
@@ -34,11 +37,7 @@ import {
   PRO_MONTHLY_EXPORT_LIMIT,
   TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT,
 } from "@/lib/exports/types";
-import {
-  FREE_PROJECT_LIMIT,
-  PRO_PROJECT_LIMIT,
-  TEAMS_PROJECT_LIMIT_PER_SEAT,
-} from "@/lib/projects/types";
+import { FREE_PROJECT_LIMIT } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
 
 export interface ConfiguredPaddlePriceMap {
@@ -47,6 +46,8 @@ export interface ConfiguredPaddlePriceMap {
   pro_yearly: string;
   team_monthly: string;
   team_yearly: string;
+  plus_monthly: string;
+  plus_yearly: string;
 }
 
 export interface PricingPageClientProps {
@@ -71,6 +72,7 @@ interface ComparisonRow {
   free: PlanCellValue;
   pro: PlanCellValue;
   team: PlanCellValue;
+  plus: PlanCellValue;
 }
 
 interface ComparisonGroup {
@@ -84,183 +86,199 @@ interface ComparisonGroup {
 const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
   {
     id: "workspace",
-    title: "Workspace & Case Study Capacity",
-    description: "How projects, published URLs, and personal vs. shared spaces scale.",
+    title: "Workspace, Seats & Case Studies",
+    description: "How seats, Case Studies, and personal vs. shared workspaces scale.",
     icon: <FolderKanban className="size-4" />,
     rows: [
       {
-        feature: "Workspace scope & seats",
-        free: "1 personal workspace · 1 person",
-        pro: "1 personal workspace · 1 person",
-        team: `1 team workspace · S = 1–${TEAMS_MAX_SELF_SERVE_SEATS} paid seats`,
+        feature: "Seats & workspace scope",
+        free: "1 seat · Personal workspace",
+        pro: "1 seat · Personal workspace",
+        team: `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats · Per-seat Team workspace`,
+        plus: `Up to ${PLUS_INCLUDED_SEATS} seats included · Flat-rate Agency workspace`,
       },
       {
-        feature: "Active, published & retained case studies",
-        free: `Up to ${FREE_PROJECT_LIMIT} active (1 live, 10 retained)`,
-        pro: `Up to ${PRO_PROJECT_LIMIT} active (10 live, 100 retained)`,
-        team: `${TEAMS_PROJECT_LIMIT_PER_SEAT} × S active (10 × S live, 100 × S retained)`,
+        feature: "Active Case Studies limit",
+        free: `Maximum ${FREE_PROJECT_LIMIT} active Case Study`,
+        pro: "Unlimited Case Studies",
+        team: "Unlimited shared Case Studies",
+        plus: "Unlimited shared Case Studies",
       },
       {
-        feature: "Private personal spaces",
-        free: "1 personal space",
-        pro: "Up to 5 private spaces",
-        team: "5 private spaces/member (hidden from Owner/Admin)",
-      },
-      {
-        feature: "Shared collaborative team spaces",
-        hint: "Collaborative spaces visible across workspace members",
+        feature: "Shared Team Workspace & Brand Kit",
+        hint: "Shared logos, colors, reusable components, commenting & review mode",
         free: false,
         pro: false,
-        team: { included: true, detail: "10 × S shared spaces" },
+        team: true,
+        plus: true,
+      },
+      {
+        feature: "Role-based permissions (Admin, Editor, Viewer)",
+        free: false,
+        pro: false,
+        team: true,
+        plus: true,
       },
     ],
   },
   {
     id: "templates",
-    title: "Templates, Frames & Design System",
-    description: "Starter layouts, Pro templates, device mockups, and theme tokens.",
+    title: "Templates & Customization",
+    description: "Standard vs. Pro & Premium templates, fonts, color palettes, and custom sections.",
     icon: <LayoutTemplate className="size-4" />,
     rows: [
       {
-        feature: "Curated Casefolio templates",
-        free: "3 approved Starter templates",
-        pro: "All eligible published templates",
-        team: "All eligible published templates",
-      },
-      {
-        feature: "Pro-tier templates unlocked",
-        free: false,
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "Ratio-locked hardware frames & curated theme palettes",
+        feature: "Standard templates",
         free: true,
         pro: true,
         team: true,
+        plus: true,
+      },
+      {
+        feature: "All Pro & Premium templates",
+        free: false,
+        pro: true,
+        team: true,
+        plus: true,
+      },
+      {
+        feature: "Full customization (custom fonts, palettes & custom sections)",
+        free: { included: false, detail: "Basic customization" },
+        pro: true,
+        team: true,
+        plus: true,
       },
       {
         feature: "Pre-publish contrast & empty-slot checks",
         free: true,
         pro: true,
         team: true,
+        plus: true,
       },
     ],
   },
   {
     id: "publishing",
-    title: "Publishing & Brand Control",
-    description: "Hosted casefolio.app URLs, visibility modes, and branding controls.",
+    title: "Live Links, Custom Domain & White-Labeling",
+    description: "Shareable links, branding removal, custom agency domains, and white-label output.",
     icon: <Globe className="size-4" />,
     rows: [
       {
-        feature: "Public, unlisted & private pages on casefolio.app",
+        feature: "Live Shareable Link",
         free: true,
         pro: true,
         team: true,
+        plus: true,
       },
       {
-        feature: "Automatic OpenGraph social preview cards",
-        free: true,
+        feature: "Watermark-free exports & removable Casefolio footer",
+        free: { included: false, detail: "Subtle watermark" },
         pro: true,
         team: true,
+        plus: true,
       },
       {
-        feature: "Removable “Made with Casefolio” branding",
-        hint: "Clean unbranded footer on live pages and exported files",
+        feature: "Custom Domain (e.g. work.youragency.com)",
         free: false,
-        pro: true,
-        team: true,
+        pro: false,
+        team: false,
+        plus: true,
+      },
+      {
+        feature: "Complete White-Labeling (live links & PDF metadata)",
+        hint: "Zero Casefolio branding in page titles, OpenGraph cards, or PDF metadata",
+        free: false,
+        pro: false,
+        team: false,
+        plus: true,
       },
     ],
   },
   {
     id: "exports",
-    title: "High-Resolution Exports",
-    description: "Pixel-identical Chromium exports for portfolios, Behance, and PDF decks.",
+    title: "PNG, PDF & Behance Exports",
+    description: "Pixel-identical exports for portfolios, PDF presentations, and Behance.",
     icon: <FileDown className="size-4" />,
     rows: [
       {
-        feature: "Monthly export allowance & PNG resolution",
-        free: `${FREE_MONTHLY_EXPORT_LIMIT}/mo · 1x (1,440 px, branded)`,
-        pro: `${PRO_MONTHLY_EXPORT_LIMIT}/mo · 1x & 2x (2,880 px, clean)`,
-        team: `${TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT} × S/mo · 1x & 2x (2,880 px, clean)`,
+        feature: "PNG & PDF Case Study export",
+        free: "Included (with watermark)",
+        pro: "High-res without watermark",
+        team: "High-res without watermark",
+        plus: "High-res white-label PDF & PNG",
       },
       {
-        feature: "2x Retina long PNG export (2,880 px)",
+        feature: "2x Retina PNG (2,880 px) & Behance 1,400 px slice pack",
         free: false,
         pro: true,
         team: true,
+        plus: true,
       },
       {
-        feature: "Paged A4 PDF deck export",
-        free: false,
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "Behance 1,400px slice pack export",
-        free: false,
-        pro: true,
-        team: true,
+        feature: "Monthly export allowance",
+        free: `${FREE_MONTHLY_EXPORT_LIMIT}/mo`,
+        pro: `${PRO_MONTHLY_EXPORT_LIMIT}/mo`,
+        team: `${TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT} × seats/mo`,
+        plus: "2,000/mo agency pool",
       },
     ],
   },
   {
     id: "storage-analytics",
-    title: "Storage, Delivery & Analytics",
-    description: "Asset storage, public CDN delivery, visitor insights, and version history.",
+    title: "Analytics, Storage & Support",
+    description: "Live link view analytics, asset storage, recovery portal, and support SLA.",
     icon: <BarChart3 className="size-4" />,
     rows: [
       {
-        feature: "Storage, monthly uploads & max file size",
-        free: "250 MB · 500 MB/mo · 10 MB/file",
-        pro: "5 GB · 10 GB/mo · 25 MB/file",
-        team: "10 GB × S · 20 GB × S/mo · 25 MB/file",
+        feature: "View analytics on live links",
+        free: { included: false, detail: "7-day summary" },
+        pro: "Basic view analytics (90d)",
+        team: "Team analytics (365d)",
+        plus: "Agency analytics (365d)",
       },
       {
-        feature: "Monthly public delivery bandwidth",
-        free: "1 GB/mo",
-        pro: "25 GB/mo",
-        team: "25 GB × S/mo",
+        feature: "Asset storage & max upload size",
+        free: "250 MB · 10 MB/file",
+        pro: "5 GB · 25 MB/file",
+        team: "10 GB × seats · 25 MB/file",
+        plus: "200 GB · 50 MB/file",
       },
       {
-        feature: "Visitor analytics & recoverable content history",
-        free: "7-day analytics · 7-day history",
-        pro: "90-day analytics · 30-day history",
-        team: "365-day analytics · 90-day history",
-      },
-      {
-        feature: `${PAID_GRACE_DURATION_DAYS}-day paid quota burst grace buffer (up to 120%)`,
+        feature: `${PAID_GRACE_DURATION_DAYS}-day paid quota burst buffer & private member recovery`,
         free: false,
         pro: true,
         team: true,
+        plus: true,
+      },
+      {
+        feature: "Priority 24/7 support & dedicated onboarding",
+        free: false,
+        pro: false,
+        team: false,
+        plus: true,
       },
     ],
   },
   {
     id: "governance",
-    title: "Team Collaboration, Privacy & Governance",
-    description: "Role permissions, isolated member spaces, and offboarding continuity.",
+    title: "Privacy & Downgrade Protection",
+    description: "Private member spaces and non-destructive downgrade safeguards.",
     icon: <Users className="size-4" />,
     rows: [
       {
-        feature: "Role-based access (Owner, Admin & Member)",
-        free: false,
-        pro: false,
+        feature: "Non-destructive Free downgrade protection",
+        hint: "Never deletes Case Studies; select 1 active Case Study while extras stay safely stored",
+        free: true,
+        pro: true,
         team: true,
+        plus: true,
       },
       {
         feature: "404-isolated member private spaces (hidden from Admins)",
         free: false,
         pro: false,
         team: true,
-      },
-      {
-        feature: "Departed member ≥90-day private recovery portal",
-        free: false,
-        pro: false,
-        team: true,
+        plus: true,
       },
     ],
   },
@@ -268,19 +286,19 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
 
 const PRICING_FAQ_STRIP = [
   {
-    question: "Are personal and team workspaces separate?",
+    question: "How do Pro, Team, and Plus differ?",
     answer:
-      "Yes. Pro covers one personal workspace ($12/mo or $120/yr), while Teams covers one shared team workspace ($18 × S/mo or $180 × S/yr). Joining a team workspace never alters or exposes your personal workspace.",
+      "Pro ($9.99/mo or $7.99/mo billed annually) is built for individual creators with unlimited Case Studies and unwatermarked exports. Team ($6.99/seat/mo or $5.59/seat/mo annually, 2–10 seats) adds shared workspaces, Brand Kit, and review tools. Plus ($99/mo or $79/mo annually flat) includes up to 20 seats, custom domains, white-labeling, and 24/7 priority support.",
   },
   {
-    question: "Can Team Owners or Admins read my private space?",
+    question: "What happens if my Team grows past 10 seats?",
     answer:
-      "No. Every member's private spaces inside a Team workspace are hidden from Owners, Admins, and other teammates by default — returning 404 on unauthorized probes. Shared spaces are collaborative across the team.",
+      "Team supports 2 to 10 seats dynamically. As soon as you invite an 11th member, you can upgrade seamlessly to Casefolio Plus for flat-rate pricing covering up to 20 seats with zero per-seat math.",
   },
   {
-    question: "How do seat changes and billing work?",
+    question: "What happens if I downgrade to Free with multiple Case Studies?",
     answer:
-      "Paddle acts as our Merchant of Record for cards, VAT, and invoices. Adding seats previews the exact prorated charge before billing; decreasing seats takes effect at your next renewal with full paid capacity preserved until then.",
+      "Your Case Studies are never deleted. Extra Case Studies are unpublished and locked for editing while you pick 1 active Case Study to keep live and editable until you upgrade again.",
   },
 ] as const;
 
@@ -337,40 +355,57 @@ export function PricingPageClient({
   const [selectedInterval, setSelectedInterval] = useState<BillingInterval>(initialInterval);
   const [selectedSeats, setSelectedSeats] = useState<number>(TEAMS_CALCULATOR_DEFAULT_SEATS);
 
-  function handleSelectPaidPlan(plan: PaidPlanTier, interval: BillingInterval) {
+  function handleSelectPaidPlan(
+    plan: PaidPlanTier,
+    interval: BillingInterval,
+    seats?: number,
+  ) {
     setSelectedPlan(plan);
     setSelectedInterval(interval);
-    setSelectedSeats(plan === "team" ? TEAMS_CALCULATOR_DEFAULT_SEATS : 1);
+    setSelectedSeats(
+      plan === "team" ? (seats ?? TEAMS_CALCULATOR_DEFAULT_SEATS) : 1,
+    );
     setCheckoutOpen(true);
   }
 
-  function handleStartCalculatorCheckout(seats: number, interval: BillingInterval) {
-    setSelectedPlan("team");
+  function handleStartCalculatorCheckout(
+    seats: number,
+    interval: BillingInterval,
+    plan: "team" | "plus" = "team",
+  ) {
+    setSelectedPlan(plan);
     setSelectedInterval(interval);
-    setSelectedSeats(seats);
+    setSelectedSeats(plan === "team" ? seats : 1);
     setCheckoutOpen(true);
   }
 
-  const proDisplayedUsd =
+  const proDisplayedLabel = formatUsdFromCents(
     selectedInterval === "yearly"
-      ? BILLING_PLAN_CATALOG.pro.yearlyMonthlyEquivalentUsd
-      : BILLING_PLAN_CATALOG.pro.monthlyPriceUsd;
-  const teamDisplayedUsd =
+      ? BILLING_PLAN_CATALOG.pro.yearlyMonthlyEquivalentCents
+      : BILLING_PLAN_CATALOG.pro.monthlyPriceCents,
+  );
+  const teamDisplayedLabel = formatUsdFromCents(
     selectedInterval === "yearly"
-      ? BILLING_PLAN_CATALOG.team.yearlyMonthlyEquivalentUsd
-      : BILLING_PLAN_CATALOG.team.monthlyPriceUsd;
+      ? BILLING_PLAN_CATALOG.team.yearlyMonthlyEquivalentCents
+      : BILLING_PLAN_CATALOG.team.monthlyPriceCents,
+  );
+  const plusDisplayedLabel = formatUsdFromCents(
+    selectedInterval === "yearly"
+      ? BILLING_PLAN_CATALOG.plus.yearlyMonthlyEquivalentCents
+      : BILLING_PLAN_CATALOG.plus.monthlyPriceCents,
+  );
 
   return (
     <div className="min-w-0 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
       <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-16 lg:gap-24">
         {/* 1. Header */}
         <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center sm:gap-6">
-          <Eyebrow icon={<Sparkles />}>Pricing &amp; Teams</Eyebrow>
+          <Eyebrow icon={<Sparkles />}>Pricing &amp; Plans</Eyebrow>
           <h1 className="text-foreground type-section text-balance">Unlock the full builder</h1>
           <p className="text-muted-foreground type-lead max-w-2xl">
-            Honest, predictable plans for individual designers and product design teams. Start free
-            with {FREE_PROJECT_LIMIT} active case studies — upgrade to Pro for unbranded 2x exports
-            or Teams for private member spaces plus shared team publishing.
+            Transparent plans for solo creators, design studios, and agencies. Start free forever
+            with {FREE_PROJECT_LIMIT} active Case Study — or choose Pro, Team, or Plus and save 20%
+            on annual billing.
           </p>
           <a
             href="#plan-comparison"
@@ -382,7 +417,7 @@ export function PricingPageClient({
           {isAuthenticated && currentTier && (
             <p className="text-muted-foreground type-caption pt-1">
               Signed in on <strong className="text-foreground capitalize">{currentTier}</strong>{" "}
-              personal plan ·{" "}
+              plan ·{" "}
               <Link
                 href="/account/billing"
                 className="text-accent-foreground underline underline-offset-4"
@@ -393,7 +428,7 @@ export function PricingPageClient({
           )}
         </header>
 
-        {/* 2. Top Pricing Cards + Monthly/Yearly toggle */}
+        {/* 2. Top Pricing Cards + Monthly/Annual toggle */}
         <section aria-label="Subscription plans" className="flex flex-col gap-6">
           <LandingPricingSection
             interval={selectedInterval}
@@ -409,6 +444,8 @@ export function PricingPageClient({
             data-pro-yearly={paddlePriceMap.pro_yearly}
             data-team-monthly={paddlePriceMap.team_monthly}
             data-team-yearly={paddlePriceMap.team_yearly}
+            data-plus-monthly={paddlePriceMap.plus_monthly}
+            data-plus-yearly={paddlePriceMap.plus_yearly}
             className="bg-warning-soft text-foreground mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2.5 rounded-2xl px-4 py-2 text-center sm:rounded-full"
           >
             <ShieldCheck className="text-warning size-4 shrink-0" aria-hidden="true" />
@@ -432,8 +469,8 @@ export function PricingPageClient({
               Compare every feature &amp; quota
             </h2>
             <p className="text-muted-foreground type-body-m">
-              See the exact difference between Free, Pro, and Teams — with every included capability,
-              quota limit, and excluded tier feature side by side.
+              See the exact difference between Free, Pro, Team, and Plus — with every included
+              capability, quota limit, and excluded feature side by side.
             </p>
 
             {/* Included vs Not Included Legend */}
@@ -447,28 +484,26 @@ export function PricingPageClient({
                 <span>Not included</span>
               </span>
               <span className="bg-surface border-border text-muted-foreground type-caption inline-flex items-center rounded-full border px-3 py-1 font-mono">
-                S = paid seats (1–{TEAMS_MAX_SELF_SERVE_SEATS})
+                Team: {TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats · Plus: up to {PLUS_INCLUDED_SEATS} seats
               </span>
             </div>
           </div>
 
-          {/* Desktop aligned plan summary strip */}
-          <div className="border-border/80 bg-surface shadow-card hidden items-center rounded-2xl border px-6 py-4 md:grid md:grid-cols-[37%_21%_21%_21%]">
+          {/* Desktop aligned 4-tier plan summary strip */}
+          <div className="border-border/80 bg-surface shadow-card hidden items-center rounded-2xl border px-6 py-4 md:grid md:grid-cols-[32%_17%_17%_17%_17%]">
             <div className="pr-4">
               <p className="text-foreground type-body-s-strong">Capability &amp; quota breakdown</p>
               <p className="text-muted-foreground type-caption">
-                Showing {selectedInterval} billing rates
+                Showing {selectedInterval === "yearly" ? "annual" : "monthly"} billing rates
               </p>
             </div>
-            <div className="px-3">
+            <div className="px-2">
               <p className="text-foreground type-body-s-strong">
                 {BILLING_PLAN_CATALOG.free.name}
               </p>
-              <p className="text-muted-foreground type-caption">
-                ${BILLING_PLAN_CATALOG.free.monthlyPriceUsd} /forever
-              </p>
+              <p className="text-muted-foreground type-caption">$0 / forever</p>
             </div>
-            <div className="flex flex-col gap-0.5 px-3">
+            <div className="flex flex-col gap-0.5 px-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-foreground type-body-s-strong">
                   {BILLING_PLAN_CATALOG.pro.name}
@@ -477,13 +512,19 @@ export function PricingPageClient({
                   Popular
                 </Badge>
               </div>
-              <p className="text-muted-foreground type-caption">${proDisplayedUsd}/mo</p>
+              <p className="text-muted-foreground type-caption">{proDisplayedLabel}/mo</p>
             </div>
-            <div className="px-3">
+            <div className="px-2">
               <p className="text-foreground type-body-s-strong">
                 {BILLING_PLAN_CATALOG.team.name}
               </p>
-              <p className="text-muted-foreground type-caption">${teamDisplayedUsd}/seat/mo</p>
+              <p className="text-muted-foreground type-caption">{teamDisplayedLabel}/seat/mo</p>
+            </div>
+            <div className="px-2">
+              <p className="text-foreground type-body-s-strong">
+                {BILLING_PLAN_CATALOG.plus.name}
+              </p>
+              <p className="text-muted-foreground type-caption">{plusDisplayedLabel}/mo flat</p>
             </div>
           </div>
 
@@ -495,7 +536,7 @@ export function PricingPageClient({
                 className="border-border/80 bg-card shadow-card overflow-hidden rounded-3xl border"
               >
                 {/* Category header with aligned plan column labels on desktop */}
-                <div className="border-border/70 bg-surface border-b px-5 py-4 sm:px-6 md:grid md:grid-cols-[37%_21%_21%_21%] md:items-center">
+                <div className="border-border/70 bg-surface border-b px-5 py-4 sm:px-6 md:grid md:grid-cols-[32%_17%_17%_17%_17%] md:items-center">
                   <div className="flex items-center gap-3 pr-4">
                     <span
                       aria-hidden="true"
@@ -508,14 +549,17 @@ export function PricingPageClient({
                       <p className="text-muted-foreground type-caption">{group.description}</p>
                     </div>
                   </div>
-                  <span className="text-muted-foreground type-overline hidden px-3 md:block">
+                  <span className="text-muted-foreground type-overline hidden px-2 md:block">
                     {BILLING_PLAN_CATALOG.free.name}
                   </span>
-                  <span className="text-accent-foreground type-overline hidden px-3 md:block">
+                  <span className="text-accent-foreground type-overline hidden px-2 md:block">
                     {BILLING_PLAN_CATALOG.pro.name}
                   </span>
-                  <span className="text-muted-foreground type-overline hidden px-3 md:block">
+                  <span className="text-muted-foreground type-overline hidden px-2 md:block">
                     {BILLING_PLAN_CATALOG.team.name}
+                  </span>
+                  <span className="text-muted-foreground type-overline hidden px-2 md:block">
+                    {BILLING_PLAN_CATALOG.plus.name}
                   </span>
                 </div>
 
@@ -529,6 +573,7 @@ export function PricingPageClient({
                       <th scope="col">{BILLING_PLAN_CATALOG.free.name}</th>
                       <th scope="col">{BILLING_PLAN_CATALOG.pro.name}</th>
                       <th scope="col">{BILLING_PLAN_CATALOG.team.name}</th>
+                      <th scope="col">{BILLING_PLAN_CATALOG.plus.name}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-border/70 flex flex-col divide-y md:table-row-group">
@@ -537,7 +582,7 @@ export function PricingPageClient({
                         key={row.feature}
                         className="md:hover:bg-surface/60 flex flex-col gap-2.5 p-4 sm:p-5 md:table-row md:p-0"
                       >
-                        <td className="md:w-[37%] md:py-4 md:pr-4 md:pl-6">
+                        <td className="md:w-[32%] md:py-4 md:pr-4 md:pl-6">
                           <p className="text-foreground type-body-s-strong">{row.feature}</p>
                           {row.hint && (
                             <p className="text-muted-foreground type-caption mt-0.5">{row.hint}</p>
@@ -545,21 +590,27 @@ export function PricingPageClient({
                         </td>
                         <td
                           data-label={BILLING_PLAN_CATALOG.free.name}
-                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[21%] md:px-3 md:py-4 md:before:content-none"
+                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
                         >
                           {renderCellValue(row.free)}
                         </td>
                         <td
                           data-label={BILLING_PLAN_CATALOG.pro.name}
-                          className="before:text-accent-foreground md:bg-accent/25 flex items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:content-[attr(data-label)] md:table-cell md:w-[21%] md:px-3 md:py-4 md:before:content-none"
+                          className="before:text-accent-foreground md:bg-accent/25 flex items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
                         >
                           {renderCellValue(row.pro)}
                         </td>
                         <td
                           data-label={BILLING_PLAN_CATALOG.team.name}
-                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[21%] md:px-3 md:py-4 md:pr-6 md:before:content-none"
+                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
                         >
                           {renderCellValue(row.team)}
+                        </td>
+                        <td
+                          data-label={BILLING_PLAN_CATALOG.plus.name}
+                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:pr-6 md:before:content-none"
+                        >
+                          {renderCellValue(row.plus)}
                         </td>
                       </tr>
                     ))}

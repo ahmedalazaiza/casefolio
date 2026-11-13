@@ -112,10 +112,27 @@ export interface PdfJpegPageInput {
   pageHeightPt: number;
 }
 
+export interface PdfDocumentMetadataOptions {
+  title?: string;
+  whiteLabel?: boolean;
+}
+
+function escapePdfLiteralString(raw: string): string {
+  return raw
+    .replace(/[^\x20-\x7e]/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+}
+
 /**
  * Builds a standards-compliant PDF 1.4 document embedding high-DPI JPEG page slices (`/DCTDecode`).
+ * When `options.whiteLabel` is `true` (Casefolio Plus), omits all Casefolio branding from PDF metadata.
  */
-export function buildMultiPageJpegPdf(pages: readonly PdfJpegPageInput[]): Uint8Array {
+export function buildMultiPageJpegPdf(
+  pages: readonly PdfJpegPageInput[],
+  options?: PdfDocumentMetadataOptions,
+): Uint8Array {
   const encoder = new TextEncoder();
   const chunks: Uint8Array[] = [];
   const offsets: number[] = [0]; // 1-indexed object byte offsets
@@ -188,6 +205,17 @@ export function buildMultiPageJpegPdf(pages: readonly PdfJpegPageInput[]): Uint8
     pushText("\nendstream\nendobj\n");
   }
 
+  let infoObjId: number | null = null;
+  if (options && (options.title || options.whiteLabel !== undefined)) {
+    infoObjId = nextObjId++;
+    offsets[infoObjId] = bytePos;
+    const safeTitle = escapePdfLiteralString(options.title?.trim() || "Case Study");
+    const infoFields = options.whiteLabel
+      ? `/Title (${safeTitle})`
+      : `/Title (${safeTitle}) /Creator (Casefolio) /Producer (Casefolio)`;
+    pushText(`${infoObjId} 0 obj\n<< ${infoFields} >>\nendobj\n`);
+  }
+
   const totalObjects = nextObjId;
   const xrefStart = bytePos;
   pushText(`xref\n0 ${totalObjects}\n0000000000 65535 f \n`);
@@ -195,8 +223,9 @@ export function buildMultiPageJpegPdf(pages: readonly PdfJpegPageInput[]): Uint8
     const padded = String(offsets[i] ?? 0).padStart(10, "0");
     pushText(`${padded} 00000 n \n`);
   }
+  const infoRef = infoObjId !== null ? ` /Info ${infoObjId} 0 R` : "";
   pushText(
-    `trailer\n<< /Size ${totalObjects} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`,
+    `trailer\n<< /Size ${totalObjects} /Root 1 0 R${infoRef} >>\nstartxref\n${xrefStart}\n%%EOF\n`,
   );
 
   return concatUint8Arrays(chunks);
@@ -342,7 +371,11 @@ export async function runBrowserAssistedExport(
     await new Promise((r) => window.setTimeout(r, 150));
 
     const { domToCanvas } = await import("modern-screenshot");
-    const preferredScale = fullHeight * 2 <= 16_000 ? 2 : 1;
+    const ownerPlan = readyRoot.dataset.ownerPlan ?? "free";
+    const whiteLabel = readyRoot.dataset.whiteLabel === "true";
+    const projectTitle = readyRoot.dataset.projectTitle?.trim() || "Case Study";
+    const preferredScale =
+      ownerPlan === "free" ? 1 : fullHeight * 2 <= 16_000 ? 2 : 1;
     const capturedCanvas = await domToCanvas(readyRoot, {
       scale: preferredScale,
       width: viewportWidth,
@@ -389,7 +422,10 @@ export async function runBrowserAssistedExport(
           pageHeightPt,
         });
       }
-      payloadBytes = buildMultiPageJpegPdf(pdfPages);
+      payloadBytes = buildMultiPageJpegPdf(pdfPages, {
+        title: projectTitle,
+        whiteLabel,
+      });
       contentType = "application/pdf";
     }
 

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { LandingExperience } from "@/components/marketing/landing-experience";
-import { BILLING_PLAN_CATALOG } from "@/lib/billing/plans";
+import { BILLING_PLAN_CATALOG, formatUsdFromCents } from "@/lib/billing/plans";
 import { buildLandingSnapshot } from "@/lib/marketing/landing-stats";
 
 describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
@@ -52,7 +52,7 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "Simple plans for every designer",
+        name: "Simple plans for every designer, studio & agency",
       }),
     ).toBeInTheDocument();
     expect(
@@ -124,28 +124,36 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
     expect(screen.getByText(/Published · Live/i)).toBeInTheDocument();
   });
 
-  it("toggles pricing between monthly and yearly prices from BILLING_PLAN_CATALOG", async () => {
+  it("toggles pricing between monthly and annual prices from BILLING_PLAN_CATALOG across Pro, Team, and Plus", async () => {
     const user = userEvent.setup();
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
 
     expect(
-      screen.getByText(`$${BILLING_PLAN_CATALOG.pro.monthlyPriceUsd}`),
+      screen.getByText(formatUsdFromCents(BILLING_PLAN_CATALOG.pro.monthlyPriceCents)),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(`$${BILLING_PLAN_CATALOG.team.monthlyPriceUsd}`),
+      screen.getByText(formatUsdFromCents(BILLING_PLAN_CATALOG.team.monthlyPriceCents)),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(formatUsdFromCents(BILLING_PLAN_CATALOG.plus.monthlyPriceCents)),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Yearly/i }));
+    await user.click(screen.getByRole("button", { name: /^Annual/i }));
 
     expect(
       screen.getByText(
-        `$${BILLING_PLAN_CATALOG.pro.yearlyMonthlyEquivalentUsd}`,
+        formatUsdFromCents(BILLING_PLAN_CATALOG.pro.yearlyMonthlyEquivalentCents),
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        `$${BILLING_PLAN_CATALOG.team.yearlyMonthlyEquivalentUsd}`,
+        formatUsdFromCents(BILLING_PLAN_CATALOG.team.yearlyMonthlyEquivalentCents),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        formatUsdFromCents(BILLING_PLAN_CATALOG.plus.yearlyMonthlyEquivalentCents),
       ),
     ).toBeInTheDocument();
   });
@@ -157,17 +165,19 @@ describe("HomePage — Clean Studio Experience & Real Platform Metrics", () => {
 
     expect(
       screen.getByText(
-        /The Casefolio team designs, versions and uploads every template/i,
+        /The Casefolio team designs, versions, and uploads every template/i,
       ),
     ).toBeInTheDocument();
 
     const secondTrigger = screen.getByRole("button", {
-      name: "Can I use my own colors and fonts?",
+      name: "Can I use my own colors, fonts, and custom domain?",
     });
     expect(secondTrigger).toHaveAttribute("aria-expanded", "false");
 
     await user.click(secondTrigger);
     expect(secondTrigger).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText(/curated theme tokens/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Plus also includes custom domains/i),
+    ).toBeInTheDocument();
   });
 });

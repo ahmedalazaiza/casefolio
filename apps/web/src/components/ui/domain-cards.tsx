@@ -197,6 +197,7 @@ export interface PlanCardProps extends ComponentProps<"section"> {
   badgeLabel?: string;
   scopeLabel?: string;
   billingNote?: string;
+  priceExtra?: ReactNode;
   description: string;
   ctaLabel?: string;
   ctaHref?: string;
@@ -215,6 +216,7 @@ export function PlanCard({
   badgeLabel,
   scopeLabel,
   billingNote,
+  priceExtra,
   description,
   ctaLabel = "Choose plan",
   ctaHref,
@@ -309,6 +311,7 @@ export function PlanCard({
                 {billingNote}
               </p>
             )}
+            {priceExtra}
           </div>
         </div>
 

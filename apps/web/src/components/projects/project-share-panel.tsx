@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isUnlimitedProjectsLimit } from "@/lib/billing/plans";
 import { can } from "@/lib/entitlements";
 import type {
   ProjectShareSettingsPayload,
@@ -258,7 +259,8 @@ export function ProjectSharePanel({
                       year: "numeric",
                     })}`
                   : " · Not published yet"}
-                {typeof initialSettings.maxPublishedProjects === "number"
+                {typeof initialSettings.maxPublishedProjects === "number" &&
+                !isUnlimitedProjectsLimit(initialSettings.maxPublishedProjects)
                   ? ` · ${initialSettings.publishedCount ?? 0} of ${initialSettings.maxPublishedProjects} published slots used`
                   : ""}
               </p>
@@ -587,14 +589,16 @@ export function ProjectSharePanel({
                   >
                     {initialSettings.preview.eyebrow}
                   </span>
-                  <span
-                    style={{
-                      color: "var(--tpl-color-textMuted, var(--muted-foreground))",
-                    }}
-                    className="type-caption"
-                  >
-                    Casefolio
-                  </span>
+                  {!initialSettings.whiteLabelEnabled && (
+                    <span
+                      style={{
+                        color: "var(--tpl-color-textMuted, var(--muted-foreground))",
+                      }}
+                      className="type-caption"
+                    >
+                      Casefolio
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -630,9 +634,9 @@ export function ProjectSharePanel({
             {!canRemoveWatermark ? (
               <>
                 <p className="text-muted-foreground type-body-s">
-                  Free plan public pages and PNG exports include a subtle &ldquo;Made with
-                  Casefolio&rdquo; badge. Upgrade to Pro to remove branding and unlock PDF &amp;
-                  Behance exports.
+                  Free plan live shareable links and PNG/PDF exports include subtle &ldquo;Made with
+                  Casefolio&rdquo; branding. Upgrade to Pro to remove watermarks and unlock 2× PNG
+                  &amp; Behance exports.
                 </p>
                 <div>
                   <Button
@@ -648,8 +652,9 @@ export function ProjectSharePanel({
             ) : (
               <div className="flex flex-col gap-3">
                 <p className="text-muted-foreground type-body-s">
-                  Your {initialSettings.ownerPlan.toUpperCase()} workspace lets you hide the
-                  &ldquo;Made with Casefolio&rdquo; footer on public pages and exports.
+                  {initialSettings.whiteLabelEnabled
+                    ? `Your PLUS workspace enables full White-Labeling — zero Casefolio branding on live links, OpenGraph cards, or PDF metadata${initialSettings.customDomain ? ` (Custom Domain: ${initialSettings.customDomain})` : ""}.`
+                    : `Your ${initialSettings.ownerPlan.toUpperCase()} workspace lets you hide the “Made with Casefolio” footer on public pages and exports.`}
                 </p>
                 <label className="text-foreground type-body-s flex items-center gap-2.5">
                   <input

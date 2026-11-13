@@ -6,6 +6,7 @@ import {
   Archive,
   ArchiveRestore,
   Building2,
+  CheckCircle2,
   Copy,
   Download,
   ExternalLink,
@@ -20,6 +21,7 @@ import {
   Search,
   Share2,
   Smartphone,
+  Sparkles,
   Trash2,
   Users,
 } from "lucide-react";
@@ -27,6 +29,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +51,7 @@ import {
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isUnlimitedProjectsLimit } from "@/lib/billing/plans";
 import {
   deleteProjectAction,
   duplicateProjectAction,
@@ -220,8 +224,52 @@ export function DashboardProjectsClient({
   const [moveBusy, setMoveBusy] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
 
-  // Busy action ID
+  // Busy action ID & downgrade upgrade modal
   const [busyProjectId, setBusyProjectId] = useState<string | null>(null);
+  const [downgradeUpgradeOpen, setDowngradeUpgradeOpen] = useState(false);
+
+  const lockedByDowngradeCount = useMemo(
+    () => projects.filter((p) => p.isLockedByDowngrade && !p.archivedAtIso).length,
+    [projects],
+  );
+
+  async function handleSetActiveFreeProject(project: DashboardProjectItem) {
+    setBusyProjectId(project.id);
+    try {
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "keep_public_project",
+          projectId: project.id,
+        }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        toast.error(json.error ?? "Could not switch active Case Study.");
+        return;
+      }
+      setProjects((prev) =>
+        prev.map((item) => {
+          if (item.archivedAtIso || item.workspaceKind !== "personal") return item;
+          const isChosen = item.id === project.id;
+          return {
+            ...item,
+            isKeptActiveProject: isChosen,
+            isLockedByDowngrade: !isChosen,
+            visibility: isChosen ? item.visibility : "private",
+            publishedAtIso: isChosen ? item.publishedAtIso : null,
+          };
+        }),
+      );
+      toast.success(`“${project.name}” is now your 1 active Case Study on Free.`);
+      router.refresh();
+    } catch {
+      toast.error("Network error while switching active Case Study.");
+    } finally {
+      setBusyProjectId(null);
+    }
+  }
 
   const activeWorkspace = workspaceContext?.activeWorkspace ?? null;
   const spaces = workspaceContext?.spaces ?? [];
@@ -668,7 +716,7 @@ export function DashboardProjectsClient({
                   <option key={ws.workspaceId} value={ws.organizationId ?? "personal"}>
                     {ws.kind === "personal"
                       ? `Personal Workspace (${ws.plan.toUpperCase()})`
-                      : `${ws.name} · Team (${ws.paidSeats} ${ws.paidSeats === 1 ? "seat" : "seats"})`}
+                      : `${ws.name} · ${ws.plan === "plus" ? "Plus" : "Team"} (${ws.paidSeats} ${ws.paidSeats === 1 ? "seat" : "seats"})`}
                   </option>
                 ))}
               </select>
@@ -765,22 +813,28 @@ export function DashboardProjectsClient({
           <div className="text-muted-foreground type-caption flex flex-wrap items-center gap-3">
             <span
               className={cn(
-                activeWorkspace.usage.activeProjects >= activeWorkspace.quotas.activeProjectsLimit
+                !isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit) &&
+                  activeWorkspace.usage.activeProjects >= activeWorkspace.quotas.activeProjectsLimit
                   ? "text-destructive font-medium"
-                  : activeWorkspace.usage.activeProjects /
+                  : !isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit) &&
+                      activeWorkspace.usage.activeProjects /
                         Math.max(1, activeWorkspace.quotas.activeProjectsLimit) >=
-                      0.8
+                        0.8
                     ? "text-warning font-medium"
                     : "",
               )}
             >
               Active: {activeWorkspace.usage.activeProjects}/
-              {activeWorkspace.quotas.activeProjectsLimit}
+              {isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit)
+                ? "Unlimited"
+                : activeWorkspace.quotas.activeProjectsLimit}
             </span>
             <span>·</span>
             <span>
               Published: {activeWorkspace.usage.publishedProjects}/
-              {activeWorkspace.quotas.publishedProjectsLimit}
+              {isUnlimitedProjectsLimit(activeWorkspace.quotas.publishedProjectsLimit)
+                ? "Unlimited"
+                : activeWorkspace.quotas.publishedProjectsLimit}
             </span>
             <span>·</span>
             <span
@@ -1108,6 +1162,37 @@ export function DashboardProjectsClient({
     <div className="mx-auto flex max-w-6xl flex-col gap-8">
       {workspaceBar}
 
+      {lockedByDowngradeCount > 0 && (
+        <div
+          role="status"
+          data-testid="dashboard-downgrade-lock-banner"
+          className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center"
+        >
+          <div className="flex items-start gap-3">
+            <Lock className="text-warning mt-0.5 size-4 shrink-0" />
+            <div className="flex flex-col gap-0.5">
+              <span className="type-body-s-strong">
+                Free plan includes 1 active Case Study ({lockedByDowngradeCount} extra{" "}
+                {lockedByDowngradeCount === 1 ? "Case Study" : "Case Studies"} safely locked)
+              </span>
+              <span className="text-muted-foreground type-caption">
+                None of your work was deleted. Open any locked card&apos;s menu to switch your 1
+                active Case Study, or upgrade to Casefolio Pro to unlock all Case Studies.
+              </span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            data-testid="downgrade-banner-upgrade-btn"
+            onClick={() => setDowngradeUpgradeOpen(true)}
+          >
+            <Sparkles className="size-3.5" />
+            Upgrade to Pro
+          </Button>
+        </div>
+      )}
+
       {/* Header + status segments + New project CTA (Figma 2:2076) */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-2.5">
@@ -1321,7 +1406,13 @@ export function DashboardProjectsClient({
                     </Link>
 
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <Badge tone={badge.tone}>{badge.label}</Badge>
+                      {project.isLockedByDowngrade ? (
+                        <Badge tone="draft" data-testid={`project-locked-badge-${project.id}`}>
+                          Locked · Free limit
+                        </Badge>
+                      ) : (
+                        <Badge tone={badge.tone}>{badge.label}</Badge>
+                      )}
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1341,10 +1432,23 @@ export function DashboardProjectsClient({
 
                         {/* Context menu matching Figma 2:2583 + Space & Archive actions */}
                         <DropdownMenuContent align="end" className="w-56">
+                          {project.isLockedByDowngrade && (
+                            <>
+                              <DropdownMenuItem
+                                data-testid={`set-active-project-${project.id}`}
+                                disabled={isBusy}
+                                onSelect={() => void handleSetActiveFreeProject(project)}
+                              >
+                                <CheckCircle2 className="size-4" />
+                                <span>Set as active Case Study</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
                           <DropdownMenuItem asChild>
                             <Link href={`/editor/${project.id}`}>
                               <ExternalLink className="size-4" />
-                              <span>Open editor</span>
+                              <span>{project.isLockedByDowngrade ? "View read-only" : "Open editor"}</span>
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => openRenameModal(project)}>
@@ -1570,6 +1674,13 @@ export function DashboardProjectsClient({
           </form>
         </DialogContent>
       </Dialog>
+
+      <UpgradePromptDialog
+        open={downgradeUpgradeOpen}
+        onOpenChange={setDowngradeUpgradeOpen}
+        featureTitle="Unlock all your Case Studies"
+        featureDescription="Upgrade to Casefolio Pro ($9.99/mo or $7.99/mo billed annually) to unlock Unlimited Case Studies, edit & publish every project, and export without watermarks."
+      />
     </div>
   );
 }

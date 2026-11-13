@@ -14,7 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BILLING_PLAN_CATALOG, type PaidPlanTier } from "@/lib/billing/plans";
+import {
+  BILLING_PLAN_CATALOG,
+  formatUsdFromCents,
+  type PaidPlanTier,
+} from "@/lib/billing/plans";
 
 export interface UpgradePromptDialogProps {
   open: boolean;
@@ -31,7 +35,7 @@ export function UpgradePromptDialog({
   onOpenChange,
   requiredPlan = "pro",
   featureTitle = "Unlock Casefolio Pro",
-  featureDescription = "Upgrade to access up to 20 active projects, all eligible published templates, and clean 1x/2x PNG, PDF & Behance exports.",
+  featureDescription = "Upgrade to unlock Unlimited Case Studies, all Pro & Premium templates, full customization, and watermark-free high-res PNG, PDF & Behance exports.",
   orgId = null,
   onUpgraded,
 }: UpgradePromptDialogProps) {
@@ -59,7 +63,7 @@ export function UpgradePromptDialog({
                 Casefolio {planDef.name}
               </span>
               <span className="text-foreground type-heading-s font-mono tabular-nums">
-                From ${planDef.yearlyMonthlyEquivalentUsd}
+                From {formatUsdFromCents(planDef.yearlyMonthlyEquivalentCents)}
                 <span className="text-muted-foreground type-caption font-sans">
                   {requiredPlan === "team" ? "/seat/mo" : "/mo"}
                 </span>

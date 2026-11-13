@@ -15,15 +15,6 @@ import { ensureProjectWorkspaceAndSpace } from "@/lib/workspaces/acl";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Casefolio Export Renderer",
-  robots: {
-    index: false,
-    follow: false,
-    nocache: true,
-  },
-};
-
 interface ExportRenderPageProps {
   params: Promise<{ jobId: string }>;
   searchParams: Promise<{ token?: string }>;
@@ -31,6 +22,49 @@ interface ExportRenderPageProps {
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: ExportRenderPageProps): Promise<Metadata> {
+  const { jobId } = await params;
+  const { token } = await searchParams;
+  const robots = {
+    index: false,
+    follow: false,
+    nocache: true,
+  } as const;
+
+  const verified = verifyExportRenderToken(token, {
+    expectedExportId: jobId,
+  });
+
+  if (!verified || !UUID_REGEX.test(jobId)) {
+    return { title: "Case Study Export", robots };
+  }
+
+  const [row] = await db
+    .select({
+      project: dbSchema.projects,
+    })
+    .from(dbSchema.exportsTable)
+    .innerJoin(dbSchema.projects, eq(dbSchema.exportsTable.projectId, dbSchema.projects.id))
+    .where(eq(dbSchema.exportsTable.id, jobId))
+    .limit(1);
+
+  if (!row || row.project.id !== verified.projectId) {
+    return { title: "Case Study Export", robots };
+  }
+
+  const ensured = await ensureProjectWorkspaceAndSpace(row.project);
+  const ent = await resolveWorkspaceEntitlementState(ensured.workspace.id);
+  const whiteLabel = ent?.plan === "plus";
+
+  return {
+    title: whiteLabel ? row.project.name : `${row.project.name} · Casefolio`,
+    robots,
+  };
+}
 
 export default async function ExportRenderPage({
   params,
@@ -84,7 +118,8 @@ export default async function ExportRenderPage({
   const ensured = await ensureProjectWorkspaceAndSpace(row.project);
   const workspaceEntitlement = await resolveWorkspaceEntitlementState(ensured.workspace.id);
   const effectivePlan = workspaceEntitlement?.plan ?? "free";
-  const showWatermark = row.exportJob.hasWatermark ?? effectivePlan === "free";
+  const whiteLabel = effectivePlan === "plus";
+  const showWatermark = !whiteLabel && (row.exportJob.hasWatermark ?? effectivePlan === "free");
 
   return (
     <main
@@ -92,6 +127,8 @@ export default async function ExportRenderPage({
       data-export-id={row.exportJob.id}
       data-export-format={row.exportJob.format}
       data-owner-plan={effectivePlan}
+      data-white-label={whiteLabel ? "true" : "false"}
+      data-project-title={row.project.name}
       className="bg-background text-foreground min-h-screen w-full"
     >
       <TemplatePuckRenderer

@@ -294,16 +294,25 @@ export const auth = betterAuth({
 
           const ensured = await ensureTeamWorkspaceForOrganization(org.id, inviter.id);
           const ent = await resolveWorkspaceEntitlementState(ensured.workspaceId);
-          if (!ent || ent.plan !== "team" || ent.isFrozen || ent.lifecycle.isPastDueInGrace) {
+          if (
+            !ent ||
+            (ent.plan !== "team" && ent.plan !== "plus") ||
+            ent.isFrozen ||
+            ent.lifecycle.isPastDueInGrace
+          ) {
             throw new APIError("FORBIDDEN", {
-              message: "An active Casefolio Teams subscription is required to invite members.",
+              message:
+                "An active Casefolio Team or Plus subscription is required to invite members.",
             });
           }
 
           const occupancy = await getTeamSeatOccupancy(org.id);
           if (occupancy.occupiedSeats >= occupancy.admissionCeiling) {
             throw new APIError("FORBIDDEN", {
-              message: "All paid team seats are currently occupied or reserved.",
+              message:
+                ent.plan === "team" && occupancy.admissionCeiling >= 10
+                  ? "Team plans support up to 10 seats. Upgrade to Casefolio Plus for up to 20 seats."
+                  : "All paid team seats are currently occupied or reserved.",
             });
           }
 
@@ -364,7 +373,7 @@ export const auth = betterAuth({
 
           const ensured = await ensureTeamWorkspaceForOrganization(org.id);
           const ent = await resolveWorkspaceEntitlementState(ensured.workspaceId);
-          if (!ent || ent.plan !== "team" || ent.isFrozen) {
+          if (!ent || (ent.plan !== "team" && ent.plan !== "plus") || ent.isFrozen) {
             throw new APIError("FORBIDDEN", {
               message: "Team workspace subscription is not active.",
             });

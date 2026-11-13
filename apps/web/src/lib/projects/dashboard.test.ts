@@ -122,19 +122,7 @@ describe("Dashboard project management service (C-1004)", () => {
       expect(listedAfterRename[0]?.name).toBe("Mosaed — Smart Debt v2");
       expect(listedAfterRename[0]?.slug).toBe(customSlug);
 
-      // 3. Duplicate succeeds for 2nd Free slot and resets copy to private draft
-      const dup1 = await duplicateProjectForUser(
-        { projectId: created.projectId },
-        { id: ownerId, role: "user" },
-        "free",
-      );
-      expect(dup1.ok).toBe(true);
-      if (!dup1.ok) return;
-      expect(dup1.project.name).toBe("Mosaed — Smart Debt v2 (Copy)");
-      expect(dup1.project.visibility).toBe("private");
-      expect(dup1.project.slug).toBeNull();
-
-      // 4. 3rd project via duplicate on Free plan is blocked by `can()`
+      // 3. 2nd Case Study via duplicate on Free plan is blocked by `can()` (FREE_PROJECT_LIMIT = 1)
       const dupBlocked = await duplicateProjectForUser(
         { projectId: created.projectId },
         { id: ownerId, role: "user" },
@@ -144,6 +132,23 @@ describe("Dashboard project management service (C-1004)", () => {
       if (!dupBlocked.ok) {
         expect(dupBlocked.code).toBe("PLAN_LIMIT_REACHED");
       }
+
+      // 4. Upgrading owner to Pro unlocks duplicate and resets copy to private draft
+      await db
+        .update(dbSchema.users)
+        .set({ plan: "pro" })
+        .where(eq(dbSchema.users.id, ownerId));
+
+      const dup1 = await duplicateProjectForUser(
+        { projectId: created.projectId },
+        { id: ownerId, role: "user" },
+        "pro",
+      );
+      expect(dup1.ok).toBe(true);
+      if (!dup1.ok) return;
+      expect(dup1.project.name).toBe("Mosaed — Smart Debt v2 (Copy)");
+      expect(dup1.project.visibility).toBe("private");
+      expect(dup1.project.slug).toBeNull();
 
       // 5. Cross-tenant stranger receives NOT_FOUND (404 per Spec §10.2 & §15) when probing rename
       const forbiddenRename = await renameProjectForUser(

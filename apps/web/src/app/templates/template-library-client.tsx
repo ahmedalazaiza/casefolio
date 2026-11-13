@@ -1,5 +1,6 @@
 "use client";
 
+import type { PlanTier } from "@casefolio/db";
 import { Eye, LayoutTemplate, Lock, Monitor, RotateCcw, Search, Smartphone, Globe, Layers } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -24,7 +25,7 @@ import type { TemplateProjectType, TemplateTier } from "@/lib/template/schema";
 import type { PublishedTemplateItem } from "@/lib/template/types";
 import { cn } from "@/lib/utils";
 
-export type UserPlanTier = "free" | "pro" | "team";
+export type UserPlanTier = PlanTier;
 
 export interface LibraryCategoryOption {
   id: string;

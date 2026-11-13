@@ -103,7 +103,7 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
           name: workspaceName,
           slug,
         })
-        .onConflictDoNothing({ target: workspaces.personalOwnerId });
+        .onConflictDoNothing();
 
       const [ws] = await db
         .select({ id: workspaces.id })
@@ -160,7 +160,7 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
           name: org.name,
           slug: wsSlug,
         })
-        .onConflictDoNothing({ target: workspaces.organizationId });
+        .onConflictDoNothing();
 
       const [ws] = await db
         .select({ id: workspaces.id })
@@ -347,13 +347,20 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
         .where(eq(organizations.id, sub.orgId))
         .limit(1);
       if (wsId) {
-        const capacity = Math.max(1, Math.min(25, orgRow?.seats ?? 1));
+        const capacity =
+          sub.plan === "plus"
+            ? 20
+            : Math.max(2, Math.min(10, orgRow?.seats ?? 2));
         await db
           .update(subscriptions)
           .set({
             workspaceId: wsId,
             currentPaidCapacity: capacity,
-            ...(sub.plan === "team" ? { userId: null } : {}),
+            maxSeats: capacity,
+            maxCaseStudies: -1,
+            customDomainEnabled: sub.plan === "plus",
+            watermarkEnabled: false,
+            ...(sub.plan === "team" || sub.plan === "plus" ? { userId: null } : {}),
           })
           .where(eq(subscriptions.id, sub.id));
         subscriptionsLinked += 1;
@@ -361,11 +368,16 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
     } else if (sub.userId) {
       const wsId = personalWorkspaceByUser.get(sub.userId);
       if (wsId) {
+        const isPaid = sub.plan !== "free";
         await db
           .update(subscriptions)
           .set({
             workspaceId: wsId,
             currentPaidCapacity: 1,
+            maxSeats: 1,
+            maxCaseStudies: isPaid ? -1 : 1,
+            customDomainEnabled: false,
+            watermarkEnabled: !isPaid,
           })
           .where(eq(subscriptions.id, sub.id));
         subscriptionsLinked += 1;
@@ -373,11 +385,11 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
     }
   }
 
-  // Ensure users whose subscription was purely a Team org subscription aren't left with `users.plan = 'team'`
+  // Ensure users whose subscription was purely a Team/Plus org subscription aren't left with `users.plan = 'team' | 'plus'`
   const teamPlanUsers = await db
     .select({ id: users.id })
     .from(users)
-    .where(inArray(users.plan, ["team"]));
+    .where(inArray(users.plan, ["team", "plus"]));
 
   for (const u of teamPlanUsers) {
     const [personalSub] = await db

@@ -175,6 +175,8 @@ export interface ProjectShareSettingsPayload {
   canPublish: boolean;
   brandingRemoved: boolean;
   canRemoveBranding: boolean;
+  whiteLabelEnabled: boolean;
+  customDomain: string | null;
   publishedCount: number;
   maxPublishedProjects: number;
   appBaseUrl: string;
@@ -195,6 +197,8 @@ export interface PublishedCaseStudyPayload {
     type: TemplateProjectType;
     visibility: "public" | "unlisted";
     brandingRemoved: boolean;
+    whiteLabelEnabled: boolean;
+    customDomain: string | null;
     publishedAtIso: string;
     updatedAtIso: string;
   };
@@ -255,6 +259,7 @@ function collectReferencedAssetIds(puckData: unknown): string[] {
 function extractCaseStudyMetaFromPuck(
   projectName: string,
   puckData: PuckDocument,
+  whiteLabel = false,
 ): { eyebrow: string; title: string; description: string } {
   let eyebrow = "Case Study";
   let title = puckData.root?.props?.title?.trim() || projectName;
@@ -281,7 +286,9 @@ function extractCaseStudyMetaFromPuck(
   }
 
   if (!description) {
-    description = `${title} — interactive design case study built with Casefolio.`;
+    description = whiteLabel
+      ? `${title} — interactive design case study.`
+      : `${title} — interactive design case study built with Casefolio.`;
   }
 
   return {
@@ -405,7 +412,8 @@ export async function getProjectShareSettingsForUser(
 
   const publishAuth = await authorizeProjectAccess(projectId, user.id, "publish");
   const counts = await getWorkspaceProjectCounts(readAuth.workspace.id);
-  const meta = extractCaseStudyMetaFromPuck(readAuth.project.name, resolvedPuck);
+  const whiteLabelShare = readAuth.entitlement.plan === "plus";
+  const meta = extractCaseStudyMetaFromPuck(readAuth.project.name, resolvedPuck, whiteLabelShare);
   const isPublished =
     (readAuth.project.visibility === "public" || readAuth.project.visibility === "unlisted") &&
     readAuth.project.publishedAt !== null &&
@@ -436,11 +444,17 @@ export async function getProjectShareSettingsForUser(
       publicAcknowledged: Boolean(readAuth.project.publicAcknowledgedAt),
       canPublish: publishAuth.ok,
       brandingRemoved:
-        readAuth.project.brandingRemoved && readAuth.entitlement.quotas.brandingRemovable,
+        whiteLabelShare ||
+        (readAuth.project.brandingRemoved && readAuth.entitlement.quotas.brandingRemovable),
       canRemoveBranding: readAuth.entitlement.quotas.brandingRemovable,
+      whiteLabelEnabled: whiteLabelShare,
+      customDomain: whiteLabelShare ? (readAuth.workspace.customDomain ?? null) : null,
       publishedCount: counts.publishedProjects,
       maxPublishedProjects: readAuth.entitlement.quotas.publishedProjectsLimit,
-      appBaseUrl: resolvePublicAppBaseUrl(),
+      appBaseUrl:
+        whiteLabelShare && readAuth.workspace.customDomain
+          ? `https://${readAuth.workspace.customDomain}`
+          : resolvePublicAppBaseUrl(),
       preview: {
         eyebrow: meta.eyebrow,
         title: meta.title,
@@ -859,12 +873,15 @@ export async function getPublishedProjectBySlug(
     }
   }
 
-  const meta = extractCaseStudyMetaFromPuck(row.project.name, resolvedPuck);
   const effectivePlan = ent ? ent.plan : await resolveEffectivePlanForUser(row.owner.id);
-  const brandingRemoved = Boolean(
-    (snapshot ? snapshot.brandingRemoved : row.project.brandingRemoved) &&
-      ent?.quotas.brandingRemovable,
-  );
+  const whiteLabelEnabled = effectivePlan === "plus";
+  const meta = extractCaseStudyMetaFromPuck(row.project.name, resolvedPuck, whiteLabelEnabled);
+  const brandingRemoved =
+    whiteLabelEnabled ||
+    Boolean(
+      (snapshot ? snapshot.brandingRemoved : row.project.brandingRemoved) &&
+        ent?.quotas.brandingRemovable,
+    );
 
   return {
     project: {
@@ -874,6 +891,8 @@ export async function getPublishedProjectBySlug(
       type: row.project.type,
       visibility: row.project.visibility,
       brandingRemoved,
+      whiteLabelEnabled,
+      customDomain: whiteLabelEnabled ? (ensured.workspace.customDomain ?? null) : null,
       publishedAtIso: (snapshot?.publishedAt ?? row.project.publishedAt).toISOString(),
       updatedAtIso: (snapshot?.updatedAt ?? row.project.updatedAt).toISOString(),
     },

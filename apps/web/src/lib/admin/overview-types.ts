@@ -39,7 +39,8 @@ export function computeSubscriptionMrrUsd(
   const def = BILLING_PLAN_CATALOG[plan];
   if (!def || plan === "free") return 0;
   const unit = interval === "yearly" ? def.yearlyMonthlyEquivalentUsd : def.monthlyPriceUsd;
-  return def.perSeatPricing ? unit * Math.max(1, Math.floor(seats)) : unit;
+  const raw = def.perSeatPricing ? unit * Math.max(1, Math.floor(seats)) : unit;
+  return Math.round(raw * 100) / 100;
 }
 
 export function detectSubscriptionInterval(args: {

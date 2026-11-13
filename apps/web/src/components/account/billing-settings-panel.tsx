@@ -6,10 +6,12 @@ import {
   Check,
   CreditCard,
   ExternalLink,
+  Globe,
   Loader2,
   Minus,
   Plus,
   RotateCcw,
+  Sparkles,
   Users,
   XCircle,
 } from "lucide-react";
@@ -34,7 +36,10 @@ import {
   BILLING_PLAN_CATALOG,
   formatPlanAmountSummary,
   formatPlanHeadingLabel,
+  formatUsdFromCents,
+  PLUS_INCLUDED_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
+  TEAMS_MIN_SEATS,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
@@ -90,7 +95,13 @@ export function BillingSettingsPanel({
   const currentAmountSummary = formatPlanAmountSummary(effectivePlan, currentInterval);
   const periodEndFormatted = formatDateLabel(sub?.currentPeriodEndIso);
   const planTitle =
-    effectivePlan === "team" ? "Teams" : effectivePlan === "pro" ? "Pro" : "Free";
+    effectivePlan === "plus"
+      ? "Plus"
+      : effectivePlan === "team"
+        ? "Team"
+        : effectivePlan === "pro"
+          ? "Pro"
+          : "Free";
   const teamBilling = overview.teamBilling ?? null;
   const personalPublished = overview.personalPublishedProjects ?? [];
 
@@ -120,12 +131,18 @@ export function BillingSettingsPanel({
 
   const [updatePaymentOpen, setUpdatePaymentOpen] = useState(false);
 
-  // Team seat management state
+  // Team seat & custom domain management state
   const [targetSeatCount, setTargetSeatCount] = useState<number>(
-    teamBilling && teamBilling.paidSeats > 0 ? teamBilling.paidSeats + 1 : 3,
+    teamBilling && teamBilling.paidSeats > 0
+      ? Math.max(TEAMS_MIN_SEATS, teamBilling.paidSeats)
+      : 3,
   );
   const [seatPreview, setSeatPreview] = useState<SeatIncreasePreviewState | null>(null);
   const [seatError, setSeatError] = useState<string | null>(null);
+  const [customDomainInput, setCustomDomainInput] = useState<string>(
+    teamBilling?.customDomain ?? "",
+  );
+  const [domainError, setDomainError] = useState<string | null>(null);
 
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -138,8 +155,9 @@ export function BillingSettingsPanel({
 
   useEffect(() => {
     if (teamBilling && teamBilling.paidSeats > 0) {
-      setTargetSeatCount(teamBilling.paidSeats);
+      setTargetSeatCount(Math.max(TEAMS_MIN_SEATS, teamBilling.paidSeats));
     }
+    setCustomDomainInput(teamBilling?.customDomain ?? "");
   }, [teamBilling]);
 
   async function handleOpenCustomerPortal() {
@@ -265,7 +283,7 @@ export function BillingSettingsPanel({
 
     if (targetSeatCount > TEAMS_MAX_SELF_SERVE_SEATS) {
       setSeatError(
-        `Self-service Teams supports 1–${TEAMS_MAX_SELF_SERVE_SEATS} paid seats. Contact support for a capacity review above ${TEAMS_MAX_SELF_SERVE_SEATS} seats.`,
+        `Casefolio Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} paid seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) for up to ${PLUS_INCLUDED_SEATS} seats, Custom Domain, and White-Labeling.`,
       );
       return;
     }
@@ -414,6 +432,44 @@ export function BillingSettingsPanel({
     }
   }
 
+  async function handleSaveCustomDomain() {
+    if (!teamBilling) return;
+    setBusyAction("custom-domain");
+    setDomainError(null);
+    try {
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set_custom_domain",
+          organizationId: teamBilling.organizationId,
+          customDomain: customDomainInput.trim() || null,
+        }),
+      });
+      const json = (await res.json()) as
+        | { ok: true; customDomain: string | null }
+        | { ok: false; error?: string };
+
+      if (!res.ok || !json.ok) {
+        setDomainError(
+          ("error" in json && json.error) || "Could not update custom domain.",
+        );
+        return;
+      }
+
+      toast.success(
+        json.customDomain
+          ? `Custom domain saved: ${json.customDomain}`
+          : "Custom domain cleared.",
+      );
+      router.refresh();
+    } catch {
+      setDomainError("Network error while updating custom domain.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   function handleConfirmPickerSelection() {
     if (pickerTier === "free") {
       if (effectivePlan === "free") {
@@ -429,13 +485,18 @@ export function BillingSettingsPanel({
     setChangePlanOpen(false);
     setCheckoutPlan(pickerTier);
     setCheckoutInterval(pickerInterval);
-    setCheckoutOrgId(pickerTier === "team" ? (teamBilling?.organizationId ?? null) : null);
+    setCheckoutOrgId(
+      pickerTier === "team" || pickerTier === "plus"
+        ? (teamBilling?.organizationId ?? null)
+        : null,
+    );
     setCheckoutOpen(true);
   }
 
   const isPastDue = sub?.status === "past_due";
   const isCancelScheduled = sub?.status === "cancel_at_period_end";
-  const hasPaidAccess = effectivePlan === "pro" || effectivePlan === "team";
+  const hasPaidAccess =
+    effectivePlan === "pro" || effectivePlan === "team" || effectivePlan === "plus";
 
   const statusBadge = (() => {
     if (!hasPaidAccess) {
@@ -507,8 +568,8 @@ export function BillingSettingsPanel({
               </span>
               <p className="text-muted-foreground type-body-s max-w-xl">
                 {planTitle} stays active until {periodEndFormatted}, then your personal
-                workspace moves to Free (1 published project kept live, branded 1x PNG
-                exports).
+                workspace moves to Free (1 active Case Study kept editable &amp; live,
+                extra Case Studies safely locked, watermarked PNG &amp; PDF exports).
               </p>
             </div>
           </div>
@@ -562,7 +623,7 @@ export function BillingSettingsPanel({
 
             <p className="text-muted-foreground type-body-s">
               {!hasPaidAccess
-                ? "$0/mo · Up to 2 active projects (1 published) & 5 branded PNG exports/mo"
+                ? "$0 / forever · 1 active Case Study, standard templates, watermarked PNG & PDF export + Live Shareable Link"
                 : isCancelScheduled
                   ? `${currentAmountSummary} · access ends ${periodEndFormatted}`
                   : `${currentAmountSummary} · next charge ${periodEndFormatted}`}
@@ -571,7 +632,9 @@ export function BillingSettingsPanel({
             {personalPublished.length > 1 && (
               <div className="border-border/70 bg-surface/80 flex flex-col gap-1.5 rounded-2xl border p-3">
                 <Label htmlFor="keep-public-select" className="type-caption text-foreground">
-                  Keep 1 public page live if downgraded to Free:
+                  {!hasPaidAccess
+                    ? "Active Case Study on Free (1 editable & live; extras safely locked):"
+                    : "Keep 1 active Case Study editable & live if downgraded to Free:"}
                 </Label>
                 <select
                   id="keep-public-select"
@@ -761,31 +824,80 @@ export function BillingSettingsPanel({
                 <h3 className="text-foreground type-heading-m">
                   Team workspace · {teamBilling.organizationName}
                 </h3>
-                <Badge tone={teamBilling.plan === "team" ? "published" : "neutral"}>
-                  {teamBilling.plan === "team" ? "Teams Active" : "Unfunded"}
+                <Badge
+                  tone={
+                    teamBilling.plan === "team" || teamBilling.plan === "plus"
+                      ? "published"
+                      : "neutral"
+                  }
+                >
+                  {teamBilling.plan === "plus"
+                    ? "Plus Active"
+                    : teamBilling.plan === "team"
+                      ? "Team Active"
+                      : "Unfunded"}
                 </Badge>
                 <Badge tone="accent">{teamBilling.role}</Badge>
               </div>
               <p className="text-muted-foreground type-body-s">
-                Separate from your personal workspace. Every Owner, Admin, and Member
-                occupies 1 paid seat.
+                Separate from your personal workspace.{" "}
+                {teamBilling.plan === "plus"
+                  ? `Flat agency rate includes up to ${PLUS_INCLUDED_SEATS} team seats, Custom Domain, and White-Labeling.`
+                  : `Team includes ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} per-seat licenses; upgrade to Plus for up to ${PLUS_INCLUDED_SEATS} seats.`}
               </p>
             </div>
 
-            {teamBilling.isOwner && teamBilling.plan !== "team" && (
+            {teamBilling.isOwner &&
+              teamBilling.plan !== "team" &&
+              teamBilling.plan !== "plus" && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    data-testid="activate-team-subscription-btn"
+                    onClick={() => {
+                      setCheckoutPlan("team");
+                      setCheckoutInterval("monthly");
+                      setCheckoutOrgId(teamBilling.organizationId);
+                      setCheckoutOpen(true);
+                    }}
+                  >
+                    <CreditCard className="size-3.5" />
+                    Activate Casefolio Team
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    data-testid="activate-plus-subscription-btn"
+                    onClick={() => {
+                      setCheckoutPlan("plus");
+                      setCheckoutInterval("monthly");
+                      setCheckoutOrgId(teamBilling.organizationId);
+                      setCheckoutOpen(true);
+                    }}
+                  >
+                    <Sparkles className="size-3.5" />
+                    Activate Plus
+                  </Button>
+                </div>
+              )}
+
+            {teamBilling.isOwner && teamBilling.plan === "team" && (
               <Button
                 type="button"
                 size="sm"
-                data-testid="activate-team-subscription-btn"
+                variant="secondary"
+                data-testid="upgrade-team-to-plus-btn"
                 onClick={() => {
-                  setCheckoutPlan("team");
-                  setCheckoutInterval("monthly");
+                  setCheckoutPlan("plus");
+                  setCheckoutInterval(teamBilling.interval ?? "monthly");
                   setCheckoutOrgId(teamBilling.organizationId);
                   setCheckoutOpen(true);
                 }}
               >
-                <CreditCard className="size-3.5" />
-                Activate Casefolio Teams
+                <Sparkles className="size-3.5" />
+                Upgrade to Plus ({PLUS_INCLUDED_SEATS} seats)
               </Button>
             )}
           </div>
@@ -874,16 +986,21 @@ export function BillingSettingsPanel({
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">
                   <span className="text-foreground type-body-s-strong">
-                    Adjust paid seats:
+                    Adjust paid seats ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS}):
                   </span>
                   <button
                     type="button"
                     aria-label="Decrease target seats"
                     disabled={
-                      targetSeatCount <= Math.max(1, teamBilling.occupiedSeats) ||
+                      targetSeatCount <=
+                        Math.max(TEAMS_MIN_SEATS, teamBilling.occupiedSeats) ||
                       teamBilling.isLockedForQuantityChange
                     }
-                    onClick={() => setTargetSeatCount((v) => Math.max(1, v - 1))}
+                    onClick={() =>
+                      setTargetSeatCount((v) =>
+                        Math.max(TEAMS_MIN_SEATS, teamBilling.occupiedSeats, v - 1),
+                      )
+                    }
                     className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
                   >
                     <Minus className="size-3.5" />
@@ -898,38 +1015,131 @@ export function BillingSettingsPanel({
                     type="button"
                     aria-label="Increase target seats"
                     disabled={
-                      targetSeatCount >= 26 || teamBilling.isLockedForQuantityChange
+                      targetSeatCount >= TEAMS_MAX_SELF_SERVE_SEATS + 1 ||
+                      teamBilling.isLockedForQuantityChange
                     }
-                    onClick={() => setTargetSeatCount((v) => Math.min(26, v + 1))}
+                    onClick={() =>
+                      setTargetSeatCount((v) =>
+                        Math.min(TEAMS_MAX_SELF_SERVE_SEATS + 1, v + 1),
+                      )
+                    }
                     className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
                   >
                     <Plus className="size-3.5" />
                   </button>
                 </div>
 
-                <Button
-                  type="button"
-                  size="sm"
-                  data-testid="apply-seat-change-btn"
-                  disabled={
-                    targetSeatCount === teamBilling.paidSeats ||
-                    teamBilling.isLockedForQuantityChange ||
-                    busyAction === "seat-preview" ||
-                    busyAction === "seat-decrease"
-                  }
-                  onClick={handlePreviewOrScheduleSeats}
-                >
-                  {targetSeatCount > teamBilling.paidSeats
-                    ? "Preview prorated seat increase"
-                    : targetSeatCount < teamBilling.paidSeats
-                      ? "Schedule renewal decrease"
-                      : "Select new seat count"}
-                </Button>
+                {targetSeatCount > TEAMS_MAX_SELF_SERVE_SEATS ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    data-testid="seat-limit-upgrade-plus-btn"
+                    onClick={() => {
+                      setCheckoutPlan("plus");
+                      setCheckoutInterval(teamBilling.interval ?? "monthly");
+                      setCheckoutOrgId(teamBilling.organizationId);
+                      setCheckoutOpen(true);
+                    }}
+                  >
+                    <Sparkles className="size-3.5" />
+                    Upgrade to Plus (up to {PLUS_INCLUDED_SEATS} seats)
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    data-testid="apply-seat-change-btn"
+                    disabled={
+                      targetSeatCount === teamBilling.paidSeats ||
+                      teamBilling.isLockedForQuantityChange ||
+                      busyAction === "seat-preview" ||
+                      busyAction === "seat-decrease"
+                    }
+                    onClick={handlePreviewOrScheduleSeats}
+                  >
+                    {targetSeatCount > teamBilling.paidSeats
+                      ? "Preview prorated seat increase"
+                      : targetSeatCount < teamBilling.paidSeats
+                        ? "Schedule renewal decrease"
+                        : "Select new seat count"}
+                  </Button>
+                )}
               </div>
+
+              {targetSeatCount > TEAMS_MAX_SELF_SERVE_SEATS && (
+                <p className="text-muted-foreground type-caption">
+                  Casefolio Team supports up to {TEAMS_MAX_SELF_SERVE_SEATS} seats.
+                  Switch to Casefolio Plus for up to {PLUS_INCLUDED_SEATS} seats at a
+                  predictable flat rate, plus Custom Domain and White-Labeling.
+                </p>
+              )}
 
               {seatError && (
                 <p role="alert" className="text-destructive type-caption">
                   {seatError}
+                </p>
+              )}
+            </div>
+          )}
+
+          {teamBilling.plan === "plus" && (
+            <div
+              data-testid="plus-custom-domain-section"
+              className="border-border flex flex-col gap-3 border-t pt-4"
+            >
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <Globe className="text-primary size-4" />
+                  <span className="text-foreground type-body-s-strong">
+                    Custom Domain &amp; White-Labeling
+                  </span>
+                  <Badge tone="published">Included in Plus</Badge>
+                </div>
+                <p className="text-muted-foreground type-caption">
+                  Serve published Case Studies on your agency domain (e.g.{" "}
+                  <span className="font-mono">work.youragency.com</span>) with complete
+                  Casefolio branding removal on live links and PDF metadata.
+                </p>
+              </div>
+
+              {teamBilling.isOwner || teamBilling.role === "admin" ? (
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <Input
+                    data-testid="plus-custom-domain-input"
+                    value={customDomainInput}
+                    onChange={(e) => setCustomDomainInput(e.target.value)}
+                    placeholder="work.youragency.com"
+                    className="max-w-sm font-mono"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    data-testid="save-custom-domain-btn"
+                    disabled={busyAction === "custom-domain"}
+                    onClick={handleSaveCustomDomain}
+                  >
+                    {busyAction === "custom-domain" ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save custom domain"
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-foreground type-caption font-mono">
+                  {teamBilling.customDomain
+                    ? `Active domain: ${teamBilling.customDomain}`
+                    : "No custom domain configured yet (Owner or Admin can configure)."}
+                </p>
+              )}
+
+              {domainError && (
+                <p role="alert" className="text-destructive type-caption">
+                  {domainError}
                 </p>
               )}
             </div>
@@ -1084,24 +1294,24 @@ export function BillingSettingsPanel({
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Yearly · Save {BILLING_PLAN_CATALOG.pro.yearlySavingsPercent}%
+                  Annual · Save {BILLING_PLAN_CATALOG.pro.yearlySavingsPercent}%
                 </button>
               </div>
 
               <div
                 role="radiogroup"
                 aria-label="Choose plan tier"
-                className="grid gap-3.5 md:grid-cols-3"
+                className="grid gap-3.5 md:grid-cols-2 lg:grid-cols-4"
               >
-                {(["free", "pro", "team"] as const).map((tier) => {
+                {(["free", "pro", "team", "plus"] as const).map((tier) => {
                   const def = BILLING_PLAN_CATALOG[tier];
                   const selected = pickerTier === tier;
-                  const unitPrice =
+                  const unitCents =
                     tier === "free"
                       ? 0
                       : pickerInterval === "yearly"
-                        ? def.yearlyMonthlyEquivalentUsd
-                        : def.monthlyPriceUsd;
+                        ? def.yearlyMonthlyEquivalentCents
+                        : def.monthlyPriceCents;
 
                   return (
                     <div
@@ -1131,14 +1341,18 @@ export function BillingSettingsPanel({
                           {def.highlighted && <ProBadge />}
                         </div>
 
-                        <div className="flex items-baseline gap-1">
+                        <div className="flex flex-wrap items-baseline gap-1">
                           <span className="text-foreground type-heading-l font-mono tabular-nums">
-                            ${unitPrice}
+                            {formatUsdFromCents(unitCents)}
                           </span>
                           <span className="text-muted-foreground type-caption">
-                            {tier === "team" ? "/seat/mo" : "/mo"}
+                            {tier === "free"
+                              ? "/forever"
+                              : tier === "team"
+                                ? "/seat/mo"
+                                : "/mo"}
                             {tier !== "free" && pickerInterval === "yearly"
-                              ? ` ($${def.yearlyTotalUsd}${tier === "team" ? "/seat/yr" : "/yr"})`
+                              ? ` (${formatUsdFromCents(def.yearlyTotalCents)}${tier === "team" ? "/seat/yr" : "/yr"})`
                               : ""}
                           </span>
                         </div>
@@ -1212,22 +1426,21 @@ export function BillingSettingsPanel({
               <li className="text-foreground type-body-s flex items-start gap-2.5">
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                 <span>
-                  1 chosen published project stays live; extra published pages unpublish
-                  safely without deleting your work
+                  1 chosen Case Study stays active, editable &amp; live; extra Case
+                  Studies safely lock and unpublish without deleting any work
                 </span>
               </li>
               <li className="text-foreground type-body-s flex items-start gap-2.5">
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                 <span>
-                  Active projects above 2 cannot create new drafts until archived within
-                  Free limits
+                  Creating a 2nd Case Study requires upgrading back to Pro, Team, or Plus
                 </span>
               </li>
               <li className="text-foreground type-body-s flex items-start gap-2.5">
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                 <span>
-                  &ldquo;Made with Casefolio&rdquo; badge returns; 2x PNG, PDF &amp;
-                  Behance exports lock
+                  Subtle Casefolio watermark returns on live links and PNG/PDF exports;
+                  2x PNG &amp; Behance exports lock
                 </span>
               </li>
             </ul>
@@ -1376,13 +1589,16 @@ export function BillingSettingsPanel({
                 <li className="text-foreground type-body-s flex items-start gap-2.5">
                   <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                   <span>
-                    Published pages display the &ldquo;Made with Casefolio&rdquo; badge
-                    after {periodEndFormatted}
+                    1 Case Study stays active &amp; live; extra Case Studies safely lock
+                    and unpublish after {periodEndFormatted}
                   </span>
                 </li>
                 <li className="text-foreground type-body-s flex items-start gap-2.5">
                   <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
-                  <span>2x PNG, PDF &amp; Behance exports end</span>
+                  <span>
+                    Subtle Casefolio watermark returns on live links and PNG/PDF exports;
+                    2x PNG &amp; Behance exports end
+                  </span>
                 </li>
               </ul>
 
@@ -1479,9 +1695,19 @@ export function BillingSettingsPanel({
                     if (overview.hasLivePaddlePortal) {
                       void handleOpenCustomerPortal();
                     } else {
-                      setCheckoutPlan(effectivePlan === "team" ? "team" : "pro");
+                      const nextPlan: PaidPlanTier =
+                        effectivePlan === "plus"
+                          ? "plus"
+                          : effectivePlan === "team"
+                            ? "team"
+                            : "pro";
+                      setCheckoutPlan(nextPlan);
                       setCheckoutInterval(currentInterval);
-                      setCheckoutOrgId(null);
+                      setCheckoutOrgId(
+                        nextPlan === "team" || nextPlan === "plus"
+                          ? (teamBilling?.organizationId ?? null)
+                          : null,
+                      );
                       setCheckoutOpen(true);
                     }
                   }}

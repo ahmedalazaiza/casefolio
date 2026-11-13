@@ -513,12 +513,15 @@ export async function createSpaceForUser(args: {
       };
     }
   } else {
-    if (ent.plan !== "team" || ent.quotas.sharedSpacesLimit <= 0) {
+    if (
+      (ent.plan !== "team" && ent.plan !== "plus") ||
+      ent.quotas.sharedSpacesLimit <= 0
+    ) {
       return {
         ok: false,
         status: 403,
         code: "TEAM_PLAN_REQUIRED",
-        error: "An active Casefolio Teams subscription is required to create shared spaces.",
+        error: "An active Casefolio Team or Plus subscription is required to create shared spaces.",
       };
     }
 
@@ -625,12 +628,15 @@ export async function transitionSpaceVisibility(args: {
   }
 
   if (args.targetVisibility === "shared") {
-    if (auth.entitlement.plan !== "team" || auth.entitlement.quotas.sharedSpacesLimit <= 0) {
+    if (
+      (auth.entitlement.plan !== "team" && auth.entitlement.plan !== "plus") ||
+      auth.entitlement.quotas.sharedSpacesLimit <= 0
+    ) {
       return {
         ok: false,
         status: 403,
         code: "TEAM_PLAN_REQUIRED",
-        error: "An active Casefolio Teams subscription is required for shared spaces.",
+        error: "An active Casefolio Team or Plus subscription is required for shared spaces.",
       };
     }
 

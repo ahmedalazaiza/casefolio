@@ -20,26 +20,27 @@ function extractCookieHeader(setCookie: string | null): string {
 }
 
 describe("Entitlements `can()` & server-side gating (C-702)", () => {
-  it("evaluates all 9 features accurately across Free, Pro, and Team plans", () => {
-    // Free plan checks
+  it("evaluates all features accurately across Free, Pro, Team (2–10 seats), and Plus (up to 20 seats)", () => {
+    // Free plan checks (1 active Case Study, watermarked PNG & PDF included, Behance/2x PNG locked)
     expect(can("free", "create_project", { projectsCount: 0 })).toBe(true);
-    expect(can("free", "create_project", { projectsCount: 1 })).toBe(true);
-    expect(can("free", "create_project", { projectsCount: 2 })).toBe(false);
+    expect(can("free", "create_project", { projectsCount: 1 })).toBe(false);
     expect(can("free", "pro_templates")).toBe(false);
     expect(can("free", "export_png", { monthlyExportsCount: 4 })).toBe(true);
     expect(can("free", "export_png", { monthlyExportsCount: 5 })).toBe(false);
-    expect(can("free", "export_pdf")).toBe(false);
+    expect(can("free", "export_pdf")).toBe(true);
     expect(can("free", "export_behance")).toBe(false);
     expect(can("free", "remove_watermark")).toBe(false);
+    expect(can("free", "custom_domain")).toBe(false);
+    expect(can("free", "white_label")).toBe(false);
     expect(can("free", "full_analytics")).toBe(false);
     expect(can("free", "team_seats", { seatsUsed: 1, seatsLimit: 3 })).toBe(false);
     expect(can("free", "shared_spaces")).toBe(false);
     expect(can("free", "export_png_2x")).toBe(false);
     expect(can(null, "pro_templates")).toBe(false);
 
-    // Pro plan checks
-    expect(can({ plan: "pro" }, "create_project", { projectsCount: 19 })).toBe(true);
-    expect(can({ plan: "pro" }, "create_project", { projectsCount: 20 })).toBe(false);
+    // Pro plan checks (unlimited Case Studies, watermark-free exports, no custom domain/white-label)
+    expect(can({ plan: "pro" }, "create_project", { projectsCount: 0 })).toBe(true);
+    expect(can({ plan: "pro" }, "create_project", { projectsCount: 250 })).toBe(true);
     expect(can({ plan: "pro" }, "pro_templates")).toBe(true);
     expect(can({ plan: "pro" }, "export_png", { monthlyExportsCount: 59 })).toBe(true);
     expect(can({ plan: "pro" }, "export_png", { monthlyExportsCount: 60 })).toBe(false);
@@ -47,24 +48,47 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
     expect(can({ plan: "pro" }, "export_pdf")).toBe(true);
     expect(can({ plan: "pro" }, "export_behance")).toBe(true);
     expect(can({ plan: "pro" }, "remove_watermark")).toBe(true);
+    expect(can({ plan: "pro" }, "custom_domain")).toBe(false);
+    expect(can({ plan: "pro" }, "white_label")).toBe(false);
     expect(can({ plan: "pro" }, "full_analytics")).toBe(true);
     expect(can({ plan: "pro" }, "team_seats", { seatsUsed: 1, seatsLimit: 3 })).toBe(false);
     expect(can({ plan: "pro" }, "shared_spaces")).toBe(false);
 
-    // Team plan checks
+    // Team plan checks (2–10 seats, 11th seat requires Plus)
+    expect(can({ plan: "team" }, "create_project", { projectsCount: 500 })).toBe(true);
     expect(can({ plan: "team" }, "pro_templates")).toBe(true);
     expect(can({ plan: "team" }, "export_pdf")).toBe(true);
     expect(can({ plan: "team" }, "export_png_2x")).toBe(true);
     expect(can({ plan: "team" }, "remove_watermark")).toBe(true);
+    expect(can({ plan: "team" }, "custom_domain")).toBe(false);
+    expect(can({ plan: "team" }, "white_label")).toBe(false);
     expect(can({ plan: "team" }, "shared_spaces")).toBe(true);
     expect(can({ plan: "team" }, "team_seats", { seatsUsed: 2, seatsLimit: 3 })).toBe(true);
     expect(can({ plan: "team" }, "team_seats", { seatsUsed: 3, seatsLimit: 3 })).toBe(false);
+    expect(can({ plan: "team" }, "team_seats", { seatsUsed: 10, seatsLimit: 10 })).toBe(false);
 
     const seatLimitDecision = evaluateEntitlement("team", "team_seats", {
       seatsUsed: 3,
       seatsLimit: 3,
     });
     expect(seatLimitDecision.code).toBe("TEAM_SEAT_LIMIT_REACHED");
+
+    const plusUpgradeDecision = evaluateEntitlement("team", "team_seats", {
+      seatsUsed: 10,
+      seatsLimit: 10,
+    });
+    expect(plusUpgradeDecision.code).toBe("PLUS_PLAN_REQUIRED");
+    expect(plusUpgradeDecision.requiredPlan).toBe("plus");
+
+    // Plus plan checks (up to 20 seats flat, custom domain & complete white-labeling)
+    expect(can({ plan: "plus" }, "create_project", { projectsCount: 1000 })).toBe(true);
+    expect(can({ plan: "plus" }, "pro_templates")).toBe(true);
+    expect(can({ plan: "plus" }, "remove_watermark")).toBe(true);
+    expect(can({ plan: "plus" }, "custom_domain")).toBe(true);
+    expect(can({ plan: "plus" }, "white_label")).toBe(true);
+    expect(can({ plan: "plus" }, "shared_spaces")).toBe(true);
+    expect(can({ plan: "plus" }, "team_seats", { seatsUsed: 19, seatsLimit: 20 })).toBe(true);
+    expect(can({ plan: "plus" }, "team_seats", { seatsUsed: 20, seatsLimit: 20 })).toBe(false);
   });
 
   it("enforces server-side Pro template, export format, watermark, subscription expiry, and Team seat gating", async () => {
@@ -120,40 +144,44 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
         expect(blockedProProject.code).toBe("PRO_TEMPLATE_LOCKED");
       }
 
-      // 2. Free user creates 2 Orbit projects, then 3rd is blocked by project limit
+      // 2. Edge Case 1: Free user creates 1 Orbit Case Study, then 2nd is blocked by PLAN_LIMIT_REACHED
       const proj1 = await createProjectFromTemplate({
         userId,
         userPlan: "free",
         input: { type: "mobile", templateId: orbitTpl!.id, name: "Orbit Free One" },
       });
+      expect(proj1.ok).toBe(true);
+
       const proj2 = await createProjectFromTemplate({
         userId,
         userPlan: "free",
         input: { type: "mobile", templateId: orbitTpl!.id, name: "Orbit Free Two" },
       });
-      expect(proj1.ok).toBe(true);
-      expect(proj2.ok).toBe(true);
-
-      const proj3 = await createProjectFromTemplate({
-        userId,
-        userPlan: "free",
-        input: { type: "mobile", templateId: orbitTpl!.id, name: "Orbit Free Three" },
-      });
-      expect(proj3.ok).toBe(false);
-      if (!proj3.ok) {
-        expect(proj3.code).toBe("PLAN_LIMIT_REACHED");
+      expect(proj2.ok).toBe(false);
+      if (!proj2.ok) {
+        expect(proj2.code).toBe("PLAN_LIMIT_REACHED");
       }
 
-      // 3. Free user blocked from PDF export; PNG export has watermark
+      // 3. Free user gets watermarked PNG & PDF exports, while Behance requires Pro+
       const projectId = proj1.ok ? proj1.projectId : "";
-      const blockedPdf = await enqueueProjectExportForUser(
+      const freePdf = await enqueueProjectExportForUser(
         { projectId, format: "pdf" },
         { id: userId, role: "user" },
         { enqueueJobFn: async () => {} },
       );
-      expect(blockedPdf.ok).toBe(false);
-      if (!blockedPdf.ok) {
-        expect(blockedPdf.code).toBe("PLAN_UPGRADE_REQUIRED");
+      expect(freePdf.ok).toBe(true);
+      if (freePdf.ok) {
+        expect(freePdf.hasWatermark).toBe(true);
+      }
+
+      const blockedBehance = await enqueueProjectExportForUser(
+        { projectId, format: "behance" },
+        { id: userId, role: "user" },
+        { enqueueJobFn: async () => {} },
+      );
+      expect(blockedBehance.ok).toBe(false);
+      if (!blockedBehance.ok) {
+        expect(blockedBehance.code).toBe("PLAN_UPGRADE_REQUIRED");
       }
 
       const freePng = await enqueueProjectExportForUser(
@@ -263,7 +291,7 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
       expect(invite1.ok).toBe(true);
       expect(invite2.ok).toBe(true);
 
-      // 4th seat exceeds default 3-seat Team workspace -> TEAM_SEAT_LIMIT_REACHED
+      // 4th seat exceeds 3-seat Team workspace -> TEAM_SEAT_LIMIT_REACHED
       const inviteOverLimit = await createGatedTeamInvitation({
         actorUserId: userId,
         rawInput: {
@@ -277,6 +305,64 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
       if (!inviteOverLimit.ok) {
         expect(inviteOverLimit.code).toBe("TEAM_SEAT_LIMIT_REACHED");
       }
+
+      // Edge Case 2: Team workspace at maximum 10 seats trying to invite 11th member -> PLUS_PLAN_REQUIRED
+      await db
+        .update(dbSchema.subscriptions)
+        .set({ currentPaidCapacity: 10, maxSeats: 10 })
+        .where(eq(dbSchema.subscriptions.orgId, orgId));
+      await db
+        .update(dbSchema.workspaces)
+        .set({ maxSeats: 10 })
+        .where(eq(dbSchema.workspaces.organizationId, orgId));
+
+      for (let seatIdx = 4; seatIdx <= 10; seatIdx++) {
+        const inv = await createGatedTeamInvitation({
+          actorUserId: userId,
+          rawInput: {
+            organizationId: orgId,
+            email: `seat${seatIdx}-${stamp}@casefolio.test`,
+            role: "viewer",
+          },
+          requestHeaders: cookieHeaders,
+        });
+        expect(inv.ok).toBe(true);
+      }
+
+      const eleventhSeatInvite = await createGatedTeamInvitation({
+        actorUserId: userId,
+        rawInput: {
+          organizationId: orgId,
+          email: `seat11-${stamp}@casefolio.test`,
+          role: "viewer",
+        },
+        requestHeaders: cookieHeaders,
+      });
+      expect(eleventhSeatInvite.ok).toBe(false);
+      if (!eleventhSeatInvite.ok) {
+        expect(eleventhSeatInvite.code).toBe("PLUS_PLAN_REQUIRED");
+      }
+
+      // Upgrading workspace to Plus unlocks up to 20 seats immediately
+      await db
+        .update(dbSchema.subscriptions)
+        .set({ plan: "plus", currentPaidCapacity: 20, maxSeats: 20, customDomainEnabled: true })
+        .where(eq(dbSchema.subscriptions.orgId, orgId));
+      await db
+        .update(dbSchema.workspaces)
+        .set({ maxSeats: 20, customDomainEnabled: true })
+        .where(eq(dbSchema.workspaces.organizationId, orgId));
+
+      const eleventhOnPlus = await createGatedTeamInvitation({
+        actorUserId: userId,
+        rawInput: {
+          organizationId: orgId,
+          email: `seat11-${stamp}@casefolio.test`,
+          role: "viewer",
+        },
+        requestHeaders: cookieHeaders,
+      });
+      expect(eleventhOnPlus.ok).toBe(true);
 
       // 7. Expired canceled subscription reconciles effective plan back to Free
       const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);

@@ -31,6 +31,8 @@ env:
   PADDLE_PRICE_PRO_YEARLY: pri_ci_pro_yearly
   PADDLE_PRICE_TEAM_MONTHLY: pri_ci_team_monthly
   PADDLE_PRICE_TEAM_YEARLY: pri_ci_team_yearly
+  PADDLE_PRICE_PLUS_MONTHLY: pri_ci_plus_monthly
+  PADDLE_PRICE_PLUS_YEARLY: pri_ci_plus_yearly
   EXPORT_WORKER_URL: http://127.0.0.1:4000
   EXPORT_SIGNING_SECRET: ci-only-export-signing-secret-32-chars
   NEXT_PUBLIC_POSTHOG_KEY: phc_ci_placeholder

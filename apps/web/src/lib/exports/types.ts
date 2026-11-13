@@ -1,3 +1,4 @@
+import type { PlanTier } from "@casefolio/db";
 import { z } from "zod";
 
 export const EXPORT_FORMATS = ["png_long", "pdf", "behance"] as const;
@@ -31,7 +32,7 @@ export const EXPORT_PRESETS: readonly ExportPresetDescriptor[] = [
     label: "PNG Long Presentation",
     badge: "1,440px (1×) · 2,880px (2× Paid)",
     description:
-      "Full-length PNG presentation (1× branded up to 1,440px on Free; 1×/2× unbranded up to 2,880px on Pro & Teams).",
+      "Full-length PNG presentation (1× with subtle Casefolio watermark on Free; high-res 1×/2× without watermark on Pro, Team & Plus).",
     requiresPro: false,
     fileExtension: "png",
   },
@@ -40,8 +41,8 @@ export const EXPORT_PRESETS: readonly ExportPresetDescriptor[] = [
     label: "PDF Case Study",
     badge: "Up to 60 Pages · Selectable Text",
     description:
-      "Multi-section PDF document (up to 60 pages) for offline presentations and hiring panels.",
-    requiresPro: true,
+      "Multi-section PDF document (includes subtle Casefolio watermark on Free; unwatermarked on Pro/Team and completely white-labeled on Plus).",
+    requiresPro: false,
     fileExtension: "pdf",
   },
   {
@@ -85,7 +86,7 @@ export interface ProjectExportsOverviewPayload {
   templateName: string;
   slug: string | null;
   isPublished: boolean;
-  ownerPlan: "free" | "pro" | "team";
+  ownerPlan: PlanTier;
   hasWatermark: boolean;
   monthlyExportsUsed: number;
   monthlyExportsLimit: number;

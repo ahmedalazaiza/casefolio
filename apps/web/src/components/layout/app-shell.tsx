@@ -80,8 +80,10 @@ function PlanUsageCard({
   projectsLimit: number | null;
   renewsLabel: string;
 }) {
-  const effectiveMax = projectsLimit ?? Math.max(10, projectsUsed + 2);
-  const ratio = Math.min(100, Math.max(0, Math.round((projectsUsed / effectiveMax) * 100)));
+  const finiteLimit =
+    projectsLimit !== null && projectsLimit >= 0 ? projectsLimit : null;
+  const effectiveMax = finiteLimit ?? Math.max(10, projectsUsed + 2);
+  const ratio = Math.min(100, Math.max(0, Math.round((projectsUsed / Math.max(1, effectiveMax)) * 100)));
 
   return (
     <div
@@ -104,9 +106,9 @@ function PlanUsageCard({
         />
       </div>
       <p className="text-muted-foreground type-caption">
-        {projectsLimit !== null
-          ? `${projectsUsed} of ${projectsLimit} projects used`
-          : `${projectsUsed} project${projectsUsed === 1 ? "" : "s"} · Unlimited`}
+        {finiteLimit !== null
+          ? `${projectsUsed} of ${finiteLimit} ${finiteLimit === 1 ? "Case Study" : "projects"} used`
+          : `${projectsUsed} Case ${projectsUsed === 1 ? "Study" : "Studies"} · Unlimited`}
       </p>
     </div>
   );

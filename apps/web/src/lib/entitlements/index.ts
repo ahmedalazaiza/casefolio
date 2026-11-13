@@ -1,5 +1,12 @@
 import type { PlanTier, UserRole } from "@casefolio/db";
-import { clampTeamsSeats, getWorkspaceQuotas } from "@/lib/billing/plans";
+import {
+  clampTeamsSeats,
+  getWorkspaceQuotas,
+  isUnlimitedProjectsLimit,
+  PLUS_INCLUDED_SEATS,
+  TEAMS_MAX_SELF_SERVE_SEATS,
+  TEAMS_MIN_SEATS,
+} from "@/lib/billing/plans";
 
 export const ENTITLEMENT_FEATURES = [
   "create_project",
@@ -13,6 +20,8 @@ export const ENTITLEMENT_FEATURES = [
   "full_analytics",
   "team_seats",
   "shared_spaces",
+  "custom_domain",
+  "white_label",
 ] as const;
 
 export type EntitlementFeature = (typeof ENTITLEMENT_FEATURES)[number];
@@ -41,7 +50,7 @@ export interface EntitlementContext {
 export interface EntitlementDecision {
   allowed: boolean;
   plan: PlanTier;
-  requiredPlan: "pro" | "team";
+  requiredPlan: "pro" | "team" | "plus";
   code:
     | "ALLOWED"
     | "PROJECT_LIMIT_REACHED"
@@ -54,6 +63,8 @@ export interface EntitlementDecision {
     | "FULL_ANALYTICS_LOCKED"
     | "TEAM_PLAN_REQUIRED"
     | "TEAM_SEAT_LIMIT_REACHED"
+    | "PLUS_PLAN_REQUIRED"
+    | "PLUS_SEAT_LIMIT_REACHED"
     | "SHARED_SPACE_LIMIT_REACHED";
   message: string;
 }
@@ -63,21 +74,32 @@ export function normalizePlanTier(subject: EntitlementSubject): PlanTier {
     return "free";
   }
   if (typeof subject === "string") {
-    if (subject === "pro" || subject === "team") {
+    if (subject === "pro" || subject === "team" || subject === "plus") {
       return subject;
     }
     return "free";
   }
-  if (subject.plan === "pro" || subject.plan === "team") {
+  if (
+    subject.plan === "pro" ||
+    subject.plan === "team" ||
+    subject.plan === "plus"
+  ) {
     return subject.plan;
   }
   return "free";
 }
 
 function resolvePaidSeats(
+  plan: PlanTier,
   subject: EntitlementSubject,
   context: EntitlementContext,
 ): number {
+  if (plan === "plus") {
+    return PLUS_INCLUDED_SEATS;
+  }
+  if (plan !== "team") {
+    return 1;
+  }
   if (typeof context.paidSeats === "number" && context.paidSeats >= 1) {
     return clampTeamsSeats(context.paidSeats);
   }
@@ -87,7 +109,7 @@ function resolvePaidSeats(
   if (subject && typeof subject === "object" && typeof subject.paidSeats === "number") {
     return clampTeamsSeats(subject.paidSeats);
   }
-  return 1;
+  return TEAMS_MIN_SEATS;
 }
 
 export function evaluateEntitlement(
@@ -96,35 +118,48 @@ export function evaluateEntitlement(
   context: EntitlementContext = {},
 ): EntitlementDecision {
   const plan = normalizePlanTier(subject);
-  const isPaid = plan === "pro" || plan === "team";
-  const isTeam = plan === "team";
-  const paidSeats = resolvePaidSeats(subject, context);
+  const isPaid = plan === "pro" || plan === "team" || plan === "plus";
+  const isTeamOrPlus = plan === "team" || plan === "plus";
+  const isPlus = plan === "plus";
+  const paidSeats = resolvePaidSeats(plan, subject, context);
   const quotas = getWorkspaceQuotas(plan, paidSeats);
 
   switch (feature) {
     case "create_project": {
-      const retainedUsed = context.retainedProjectsCount ?? context.projectsCount ?? 0;
-      if (retainedUsed >= quotas.retainedProjectsLimit) {
-        return {
-          allowed: false,
-          plan,
-          requiredPlan: plan === "free" ? "pro" : "team",
-          code: "RETAINED_PROJECT_LIMIT_REACHED",
-          message: `This workspace has reached its total retained project limit (${quotas.retainedProjectsLimit}, including archived projects).`,
-        };
+      if (!isUnlimitedProjectsLimit(quotas.retainedProjectsLimit)) {
+        const retainedUsed = context.retainedProjectsCount ?? context.projectsCount ?? 0;
+        if (retainedUsed >= quotas.retainedProjectsLimit) {
+          return {
+            allowed: false,
+            plan,
+            requiredPlan: plan === "free" ? "pro" : "team",
+            code: "RETAINED_PROJECT_LIMIT_REACHED",
+            message: `This workspace has reached its total retained project limit (${quotas.retainedProjectsLimit}, including archived projects).`,
+          };
+        }
       }
 
-      const activeUsed = context.projectsCount ?? 0;
-      if (activeUsed >= quotas.activeProjectsLimit) {
+      if (!isUnlimitedProjectsLimit(quotas.activeProjectsLimit)) {
+        const activeUsed = context.projectsCount ?? 0;
+        if (activeUsed >= quotas.activeProjectsLimit) {
+          return {
+            allowed: false,
+            plan,
+            requiredPlan: plan === "free" ? "pro" : "team",
+            code: "PROJECT_LIMIT_REACHED",
+            message:
+              plan === "free"
+                ? "Free plan allows 1 active Case Study. Upgrade to Casefolio Pro ($9.99/mo or $7.99/mo billed annually) for unlimited Case Studies."
+                : `This workspace has reached its active project limit (${quotas.activeProjectsLimit}).`,
+          };
+        }
+
         return {
-          allowed: false,
+          allowed: true,
           plan,
-          requiredPlan: plan === "free" ? "pro" : "team",
-          code: "PROJECT_LIMIT_REACHED",
-          message:
-            plan === "free"
-              ? `Free plan includes up to ${quotas.activeProjectsLimit} active projects. Archive an existing project or upgrade to Pro (up to 20 active projects).`
-              : `This workspace has reached its active project limit (${quotas.activeProjectsLimit}). Archive an existing project or add capacity.`,
+          requiredPlan: "pro",
+          code: "ALLOWED",
+          message: `${quotas.activeProjectsLimit - activeUsed} active case study slot(s) remaining.`,
         };
       }
 
@@ -133,22 +168,31 @@ export function evaluateEntitlement(
         plan,
         requiredPlan: "pro",
         code: "ALLOWED",
-        message: `${quotas.activeProjectsLimit - activeUsed} active project slot(s) remaining.`,
+        message: "Unlimited Case Studies unlocked.",
       };
     }
 
     case "publish_project": {
-      const publishedUsed = context.publishedProjectsCount ?? 0;
-      if (publishedUsed >= quotas.publishedProjectsLimit) {
+      if (!isUnlimitedProjectsLimit(quotas.publishedProjectsLimit)) {
+        const publishedUsed = context.publishedProjectsCount ?? 0;
+        if (publishedUsed >= quotas.publishedProjectsLimit) {
+          return {
+            allowed: false,
+            plan,
+            requiredPlan: plan === "free" ? "pro" : "team",
+            code: "PUBLISHED_PROJECT_LIMIT_REACHED",
+            message:
+              plan === "free"
+                ? `Free plan allows ${quotas.publishedProjectsLimit} active live Case Study. Upgrade to Casefolio Pro for unlimited live Case Studies.`
+                : `This workspace has reached its simultaneous published project limit (${quotas.publishedProjectsLimit}).`,
+          };
+        }
         return {
-          allowed: false,
+          allowed: true,
           plan,
-          requiredPlan: plan === "free" ? "pro" : "team",
-          code: "PUBLISHED_PROJECT_LIMIT_REACHED",
-          message:
-            plan === "free"
-              ? `Free plan allows ${quotas.publishedProjectsLimit} simultaneously published case study. Unpublish your live project first or upgrade to Pro (up to 10 published).`
-              : `This workspace has reached its simultaneous published project limit (${quotas.publishedProjectsLimit}).`,
+          requiredPlan: "pro",
+          code: "ALLOWED",
+          message: `${quotas.publishedProjectsLimit - publishedUsed} published slot(s) remaining.`,
         };
       }
       return {
@@ -156,7 +200,7 @@ export function evaluateEntitlement(
         plan,
         requiredPlan: "pro",
         code: "ALLOWED",
-        message: `${quotas.publishedProjectsLimit - publishedUsed} published slot(s) remaining.`,
+        message: "Unlimited published Case Studies unlocked.",
       };
     }
 
@@ -167,7 +211,7 @@ export function evaluateEntitlement(
           plan,
           requiredPlan: "pro",
           code: "ALLOWED",
-          message: "All eligible published templates unlocked.",
+          message: "All Pro & Premium templates unlocked.",
         };
       }
       return {
@@ -175,7 +219,7 @@ export function evaluateEntitlement(
         plan,
         requiredPlan: "pro",
         code: "PRO_TEMPLATE_LOCKED",
-        message: "Pro templates require an active Pro or Teams workspace plan.",
+        message: "Pro & Premium templates require Casefolio Pro, Team, or Plus.",
       };
     }
 
@@ -196,8 +240,8 @@ export function evaluateEntitlement(
         requiredPlan: "pro",
         code: "ALLOWED",
         message: isPaid
-          ? "Unbranded PNG export available."
-          : "Branded 1× PNG export available (up to 1,440 px).",
+          ? "High-res PNG export without watermark available."
+          : "PNG export available (includes subtle Casefolio watermark).",
       };
     }
 
@@ -209,7 +253,7 @@ export function evaluateEntitlement(
           requiredPlan: "pro",
           code: "PRO_EXPORT_FORMAT_LOCKED",
           message:
-            "2× Retina PNG export (up to 2,880 px) requires Pro or Teams. Free supports 1× PNG up to 1,440 px.",
+            "High-res 2× Retina PNG export (up to 2,880 px) without watermark requires Casefolio Pro, Team, or Plus.",
         };
       }
       const monthlyUsed = context.monthlyExportsCount ?? 0;
@@ -227,27 +271,17 @@ export function evaluateEntitlement(
         plan,
         requiredPlan: "pro",
         code: "ALLOWED",
-        message: "2× PNG export (up to 2,880 px) unlocked.",
+        message: "High-res 2× PNG export (up to 2,880 px) unlocked.",
       };
     }
 
     case "export_pdf": {
-      if (!isPaid) {
-        return {
-          allowed: false,
-          plan,
-          requiredPlan: "pro",
-          code: "PRO_EXPORT_FORMAT_LOCKED",
-          message:
-            "PDF export requires Casefolio Pro or Teams. Free plan supports branded 1× PNG exports.",
-        };
-      }
       const monthlyUsed = context.monthlyExportsCount ?? 0;
       if (monthlyUsed >= quotas.monthlyExportsLimit) {
         return {
           allowed: false,
           plan,
-          requiredPlan: "team",
+          requiredPlan: plan === "free" ? "pro" : "team",
           code: "EXPORT_LIMIT_REACHED",
           message: `This workspace has reached its ${quotas.monthlyExportsLimit} monthly export limit.`,
         };
@@ -257,7 +291,9 @@ export function evaluateEntitlement(
         plan,
         requiredPlan: "pro",
         code: "ALLOWED",
-        message: "PDF exports (up to 60 pages) unlocked.",
+        message: isPaid
+          ? "High-res PDF export without watermark unlocked."
+          : "PDF export available (includes subtle Casefolio watermark).",
       };
     }
 
@@ -269,7 +305,7 @@ export function evaluateEntitlement(
           requiredPlan: "pro",
           code: "PRO_EXPORT_FORMAT_LOCKED",
           message:
-            "Behance image pack export requires Casefolio Pro or Teams. Free plan supports branded 1× PNG exports.",
+            "Behance image pack export requires Casefolio Pro, Team, or Plus.",
         };
       }
       const monthlyUsed = context.monthlyExportsCount ?? 0;
@@ -298,7 +334,7 @@ export function evaluateEntitlement(
           plan,
           requiredPlan: "pro",
           code: "ALLOWED",
-          message: "Casefolio branding is removable on public pages and exports.",
+          message: "Exports and live links are free of watermarks.",
         };
       }
       return {
@@ -307,7 +343,7 @@ export function evaluateEntitlement(
         requiredPlan: "pro",
         code: "WATERMARK_REMOVAL_LOCKED",
         message:
-          "Removing the “Made with Casefolio” badge requires Casefolio Pro or Teams.",
+          "Removing the Casefolio watermark requires Casefolio Pro, Team, or Plus.",
       };
     }
 
@@ -326,39 +362,73 @@ export function evaluateEntitlement(
         plan,
         requiredPlan: "pro",
         code: "FULL_ANALYTICS_LOCKED",
-        message: "90-day / 365-day referrer and daily trend analytics require Pro or Teams.",
+        message: "View analytics on live links require Casefolio Pro, Team, or Plus.",
       };
     }
 
     case "team_seats": {
-      if (!isTeam) {
+      if (!isTeamOrPlus) {
         return {
           allowed: false,
           plan,
           requiredPlan: "team",
           code: "TEAM_PLAN_REQUIRED",
           message:
-            "Inviting team members requires an active Casefolio Teams subscription (S = 1–25 paid seats).",
+            "Inviting team members requires an active Casefolio Team (2–10 seats) or Plus (up to 20 seats) plan.",
         };
       }
       if (context.seatsLimit === undefined && context.seatsUsed === undefined) {
         return {
           allowed: true,
           plan,
-          requiredPlan: "team",
+          requiredPlan: plan === "plus" ? "plus" : "team",
           code: "ALLOWED",
-          message: "Casefolio Teams collaboration unlocked.",
+          message: "Team collaboration unlocked.",
         };
       }
-      const seatsLimit = clampTeamsSeats(context.seatsLimit ?? 1);
+
+      if (plan === "plus") {
+        const plusLimit = Math.min(
+          PLUS_INCLUDED_SEATS,
+          Math.max(1, Math.floor(context.seatsLimit ?? PLUS_INCLUDED_SEATS)),
+        );
+        const used = context.seatsUsed ?? 1;
+        if (used >= plusLimit) {
+          return {
+            allowed: false,
+            plan,
+            requiredPlan: "plus",
+            code: "PLUS_SEAT_LIMIT_REACHED",
+            message: `All ${plusLimit} team seats included in Casefolio Plus are occupied or reserved.`,
+          };
+        }
+        return {
+          allowed: true,
+          plan,
+          requiredPlan: "plus",
+          code: "ALLOWED",
+          message: `${plusLimit - used} Plus team seat(s) available.`,
+        };
+      }
+
+      const seatsLimit = clampTeamsSeats(context.seatsLimit ?? TEAMS_MIN_SEATS);
       const seatsUsed = context.seatsUsed ?? 1;
       if (seatsUsed >= seatsLimit) {
+        if (seatsLimit >= TEAMS_MAX_SELF_SERVE_SEATS) {
+          return {
+            allowed: false,
+            plan,
+            requiredPlan: "plus",
+            code: "PLUS_PLAN_REQUIRED",
+            message: `Team plan supports up to ${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) for up to ${PLUS_INCLUDED_SEATS} team seats.`,
+          };
+        }
         return {
           allowed: false,
           plan,
           requiredPlan: "team",
           code: "TEAM_SEAT_LIMIT_REACHED",
-          message: `All ${seatsLimit} paid seat(s) in this Teams workspace are occupied or reserved. The Owner can review adding seats in Billing.`,
+          message: `All ${seatsLimit} paid seat(s) in this Team workspace are occupied or reserved. Add seats in Billing (up to ${TEAMS_MAX_SELF_SERVE_SEATS}) or upgrade to Plus for up to ${PLUS_INCLUDED_SEATS} seats.`,
         };
       }
       return {
@@ -371,13 +441,13 @@ export function evaluateEntitlement(
     }
 
     case "shared_spaces": {
-      if (!isTeam) {
+      if (!isTeamOrPlus) {
         return {
           allowed: false,
           plan,
           requiredPlan: "team",
           code: "TEAM_PLAN_REQUIRED",
-          message: "Shared team spaces require an active Casefolio Teams subscription.",
+          message: "Shared team workspaces require Casefolio Team or Plus.",
         };
       }
       const sharedUsed = context.sharedSpacesCount ?? 0;
@@ -385,9 +455,9 @@ export function evaluateEntitlement(
         return {
           allowed: false,
           plan,
-          requiredPlan: "team",
+          requiredPlan: plan === "team" ? "plus" : "plus",
           code: "SHARED_SPACE_LIMIT_REACHED",
-          message: `This Teams workspace has reached its ${quotas.sharedSpacesLimit} shared spaces limit (10 × S).`,
+          message: `This workspace has reached its ${quotas.sharedSpacesLimit} shared spaces limit.`,
         };
       }
       return {
@@ -396,6 +466,47 @@ export function evaluateEntitlement(
         requiredPlan: "team",
         code: "ALLOWED",
         message: "Shared team spaces unlocked.",
+      };
+    }
+
+    case "custom_domain": {
+      if (isPlus) {
+        return {
+          allowed: true,
+          plan,
+          requiredPlan: "plus",
+          code: "ALLOWED",
+          message: "Custom domain for live links unlocked.",
+        };
+      }
+      return {
+        allowed: false,
+        plan,
+        requiredPlan: "plus",
+        code: "PLUS_PLAN_REQUIRED",
+        message:
+          "Connecting a custom domain (e.g., work.youragency.com) requires Casefolio Plus.",
+      };
+    }
+
+    case "white_label": {
+      if (isPlus) {
+        return {
+          allowed: true,
+          plan,
+          requiredPlan: "plus",
+          code: "ALLOWED",
+          message:
+            "Complete white-labeling (removal of Casefolio branding from live links & PDF metadata) unlocked.",
+        };
+      }
+      return {
+        allowed: false,
+        plan,
+        requiredPlan: "plus",
+        code: "PLUS_PLAN_REQUIRED",
+        message:
+          "Complete white-labeling on live links and PDF metadata requires Casefolio Plus.",
       };
     }
   }

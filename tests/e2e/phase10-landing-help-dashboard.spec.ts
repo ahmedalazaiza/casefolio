@@ -102,18 +102,18 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await maybeSaveScreenshot(page, "landing-hero-1440.png", false);
     await maybeSaveScreenshot(page, "landing-1440.png", true);
 
-    // Toggle Yearly billing on landing pricing section & open an FAQ item
+    // Toggle Annual billing on landing pricing section & open an FAQ item
     await page
-      .getByRole("button", { name: /Yearly/i })
+      .getByRole("button", { name: /^Annual/i })
       .first()
       .click();
-    await expect(page.getByText("$10").first()).toBeVisible();
+    await expect(page.getByText("$7.99").first()).toBeVisible();
     await page
       .getByRole("button", {
-        name: /Can I use my own colors and fonts/i,
+        name: /Can I use my own colors, fonts, and custom domain/i,
       })
       .click();
-    await expect(page.getByText(/Every template exposes curated theme tokens/i)).toBeVisible();
+    await expect(page.getByText(/Plus also includes custom domains/i)).toBeVisible();
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("/");

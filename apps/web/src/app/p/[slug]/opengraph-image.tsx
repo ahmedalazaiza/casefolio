@@ -144,22 +144,24 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps): P
               gap: 14,
             }}
           >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                backgroundColor: primary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: bg,
-                fontSize: 20,
-                fontWeight: 700,
-              }}
-            >
-              C
-            </div>
+            {!published.project.whiteLabelEnabled ? (
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  backgroundColor: primary,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: bg,
+                  fontSize: 20,
+                  fontWeight: 700,
+                }}
+              >
+                C
+              </div>
+            ) : null}
             <span
               style={{
                 fontSize: 22,
@@ -178,7 +180,11 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps): P
               color: textMuted,
             }}
           >
-            casefolio.design/p/{published.project.slug}
+            {published.project.whiteLabelEnabled
+              ? published.project.customDomain
+                ? `${published.project.customDomain}/p/${published.project.slug}`
+                : `/p/${published.project.slug}`
+              : `casefolio.design/p/${published.project.slug}`}
           </span>
         </div>
       </div>

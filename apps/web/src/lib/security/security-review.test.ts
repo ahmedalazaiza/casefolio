@@ -111,22 +111,25 @@ describe("Phase 11 Security Review & Hardening Audit (C-1101)", () => {
     }
   });
 
-  it("2. enforces single `can(plan, feature)` entitlement matrix across Free, Pro, and Team", () => {
-    expect(can("free", "create_project", { projectsCount: 1 })).toBe(true);
-    expect(can("free", "create_project", { projectsCount: 2 })).toBe(false);
-    expect(can("pro", "create_project", { projectsCount: 19 })).toBe(true);
-    expect(can("pro", "create_project", { projectsCount: 20 })).toBe(false);
+  it("2. enforces single `can(plan, feature)` entitlement matrix across Free, Pro, Team, and Plus", () => {
+    expect(can("free", "create_project", { projectsCount: 0 })).toBe(true);
+    expect(can("free", "create_project", { projectsCount: 1 })).toBe(false);
+    expect(can("pro", "create_project", { projectsCount: 250 })).toBe(true);
 
     expect(can("free", "pro_templates")).toBe(false);
     expect(can("pro", "pro_templates")).toBe(true);
 
-    expect(can("free", "export_pdf")).toBe(false);
-    expect(can("pro", "export_pdf")).toBe(true);
+    expect(can("free", "export_pdf")).toBe(true);
+    expect(can("free", "export_behance")).toBe(false);
+    expect(can("pro", "export_behance")).toBe(true);
     expect(can("free", "remove_watermark")).toBe(false);
     expect(can("pro", "remove_watermark")).toBe(true);
 
     expect(can("pro", "team_seats")).toBe(false);
     expect(can("team", "team_seats")).toBe(true);
+    expect(can("team", "custom_domain")).toBe(false);
+    expect(can("plus", "custom_domain")).toBe(true);
+    expect(can("plus", "white_label")).toBe(true);
   });
 
   it("3. verifies Paddle webhook HMAC-SHA256 signatures and rejects missing, tampered, or replayed requests", () => {

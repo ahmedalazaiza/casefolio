@@ -11,6 +11,8 @@ vi.mock("@/env", async (importOriginal) => {
     PADDLE_PRICE_PRO_YEARLY: "pri_ci_pro_yearly",
     PADDLE_PRICE_TEAM_MONTHLY: "pri_ci_team_monthly",
     PADDLE_PRICE_TEAM_YEARLY: "pri_ci_team_yearly",
+    PADDLE_PRICE_PLUS_MONTHLY: "pri_ci_plus_monthly",
+    PADDLE_PRICE_PLUS_YEARLY: "pri_ci_plus_yearly",
     NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: "test_ci_paddle_token",
   };
   return {
@@ -52,6 +54,8 @@ describe("evaluateBillingConfig (pure, shared with /api/health)", () => {
     PADDLE_PRICE_PRO_YEARLY: "pri_01hproYearly00000000000000",
     PADDLE_PRICE_TEAM_MONTHLY: "pri_01hteamMonthly000000000000",
     PADDLE_PRICE_TEAM_YEARLY: "pri_01hteamYearly0000000000000",
+    PADDLE_PRICE_PLUS_MONTHLY: "pri_01hplusMonthly000000000000",
+    PADDLE_PRICE_PLUS_YEARLY: "pri_01hplusYearly0000000000000",
   };
 
   it("accepts a consistent sandbox configuration", async () => {
@@ -93,6 +97,6 @@ describe("evaluateBillingConfig (pure, shared with /api/health)", () => {
       ...realPrices,
       PADDLE_PRICE_TEAM_YEARLY: realPrices.PADDLE_PRICE_PRO_YEARLY,
     });
-    expect(duplicated.problems.join("\n")).toMatch(/four distinct prices/);
+    expect(duplicated.problems.join("\n")).toMatch(/six distinct prices/);
   });
 });

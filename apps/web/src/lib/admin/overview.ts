@@ -397,7 +397,9 @@ export async function getAdminPlatformAnalytics(
     ]);
 
   const totalUsers = userRows.length;
-  const paidUsers = userRows.filter((u) => u.plan === "pro" || u.plan === "team").length;
+  const paidUsers = userRows.filter(
+    (u) => u.plan === "pro" || u.plan === "team" || u.plan === "plus",
+  ).length;
   const freeToProRatePercent =
     totalUsers > 0 ? Math.round((paidUsers / totalUsers) * 1000) / 10 : 0;
 

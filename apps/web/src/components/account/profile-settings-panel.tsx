@@ -1,5 +1,6 @@
 "use client";
 
+import type { PlanTier } from "@casefolio/db";
 import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
@@ -21,7 +22,7 @@ export interface ProfileSettingsPanelProps {
     image: string | null;
     initials: string;
     role: string;
-    effectivePlan: "free" | "pro" | "team";
+    effectivePlan: PlanTier;
     jobTitle: string | null;
     designFocus: "mobile" | "web" | "both" | null;
   };

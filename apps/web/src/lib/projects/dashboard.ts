@@ -10,11 +10,13 @@ import {
   type UserRole,
 } from "@casefolio/db";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
+import { getWorkspaceQuotas } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import { can } from "@/lib/entitlements";
 import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
+  resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
 import { resolveProjectOrTemplateThumbnailUrl } from "@/lib/template/cover-url";
 import {
@@ -151,9 +153,42 @@ export async function listDashboardProjectsForUser(
     )
     .orderBy(desc(dbSchema.projects.updatedAt));
 
+  let downgradedActiveProjectId: string | null = null;
+  let hasDowngradeExtraLocks = false;
+
+  if (targetWorkspaceKind === "personal") {
+    const [[wsRow], ent] = await Promise.all([
+      db
+        .select({ keepPublicProjectId: dbSchema.workspaces.keepPublicProjectId })
+        .from(dbSchema.workspaces)
+        .where(eq(dbSchema.workspaces.id, targetWorkspaceId))
+        .limit(1),
+      resolveWorkspaceEntitlementState(targetWorkspaceId),
+    ]);
+
+    if (!ent || ent.plan === "free") {
+      const nonArchived = rows.filter((r) => r.project.archivedAt === null);
+      if (nonArchived.length > 1) {
+        hasDowngradeExtraLocks = true;
+        const keepId = wsRow?.keepPublicProjectId ?? null;
+        downgradedActiveProjectId =
+          keepId && nonArchived.some((r) => r.project.id === keepId)
+            ? keepId
+            : (nonArchived.find((r) => r.project.visibility !== "private")?.project.id ??
+                nonArchived[0]!.project.id);
+      }
+    }
+  }
+
   return rows.map((row) => {
     const sp = row.project.spaceId ? spaceMap.get(row.project.spaceId) : undefined;
     const creatorId = row.project.createdByUserId ?? row.project.ownerId;
+    const isNonArchived = row.project.archivedAt === null;
+    const isKeptActiveProject =
+      hasDowngradeExtraLocks && isNonArchived && row.project.id === downgradedActiveProjectId;
+    const isLockedByDowngrade =
+      hasDowngradeExtraLocks && isNonArchived && row.project.id !== downgradedActiveProjectId;
+
     return {
       id: row.project.id,
       name: row.project.name,
@@ -179,6 +214,8 @@ export async function listDashboardProjectsForUser(
       spaceName: sp?.name,
       spaceVisibility: sp?.visibility,
       isCreator: creatorId === userId,
+      isLockedByDowngrade,
+      isKeptActiveProject,
     };
   });
 }
@@ -309,25 +346,26 @@ export async function duplicateProjectForUser(
   }
 
   const effectivePlan: PlanTier =
-    auth.workspace.kind === "personal" && userPlan === "pro" && auth.entitlement.plan === "free"
-      ? "pro"
+    auth.workspace.kind === "personal" && userPlan !== "free" && auth.entitlement.plan === "free"
+      ? userPlan
       : auth.entitlement.plan;
 
   if (row.templateTier === "pro" && !can(effectivePlan, "pro_templates")) {
     return {
       ok: false,
       code: "FORBIDDEN",
-      error: "Upgrade to Pro or Teams to duplicate case studies built on Pro templates.",
+      error: "Upgrade to Pro, Team, or Plus to duplicate case studies built on Pro templates.",
     };
   }
 
+  const fallbackPaidQuotas = getWorkspaceQuotas(effectivePlan, 1);
   const effectiveMaxActive =
-    auth.workspace.kind === "personal" && userPlan === "pro" && auth.entitlement.plan === "free"
-      ? 20
+    auth.workspace.kind === "personal" && userPlan !== "free" && auth.entitlement.plan === "free"
+      ? fallbackPaidQuotas.activeProjectsLimit
       : auth.entitlement.quotas.activeProjectsLimit;
   const effectiveMaxRetained =
-    auth.workspace.kind === "personal" && userPlan === "pro" && auth.entitlement.plan === "free"
-      ? 100
+    auth.workspace.kind === "personal" && userPlan !== "free" && auth.entitlement.plan === "free"
+      ? fallbackPaidQuotas.retainedProjectsLimit
       : auth.entitlement.quotas.retainedProjectsLimit;
 
   const copyName = `${auth.project.name} (Copy)`.slice(0, 120);

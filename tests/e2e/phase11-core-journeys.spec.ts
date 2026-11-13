@@ -223,11 +223,11 @@ test.describe("Phase 11 Core E2E Journeys (C-1102)", () => {
       ).toBeVisible();
       await expect(anonPage.getByTestId("casefolio-watermark-badge")).toBeVisible();
 
-      // 7. Export PNG on Free (PDF gated on Free)
+      // 7. Export PNG on Free (Behance gated on Free)
       await page.getByRole("link", { name: /Exports \(PNG \/ PDF \/ Behance\)/i }).click();
       await expect(page).toHaveURL(new RegExp(`/projects/${createdProjectId}/exports`));
 
-      await page.getByTestId("export-preset-pdf").click();
+      await page.getByTestId("export-preset-behance").click();
       await expect(page.getByTestId("upgrade-export-cta")).toBeVisible();
 
       await page.getByTestId("export-preset-png_long").click();

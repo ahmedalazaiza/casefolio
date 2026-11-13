@@ -314,8 +314,8 @@ export function AdminUserDetailPanel({
                 <dt className="text-muted-foreground type-body-s">Billing</dt>
                 <dd className="text-foreground type-body-s">
                   {detail.subscription.interval
-                    ? `${detail.subscription.interval === "yearly" ? "Yearly" : "Monthly"} · $${detail.subscription.amountUsd}`
-                    : "Free"}
+                    ? `${detail.subscription.interval === "yearly" ? "Annual" : "Monthly"} · $${detail.subscription.amountUsd.toFixed(2)}`
+                    : "Free ($0 / forever)"}
                 </dd>
               </div>
               <div className="flex items-center justify-between py-2.5">

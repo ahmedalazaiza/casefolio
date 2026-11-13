@@ -1,5 +1,6 @@
 "use client";
 
+import type { PlanTier } from "@casefolio/db";
 import { Download, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,13 +20,14 @@ import {
 } from "@/lib/admin/users-types";
 import { cn } from "@/lib/utils";
 
-function planBadgeTone(plan: "free" | "pro" | "team"): "neutral" | "pro" | "accent" {
-  if (plan === "team") return "accent";
+function planBadgeTone(plan: PlanTier): "neutral" | "pro" | "accent" {
+  if (plan === "plus" || plan === "team") return "accent";
   if (plan === "pro") return "pro";
   return "neutral";
 }
 
-function formatPlanLabel(plan: "free" | "pro" | "team"): string {
+function formatPlanLabel(plan: PlanTier): string {
+  if (plan === "plus") return "Plus";
   if (plan === "team") return "Team";
   if (plan === "pro") return "Pro";
   return "Free";

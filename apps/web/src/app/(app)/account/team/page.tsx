@@ -136,17 +136,24 @@ export default async function AccountTeamPage({
 
   const orgEntitlementMap = new Map<
     string,
-    { paidSeats: number; renewalSeats: number | null; hasActiveTeamPlan: boolean }
+    {
+      plan: "free" | "pro" | "team" | "plus";
+      paidSeats: number;
+      renewalSeats: number | null;
+      hasActiveTeamPlan: boolean;
+    }
   >();
 
   await Promise.all(
     userMemberships.map(async (row) => {
       const ws = await ensureTeamWorkspaceForOrganization(row.organization.id, user.id);
       const state = await resolveWorkspaceEntitlementState(ws.workspaceId, now);
+      const isTeamOrPlus = state?.plan === "team" || state?.plan === "plus";
       orgEntitlementMap.set(row.organization.id, {
-        paidSeats: state?.plan === "team" ? state.paidSeats : row.organization.seats,
+        plan: state?.plan ?? "free",
+        paidSeats: isTeamOrPlus ? state.paidSeats : row.organization.seats,
         renewalSeats: state?.plan === "team" ? state.renewalQuantity : null,
-        hasActiveTeamPlan: state?.plan === "team" && state.lifecycle.grantsPaidAccess,
+        hasActiveTeamPlan: Boolean(isTeamOrPlus && state?.lifecycle.grantsPaidAccess),
       });
     }),
   );
@@ -162,6 +169,7 @@ export default async function AccountTeamPage({
       name: row.organization.name,
       slug: row.organization.slug,
       seats: row.organization.seats,
+      plan: ent?.plan ?? "free",
       paidSeats: ent?.paidSeats ?? row.organization.seats,
       renewalSeats: ent?.renewalSeats ?? null,
       hasActiveTeamPlan: ent?.hasActiveTeamPlan ?? false,

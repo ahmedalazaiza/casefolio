@@ -174,7 +174,8 @@ export function LandingExperience({
           </div>
 
           <p className="text-muted-foreground type-caption">
-            {snapshot.freeProjectsIncluded} free case studies included · No
+            {snapshot.freeProjectsIncluded} free case{" "}
+            {snapshot.freeProjectsIncluded === 1 ? "study" : "studies"} included · No
             credit card required
           </p>
         </LandingHeroMotion>
@@ -402,8 +403,8 @@ export function LandingExperience({
         <SectionIntro
           icon={<Tag />}
           eyebrow="Pricing"
-          title="Simple plans for every designer"
-          description="Start free with two active projects — upgrade anytime for up to 20 active case studies on Pro, pooled team capacity, unbranded 2x PNG & PDF exports, and full analytics."
+          title="Simple plans for every designer, studio & agency"
+          description="Start free forever with 1 active Case Study — or choose Pro, Team (2–10 seats), or Plus (up to 20 seats, custom domain & white-labeling) with 20% off annual billing."
         />
         <LandingPricingSection showComparisonLink />
       </section>
@@ -435,8 +436,9 @@ export function LandingExperience({
               Your next case study is one template away
             </h2>
             <p className="text-muted-foreground type-lead max-w-md">
-              Start free with {snapshot.freeProjectsIncluded} full case studies
-              — pick Cinema, Orbit, or Meridian and publish today.
+              Start free with {snapshot.freeProjectsIncluded} full case{" "}
+              {snapshot.freeProjectsIncluded === 1 ? "study" : "studies"} — pick
+              Cinema, Orbit, or Northwind and publish today.
             </p>
             <Button size="lg" asChild>
               <Link href="/sign-up">

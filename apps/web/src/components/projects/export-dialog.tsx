@@ -1,5 +1,6 @@
 "use client";
 
+import type { PlanTier } from "@casefolio/db";
 import {
   AlertCircle,
   CheckCircle2,
@@ -38,7 +39,7 @@ import { cn } from "@/lib/utils";
 export interface ExportCaseStudyDialogProps {
   projectId: string;
   projectName: string;
-  ownerPlan: "free" | "pro" | "team";
+  ownerPlan: PlanTier;
   trigger?: ReactNode;
   onExportQueued?: (job: ExportHistoryItem) => void;
   onExportCompleted?: (job: ExportHistoryItem) => void;
@@ -238,7 +239,7 @@ export function ExportCaseStudyDialog({
                   {locked && (
                     <span className="text-warning type-caption inline-flex items-center gap-1.5 pt-0.5">
                       <Lock className="size-3" />
-                      <span>Requires Pro or Team plan</span>
+                      <span>Requires Pro, Team, or Plus plan</span>
                     </span>
                   )}
                 </button>
@@ -250,11 +251,24 @@ export function ExportCaseStudyDialog({
             <div className="border-border bg-sunken flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
               <span className="text-muted-foreground type-caption inline-flex items-center gap-2">
                 <Sparkles className="text-primary size-3.5 shrink-0" />
-                <span>Free PNG exports include a &ldquo;Made with Casefolio&rdquo; footer.</span>
+                <span>
+                  Free PNG &amp; PDF exports include a subtle &ldquo;Made with Casefolio&rdquo;
+                  watermark.
+                </span>
               </span>
-              <Link href="/account" className="text-primary type-caption shrink-0 hover:underline">
+              <Link href="/account/billing" className="text-primary type-caption shrink-0 hover:underline">
                 Upgrade
               </Link>
+            </div>
+          )}
+
+          {ownerPlan === "plus" && (
+            <div className="border-border bg-sunken flex items-center gap-2 rounded-xl border px-4 py-3">
+              <Sparkles className="text-primary size-3.5 shrink-0" />
+              <span className="text-muted-foreground type-caption">
+                White-Label exports active (Casefolio Plus) — zero Casefolio branding in rendered
+                files or PDF metadata.
+              </span>
             </div>
           )}
 

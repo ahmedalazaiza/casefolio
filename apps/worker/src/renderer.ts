@@ -324,6 +324,12 @@ export async function renderExportWithPlaywright(
     }
 
     if (input.format === "pdf") {
+      await page.evaluate(() => {
+        const root = document.querySelector('[data-testid="export-render-ready"]') as HTMLElement | null;
+        if (root?.dataset.whiteLabel === "true") {
+          document.title = root.dataset.projectTitle?.trim() || "Case Study";
+        }
+      });
       await page.emulateMedia({ media: "screen" });
       const pdfBuffer = await page.pdf({
         width: `${EXPORT_DESKTOP_WIDTH}px`,

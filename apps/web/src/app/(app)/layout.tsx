@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { computeUserInitials, requireSession } from "@/lib/auth/session";
-import { getWorkspaceQuotas } from "@/lib/billing/plans";
+import { getWorkspaceQuotas, isUnlimitedProjectsLimit } from "@/lib/billing/plans";
 import { getUserBillingOverview } from "@/lib/billing/service";
 import { db, dbSchema } from "@/lib/db";
 import { can } from "@/lib/entitlements";
@@ -47,10 +47,15 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   const periodDate = formatShortDate(billing.subscription?.currentPeriodEndIso ?? null);
 
   let planLabel = "Free · Starter";
-  let renewsLabel = "Upgrade to Pro for 20 active case studies";
+  let renewsLabel = "Upgrade to Pro for Unlimited Case Studies";
 
   if (isPaid) {
-    const tierTitle = billing.effectivePlan === "team" ? "Team" : "Pro";
+    const tierTitle =
+      billing.effectivePlan === "plus"
+        ? "Plus"
+        : billing.effectivePlan === "team"
+          ? "Team"
+          : "Pro";
     if (billing.subscription?.status === "past_due") {
       planLabel = `${tierTitle} · Past due`;
       renewsLabel = periodDate ? `Payment retry due ${periodDate}` : "Action needed in Billing";
@@ -77,7 +82,11 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       showProBadge={isPaid}
       planLabel={planLabel}
       projectsUsed={projectsUsed}
-      projectsLimit={quotas.activeProjectsLimit}
+      projectsLimit={
+        isUnlimitedProjectsLimit(quotas.activeProjectsLimit)
+          ? null
+          : quotas.activeProjectsLimit
+      }
       renewsLabel={renewsLabel}
       failedPaymentPauseDateLabel={failedPaymentPauseDateLabel}
       initialUnreadNotifications={notificationsSummary.unreadCount}

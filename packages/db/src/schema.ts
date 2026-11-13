@@ -16,8 +16,12 @@ import {
 export const USER_ROLES = ["user", "admin", "superadmin"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
-export const PLAN_TIERS = ["free", "pro", "team"] as const;
+export const PLAN_TIERS = ["free", "pro", "team", "plus"] as const;
 export type PlanTier = (typeof PLAN_TIERS)[number];
+
+export const BILLING_INTERVALS = ["monthly", "annual"] as const;
+export const CANONICAL_BILLING_INTERVALS = ["monthly", "yearly"] as const;
+export type CanonicalBillingInterval = (typeof CANONICAL_BILLING_INTERVALS)[number];
 
 export const CANONICAL_MEMBERSHIP_ROLES = ["owner", "admin", "member"] as const;
 export type CanonicalMembershipRole = (typeof CANONICAL_MEMBERSHIP_ROLES)[number];
@@ -154,6 +158,11 @@ export const workspaces = pgTable(
     graceUsedAt: timestamp("grace_used_at", { withTimezone: true }),
     graceExpiresAt: timestamp("grace_expires_at", { withTimezone: true }),
     keepPublicProjectId: uuid("keep_public_project_id"),
+    maxSeats: integer("max_seats").notNull().default(1),
+    maxCaseStudies: integer("max_case_studies").notNull().default(1),
+    customDomain: text("custom_domain"),
+    customDomainEnabled: boolean("custom_domain_enabled").notNull().default(false),
+    watermarkEnabled: boolean("watermark_enabled").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -438,10 +447,14 @@ export const subscriptions = pgTable(
     paddleCustomerId: text("paddle_customer_id"),
     paddleSubscriptionId: text("paddle_subscription_id").unique(),
     plan: text("plan").$type<PlanTier>().notNull().default("free"),
-    planVersion: text("plan_version").notNull().default("2026-11-07.v1"),
+    planVersion: text("plan_version").notNull().default("2026-11-13.v2"),
     interval: text("interval").$type<"monthly" | "yearly">().notNull().default("monthly"),
     status: text("status").notNull().default("active"),
     currentPaidCapacity: integer("current_paid_capacity").notNull().default(1),
+    maxSeats: integer("max_seats").notNull().default(1),
+    maxCaseStudies: integer("max_case_studies").notNull().default(1),
+    customDomainEnabled: boolean("custom_domain_enabled").notNull().default(false),
+    watermarkEnabled: boolean("watermark_enabled").notNull().default(true),
     renewalQuantity: integer("renewal_quantity"),
     pastDueSince: timestamp("past_due_since", { withTimezone: true }),
     lastEventOccurredAt: timestamp("last_event_occurred_at", { withTimezone: true }),

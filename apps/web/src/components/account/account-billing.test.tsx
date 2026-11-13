@@ -101,11 +101,17 @@ describe("AccountSettingsShell & BillingSettingsPanel (C-703)", () => {
 
     await user.click(screen.getByTestId("open-change-plan-modal"));
     expect(screen.getByTestId("change-plan-dialog")).toBeInTheDocument();
-    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("$12");
+    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("$9.99");
+    expect(screen.getByTestId("plan-card-team")).toHaveTextContent("$6.99");
+    expect(screen.getByTestId("plan-card-plus")).toHaveTextContent("$99");
 
     await user.click(screen.getByTestId("picker-interval-yearly"));
-    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("$10");
-    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("($120/yr)");
+    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("$7.99");
+    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("($95.88/yr)");
+    expect(screen.getByTestId("plan-card-team")).toHaveTextContent("$5.59");
+    expect(screen.getByTestId("plan-card-team")).toHaveTextContent("($67.08/seat/yr)");
+    expect(screen.getByTestId("plan-card-plus")).toHaveTextContent("$79");
+    expect(screen.getByTestId("plan-card-plus")).toHaveTextContent("($948/yr)");
   });
 
   it("walks through the 2-step subscription cancellation flow and calls DELETE /api/paddle/portal", async () => {
@@ -205,6 +211,68 @@ describe("AccountSettingsShell & BillingSettingsPanel (C-703)", () => {
     await user.click(screen.getByTestId("resume-subscription-btn"));
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith("/api/paddle/portal", { method: "PATCH" });
+      expect(refreshMock).toHaveBeenCalled();
+    });
+  });
+
+  it("renders Plus Custom Domain & White-Labeling controls and saves custom domain via POST /api/paddle/seats", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ ok: true, customDomain: "work.northstar.agency" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    render(
+      <BillingSettingsPanel
+        overview={{
+          ...FREE_OVERVIEW,
+          teamBilling: {
+            organizationId: "org-plus-1",
+            organizationName: "Northstar Agency",
+            workspaceId: "ws-plus-1",
+            role: "owner",
+            isOwner: true,
+            plan: "plus",
+            status: "active",
+            interval: "yearly",
+            currentPeriodEndIso: "2027-11-05T12:00:00.000Z",
+            pastDueSinceIso: null,
+            paidSeats: 20,
+            renewalSeats: null,
+            activeMembers: 8,
+            reservedInvites: 2,
+            occupiedSeats: 10,
+            availableSeats: 10,
+            isLockedForQuantityChange: false,
+            lockReason: null,
+            customDomain: null,
+            customDomainEnabled: true,
+          },
+        }}
+        accountName="Ahmed Al-Azaiza"
+        accountEmail="ahmed@example.com"
+      />,
+    );
+
+    expect(screen.getByTestId("plus-custom-domain-section")).toBeInTheDocument();
+    const domainInput = screen.getByTestId("plus-custom-domain-input");
+    await user.type(domainInput, "work.northstar.agency");
+    await user.click(screen.getByTestId("save-custom-domain-btn"));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/paddle/seats",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            action: "set_custom_domain",
+            organizationId: "org-plus-1",
+            customDomain: "work.northstar.agency",
+          }),
+        }),
+      );
       expect(refreshMock).toHaveBeenCalled();
     });
   });

@@ -29,6 +29,13 @@
       "when": 1794398200000,
       "tag": "0003_auth_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794600000000,
+      "tag": "0004_pricing_tiers_plus",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type { PlanTier } from "@casefolio/db";
 import {
   ArrowRightLeft,
   Check,
@@ -9,6 +10,7 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
   UserMinus,
   Users,
   X,
@@ -23,6 +25,12 @@ import { Card } from "@/components/ui/card";
 import { InputField } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 import { createOrganizationSchema, inviteTeamMemberSchema } from "@/lib/auth/schemas";
+import {
+  PLUS_INCLUDED_SEATS,
+  TEAMS_MAX_SELF_SERVE_SEATS,
+  TEAMS_MIN_SEATS,
+  type PaidPlanTier,
+} from "@/lib/billing/plans";
 import { can, evaluateEntitlement } from "@/lib/entitlements";
 
 export type CanonicalOrLegacyRole = "owner" | "admin" | "member" | "editor" | "viewer";
@@ -32,6 +40,7 @@ export interface TeamOrganizationSummary {
   name: string;
   slug: string;
   seats: number;
+  plan?: PlanTier;
   paidSeats?: number;
   renewalSeats?: number | null;
   hasActiveTeamPlan?: boolean;
@@ -75,7 +84,7 @@ export interface IncomingOwnerTransferSummary {
 
 export interface TeamWorkspaceClientProps {
   currentUserId?: string;
-  userPlan?: "free" | "pro" | "team";
+  userPlan?: PlanTier;
   activeOrganizationId: string | null;
   organizations: TeamOrganizationSummary[];
   incomingInvitations: IncomingTeamInvitation[];
@@ -144,6 +153,7 @@ export function TeamWorkspaceClient({
   const [transferError, setTransferError] = useState<string | null>(null);
 
   const [teamUpgradeOpen, setTeamUpgradeOpen] = useState(false);
+  const [upgradeTargetPlan, setUpgradeTargetPlan] = useState<PaidPlanTier>("team");
 
   const currentOrg =
     organizations.find((org) => org.id === selectedOrgId) ?? organizations[0] ?? null;
@@ -167,8 +177,18 @@ export function TeamWorkspaceClient({
   const seatsUsed = activeMembersCount + reservedInvitesCount;
   const availableSeats = Math.max(0, admissionCeiling - seatsUsed);
 
-  const effectiveOrgPlan: "free" | "pro" | "team" =
-    currentOrg?.hasActiveTeamPlan || userPlan === "team" ? "team" : userPlan;
+  const effectiveOrgPlan: PlanTier =
+    currentOrg?.plan === "plus" || userPlan === "plus"
+      ? "plus"
+      : currentOrg?.hasActiveTeamPlan ||
+          currentOrg?.plan === "team" ||
+          userPlan === "team"
+        ? "team"
+        : userPlan;
+
+  const isTeamAtTenSeatCap =
+    effectiveOrgPlan === "team" &&
+    seatsUsed >= TEAMS_MAX_SELF_SERVE_SEATS;
 
   const seatDecision = evaluateEntitlement(effectiveOrgPlan, "team_seats", {
     seatsUsed,
@@ -234,6 +254,9 @@ export function TeamWorkspaceClient({
 
     if (!canUseTeamSeats) {
       setInviteError(seatDecision.message);
+      setUpgradeTargetPlan(
+        seatDecision.requiredPlan === "plus" || isTeamAtTenSeatCap ? "plus" : "team",
+      );
       setTeamUpgradeOpen(true);
       return;
     }
@@ -258,8 +281,13 @@ export function TeamWorkspaceClient({
         setInviteError(message);
         if (
           "code" in json &&
-          (json.code === "TEAM_PLAN_REQUIRED" || json.code === "TEAM_SEAT_LIMIT_REACHED")
+          (json.code === "TEAM_PLAN_REQUIRED" ||
+            json.code === "PLUS_PLAN_REQUIRED" ||
+            json.code === "TEAM_SEAT_LIMIT_REACHED")
         ) {
+          setUpgradeTargetPlan(
+            json.code === "PLUS_PLAN_REQUIRED" || isTeamAtTenSeatCap ? "plus" : "team",
+          );
           setTeamUpgradeOpen(true);
         }
         return;
@@ -764,16 +792,31 @@ export function TeamWorkspaceClient({
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-foreground type-body-s-strong">
-                      {effectiveOrgPlan === "team"
-                        ? "All paid seats are currently assigned or reserved"
-                        : "Collaborative seats require Casefolio Teams"}
+                      {isTeamAtTenSeatCap
+                        ? `Team maximum reached (${TEAMS_MAX_SELF_SERVE_SEATS} seats)`
+                        : effectiveOrgPlan === "team" || effectiveOrgPlan === "plus"
+                          ? "All paid seats are currently assigned or reserved"
+                          : "Collaborative seats require Casefolio Team"}
                     </span>
                     <ProBadge />
                   </div>
                   <p className="text-muted-foreground type-caption">{seatDecision.message}</p>
                 </div>
               </div>
-              {effectiveOrgPlan === "team" && isOwner ? (
+              {isTeamAtTenSeatCap ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  data-testid="upgrade-to-plus-button"
+                  onClick={() => {
+                    setUpgradeTargetPlan("plus");
+                    setTeamUpgradeOpen(true);
+                  }}
+                >
+                  <Sparkles className="size-3.5" />
+                  Upgrade to Plus ({PLUS_INCLUDED_SEATS} seats)
+                </Button>
+              ) : effectiveOrgPlan === "team" && isOwner ? (
                 <Button asChild size="sm" data-testid="upgrade-to-team-button">
                   <Link href="/account/billing">Add paid seats</Link>
                 </Button>
@@ -782,9 +825,16 @@ export function TeamWorkspaceClient({
                   type="button"
                   size="sm"
                   data-testid="upgrade-to-team-button"
-                  onClick={() => setTeamUpgradeOpen(true)}
+                  onClick={() => {
+                    setUpgradeTargetPlan(
+                      seatDecision.requiredPlan === "plus" ? "plus" : "team",
+                    );
+                    setTeamUpgradeOpen(true);
+                  }}
                 >
-                  Upgrade to Teams
+                  {seatDecision.requiredPlan === "plus"
+                    ? "Upgrade to Plus"
+                    : "Upgrade to Team"}
                 </Button>
               )}
             </div>
@@ -987,7 +1037,8 @@ export function TeamWorkspaceClient({
           </h2>
           <p className="text-muted-foreground type-body-s">
             Collaborate in Shared Spaces while keeping every designer&apos;s Private Spaces isolated
-            by default (1–25 self-serve seats).
+            by default ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats on Team, or up to{" "}
+            {PLUS_INCLUDED_SEATS} seats on Plus).
           </p>
         </div>
 
@@ -1035,10 +1086,18 @@ export function TeamWorkspaceClient({
       <UpgradePromptDialog
         open={teamUpgradeOpen}
         onOpenChange={setTeamUpgradeOpen}
-        requiredPlan="team"
+        requiredPlan={upgradeTargetPlan}
         orgId={currentOrg?.id ?? null}
-        featureTitle="Unlock Casefolio Teams seats"
-        featureDescription="Subscribe to Casefolio Teams ($18/seat/mo or $15/seat/mo billed yearly, 1–25 self-serve seats) to collaborate in Shared Spaces with per-member Private Spaces."
+        featureTitle={
+          upgradeTargetPlan === "plus"
+            ? `Upgrade to Casefolio Plus for up to ${PLUS_INCLUDED_SEATS} seats`
+            : "Unlock Casefolio Team seats"
+        }
+        featureDescription={
+          upgradeTargetPlan === "plus"
+            ? `Casefolio Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) for up to ${PLUS_INCLUDED_SEATS} team seats, Custom Domain, and White-Labeling.`
+            : `Subscribe to Casefolio Team ($6.99/seat/mo or $5.59/seat/mo billed annually, ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats) to collaborate in Shared Spaces with role-based permissions and Shared Brand Kit.`
+        }
       />
     </div>
   );

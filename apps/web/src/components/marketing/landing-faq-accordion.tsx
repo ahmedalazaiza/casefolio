@@ -12,27 +12,27 @@ export const LANDING_FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Who designs the templates?",
     answer:
-      "The Casefolio team designs, versions and uploads every template so layouts stay consistent, responsive, and ready for live pages and exports. Free includes 3 Starter templates at launch; Pro and Teams unlock all eligible published templates.",
+      "The Casefolio team designs, versions, and uploads every template so layouts stay consistent, responsive, and ready for live pages and exports. Free includes standard templates; Pro, Team, and Plus unlock all Pro & Premium templates.",
   },
   {
-    question: "Can I use my own colors and fonts?",
+    question: "Can I use my own colors, fonts, and custom domain?",
     answer:
-      "Yes. Every template exposes curated theme tokens — primary, secondary, background, and text colors plus licensed heading and body font pairs — while preserving spacing and visual hierarchy.",
+      "Yes. Pro, Team, and Plus unlock full customization including custom fonts, color palettes, and custom sections. Plus also includes custom domains (e.g. work.youragency.com) and complete white-labeling.",
   },
   {
     question: "What can I export on each plan?",
     answer:
-      "Free includes 5 branded 1x PNG exports per month (up to 1,440 px). Pro (60/mo) and Teams (100 × S/mo) unlock clean, unbranded 1x and 2x PNGs (up to 2,880 px), multi-page A4 PDFs, and Behance-ready 1,400 px slices.",
+      "Free includes PNG and PDF Case Study exports with a subtle Casefolio watermark plus a Live Shareable Link. Pro ($9.99/mo or $7.99/mo annually) and Team ($6.99/seat/mo or $5.59/seat/mo annually) unlock high-res PNG, PDF, and Behance exports without watermarks. Plus ($99/mo or $79/mo annually) removes all Casefolio branding from PDF metadata and live links.",
   },
   {
-    question: "How do private spaces work inside Casefolio Teams?",
+    question: "How do seats work on Team vs. Plus?",
     answer:
-      "Every Teams member gets up to 5 private spaces that are hidden from Owners, Admins, and teammates by default — plus shared team spaces (10 × S) where the studio collaborates and Owners or Admins publish.",
+      "Team supports 2 to 10 seats dynamically priced per seat, with role-based permissions, Shared Brand Kit, and private member spaces hidden from Admins. Need 11 to 20 seats? Plus includes up to 20 seats at a flat rate with zero per-seat math.",
   },
   {
-    question: "What happens if I downgrade or leave a team?",
+    question: "What happens if I downgrade to Free or leave a team?",
     answer:
-      "Nothing is deleted immediately. On Pro → Free, you keep 1 chosen public page live while extra projects remain safe to edit or archive within Free limits. If you leave a Team workspace, your private spaces enter a ≥90-day personal Recovery Portal so you can copy projects to your Personal Workspace.",
+      "Your Case Studies are never deleted. When downgrading to Free with more than 1 Case Study, you select 1 active Case Study to keep live and editable while extra Case Studies remain safely stored and locked until you upgrade again. Departing team members retain a ≥90-day private Recovery Portal.",
   },
 ];
 

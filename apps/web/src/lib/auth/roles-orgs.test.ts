@@ -161,7 +161,7 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
         );
       expect(ownerMembership?.role).toBe("owner");
 
-      // Unpaid org cannot invite members before activating Casefolio Teams
+      // Unpaid org cannot invite members before activating Casefolio Team or Plus
       await expect(
         auth.api.createInvitation({
           body: {
@@ -171,7 +171,7 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
           },
           headers: ownerHeaders,
         }),
-      ).rejects.toThrow(/Casefolio Teams subscription/i);
+      ).rejects.toThrow(/Casefolio Team(?:s| or Plus) subscription/i);
 
       await completeSandboxCheckoutForUser(
         { id: ownerSignUp.response.user.id, email: ownerEmail },

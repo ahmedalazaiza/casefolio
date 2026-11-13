@@ -1,3 +1,4 @@
+import type { PlanTier } from "@casefolio/db";
 import { z } from "zod";
 import {
   puckDocumentSchema,
@@ -10,17 +11,17 @@ import {
   type TemplateTheme,
 } from "@/lib/template/schema";
 
-export const FREE_PROJECT_LIMIT = 2;
-export const PRO_PROJECT_LIMIT = 20;
-export const TEAMS_PROJECT_LIMIT_PER_SEAT = 20;
+export const FREE_PROJECT_LIMIT = 1;
+export const PRO_PROJECT_LIMIT = -1;
+export const TEAMS_PROJECT_LIMIT_PER_SEAT = -1;
 
 export const FREE_PUBLISHED_LIMIT = 1;
-export const PRO_PUBLISHED_LIMIT = 10;
-export const TEAMS_PUBLISHED_LIMIT_PER_SEAT = 10;
+export const PRO_PUBLISHED_LIMIT = -1;
+export const TEAMS_PUBLISHED_LIMIT_PER_SEAT = -1;
 
-export const FREE_RETAINED_LIMIT = 10;
-export const PRO_RETAINED_LIMIT = 100;
-export const TEAMS_RETAINED_LIMIT_PER_SEAT = 100;
+export const FREE_RETAINED_LIMIT = 999_999;
+export const PRO_RETAINED_LIMIT = 999_999;
+export const TEAMS_RETAINED_LIMIT_PER_SEAT = 999_999;
 
 export const CONSTRAINED_PUCK_PERMISSIONS = {
   insert: false,
@@ -44,7 +45,8 @@ export interface EditorLeaseState {
     | "archived"
     | "workspace_frozen"
     | "past_due_read_only"
-    | "pro_template_downgraded";
+    | "pro_template_downgraded"
+    | "free_tier_extra_project_locked";
 }
 
 export interface ProjectEditorPayload {
@@ -67,7 +69,7 @@ export interface ProjectEditorPayload {
   lease?: EditorLeaseState | null;
   isReadOnly?: boolean;
   readOnlyReason?: string | null;
-  workspacePlan?: "free" | "pro" | "team";
+  workspacePlan?: PlanTier;
   template: {
     id: string;
     name: string;

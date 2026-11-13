@@ -20,7 +20,9 @@ import {
   BILLING_PLAN_CATALOG,
   clampTeamsSeats,
   formatPlanHeadingLabel,
-  getChargeAmountUsd,
+  formatUsdFromCents,
+  getChargeAmountCents,
+  PLUS_INCLUDED_SEATS,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
@@ -36,6 +38,7 @@ export interface PreparedCheckoutPayload {
   plan: PaidPlanTier;
   interval: BillingInterval;
   seats: number;
+  amountCents?: number;
   amountUsd: number;
   customerEmail: string;
   orgId: string | null;
@@ -78,7 +81,8 @@ async function confirmPlanActivation(args: {
         const activated =
           args.plan === "pro"
             ? json.personal.plan === "pro"
-            : json.team?.plan === "team" && ["active", "trialing"].includes(json.team.status);
+            : json.team?.plan === args.plan &&
+              ["active", "trialing"].includes(json.team.status);
         if (activated) return "active";
       }
     } catch {
@@ -134,7 +138,9 @@ export function PaddleCheckoutModal({
 
   const planDef = BILLING_PLAN_CATALOG[selectedPlan];
   const effectiveSeats = selectedPlan === "team" ? selectedSeats : 1;
-  const displayAmount = getChargeAmountUsd(selectedPlan, selectedInterval, effectiveSeats);
+  const displayAmountLabel = formatUsdFromCents(
+    getChargeAmountCents(selectedPlan, selectedInterval, effectiveSeats),
+  );
 
   async function launchPaddleOverlay(session: PreparedCheckoutPayload) {
     const planName = BILLING_PLAN_CATALOG[session.plan].name;
@@ -203,7 +209,7 @@ export function PaddleCheckoutModal({
         body: JSON.stringify({
           plan: selectedPlan,
           interval: selectedInterval,
-          orgId: selectedPlan === "team" ? orgId : null,
+          orgId: selectedPlan === "team" || selectedPlan === "plus" ? orgId : null,
           seats: effectiveSeats,
         }),
       });
@@ -244,7 +250,7 @@ export function PaddleCheckoutModal({
         body: JSON.stringify({
           plan: selectedPlan,
           interval: selectedInterval,
-          orgId: selectedPlan === "team" ? orgId : null,
+          orgId: selectedPlan === "team" || selectedPlan === "plus" ? orgId : null,
           seats: effectiveSeats,
         }),
       });
@@ -297,14 +303,14 @@ export function PaddleCheckoutModal({
 
         {!prepared ? (
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-2 gap-2.5" role="group" aria-label="Select plan tier">
-              {(["pro", "team"] as const).map((tier) => {
+            <div className="grid grid-cols-3 gap-2.5" role="group" aria-label="Select plan tier">
+              {(["pro", "team", "plus"] as const).map((tier) => {
                 const def = BILLING_PLAN_CATALOG[tier];
                 const active = selectedPlan === tier;
-                const unitUsd =
+                const unitCents =
                   selectedInterval === "yearly"
-                    ? def.yearlyMonthlyEquivalentUsd
-                    : def.monthlyPriceUsd;
+                    ? def.yearlyMonthlyEquivalentCents
+                    : def.monthlyPriceCents;
                 return (
                   <button
                     key={tier}
@@ -319,7 +325,7 @@ export function PaddleCheckoutModal({
                   >
                     <span className="text-foreground type-body-s-strong">{def.name}</span>
                     <span className="type-caption">
-                      ${unitUsd}
+                      {formatUsdFromCents(unitCents)}
                       {tier === "team" ? "/seat/mo" : "/mo"}
                     </span>
                   </button>
@@ -354,7 +360,7 @@ export function PaddleCheckoutModal({
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Yearly · Save {planDef.yearlySavingsPercent}%
+                Annual · Save {planDef.yearlySavingsPercent}%
               </button>
             </div>
 
@@ -365,10 +371,10 @@ export function PaddleCheckoutModal({
               >
                 <div className="flex flex-col">
                   <span className="text-foreground type-body-s-strong">
-                    Paid seats (1–{TEAMS_MAX_SELF_SERVE_SEATS})
+                    Paid seats ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS})
                   </span>
                   <span className="text-muted-foreground type-caption">
-                    Includes Owner, Admin &amp; Member accounts
+                    Need 11–{PLUS_INCLUDED_SEATS} seats? Choose Plus for a flat agency rate.
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -408,13 +414,27 @@ export function PaddleCheckoutModal({
               </div>
             )}
 
+            {selectedPlan === "plus" && (
+              <div
+                data-testid="checkout-plus-capacity-note"
+                className="border-border bg-surface flex flex-col gap-0.5 rounded-xl border px-4 py-3"
+              >
+                <span className="text-foreground type-body-s-strong">
+                  Flat rate · Up to {PLUS_INCLUDED_SEATS} team seats included
+                </span>
+                <span className="text-muted-foreground type-caption">
+                  Includes Custom Domain, complete White-Labeling, and priority 24/7 support.
+                </span>
+              </div>
+            )}
+
             <div className="border-border bg-surface flex flex-col gap-3 rounded-xl border p-4">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-foreground type-heading-s">
                   {formatPlanHeadingLabel(selectedPlan, selectedInterval, effectiveSeats)}
                 </span>
                 <span className="text-foreground type-heading-m font-mono tabular-nums">
-                  ${displayAmount}
+                  {displayAmountLabel}
                   <span className="text-muted-foreground type-caption font-sans">
                     /{selectedInterval === "yearly" ? "yr" : "mo"}
                   </span>
@@ -502,7 +522,10 @@ export function PaddleCheckoutModal({
               <div className="border-border flex items-center justify-between border-t pt-2.5">
                 <span className="text-foreground type-body-s-strong">Total due today</span>
                 <span className="text-foreground type-heading-s font-mono tabular-nums">
-                  ${prepared.amountUsd}.00 USD
+                  {formatUsdFromCents(
+                    prepared.amountCents ?? Math.round(prepared.amountUsd * 100),
+                  )}{" "}
+                  USD
                 </span>
               </div>
             </div>
@@ -565,7 +588,7 @@ export function PaddleCheckoutModal({
                     Processing payment...
                   </>
                 ) : (
-                  `Pay $${prepared.amountUsd}.00 (Sandbox)`
+                  `Pay ${formatUsdFromCents(prepared.amountCents ?? Math.round(prepared.amountUsd * 100))} (Sandbox)`
                 )}
               </Button>
             </DialogFooter>

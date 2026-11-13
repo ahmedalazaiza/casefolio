@@ -12,6 +12,10 @@ import {
 import { env } from "@/env";
 import { sendTeamInvitationEmail } from "@/lib/auth/email";
 import { inviteTeamMemberSchema } from "@/lib/auth/schemas";
+import {
+  PLUS_INCLUDED_SEATS,
+  TEAMS_MAX_SELF_SERVE_SEATS,
+} from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import {
   ensureTeamWorkspaceForOrganization,
@@ -57,6 +61,7 @@ export type InviteTeamMemberResult =
         | "FORBIDDEN"
         | "TEAM_PLAN_REQUIRED"
         | "TEAM_SEAT_LIMIT_REACHED"
+        | "PLUS_PLAN_REQUIRED"
         | "WORKSPACE_PAST_DUE_OR_FROZEN"
         | "ALREADY_MEMBER"
         | "INVITATION_FAILED";
@@ -197,12 +202,12 @@ export async function createGatedTeamInvitation({
   const ensured = await ensureTeamWorkspaceForOrganization(valid.organizationId, actorUserId);
   const ent = await resolveWorkspaceEntitlementState(ensured.workspaceId, now);
 
-  if (!ent || ent.plan !== "team") {
+  if (!ent || (ent.plan !== "team" && ent.plan !== "plus")) {
     return {
       ok: false,
       status: 403,
       code: "TEAM_PLAN_REQUIRED",
-      error: "Collaborative team seats require an active Casefolio Teams subscription.",
+      error: "Collaborative team seats require an active Casefolio Team or Plus subscription.",
     };
   }
 
@@ -261,6 +266,14 @@ export async function createGatedTeamInvitation({
 
     const occupiedExcludingThisEmail = existingMemberRows.length + otherPendingEmails.size;
     if (occupiedExcludingThisEmail >= ent.admissionCeiling) {
+      if (ent.plan === "team" && ent.admissionCeiling >= TEAMS_MAX_SELF_SERVE_SEATS) {
+        return {
+          ok: false,
+          status: 403,
+          code: "PLUS_PLAN_REQUIRED",
+          error: `Team plan supports up to ${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) to invite up to ${PLUS_INCLUDED_SEATS} team members.`,
+        };
+      }
       return {
         ok: false,
         status: 403,
@@ -268,7 +281,9 @@ export async function createGatedTeamInvitation({
         error:
           ent.renewalQuantity !== null && ent.renewalQuantity < ent.paidSeats
             ? `Admissions are capped at your scheduled renewal seat target (${ent.admissionCeiling}). Cancel the pending seat decrease or purchase another seat first.`
-            : `All ${ent.paidSeats} paid team seat${ent.paidSeats === 1 ? "" : "s"} are occupied or reserved. Purchase an additional seat before inviting.`,
+            : ent.plan === "plus"
+              ? `All ${PLUS_INCLUDED_SEATS} team seats included in Casefolio Plus are occupied or reserved.`
+              : `All ${ent.paidSeats} paid team seats are occupied or reserved. Purchase an additional seat (up to ${TEAMS_MAX_SELF_SERVE_SEATS}) or upgrade to Plus.`,
       };
     }
 
@@ -647,7 +662,7 @@ export async function acceptTeamInvitation(args: {
 
   const ensuredBefore = await ensureTeamWorkspaceForOrganization(inv.organizationId);
   const ent = await resolveWorkspaceEntitlementState(ensuredBefore.workspaceId, now);
-  if (!ent || ent.plan !== "team" || ent.isFrozen) {
+  if (!ent || (ent.plan !== "team" && ent.plan !== "plus") || ent.isFrozen) {
     return {
       ok: false,
       status: 403,

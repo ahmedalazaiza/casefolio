@@ -313,11 +313,11 @@ test("Phase 6 E2E: publish Orbit project, open public link logged out (<2s + OG 
     await page.getByTestId("publish-project-button").click();
     await expect(page.getByTestId("share-status-badge")).toContainText("Published · Public");
 
-    // 7. Navigate to Exports: Free user exports PNG Long (with watermark), PDF locked on Free
+    // 7. Navigate to Exports: Free user exports PNG Long (with watermark), Behance locked on Free
     await page.getByRole("link", { name: /Exports \(PNG \/ PDF \/ Behance\)/i }).click();
     await expect(page).toHaveURL(new RegExp(`/projects/${createdProjectId}/exports`));
 
-    await page.getByTestId("export-preset-pdf").click();
+    await page.getByTestId("export-preset-behance").click();
     await expect(page.getByTestId("upgrade-export-cta")).toBeVisible();
 
     await page.getByTestId("export-preset-png_long").click();

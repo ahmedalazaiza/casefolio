@@ -9,7 +9,9 @@ import {
   getUserBillingOverview,
   prepareCheckoutSessionForUser,
   resumeUserSubscription,
+  updateTeamCustomDomain,
 } from "@/lib/billing/service";
+import { computeTeamsPrice } from "@/lib/billing/plans";
 import {
   computePaddleWebhookHmacHex,
   signPaddleWebhookPayload,
@@ -121,7 +123,8 @@ describe("Paddle Billing signature, checkout & idempotent webhooks (C-701)", () 
       expect(prep.ok).toBe(true);
       if (!prep.ok) return;
       expect(prep.session.priceId).toBe(env.PADDLE_PRICE_PRO_YEARLY);
-      expect(prep.session.amountUsd).toBe(120);
+      expect(prep.session.amountUsd).toBe(95.88);
+      expect(prep.session.amountCents).toBe(9588);
 
       // 2. Complete sandbox checkout -> dispatches signed webhook -> upgrades user to Pro
       const completed = await completeSandboxCheckoutForUser(
@@ -226,6 +229,104 @@ describe("Paddle Billing signature, checkout & idempotent webhooks (C-701)", () 
         await db
           .delete(dbSchema.webhookEvents)
           .where(eq(dbSchema.webhookEvents.eventId, eid));
+      }
+      await db.delete(dbSchema.users).where(eq(dbSchema.users.id, userId));
+    }
+  });
+
+  it("enforces Team 2–10 seat pricing ($6.99/$5.59), blocks 11th seat with PLUS_UPGRADE_REQUIRED, and provisions Plus ($99/$79, 20 seats, custom domain)", async () => {
+    // Dynamic Team per-seat pricing (2..10 seats)
+    const twoSeatsMonthly = computeTeamsPrice(2, "monthly");
+    expect(twoSeatsMonthly).toMatchObject({
+      ok: true,
+      seats: 2,
+      monthlyTotalCents: 1398,
+      monthlyTotalUsd: 13.98,
+    });
+    const tenSeatsYearly = computeTeamsPrice(10, "yearly");
+    expect(tenSeatsYearly).toMatchObject({
+      ok: true,
+      seats: 10,
+      yearlyMonthlyEquivalentCents: 5590,
+      yearlyTotalCents: 67080,
+      yearlyTotalUsd: 670.8,
+    });
+    const elevenSeats = computeTeamsPrice(11, "monthly");
+    expect(elevenSeats).toMatchObject({
+      ok: false,
+      code: "PLUS_UPGRADE_REQUIRED",
+    });
+
+    const stamp = Date.now();
+    const email = `c701-plus-${stamp}@casefolio.test`;
+    const [createdUser] = await db
+      .insert(dbSchema.users)
+      .values({
+        email,
+        emailVerified: true,
+        name: "Plus Agency Owner",
+        plan: "free",
+        role: "user",
+      })
+      .returning();
+
+    const userId = createdUser!.id;
+    let createdOrgId: string | null = null;
+    const createdEventIds: string[] = [];
+
+    try {
+      // Prepare Plus annual checkout ($948/yr flat, 20 seats included)
+      const prepPlus = await prepareCheckoutSessionForUser(
+        { id: userId, email, name: "Plus Agency Owner" },
+        { plan: "plus", interval: "yearly" },
+      );
+      expect(prepPlus.ok).toBe(true);
+      if (!prepPlus.ok) return;
+      createdOrgId = prepPlus.session.orgId;
+      expect(prepPlus.session.priceId).toBe(env.PADDLE_PRICE_PLUS_YEARLY);
+      expect(prepPlus.session.amountCents).toBe(94800);
+      expect(prepPlus.session.amountUsd).toBe(948);
+      expect(prepPlus.session.seats).toBe(1); // Flat-rate Paddle item quantity = 1 (covers up to 20 seats)
+
+      // Complete sandbox checkout for Plus org
+      const completedPlus = await completeSandboxCheckoutForUser(
+        { id: userId, email, name: "Plus Agency Owner" },
+        { plan: "plus", interval: "yearly", orgId: createdOrgId! },
+      );
+      expect(completedPlus.ok).toBe(true);
+      if (!completedPlus.ok) return;
+      createdEventIds.push(completedPlus.eventId);
+      expect(completedPlus.effectivePlan).toBe("plus");
+
+      // Plus workspace has maxSeats=20, customDomainEnabled=true, watermarkEnabled=false
+      const [plusWs] = await db
+        .select()
+        .from(dbSchema.workspaces)
+        .where(eq(dbSchema.workspaces.organizationId, createdOrgId!));
+      expect(plusWs?.maxSeats).toBe(20);
+      expect(plusWs?.customDomainEnabled).toBe(true);
+      expect(plusWs?.watermarkEnabled).toBe(false);
+
+      // Configure agency custom domain on Plus workspace
+      const domainRes = await updateTeamCustomDomain({
+        actorUserId: userId,
+        organizationId: createdOrgId!,
+        customDomain: "work.northstar.agency",
+      });
+      expect(domainRes).toEqual({
+        ok: true,
+        customDomain: "work.northstar.agency",
+      });
+    } finally {
+      for (const eid of createdEventIds) {
+        await db
+          .delete(dbSchema.webhookEvents)
+          .where(eq(dbSchema.webhookEvents.eventId, eid));
+      }
+      if (createdOrgId) {
+        await db
+          .delete(dbSchema.organizations)
+          .where(eq(dbSchema.organizations.id, createdOrgId));
       }
       await db.delete(dbSchema.users).where(eq(dbSchema.users.id, userId));
     }

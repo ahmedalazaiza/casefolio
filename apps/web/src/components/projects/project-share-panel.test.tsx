@@ -24,6 +24,8 @@ const BASE_SETTINGS: ProjectShareSettingsPayload = {
   canPublish: true,
   brandingRemoved: false,
   canRemoveBranding: false,
+  whiteLabelEnabled: false,
+  customDomain: null,
   publishedCount: 0,
   maxPublishedProjects: 1,
   appBaseUrl: "http://localhost:3000",
@@ -109,5 +111,30 @@ describe("ProjectSharePanel (C-601)", () => {
     });
 
     expect(screen.getByTestId("share-status-badge")).toHaveTextContent("Draft · Private");
+  });
+
+  it("hides Casefolio OpenGraph badge and shows custom domain white-label copy on Plus workspaces", () => {
+    render(
+      <ProjectSharePanel
+        initialSettings={{
+          ...BASE_SETTINGS,
+          ownerPlan: "plus",
+          workspaceKind: "team",
+          canRemoveBranding: true,
+          brandingRemoved: true,
+          whiteLabelEnabled: true,
+          customDomain: "work.northstar.agency",
+        }}
+        onCheckSlug={vi.fn()}
+        onPublish={vi.fn()}
+        onUnpublish={vi.fn()}
+      />,
+    );
+
+    const ogPreview = screen.getByTestId("og-card-preview");
+    expect(ogPreview).not.toHaveTextContent("Casefolio");
+    expect(
+      screen.getByText(/Custom Domain: work\.northstar\.agency/i),
+    ).toBeInTheDocument();
   });
 });

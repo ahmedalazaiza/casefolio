@@ -9,7 +9,7 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import { formatUsdWhole } from "@/lib/admin/overview-types";
 import type { AdminSubscriptionsOverview } from "@/lib/admin/users-types";
 import type { PlanTier } from "@casefolio/db";
-import { BILLING_PLAN_CATALOG } from "@/lib/billing/plans";
+import { BILLING_PLAN_CATALOG, formatUsdFromCents } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
 function statusTone(status: string): "published" | "draft" | "danger" | "neutral" {
@@ -20,7 +20,7 @@ function statusTone(status: string): "published" | "draft" | "danger" | "neutral
   return "neutral";
 }
 
-const PLAN_ORDER: readonly PlanTier[] = ["free", "pro", "team"];
+const PLAN_ORDER: readonly PlanTier[] = ["free", "pro", "team", "plus"];
 
 export function AdminSubscriptionsPanel({
   overview,
@@ -57,7 +57,7 @@ export function AdminSubscriptionsPanel({
           <span className="text-foreground type-display-s">
             {overview.payingUsersCount.toLocaleString("en-US")}
           </span>
-          <span className="text-muted-foreground type-caption">Pro &amp; Team subscribers</span>
+          <span className="text-muted-foreground type-caption">Pro, Team &amp; Plus subscribers</span>
         </Card>
 
         <Card className="min-w-0 justify-between gap-2 p-5">
@@ -78,7 +78,7 @@ export function AdminSubscriptionsPanel({
       </div>
 
       {/* Plan cards (Figma 34:8582) */}
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {PLAN_ORDER.map((tier) => {
           const plan = BILLING_PLAN_CATALOG[tier];
           return (
@@ -95,12 +95,17 @@ export function AdminSubscriptionsPanel({
                   {plan.highlighted && <Badge tone="accent">Most popular</Badge>}
                 </div>
                 <p className="text-muted-foreground type-body-s">{plan.tagline}</p>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-foreground type-display-s">${plan.monthlyPriceUsd}</span>
-                  <span className="text-muted-foreground type-body-s">/ month</span>
-                  {plan.yearlyTotalUsd > 0 && (
-                    <span className="text-tertiary type-caption ml-2">
-                      (${plan.yearlyTotalUsd}/yr)
+                <div className="flex flex-wrap items-baseline gap-1.5">
+                  <span className="text-foreground type-display-s">
+                    {formatUsdFromCents(plan.monthlyPriceCents)}
+                  </span>
+                  <span className="text-muted-foreground type-body-s">
+                    {tier === "free" ? "/ forever" : tier === "team" ? "/ seat / mo" : "/ month"}
+                  </span>
+                  {plan.yearlyTotalCents > 0 && (
+                    <span className="text-tertiary type-caption ml-1">
+                      ({formatUsdFromCents(plan.yearlyTotalCents)}
+                      {tier === "team" ? "/seat/yr" : "/yr"})
                     </span>
                   )}
                 </div>

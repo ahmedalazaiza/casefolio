@@ -356,23 +356,23 @@ export default function DevUiPage() {
             <PlanCard
               name="Free"
               price="$0"
-              period="/mo"
+              period="/forever"
               badgeLabel="Starter"
               description="Everything you need to build and publish your first case study."
               ctaLabel="Start free"
               features={[
-                "1 active case study project",
-                "Free community templates",
-                "Public share link with Casefolio badge",
-                "1 watermarked export per month",
+                "1 active Case Study",
+                "Standard templates & basic customization",
+                "Live Shareable Link with subtle Casefolio branding",
+                "Watermarked PNG & PDF exports",
               ]}
             />
             <PlanCard
               name="Pro"
-              price="$12"
+              price="$9.99"
               period="/mo"
               badgeLabel="Popular"
-              description="Unlimited projects, Pro templates, clean exports, and custom branding."
+              description="Unlimited Case Studies, Pro & Premium templates, and watermark-free exports."
               ctaLabel="Choose Pro"
               highlighted
               features={PLAN_FEATURES}

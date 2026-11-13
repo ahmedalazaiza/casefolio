@@ -386,7 +386,7 @@ export function ProjectExportsPanel({
                 {locked ? (
                   <span className="text-muted-foreground type-caption inline-flex items-center gap-1.5">
                     <Lock className="text-warning size-3.5" />
-                    <span>Pro or Teams plan required</span>
+                    <span>Pro, Team, or Plus plan required</span>
                   </span>
                 ) : (
                   <span className="text-tertiary type-caption font-mono">
@@ -404,7 +404,8 @@ export function ProjectExportsPanel({
             <div className="flex flex-col gap-0.5">
               <span className="text-foreground type-body-s-strong">PNG Output Resolution</span>
               <span className="text-muted-foreground type-caption">
-                1× renders up to 1,440 px wide; 2× renders retina 2,880 px wide on Pro &amp; Teams.
+                1× renders up to 1,440 px wide; 2× renders retina 2,880 px wide on Pro, Team &amp;
+                Plus.
               </span>
             </div>
 
@@ -457,8 +458,10 @@ export function ProjectExportsPanel({
             <Sparkles className="text-primary size-4 shrink-0" />
             <span className="text-muted-foreground type-caption">
               {overview.hasWatermark
-                ? "Free exports include a subtle 'Made with Casefolio' footer badge."
-                : "Unbranded Pro & Teams exports enabled."}
+                ? "Free PNG & PDF exports include a subtle 'Made with Casefolio' watermark."
+                : overview.ownerPlan === "plus"
+                  ? "White-Label exports enabled (Casefolio Plus — zero branding in files or PDF metadata)."
+                  : "Watermark-free high-res exports enabled."}
             </span>
           </div>
 
@@ -601,7 +604,7 @@ export function ProjectExportsPanel({
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         featureTitle={`Unlock ${selectedFormat === "png_long" ? "2× Retina PNG Exports" : selectedPreset.label}`}
-        featureDescription="Upgrade to Casefolio Pro for PDF case studies (up to 60 pages), Behance 1,400px image packs, 2× 2,880px PNG exports, 60 monthly exports, and removable branding."
+        featureDescription="Upgrade to Casefolio Pro ($9.99/mo or $7.99/mo billed annually) for watermark-free PDF & 2× 2,880px PNG exports, Behance 1,400px image packs, and Unlimited Case Studies."
       />
     </div>
   );

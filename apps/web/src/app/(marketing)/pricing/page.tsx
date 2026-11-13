@@ -9,7 +9,7 @@ import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 export const metadata: Metadata = {
   title: "Pricing — Casefolio",
   description:
-    "Compare Free, Pro and Team Casefolio plans. Start free with two projects, or upgrade for 20+ active case studies and unwatermarked PNG & PDF exports.",
+    "Compare Pro, Team, and Plus Casefolio plans — or start free forever with 1 active Case Study. Save 20% with annual billing.",
   alternates: {
     canonical: "/pricing",
   },
@@ -22,7 +22,7 @@ export default async function PricingPage({
 }) {
   const params = (await searchParams) ?? {};
   const initialInterval: BillingInterval =
-    params.interval === "yearly" ? "yearly" : "monthly";
+    params.interval === "yearly" || params.interval === "annual" ? "yearly" : "monthly";
 
   const sessionCtx = await getServerSession();
   const currentTier = sessionCtx
@@ -35,6 +35,8 @@ export default async function PricingPage({
     pro_yearly: resolveServerPaddlePriceId("pro", "yearly"),
     team_monthly: resolveServerPaddlePriceId("team", "monthly"),
     team_yearly: resolveServerPaddlePriceId("team", "yearly"),
+    plus_monthly: resolveServerPaddlePriceId("plus", "monthly"),
+    plus_yearly: resolveServerPaddlePriceId("plus", "yearly"),
   };
 
   return (

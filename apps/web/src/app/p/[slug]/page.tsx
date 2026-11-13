@@ -31,7 +31,7 @@ export async function generateMetadata({
 
   if (!published) {
     return {
-      title: "Case Study Not Found · Casefolio",
+      title: "Case Study Not Found",
       robots: {
         index: false,
         follow: false,
@@ -39,10 +39,16 @@ export async function generateMetadata({
     };
   }
 
-  const baseUrl = resolvePublicAppBaseUrl();
+  const whiteLabel = published.project.whiteLabelEnabled;
+  const baseUrl =
+    whiteLabel && published.project.customDomain
+      ? `https://${published.project.customDomain}`
+      : resolvePublicAppBaseUrl();
   const publicUrl = buildPublicCaseStudyUrl(published.project.slug, baseUrl);
-  const ogImageUrl = `${baseUrl}/p/${encodeURIComponent(published.project.slug)}/opengraph-image`;
-  const pageTitle = `${published.meta.title} · Casefolio`;
+  const ogImageUrl = `${resolvePublicAppBaseUrl()}/p/${encodeURIComponent(published.project.slug)}/opengraph-image`;
+  const pageTitle = whiteLabel
+    ? published.meta.title
+    : `${published.meta.title} · Casefolio`;
 
   return {
     title: pageTitle,
@@ -65,7 +71,7 @@ export async function generateMetadata({
       title: published.meta.title,
       description: published.meta.description,
       url: publicUrl,
-      siteName: "Casefolio",
+      ...(whiteLabel ? {} : { siteName: "Casefolio" }),
       type: "article",
       publishedTime: published.project.publishedAtIso,
       modifiedTime: published.project.updatedAtIso,
