@@ -23,6 +23,7 @@ import {
   resolvePlanFromServerPriceId,
 } from "@/lib/billing/server-config";
 import { db, dbSchema } from "@/lib/db";
+import { sendAdminAccountSuspensionEmail } from "@/lib/email";
 import { recordAdminAuditLog } from "@/lib/template/service";
 
 export interface FetchPaddleSubscriptionOptions {
@@ -403,6 +404,12 @@ export async function setAdminUserSuspension(args: {
       suspended: args.suspended,
     },
   );
+
+  await sendAdminAccountSuspensionEmail({
+    to: target.email,
+    name: target.name,
+    suspended: args.suspended,
+  }).catch(() => undefined);
 
   return { ok: true, suspended: args.suspended };
 }

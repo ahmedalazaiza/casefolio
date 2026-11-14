@@ -7,6 +7,10 @@ import { isSafeAvatarUrl } from "@/lib/auth/schemas";
 import { getServerSession } from "@/lib/auth/session";
 import { cancelUserSubscription } from "@/lib/billing/service";
 import { db, dbSchema } from "@/lib/db";
+import {
+  sendAccountDeletedEmail,
+  sendSessionsRevokedEmail,
+} from "@/lib/email";
 import { executeMemberDepartureSideEffects } from "@/lib/entitlements/team-invitations";
 import { deleteStoredObject } from "@/lib/storage/r2";
 
@@ -124,6 +128,11 @@ export async function revokeOtherUserSessionsAction(): Promise<
       and(eq(dbSchema.sessions.userId, ctx.user.id), ne(dbSchema.sessions.id, ctx.session.id)),
     );
 
+  await sendSessionsRevokedEmail({
+    to: ctx.user.email,
+    name: ctx.user.name,
+  }).catch(() => undefined);
+
   revalidatePath("/account/security");
   return { ok: true };
 }
@@ -234,10 +243,14 @@ export async function deleteUserAccountAction(
     }
   }
 
+  const deletedEmail = ctx.user.email;
+  const deletedName = ctx.user.name;
+
   // 3. Cancel personal subscription immediately
   await cancelUserSubscription(
     { id: ctx.user.id, email: ctx.user.email, name: ctx.user.name },
     { reason: "other", feedback: "Account deleted by user", immediate: true },
+    { suppressEmail: true },
   ).catch(() => null);
 
   // 4. Purge stored R2/local asset & export objects belonging to personal projects before cascading DB rows
@@ -267,6 +280,11 @@ export async function deleteUserAccountAction(
   }
 
   await db.delete(dbSchema.users).where(eq(dbSchema.users.id, ctx.user.id));
+
+  await sendAccountDeletedEmail({
+    to: deletedEmail,
+    name: deletedName,
+  }).catch(() => undefined);
 
   return { ok: true };
 }

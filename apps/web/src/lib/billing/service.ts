@@ -44,6 +44,11 @@ import {
 } from "@/lib/billing/webhooks";
 import { db, dbSchema } from "@/lib/db";
 import {
+  sendSubscriptionCanceledEmail,
+  sendSubscriptionResumedEmail,
+  sendTeamSeatUpdatedEmail,
+} from "@/lib/email";
+import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
   resolveWorkspaceEntitlementState,
@@ -1144,6 +1149,7 @@ export async function createPaddlePortalSessionForUser(
 export async function cancelUserSubscription(
   actor: BillingActor,
   rawInput: unknown,
+  options?: { suppressEmail?: boolean },
 ): Promise<
   | {
       ok: true;
@@ -1325,6 +1331,16 @@ export async function cancelUserSubscription(
     };
   }
 
+  if (!options?.suppressEmail) {
+    await sendSubscriptionCanceledEmail({
+      to: actor.email,
+      name: actor.name,
+      plan: subRow.plan,
+      immediate: Boolean(parsed.data.immediate),
+      effectiveEndIso: effectiveEnd.toISOString(),
+    }).catch(() => undefined);
+  }
+
   return {
     ok: true,
     status: parsed.data.immediate ? "canceled" : "cancel_at_period_end",
@@ -1448,6 +1464,12 @@ export async function resumeUserSubscription(
   if (!processed.ok) {
     return { ok: false, error: processed.error };
   }
+
+  await sendSubscriptionResumedEmail({
+    to: actor.email,
+    name: actor.name,
+    plan: subRow.plan,
+  }).catch(() => undefined);
 
   return {
     ok: true,
@@ -1976,6 +1998,31 @@ export async function confirmTeamSeatIncrease(args: {
     };
   }
 
+  const [[ownerUser], [orgRow]] = await Promise.all([
+    db
+      .select({ email: dbSchema.users.email, name: dbSchema.users.name })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, args.actorUserId))
+      .limit(1),
+    db
+      .select({ name: dbSchema.organizations.name })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, args.organizationId))
+      .limit(1),
+  ]);
+
+  if (ownerUser) {
+    await sendTeamSeatUpdatedEmail({
+      to: ownerUser.email,
+      name: ownerUser.name,
+      organizationName: orgRow?.name ?? null,
+      changeKind: "increase_immediate",
+      currentSeats: op.previousQuantity ?? sub.current_paid_capacity,
+      targetSeats: processed.currentPaidCapacity ?? targetSeats,
+      chargedUsd: Math.round(op.previewAmountCents ?? 0) / 100,
+    }).catch(() => undefined);
+  }
+
   return {
     ok: true,
     paidSeats: processed.currentPaidCapacity ?? targetSeats,
@@ -2259,6 +2306,31 @@ export async function scheduleTeamSeatDecrease(args: {
       code: "PROVIDER_ERROR",
       error: processed.error,
     };
+  }
+
+  const [[ownerUser], [orgRow]] = await Promise.all([
+    db
+      .select({ email: dbSchema.users.email, name: dbSchema.users.name })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, args.actorUserId))
+      .limit(1),
+    db
+      .select({ name: dbSchema.organizations.name })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, args.organizationId))
+      .limit(1),
+  ]);
+
+  if (ownerUser) {
+    await sendTeamSeatUpdatedEmail({
+      to: ownerUser.email,
+      name: ownerUser.name,
+      organizationName: orgRow?.name ?? null,
+      changeKind: "decrease_scheduled",
+      currentSeats: processed.currentPaidCapacity ?? sub.current_paid_capacity,
+      targetSeats: processed.renewalQuantity ?? args.targetSeats,
+      effectiveAtIso: effectivePeriodEnd.toISOString(),
+    }).catch(() => undefined);
   }
 
   return {

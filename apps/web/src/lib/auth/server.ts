@@ -17,6 +17,10 @@ import {
 import { organizationAccessControl, organizationRoles } from "@/lib/auth/permissions";
 import { db, dbSchema } from "@/lib/db";
 import {
+  sendPasswordChangedEmail,
+  sendTeamMemberJoinedEmail,
+} from "@/lib/email";
+import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
   resolveWorkspaceEntitlementState,
@@ -103,6 +107,47 @@ export const auth = betterAuth({
           });
           if (!gate.allowed) {
             throw new APIError("FORBIDDEN", { message: gate.message });
+          }
+        }
+      }
+    }),
+    after: createAuthMiddleware(async (ctx) => {
+      if (
+        ctx.path === "/change-password" ||
+        ctx.path === "/reset-password" ||
+        ctx.path === "/email-otp/reset-password"
+      ) {
+        const returned = ctx.context.returned;
+        const isErrorResult =
+          returned instanceof Error ||
+          (returned instanceof Response && !returned.ok);
+        if (isErrorResult) {
+          return;
+        }
+
+        const sessionUser = ctx.context.session?.user ?? ctx.context.newSession?.user;
+        if (sessionUser?.email) {
+          await sendPasswordChangedEmail({
+            to: sessionUser.email,
+            name: sessionUser.name,
+          }).catch(() => undefined);
+          return;
+        }
+
+        const body = (ctx.body ?? {}) as { email?: unknown };
+        const rawEmail =
+          typeof body.email === "string" ? body.email.trim().toLowerCase() : null;
+        if (rawEmail) {
+          const [targetUser] = await db
+            .select({ email: dbSchema.users.email, name: dbSchema.users.name })
+            .from(dbSchema.users)
+            .where(eq(dbSchema.users.email, rawEmail))
+            .limit(1);
+          if (targetUser) {
+            await sendPasswordChangedEmail({
+              to: targetUser.email,
+              name: targetUser.name,
+            }).catch(() => undefined);
           }
         }
       }
@@ -403,6 +448,32 @@ export const auth = betterAuth({
             .where(eq(dbSchema.seatReservations.invitationId, invitation.id));
 
           await ensureTeamWorkspaceForOrganization(org.id, user.id);
+
+          const [ownerRow] = await db
+            .select({
+              email: dbSchema.users.email,
+              name: dbSchema.users.name,
+            })
+            .from(dbSchema.memberships)
+            .innerJoin(dbSchema.users, eq(dbSchema.memberships.userId, dbSchema.users.id))
+            .where(
+              and(
+                eq(dbSchema.memberships.orgId, org.id),
+                eq(dbSchema.memberships.role, "owner"),
+              ),
+            )
+            .limit(1);
+
+          if (ownerRow && ownerRow.email.toLowerCase() !== user.email.toLowerCase()) {
+            await sendTeamMemberJoinedEmail({
+              to: ownerRow.email,
+              ownerName: ownerRow.name,
+              memberName: user.name || user.email,
+              memberEmail: user.email,
+              organizationName: org.name,
+              role: normalizeMembershipRole(invitation.role),
+            }).catch(() => undefined);
+          }
         },
         async afterCancelInvitation({ invitation }) {
           const now = new Date();

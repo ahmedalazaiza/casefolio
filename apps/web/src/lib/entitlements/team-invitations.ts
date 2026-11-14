@@ -18,6 +18,13 @@ import {
 } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import {
+  sendOwnershipTransferredEmail,
+  sendOwnershipTransferRequestedEmail,
+  sendTeamMemberJoinedEmail,
+  sendTeamMemberRemovedEmail,
+  sendTeamRoleUpdatedEmail,
+} from "@/lib/email";
+import {
   ensureTeamWorkspaceForOrganization,
   resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
@@ -762,6 +769,37 @@ export async function acceptTeamInvitation(args: {
   // Also restore any previously departed recovery spaces owned by this member if rejoining (`Spec §11.3`)
   const ensured = await ensureTeamWorkspaceForOrganization(inv.organizationId, args.actorUserId);
 
+  // Notify workspace Owner that the invited teammate joined (`team@casefolio.com`)
+  const [[orgRow], [ownerRow]] = await Promise.all([
+    db
+      .select({ name: dbSchema.organizations.name })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, inv.organizationId))
+      .limit(1),
+    db
+      .select({ email: dbSchema.users.email, name: dbSchema.users.name })
+      .from(dbSchema.memberships)
+      .innerJoin(dbSchema.users, eq(dbSchema.memberships.userId, dbSchema.users.id))
+      .where(
+        and(
+          eq(dbSchema.memberships.orgId, inv.organizationId),
+          eq(dbSchema.memberships.role, "owner"),
+        ),
+      )
+      .limit(1),
+  ]);
+
+  if (ownerRow && ownerRow.email.toLowerCase() !== actorUser.email.toLowerCase()) {
+    await sendTeamMemberJoinedEmail({
+      to: ownerRow.email,
+      ownerName: ownerRow.name,
+      memberName: actorUser.name || actorUser.email,
+      memberEmail: actorUser.email,
+      organizationName: orgRow?.name ?? "Team Workspace",
+      role: assignedRole,
+    }).catch(() => undefined);
+  }
+
   return {
     ok: true,
     organizationId: inv.organizationId,
@@ -1027,6 +1065,29 @@ export async function removeTeamMemberWithRecovery(args: {
     at: now,
   });
 
+  if (!isSelfLeave) {
+    const [[targetUser], [orgRow]] = await Promise.all([
+      db
+        .select({ email: dbSchema.users.email, name: dbSchema.users.name })
+        .from(dbSchema.users)
+        .where(eq(dbSchema.users.id, args.targetUserId))
+        .limit(1),
+      db
+        .select({ name: dbSchema.organizations.name })
+        .from(dbSchema.organizations)
+        .where(eq(dbSchema.organizations.id, args.organizationId))
+        .limit(1),
+    ]);
+
+    if (targetUser) {
+      await sendTeamMemberRemovedEmail({
+        to: targetUser.email,
+        memberName: targetUser.name,
+        organizationName: orgRow?.name ?? "Team Workspace",
+      }).catch(() => undefined);
+    }
+  }
+
   return { ok: true, removedUserId: args.targetUserId };
 }
 
@@ -1086,6 +1147,28 @@ export async function updateTeamMemberRole(args: {
     },
     at: now,
   });
+
+  const [[targetUser], [orgRow]] = await Promise.all([
+    db
+      .select({ email: dbSchema.users.email, name: dbSchema.users.name })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, args.targetUserId))
+      .limit(1),
+    db
+      .select({ name: dbSchema.organizations.name })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, args.organizationId))
+      .limit(1),
+  ]);
+
+  if (targetUser) {
+    await sendTeamRoleUpdatedEmail({
+      to: targetUser.email,
+      memberName: targetUser.name,
+      organizationName: orgRow?.name ?? "Team Workspace",
+      newRole: args.newRole,
+    }).catch(() => undefined);
+  }
 
   return { ok: true, userId: args.targetUserId, role: args.newRole };
 }
@@ -1174,6 +1257,34 @@ export async function requestOwnerTransfer(args: {
       createdAt: now,
     })
     .returning();
+
+  const [[fromUser], [toUser], [orgRow]] = await Promise.all([
+    db
+      .select({ name: dbSchema.users.name, email: dbSchema.users.email })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, args.actorUserId))
+      .limit(1),
+    db
+      .select({ name: dbSchema.users.name, email: dbSchema.users.email })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, args.targetMemberUserId))
+      .limit(1),
+    db
+      .select({ name: dbSchema.organizations.name })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, args.organizationId))
+      .limit(1),
+  ]);
+
+  if (toUser) {
+    await sendOwnershipTransferRequestedEmail({
+      to: toUser.email,
+      recipientName: toUser.name,
+      currentOwnerName: fromUser?.name || fromUser?.email || "Workspace Owner",
+      organizationName: orgRow?.name ?? "Team Workspace",
+      expiresAtIso: expiresAt.toISOString(),
+    }).catch(() => undefined);
+  }
 
   return {
     ok: true,
@@ -1290,6 +1401,49 @@ export async function acceptOwnerTransfer(args: {
   if (!outcome.ok) {
     return outcome;
   }
+
+  const [[prevOwnerUser], [newOwnerUser], [orgRow]] = await Promise.all([
+    db
+      .select({ name: dbSchema.users.name, email: dbSchema.users.email })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, reqRow.fromOwnerUserId))
+      .limit(1),
+    db
+      .select({ name: dbSchema.users.name, email: dbSchema.users.email })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, args.actorUserId))
+      .limit(1),
+    db
+      .select({ name: dbSchema.organizations.name })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, reqRow.organizationId))
+      .limit(1),
+  ]);
+
+  const workspaceLabel = orgRow?.name ?? "Team Workspace";
+  const prevLabel = prevOwnerUser?.name || prevOwnerUser?.email || "Previous Owner";
+  const newLabel = newOwnerUser?.name || newOwnerUser?.email || "New Owner";
+
+  await Promise.all([
+    newOwnerUser
+      ? sendOwnershipTransferredEmail({
+          to: newOwnerUser.email,
+          recipientRole: "new_owner",
+          previousOwnerName: prevLabel,
+          newOwnerName: newLabel,
+          organizationName: workspaceLabel,
+        }).catch(() => undefined)
+      : Promise.resolve(),
+    prevOwnerUser
+      ? sendOwnershipTransferredEmail({
+          to: prevOwnerUser.email,
+          recipientRole: "previous_owner",
+          previousOwnerName: prevLabel,
+          newOwnerName: newLabel,
+          organizationName: workspaceLabel,
+        }).catch(() => undefined)
+      : Promise.resolve(),
+  ]);
 
   return {
     ok: true,

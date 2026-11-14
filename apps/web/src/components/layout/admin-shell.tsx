@@ -5,6 +5,7 @@ import {
   CreditCard,
   LayoutDashboard,
   LayoutTemplate,
+  Mail,
   Menu,
   Search,
   Settings,
@@ -43,6 +44,7 @@ export const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Subscriptions & plans", href: "/admin/subscriptions", icon: CreditCard },
   { label: "Moderation", href: "/admin/moderation", icon: ShieldAlert },
+  { label: "Email studio", href: "/admin/emails", icon: Mail },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Settings & roles", href: "/admin/settings", icon: Settings },
 ] as const;

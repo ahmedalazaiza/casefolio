@@ -9,6 +9,7 @@ import {
   type PlatformSettings,
 } from "@/lib/admin/settings-types";
 import { db, dbSchema } from "@/lib/db";
+import { sendAdminRoleChangedEmail } from "@/lib/email";
 import { recordAdminAuditLog } from "@/lib/template/service";
 
 export const PLATFORM_SETTINGS_AUDIT_ACTION = "admin.platform_settings.updated";
@@ -122,6 +123,13 @@ export async function updateAdminUserRole(args: {
     previousRole: target.role,
     nextRole: args.nextRole,
   });
+
+  await sendAdminRoleChangedEmail({
+    to: target.email,
+    name: target.name,
+    previousRole: target.role,
+    nextRole: args.nextRole,
+  }).catch(() => undefined);
 
   return { ok: true, role: args.nextRole };
 }

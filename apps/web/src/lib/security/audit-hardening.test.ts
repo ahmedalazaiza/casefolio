@@ -490,7 +490,8 @@ describe("Principal Security & Architectural Audit Regression Suite", () => {
     const res = await POST(req);
     expect(res.status).toBe(200);
     expect(renderAndDeliverEmailMock).toHaveBeenCalledTimes(1);
-    expect(renderAndDeliverEmailMock.mock.calls[0]?.[0]?.to).toBe("support@casefolio.app");
+    expect(renderAndDeliverEmailMock.mock.calls[0]?.[0]?.to).toBe("support@casefolio.com");
+    expect(renderAndDeliverEmailMock.mock.calls[0]?.[0]?.department).toBe("support");
   });
 
   it("6. neutralizes CSV formula injection, hardens proxy IP extraction, and bounds rate-limit buckets", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, Mail, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeActivity, type AdminUserDetail } from "@/lib/admin/users-types";
 import { cn } from "@/lib/utils";
 
@@ -24,8 +26,53 @@ export function AdminUserDetailPanel({
   const [detail, setDetail] = useState<AdminUserDetail>(initialDetail);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showEmailComposer, setShowEmailComposer] = useState(false);
+  const [noticeSubject, setNoticeSubject] = useState("");
+  const [noticeHeading, setNoticeHeading] = useState("");
+  const [noticeMessage, setNoticeMessage] = useState("");
 
   const isSelf = detail.id === currentAdminId;
+
+  function handleSendAdminNotice(event: React.FormEvent) {
+    event.preventDefault();
+    setErrorMessage(null);
+    setFeedback(null);
+
+    startTransition(async () => {
+      const response = await fetch("/api/admin/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send_admin_notice",
+          recipientEmail: detail.email,
+          recipientName: detail.name,
+          targetUserId: detail.id,
+          subject: noticeSubject,
+          heading: noticeHeading,
+          message: noticeMessage,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        delivered?: boolean;
+        from?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.ok) {
+        setErrorMessage(payload.error ?? "Failed to send official admin email.");
+        return;
+      }
+      setShowEmailComposer(false);
+      setNoticeSubject("");
+      setNoticeHeading("");
+      setNoticeMessage("");
+      setFeedback(
+        payload.delivered
+          ? `Official email dispatched from ${payload.from} to ${detail.email}.`
+          : `Official email prepared from ${payload.from} for ${detail.email} (dev preview mode).`,
+      );
+    });
+  }
 
   function handleToggleSuspend() {
     setErrorMessage(null);
@@ -127,17 +174,81 @@ export function AdminUserDetailPanel({
           </p>
         </div>
 
-        {!isSelf && (
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant={detail.suspended ? "secondary" : "destructive"}
+            variant="secondary"
             disabled={isPending}
-            onClick={handleToggleSuspend}
+            onClick={() => setShowEmailComposer((prev) => !prev)}
           >
-            {detail.suspended ? "Reactivate user" : "Suspend user"}
+            <Mail className="size-4" />
+            Email from Admin
           </Button>
-        )}
+          {!isSelf && (
+            <Button
+              type="button"
+              variant={detail.suspended ? "secondary" : "destructive"}
+              disabled={isPending}
+              onClick={handleToggleSuspend}
+            >
+              {detail.suspended ? "Reactivate user" : "Suspend user"}
+            </Button>
+          )}
+        </div>
       </header>
+
+      {showEmailComposer && (
+        <Card className="gap-4 p-5">
+          <div className="flex flex-col gap-0.5">
+            <span className="v3-label text-[var(--cf-royal-text)] uppercase">
+              Direct Administration Notice
+            </span>
+            <h2 className="text-foreground type-heading-s">
+              Send official email to {detail.email}
+            </h2>
+            <p className="text-muted-foreground type-caption">
+              Dispatched from Casefolio Admin (admin@casefolio.com) and logged in Audit Trail.
+            </p>
+          </div>
+          <form onSubmit={handleSendAdminNotice} className="grid gap-3 sm:grid-cols-2">
+            <Input
+              required
+              value={noticeSubject}
+              onChange={(e) => setNoticeSubject(e.target.value)}
+              placeholder="Email subject line"
+            />
+            <Input
+              required
+              value={noticeHeading}
+              onChange={(e) => setNoticeHeading(e.target.value)}
+              placeholder="Editorial display heading"
+            />
+            <div className="sm:col-span-2">
+              <Textarea
+                required
+                rows={4}
+                value={noticeMessage}
+                onChange={(e) => setNoticeMessage(e.target.value)}
+                placeholder="Write official message to user..."
+              />
+            </div>
+            <div className="flex justify-end gap-2 sm:col-span-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEmailComposer(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isPending}>
+                <Send className="size-3.5" />
+                Send official email
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       {errorMessage && (
         <div

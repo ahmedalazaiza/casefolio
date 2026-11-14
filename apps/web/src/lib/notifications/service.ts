@@ -9,6 +9,7 @@ import {
 } from "@casefolio/db";
 import { renderAndDeliverEmail } from "@/lib/auth/email";
 import { db, dbSchema } from "@/lib/db";
+import type { EmailDepartment } from "@/lib/email/senders";
 import {
   formatExportFormatShortLabel,
   isKnownNotificationKind,
@@ -163,18 +164,69 @@ export async function createUserNotification(
       const subject = input.emailSubject ?? `${input.title} — Casefolio`;
       const deliverFn = input.deliverEmailFn ?? renderAndDeliverEmail;
 
+      const departmentByKind: Record<
+        NotificationKind,
+        { department: EmailDepartment; templateKey: string; eyebrow: string }
+      > = {
+        export_ready: {
+          department: "notifications",
+          templateKey: "export.ready",
+          eyebrow: "Export Completed",
+        },
+        export_failed: {
+          department: "notifications",
+          templateKey: "export.failed",
+          eyebrow: "Export Issue",
+        },
+        published: {
+          department: "notifications",
+          templateKey: "project.published",
+          eyebrow: "Case Study Live",
+        },
+        template_update: {
+          department: "notifications",
+          templateKey: "template.updated",
+          eyebrow: "Template Release",
+        },
+        payment_failed: {
+          department: "billing",
+          templateKey: "billing.payment_failed",
+          eyebrow: "Billing Alert",
+        },
+        team_invite: {
+          department: "team",
+          templateKey: "team.invitation",
+          eyebrow: "Workspace Invitation",
+        },
+        moderation_takedown: {
+          department: "admin",
+          templateKey: "admin.moderation_takedown",
+          eyebrow: "Moderation Notice",
+        },
+      };
+
+      const routing = departmentByKind[input.kind];
+
       try {
         const result = await deliverFn({
           to: targetEmail,
           subject,
+          department: routing.department,
+          templateKey: routing.templateKey,
+          appBaseUrl: baseUrl,
           template: {
             previewText: input.message,
+            eyebrow: routing.eyebrow,
             heading: input.title,
             body: input.message,
             ctaLabel: input.emailCtaLabel ?? "Open in Casefolio",
             ctaUrl,
             footerNote:
-              "You received this notification because of activity in your Casefolio workspace.",
+              routing.department === "admin"
+                ? "This official moderation notice was issued by Casefolio Administration."
+                : routing.department === "billing"
+                  ? "Manage your payment method and invoices anytime from Casefolio Billing."
+                  : "You received this notification because of activity in your Casefolio workspace.",
           },
         });
         emailPrepared = result.html.length > 0;
@@ -555,6 +607,8 @@ export async function notifyProjectPublished(args: {
       projectId: args.projectId,
       slug: args.slug,
     },
-    sendEmail: false,
+    sendEmail: true,
+    emailSubject: `“${args.projectName}” is now live on Casefolio`,
+    emailCtaLabel: "View live case study",
   });
 }

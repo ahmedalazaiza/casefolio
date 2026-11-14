@@ -7,6 +7,7 @@ import {
   type ModerationQueueFilter,
 } from "@/lib/admin/moderation-types";
 import { db, dbSchema } from "@/lib/db";
+import { sendAdminAbuseReportAlertEmail } from "@/lib/email";
 import { createUserNotification } from "@/lib/notifications/service";
 import { recordAdminAuditLog } from "@/lib/template/service";
 
@@ -54,6 +55,14 @@ export async function submitPublicProjectReport(args: {
       error: "Failed to submit report.",
     };
   }
+
+  await sendAdminAbuseReportAlertEmail({
+    reportId: created.id,
+    projectName: project.name,
+    projectSlug: project.slug,
+    category: args.input.category,
+    details: trimmedDetails || null,
+  }).catch(() => undefined);
 
   return { ok: true, reportId: created.id };
 }

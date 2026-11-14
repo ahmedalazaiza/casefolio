@@ -20,6 +20,7 @@ import {
 } from "@/lib/billing/server-config";
 import { verifyPaddleWebhookSignature } from "@/lib/billing/signature";
 import { db, dbSchema } from "@/lib/db";
+import { sendSubscriptionActivatedEmail } from "@/lib/email";
 import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
@@ -1464,6 +1465,32 @@ async function processValidatedPaddleWebhookOnce(
         eventType: envelope.event_type,
       },
     });
+
+    if (
+      !txOutcome.result.deduplicated &&
+      txOutcome.result.effectivePlan !== "free" &&
+      "resolvedUserId" in txOutcome
+    ) {
+      const buyerUserId = txOutcome.actorUserId ?? txOutcome.resolvedUserId;
+      if (buyerUserId) {
+        const [buyerUser] = await db
+          .select({ email: dbSchema.users.email, name: dbSchema.users.name })
+          .from(dbSchema.users)
+          .where(eq(dbSchema.users.id, buyerUserId))
+          .limit(1);
+
+        if (buyerUser) {
+          await sendSubscriptionActivatedEmail({
+            to: buyerUser.email,
+            name: buyerUser.name,
+            plan: txOutcome.result.effectivePlan,
+            interval: details.interval ?? "monthly",
+            seats: txOutcome.result.currentPaidCapacity ?? 1,
+            renewsAtIso: details.currentPeriodEnd ? details.currentPeriodEnd.toISOString() : null,
+          }).catch(() => undefined);
+        }
+      }
+    }
   }
 
   if (

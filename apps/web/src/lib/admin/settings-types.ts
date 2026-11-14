@@ -151,7 +151,11 @@ export const PERMISSION_MATRIX_ROWS: readonly PermissionMatrixRow[] = [
 export function classifyAuditAction(action: string): Exclude<AuditActionCategory, "all"> {
   if (action.startsWith("template.")) return "templates";
   if (action.startsWith("admin.category.")) return "categories";
-  if (action.startsWith("admin.user.") || action.startsWith("admin.subscription.")) {
+  if (
+    action.startsWith("admin.user.") ||
+    action.startsWith("admin.subscription.") ||
+    action === "admin.email.dispatched"
+  ) {
     return "users";
   }
   if (action.startsWith("admin.moderation.")) return "moderation";
@@ -199,6 +203,10 @@ export function formatAuditLogSummary(
       return `Bulk-dismissed ${String(meta.dismissedReportCount ?? 0)} open reports`;
     case "admin.role.updated":
       return `Changed role ${String(meta.previousRole ?? "user")} → ${String(meta.nextRole ?? "admin")}`;
+    case "admin.email.dispatched":
+      return `Sent official admin email (${String(meta.subject ?? "Notice")})`;
+    case "admin.email.test_sent":
+      return `Sent test preview for template ${String(meta.templateKey ?? "")}`;
     case "admin.platform_settings.updated":
       return `Sign-ups: ${meta.newSignupsOpen ? "open" : "closed"} · Email verify: ${meta.requireEmailVerification ? "on" : "off"} · Maintenance: ${meta.maintenanceMode ? "on" : "off"}`;
     default:
