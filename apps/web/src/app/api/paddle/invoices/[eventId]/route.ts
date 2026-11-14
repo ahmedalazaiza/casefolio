@@ -36,16 +36,17 @@ export async function GET(_request: Request, context: { params: Promise<{ eventI
     <meta charset="utf-8" />
     <title>Receipt ${escapeHtml(invoice.invoiceNumber)} — Casefolio</title>
     <style>
-      body { font-family: system-ui, -apple-system, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 24px; color: #111827; line-height: 1.5; }
-      .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; }
-      .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+      body { font-family: system-ui, -apple-system, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 24px; background: #f7f8fc; color: #0a1024; line-height: 1.5; }
+      .card { background: #ffffff; border: 1px solid #dce2f2; border-radius: 16px; padding: 32px; }
+      .brand { color: #2650f2; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; }
+      .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eef1f9; }
       .total { font-weight: 700; font-size: 18px; border-bottom: none; padding-top: 16px; }
-      .muted { color: #6b7280; font-size: 13px; }
+      .muted { color: #525c7a; font-size: 13px; }
     </style>
   </head>
   <body>
     <div class="card">
-      <p class="muted">CASEFOLIO · PADDLE BILLING RECEIPT (${escapeHtml(overview.environment.toUpperCase())})</p>
+      <p class="brand">CASEFOLIO · PADDLE BILLING RECEIPT (${escapeHtml(overview.environment.toUpperCase())})</p>
       <h1>Invoice ${escapeHtml(invoice.invoiceNumber)}</h1>
       <div class="row"><span>Billed to</span><span>${escapeHtml(sessionData.user.email)}</span></div>
       <div class="row"><span>Date</span><span>${escapeHtml(formattedDate)}</span></div>

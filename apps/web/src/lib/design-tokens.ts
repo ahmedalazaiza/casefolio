@@ -28,14 +28,14 @@ export const COLOR_TOKENS: readonly ColorTokenSpec[] = [
   { figmaName: "text/inverse", cssVar: "--text-inverse", role: "Text on inverse fills" },
   { figmaName: "border/default", cssVar: "--border-default", role: "Hairlines & card borders" },
   { figmaName: "border/strong", cssVar: "--border-strong", role: "Emphasized outlines" },
-  { figmaName: "accent/primary", cssVar: "--accent-primary", role: "Brand indigo action" },
+  { figmaName: "accent/primary", cssVar: "--accent-primary", role: "Electric royal blue action" },
   { figmaName: "accent/on-primary", cssVar: "--accent-on-primary", role: "Label on brand action" },
-  { figmaName: "accent/soft", cssVar: "--accent-soft", role: "Accent tint & badge fill" },
-  { figmaName: "accent/secondary", cssVar: "--accent-secondary", role: "Neutral strong accent" },
+  { figmaName: "accent/soft", cssVar: "--accent-soft", role: "Royal tint & badge fill" },
+  { figmaName: "accent/secondary", cssVar: "--accent-secondary", role: "Midnight cobalt strong accent" },
   {
     figmaName: "accent/secondary-soft",
     cssVar: "--accent-secondary-soft",
-    role: "Neutral chip & Pro pill fill",
+    role: "Studio chip & cool sunken fill",
   },
   { figmaName: "status/success", cssVar: "--status-success", role: "Published & success state" },
   {

@@ -90,7 +90,7 @@ export default function DevUiPage() {
           <div className="flex flex-col gap-1">
             <span className="text-tertiary type-overline">02 · Typography</span>
             <h2 id="section-type" className="type-heading-m text-foreground">
-              Type Scale ({TYPE_SCALE_TOKENS.length} styles · Geist + JetBrains Mono)
+              Type Scale ({TYPE_SCALE_TOKENS.length} styles · Bricolage Grotesque + Geist + JetBrains Mono)
             </h2>
           </div>
           <Card variant="flat" className="divide-border divide-y overflow-hidden">

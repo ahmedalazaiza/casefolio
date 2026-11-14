@@ -203,7 +203,7 @@ export function RichTextField({
     <div data-testid="rich-text-field" className="flex flex-col gap-1.5">
       <span className="text-foreground type-caption font-medium">{label}</span>
 
-      <div className="border-border/70 bg-elevated focus-within:ring-ring/25 focus-within:border-ring overflow-hidden rounded-xl border shadow-2xs transition-all focus-within:ring-3">
+      <div className="border-border/70 bg-elevated focus-within:ring-ring/25 focus-within:border-ring overflow-hidden rounded-xl border transition-all focus-within:ring-3">
         {/* Constrained formatting toolbar: Bold, Italic, Lists, Link only */}
         <div
           role="toolbar"

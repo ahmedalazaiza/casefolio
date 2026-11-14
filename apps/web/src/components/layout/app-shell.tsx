@@ -88,24 +88,28 @@ function PlanUsageCard({
   return (
     <div
       data-slot="plan-usage-card"
-      className="border-border/70 bg-wash-panel flex flex-col gap-2.5 rounded-2xl border p-4 shadow-2xs"
+      className="v3-pattern-dots-dark flex flex-col gap-3 rounded-xl border border-[var(--cf-border-on-royal)] p-4 text-[var(--cf-text-on-royal)]"
     >
-      <span className="text-accent-foreground type-overline">{planLabel}</span>
-      <p className="text-foreground type-caption">{renewsLabel}</p>
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center rounded-md bg-[var(--cf-bg-accent)] px-2 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+          {planLabel}
+        </span>
+      </div>
+      <p className="type-caption text-[var(--cf-text-on-royal-muted)]">{renewsLabel}</p>
       <div
         role="progressbar"
         aria-label="Project quota usage"
         aria-valuenow={projectsUsed}
         aria-valuemin={0}
         aria-valuemax={effectiveMax}
-        className="bg-background/80 h-1.5 w-full overflow-hidden rounded-full"
+        className="h-2 w-full overflow-hidden rounded-full bg-[var(--cf-bg-elevated)]/20"
       >
         <div
-          className="bg-primary h-full rounded-full transition-all"
+          className="h-full rounded-full bg-[var(--cf-bg-accent)] transition-all"
           style={{ width: `${ratio}%` }}
         />
       </div>
-      <p className="text-muted-foreground type-caption">
+      <p className="type-caption font-medium text-[var(--cf-text-on-royal)]">
         {finiteLimit !== null
           ? `${projectsUsed} of ${finiteLimit} ${finiteLimit === 1 ? "Case Study" : "projects"} used`
           : `${projectsUsed} Case ${projectsUsed === 1 ? "Study" : "Studies"} · Unlimited`}
@@ -133,35 +137,35 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="bg-wash-top bg-surface text-foreground flex min-h-screen flex-col">
+    <div className="bg-wash-top text-foreground flex min-h-screen flex-col">
       <a
         href="#main-content"
-        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:px-4 focus:py-2"
+        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:px-4 focus:py-2"
       >
         Skip to main content
       </a>
 
-      <header className="border-border/70 bg-elevated/88 sticky top-0 z-40 border-b backdrop-blur-xl">
-        <div className="flex h-17 items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
+      <header className="fixed inset-x-0 top-0 z-40 h-17 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]/95 backdrop-blur-xl">
+        <div className="flex h-full items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <button
                   type="button"
                   aria-label="Open workspace navigation"
-                  className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 lg:hidden"
+                  className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] focus-visible:ring-2 lg:hidden"
                 >
                   <Menu className="size-4" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 rounded-r-3xl p-4">
+              <SheetContent side="left" className="w-72 rounded-r-2xl border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4">
                 <SheetHeader className="px-2 pt-1 pb-2 text-left">
                   <SheetTitle>Workspace</SheetTitle>
                   <SheetDescription>Navigate your Casefolio workspace.</SheetDescription>
                 </SheetHeader>
                 <nav
                   aria-label="Mobile workspace navigation"
-                  className="flex flex-1 flex-col gap-1"
+                  className="flex flex-1 flex-col gap-1.5"
                 >
                   {APP_NAV_ITEMS.map((item) => {
                     const Icon = item.icon;
@@ -173,16 +177,18 @@ export function AppShell({
                         aria-current={active ? "page" : undefined}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
-                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-full border px-3.5 py-2.5 transition-all outline-none focus-visible:ring-2",
+                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors outline-none focus-visible:ring-2",
                           active
-                            ? "border-border/80 bg-elevated text-foreground type-body-s-strong shadow-xs"
-                            : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s border-transparent",
+                            ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] font-semibold text-[var(--cf-text-on-royal)]"
+                            : "type-body-s border-transparent text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
                         )}
                       >
                         <Icon
                           className={cn(
                             "size-4 shrink-0",
-                            active ? "text-primary" : "text-tertiary",
+                            active
+                              ? "text-[var(--cf-text-on-royal)]"
+                              : "text-[var(--cf-text-tertiary)]",
                           )}
                         />
                         <span>{item.label}</span>
@@ -207,7 +213,7 @@ export function AppShell({
             <button
               type="button"
               aria-label="Search workspace"
-              className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border shadow-2xs transition-colors outline-none focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
             >
               <Search className="size-4" />
             </button>
@@ -224,12 +230,68 @@ export function AppShell({
             />
           </div>
         </div>
+      </header>
 
+      <aside
+        aria-label="Workspace sidebar"
+        className="hidden border-r border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 lg:fixed lg:top-17 lg:bottom-0 lg:left-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:justify-between lg:overflow-y-auto"
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 px-2.5 pt-1">
+            <span
+              aria-hidden="true"
+              className="size-2 rounded-full bg-[var(--cf-royal)]"
+            />
+            <span className="v3-label text-[var(--cf-text-tertiary)] uppercase">
+              Studio Navigation
+            </span>
+          </div>
+
+          <nav aria-label="Workspace navigation" className="flex flex-col gap-1.5">
+            {APP_NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = isNavItemActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "focus-visible:ring-ring/40 flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors outline-none focus-visible:ring-2",
+                    active
+                      ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-sm font-semibold text-[var(--cf-text-on-royal)]"
+                      : "type-body-s border-transparent text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "size-4 shrink-0",
+                      active
+                        ? "text-[var(--cf-text-on-royal)]"
+                        : "text-[var(--cf-text-tertiary)]",
+                    )}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        <PlanUsageCard
+          planLabel={planLabel}
+          projectsUsed={projectsUsed}
+          projectsLimit={projectsLimit}
+          renewsLabel={renewsLabel}
+        />
+      </aside>
+
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col pt-17 lg:pl-64">
         {failedPaymentPauseDateLabel && (
           <div
             role="alert"
             data-testid="app-failed-payment-banner"
-            className="border-destructive/30 bg-destructive-soft text-destructive flex flex-wrap items-center justify-center gap-2 border-t px-4 py-2 text-center"
+            className="border-destructive/30 bg-destructive-soft text-destructive flex flex-wrap items-center justify-center gap-2 border-b px-4 py-2 text-center"
           >
             <AlertTriangle className="size-4 shrink-0" />
             <span className="type-body-s">
@@ -243,50 +305,8 @@ export function AppShell({
             </Link>
           </div>
         )}
-      </header>
 
-      <div className="flex min-w-0 flex-1">
-        <aside
-          aria-label="Workspace sidebar"
-          className="border-border/70 bg-elevated/70 hidden w-66 shrink-0 flex-col justify-between border-r p-4 backdrop-blur-md lg:flex"
-        >
-          <nav aria-label="Workspace navigation" className="flex flex-col gap-1">
-            {APP_NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = isNavItemActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "focus-visible:ring-ring/40 flex items-center gap-3 rounded-full border px-3.5 py-2.5 transition-all outline-none focus-visible:ring-2",
-                    active
-                      ? "border-border/80 bg-elevated text-foreground type-body-s-strong shadow-xs"
-                      : "text-muted-foreground hover:bg-surface hover:text-foreground type-body-s border-transparent",
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "size-4 shrink-0",
-                      active ? "text-primary" : "text-tertiary",
-                    )}
-                  />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <PlanUsageCard
-            planLabel={planLabel}
-            projectsUsed={projectsUsed}
-            projectsLimit={projectsLimit}
-            renewsLabel={renewsLabel}
-          />
-        </aside>
-
-        <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-10">
+        <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8 xl:p-10">
           {children}
         </main>
       </div>

@@ -401,7 +401,7 @@ export function AdminTemplatesList({
                 aria-label="Filter by category"
                 value={categoryFilter}
                 onChange={(event) => setCategoryFilter(event.target.value)}
-                className="border-border/80 bg-elevated text-foreground type-caption focus-visible:ring-ring/40 h-9 rounded-full border px-3.5 shadow-xs outline-none focus-visible:ring-2"
+                className="border-border/80 bg-elevated text-foreground type-caption focus-visible:ring-ring/40 h-9 rounded-full border px-3.5 outline-none focus-visible:ring-2"
               >
                 <option value="all">All categories</option>
                 {categoryOptions.map((cat) => (
@@ -454,7 +454,7 @@ export function AdminTemplatesList({
                             slug={item.slug}
                             name={item.name}
                             hideFallbackLabel
-                            className="border-border/80 aspect-[4/3] w-16 rounded-xl border p-2 shadow-2xs"
+                            className="border-border/80 aspect-[4/3] w-16 rounded-xl border p-2"
                           />
                         </Link>
                         <div className="flex flex-wrap items-center gap-2">

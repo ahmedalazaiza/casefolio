@@ -369,9 +369,9 @@ export function ImageSlotFrame({
       <div
         aria-hidden="true"
         style={{
-          backgroundColor: `var(--tpl-color-${safeAccent}, var(--primary))`,
+          borderColor: `var(--tpl-color-${safeAccent}, var(--primary))`,
         }}
-        className="pointer-events-none absolute inset-6 z-0 rounded-full opacity-25 blur-3xl"
+        className="pointer-events-none absolute -inset-2 z-0 rounded-3xl border opacity-20"
       />
       <div className="relative z-10">{frameElement}</div>
     </div>

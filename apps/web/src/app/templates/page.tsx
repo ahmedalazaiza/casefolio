@@ -48,15 +48,13 @@ export default async function TemplatesLibraryPage() {
   }
 
   return (
-    <MarketingShell>
-      <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <TemplateLibraryClient
-          templates={publishedTemplates}
-          categories={categoryOptions}
-          userPlan="free"
-          isAuthenticated={false}
-        />
-      </div>
+    <MarketingShell activeNavHref="/templates">
+      <TemplateLibraryClient
+        templates={publishedTemplates}
+        categories={categoryOptions}
+        userPlan="free"
+        isAuthenticated={false}
+      />
     </MarketingShell>
   );
 }

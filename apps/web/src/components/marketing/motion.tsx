@@ -10,6 +10,7 @@ import {
   ensureGsapPluginsRegistered,
   gsap,
   prefersReducedMotion,
+  ScrollTrigger,
   useGSAP,
 } from "@/lib/animation/gsap";
 import { cn } from "@/lib/utils";
@@ -204,16 +205,21 @@ export function CountUp({ value, className }: CountUpProps) {
       if (!el || prefersReducedMotion()) return;
       ensureGsapPluginsRegistered();
 
-      const counter = { current: 0 };
-      el.textContent = "0";
-      gsap.to(counter, {
-        current: value,
-        duration: 1.6,
-        ease: "power2.out",
-        onUpdate: () => {
-          el.textContent = String(Math.round(counter.current));
+      const counter = { current: Math.max(0, Math.floor(value * 0.35)) };
+      ScrollTrigger.create({
+        trigger: el,
+        start: "top 95%",
+        once: true,
+        onEnter: () => {
+          gsap.to(counter, {
+            current: value,
+            duration: 0.9,
+            ease: "power2.out",
+            onUpdate: () => {
+              el.textContent = String(Math.round(counter.current));
+            },
+          });
         },
-        scrollTrigger: { trigger: el, start: "top 92%", once: true },
       });
     },
     { scope: ref, dependencies: [value] },
@@ -300,11 +306,451 @@ export function Float({
       gsap.to(el, {
         y: amplitude,
         rotate: amplitude / 8,
-        duration: duration + Math.random(),
+        duration,
         ease: "sine.inOut",
         yoyo: true,
         repeat: -1,
       });
+    },
+    { scope: ref, dependencies: [amplitude, duration] },
+  );
+
+  return (
+    <div ref={ref} className={cn("will-change-transform", className)}>
+      {children}
+    </div>
+  );
+}
+
+export interface SectionIntersectProps {
+  children: ReactNode;
+  className?: string;
+  /** Vertical overlap travel in px scrubbed by ScrollTrigger (positive starts shifted down and settles to 0). */
+  overlapY?: number;
+  /** Slight starting scale before settling to 1 (safe at opacity 1). */
+  startScale?: number;
+}
+
+/**
+ * Scrubbed section intersection transition: glides a section upward to overlap
+ * the previous band as the user scrolls, while preserving full opacity at all times.
+ */
+export function SectionIntersect({
+  children,
+  className,
+  overlapY = 36,
+  startScale = 0.985,
+}: SectionIntersectProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el || prefersReducedMotion()) return;
+      ensureGsapPluginsRegistered();
+
+      gsap.fromTo(
+        el,
+        { y: overlapY, scale: startScale },
+        {
+          y: 0,
+          scale: 1,
+          ease: "none",
+          clearProps: "transform",
+          scrollTrigger: {
+            trigger: el,
+            start: "top bottom",
+            end: "top 42%",
+            scrub: 0.75,
+          },
+        },
+      );
+    },
+    { scope: ref, dependencies: [overlapY, startScale] },
+  );
+
+  return (
+    <div ref={ref} className={cn("relative will-change-transform", className)}>
+      {children}
+    </div>
+  );
+}
+
+export interface ScrollRiseProps {
+  children: ReactNode;
+  className?: string;
+  stagger?: boolean;
+  y?: number;
+  start?: string;
+  "data-testid"?: string;
+}
+
+/**
+ * Transform-only scroll entrance: translates elements into place without ever
+ * holding content at opacity 0 before scroll.
+ */
+export function ScrollRise({
+  children,
+  className,
+  stagger = false,
+  y = 20,
+  start = "top 92%",
+  "data-testid": dataTestId,
+}: ScrollRiseProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el || prefersReducedMotion()) return;
+      ensureGsapPluginsRegistered();
+
+      const targets = stagger ? Array.from(el.children) : [el];
+      if (targets.length === 0) return;
+
+      gsap.fromTo(
+        targets,
+        { y },
+        {
+          y: 0,
+          duration: 0.7,
+          ease: EASE_OUT,
+          stagger: stagger ? 0.08 : 0,
+          clearProps: "transform",
+          scrollTrigger: { trigger: el, start, once: true },
+        },
+      );
+    },
+    { scope: ref, dependencies: [stagger, y, start] },
+  );
+
+  return (
+    <div ref={ref} className={className} data-testid={dataTestId}>
+      {children}
+    </div>
+  );
+}
+
+export interface ScrollConnectorProps {
+  className?: string;
+}
+
+/** Horizontal progress rail that draws across stepped workflow cards on scroll. */
+export function ScrollConnector({ className }: ScrollConnectorProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el || prefersReducedMotion()) return;
+      ensureGsapPluginsRegistered();
+
+      gsap.fromTo(
+        el,
+        { scaleX: 0.14 },
+        {
+          scaleX: 1,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 88%",
+            end: "top 45%",
+            scrub: 0.6,
+          },
+        },
+      );
+    },
+    { scope: ref },
+  );
+
+  return (
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className={cn(
+        "from-primary/35 via-primary to-primary/45 origin-left rounded-full bg-gradient-to-r will-change-transform",
+        className,
+      )}
+    />
+  );
+}
+
+/** Sticky navbar scroll progress ribbon (Electric Royal Blue -> Acid Lime). */
+export function ScrollProgressBar({ className }: { className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el || prefersReducedMotion()) return;
+      ensureGsapPluginsRegistered();
+
+      gsap.fromTo(
+        el,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
+          ease: "none",
+          scrollTrigger: {
+            trigger: document.documentElement,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 0.25,
+          },
+        },
+      );
+    },
+    { scope: ref },
+  );
+
+  return (
+    <div
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none absolute right-0 bottom-0 left-0 h-[2.5px] overflow-hidden bg-transparent",
+        className,
+      )}
+    >
+      <div
+        ref={ref}
+        style={{ transform: "scaleX(0)" }}
+        className="h-full w-full origin-left bg-gradient-to-r from-[var(--cf-royal)] via-[var(--cf-royal)] to-[var(--cf-bg-accent)] will-change-transform"
+      />
+    </div>
+  );
+}
+
+export interface SectionStackSheetProps {
+  children: ReactNode;
+  className?: string;
+  overlapY?: number;
+  startScale?: number;
+  recedeOnExit?: boolean;
+}
+
+/**
+ * Architectural overlapping sheet section:
+ * Glides upward to physically overlap the preceding band on scroll entrance,
+ * and optionally tucks into subtle depth when the next sheet rises over it.
+ */
+export function SectionStackSheet({
+  children,
+  className,
+  overlapY = 52,
+  startScale = 0.972,
+  recedeOnExit = false,
+}: SectionStackSheetProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el || prefersReducedMotion()) return;
+      ensureGsapPluginsRegistered();
+
+      gsap.fromTo(
+        el,
+        { y: overlapY, scale: startScale },
+        {
+          y: 0,
+          scale: 1,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el,
+            start: "top bottom",
+            end: "top 36%",
+            scrub: 0.65,
+          },
+        },
+      );
+
+      if (recedeOnExit) {
+        gsap.fromTo(
+          el,
+          { scale: 1, y: 0 },
+          {
+            scale: 0.986,
+            y: -16,
+            ease: "none",
+            immediateRender: false,
+            scrollTrigger: {
+              trigger: el,
+              start: "bottom 72%",
+              end: "bottom top",
+              scrub: 0.65,
+            },
+          },
+        );
+      }
+    },
+    { scope: ref, dependencies: [overlapY, startScale, recedeOnExit] },
+  );
+
+  return (
+    <div ref={ref} className={cn("relative origin-top will-change-transform", className)}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Choreographs split feature panels so Panel 01 recedes into depth as Panel 02 glides up,
+ * while floating inner `[data-panel-media]` artwork in gentle counter-parallax.
+ */
+export function DepthStackPanel({
+  children,
+  className,
+  recede = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  recede?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el || prefersReducedMotion()) return;
+      ensureGsapPluginsRegistered();
+
+      gsap.fromTo(
+        el,
+        { y: 38, scale: 0.978 },
+        {
+          y: 0,
+          scale: 1,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 95%",
+            end: "top 44%",
+            scrub: 0.6,
+          },
+        },
+      );
+
+      if (recede) {
+        gsap.fromTo(
+          el,
+          { scale: 1, y: 0 },
+          {
+            scale: 0.972,
+            y: 20,
+            ease: "none",
+            immediateRender: false,
+            scrollTrigger: {
+              trigger: el,
+              start: "bottom 68%",
+              end: "bottom 10%",
+              scrub: 0.65,
+            },
+          },
+        );
+      }
+
+      const media = el.querySelector<HTMLElement>("[data-panel-media]");
+      if (media) {
+        gsap.fromTo(
+          media,
+          { y: 20 },
+          {
+            y: -14,
+            ease: "none",
+            scrollTrigger: {
+              trigger: el,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 0.7,
+            },
+          },
+        );
+      }
+    },
+    { scope: ref, dependencies: [recede] },
+  );
+
+  return (
+    <div ref={ref} className={cn("origin-top will-change-transform", className)}>
+      {children}
+    </div>
+  );
+}
+
+/** Animates `.v3-highlight` Acid-Lime stroke width (`--cf-hl-scale`) as a heading scrolls into view. */
+export function HighlightUnfurl({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el || prefersReducedMotion()) return;
+      ensureGsapPluginsRegistered();
+
+      const highlights = el.querySelectorAll<HTMLElement>(".v3-highlight");
+      if (highlights.length === 0) return;
+
+      gsap.fromTo(
+        highlights,
+        { "--cf-hl-scale": 0.32 },
+        {
+          "--cf-hl-scale": 1,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 92%",
+            end: "top 56%",
+            scrub: 0.5,
+          },
+        },
+      );
+    },
+    { scope: ref },
+  );
+
+  return (
+    <div ref={ref} className={className}>
+      {children}
+    </div>
+  );
+}
+
+/** Adds scroll-velocity horizontal momentum to the infinite template marquee. */
+export function ScrubbedMarqueeBoost({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el || prefersReducedMotion()) return;
+      ensureGsapPluginsRegistered();
+
+      gsap.fromTo(
+        el,
+        { x: 28 },
+        {
+          x: -56,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 0.7,
+          },
+        },
+      );
     },
     { scope: ref },
   );

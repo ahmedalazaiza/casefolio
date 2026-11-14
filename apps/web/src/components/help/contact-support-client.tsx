@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, Loader2, Plus, Upload } from "lucide-react";
+import { ArrowRight, Check, Loader2, Plus, Sparkles, Upload } from "lucide-react";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SUPPORT_TOPICS, type SupportTopic } from "@/lib/help/contact";
@@ -87,25 +87,29 @@ export function ContactSupportClient({
     }
   }
 
-  // Message sent confirmation view matching Figma 2:10147
   if (sentTicket) {
     return (
       <section
         data-testid="support-message-sent"
-        className="border-border bg-surface flex flex-col items-start gap-5 rounded-xl border p-8 sm:p-12"
+        className="v3-pattern-dots-light flex flex-col items-start gap-6 rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-8 shadow-[var(--cf-shadow-card)] sm:p-12"
       >
-        <span
-          aria-hidden="true"
-          className="bg-success-soft text-success inline-flex size-16 items-center justify-center rounded-xl"
-        >
-          <Check className="size-7" />
-        </span>
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="inline-flex size-14 items-center justify-center rounded-2xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)] shadow-[var(--cf-shadow-royal)]"
+          >
+            <Check className="size-7" />
+          </span>
+          <span className="rounded-lg bg-[var(--cf-bg-accent)] px-3 py-1 font-mono text-xs font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+            01 · Dispatched
+          </span>
+        </div>
 
-        <div className="flex flex-col gap-1.5">
-          <h1 className="text-foreground type-display-m">Message sent</h1>
-          <p className="text-muted-foreground type-body-m">
+        <div className="flex flex-col gap-2">
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">Message sent</h1>
+          <p className="text-base leading-relaxed text-[var(--cf-text-secondary)]">
             Ticket #{sentTicket.ticketCode} · We’ll reply to{" "}
-            <span className="text-foreground font-medium">
+            <span className="font-semibold text-[var(--cf-text-primary)]">
               {sentTicket.replyToEmail}
             </span>
             .
@@ -113,33 +117,53 @@ export function ContactSupportClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 pt-1">
-          <Button variant="secondary" asChild>
-            <Link href="/help">Back to help center</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/dashboard">Go to projects</Link>
-          </Button>
+          <Link href="/help" className="v3-btn-secondary">
+            <span>Back to help center</span>
+          </Link>
+          <Link href="/dashboard" className="v3-btn-primary">
+            <span>Go to projects</span>
+            <ArrowRight className="size-3.5" />
+          </Link>
         </div>
       </section>
     );
   }
 
-  // Contact support form matching Figma 2:10019
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <p className="text-accent-foreground type-overline">Support</p>
-        <h1 className="text-foreground type-display-m">Contact support</h1>
-        <p className="text-muted-foreground type-body-m">
-          Tell us what you’re running into and our team will reply by email within one business day.
-        </p>
+      <header className="v3-pattern-grid relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-10">
+        <div className="flex flex-col gap-3">
+          <Eyebrow className="w-fit">
+            Support
+          </Eyebrow>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            Contact support
+          </h1>
+          <p className="max-w-2xl text-base leading-relaxed text-[var(--cf-text-secondary)]">
+            Tell us what you’re running into and our studio team will reply by email within one
+            business day.
+          </p>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
         <form
           onSubmit={handleSubmit}
-          className="border-border bg-card flex flex-col gap-5 rounded-xl border p-6 sm:p-8 lg:col-span-8"
+          className="flex flex-col gap-5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8 lg:col-span-8"
         >
+          <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] pb-4">
+            <div className="flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-[var(--cf-royal)]" />
+              <span className="size-2.5 rounded-full bg-[var(--cf-bg-accent)]" />
+              <span className="ml-1 font-mono text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+                support.casefolio.app/ticket
+              </span>
+            </div>
+            <span className="rounded-md bg-[var(--cf-royal-soft)] px-2.5 py-1 font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+              02 · Ticket Details
+            </span>
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="support-email">Reply-to email</Label>
             <Input
@@ -158,10 +182,8 @@ export function ContactSupportClient({
               <select
                 id="support-topic"
                 value={topic}
-                onChange={(event) =>
-                  setTopic(event.target.value as SupportTopic)
-                }
-                className="border-input bg-background text-foreground focus-visible:ring-ring/40 type-body-m h-11 rounded-md border px-3 outline-none focus-visible:ring-2"
+                onChange={(event) => setTopic(event.target.value as SupportTopic)}
+                className="h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-sm font-medium text-[var(--cf-text-primary)] outline-none transition-colors focus-visible:border-[var(--cf-royal)] focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/30"
               >
                 {SUPPORT_TOPICS.map((item) => (
                   <option key={item} value={item}>
@@ -178,7 +200,7 @@ export function ContactSupportClient({
                   id="support-project"
                   value={relatedProject}
                   onChange={(event) => setRelatedProject(event.target.value)}
-                  className="border-input bg-background text-foreground focus-visible:ring-ring/40 type-body-m h-11 rounded-md border px-3 outline-none focus-visible:ring-2"
+                  className="h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-sm font-medium text-[var(--cf-text-primary)] outline-none transition-colors focus-visible:border-[var(--cf-royal)] focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/30"
                 >
                   {projects.map((proj) => (
                     <option key={proj.id} value={proj.title}>
@@ -220,23 +242,22 @@ export function ContactSupportClient({
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               placeholder="Describe what happened, the project or template involved, and any steps that help us reproduce it…"
-              className="border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/40 type-body-m w-full rounded-md border p-3 outline-none focus-visible:ring-2"
+              className="w-full rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3.5 text-sm text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] outline-none transition-colors focus-visible:border-[var(--cf-royal)] focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/30"
             />
           </div>
 
-          {/* Optional screenshot attachment slot matching Figma 2:10124 */}
           <div className="flex flex-col gap-2">
             <label
               htmlFor="support-attachment"
-              className="border-border-strong bg-surface hover:bg-sunken flex max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors"
+              className="flex max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-6 text-center transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)]"
             >
-              <span className="bg-accent text-accent-foreground inline-flex size-10 items-center justify-center rounded-full">
+              <span className="inline-flex size-10 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]">
                 <Upload className="size-4" />
               </span>
-              <span className="text-foreground type-body-s-strong">
+              <span className="text-sm font-semibold text-[var(--cf-text-primary)]">
                 {attachmentName || "Attach screenshots (optional)"}
               </span>
-              <span className="text-muted-foreground type-caption">
+              <span className="font-mono text-xs text-[var(--cf-text-secondary)]">
                 PNG / JPG · up to 10 MB
               </span>
               <input
@@ -252,12 +273,12 @@ export function ContactSupportClient({
             </label>
           </div>
 
-          <label className="text-foreground type-body-s flex items-center gap-2.5">
+          <label className="flex items-center gap-2.5 text-sm font-medium text-[var(--cf-text-primary)]">
             <input
               type="checkbox"
               checked={includeDiagnostics}
               onChange={(event) => setIncludeDiagnostics(event.target.checked)}
-              className="accent-primary size-4 rounded-xs"
+              className="size-4 rounded-xs accent-[var(--cf-royal)]"
             />
             <span>Include diagnostic info (browser, project ID)</span>
           </label>
@@ -265,33 +286,44 @@ export function ContactSupportClient({
           {errorMessage && (
             <p
               role="alert"
-              className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+              className="border-destructive/30 bg-destructive-soft text-destructive rounded-xl border px-3.5 py-2.5 text-sm font-medium"
             >
               {errorMessage}
             </p>
           )}
 
           <div className="flex justify-end pt-1">
-            <Button type="submit" size="lg" disabled={submitting}>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="v3-btn-primary disabled:pointer-events-none disabled:opacity-60"
+            >
               {submitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Sending…
+                  <span>Sending…</span>
                 </>
               ) : (
                 <>
-                  <Plus className="size-4" />
-                  Send message
+                  <span>Send message</span>
+                  <Plus className="size-3.5" />
                 </>
               )}
-            </Button>
+            </button>
           </div>
         </form>
 
-        {/* Side panel matching Figma 2:10144 */}
-        <aside className="border-border bg-sunken flex flex-col gap-3 rounded-xl border p-6 lg:col-span-4">
-          <h2 className="text-foreground type-heading-s">Before you send</h2>
-          <ul className="text-muted-foreground type-body-s flex list-disc flex-col gap-2 pl-4">
+        <aside className="v3-pattern-dots-dark v3-sheet-royal flex flex-col gap-4 rounded-2xl border border-[var(--cf-border-on-royal)] p-6 sm:p-7 lg:col-span-4">
+          <div className="flex items-center justify-between">
+            <span className="inline-flex size-10 items-center justify-center rounded-xl bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+              <Sparkles className="size-5" />
+            </span>
+            <span className="rounded-md bg-[var(--cf-bg-inverse-elevated)] px-2.5 py-1 font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-bg-accent)] uppercase">
+              03 · Checklist
+            </span>
+          </div>
+          <h2 className="v3-heading-s text-[var(--cf-text-on-royal)]">Before you send</h2>
+          <ul className="flex list-disc flex-col gap-2.5 pl-4 text-sm leading-relaxed text-[var(--cf-text-on-royal-muted)]">
             <li>Check your Exports tab first for one-click retry options</li>
             <li>Include your live page URL or custom slug for publishing issues</li>
             <li>Billing question? Share your Paddle receipt email or invoice date</li>

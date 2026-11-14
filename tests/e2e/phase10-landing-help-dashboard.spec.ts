@@ -89,36 +89,56 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     expect(tplVer).toBeTruthy();
 
     // =========================================================================
-    // 1. Marketing Landing `/` (Figma 27:6665) at 1440px & 375px
+    // 1. Marketing Landing `/` (Figma 85:7700 Desktop 1440 & 87:9604 Mobile 390/375)
     // =========================================================================
     await page.setViewportSize({ width: 1440, height: 920 });
     await page.goto("/");
     await expect(
       page.getByRole("heading", {
-        name: /Turn finished UI screens into published case studies/i,
+        name: /Turn finished projects into publishable case studies/i,
       }),
     ).toBeVisible();
+    await expect
+      .poll(() =>
+        page
+          .locator("[data-hero-visual]")
+          .evaluate((el) => window.getComputedStyle(el).opacity),
+      )
+      .toBe("1");
     await assertNoHorizontalOverflow(page, "/ at 1440px");
     await maybeSaveScreenshot(page, "landing-hero-1440.png", false);
     await maybeSaveScreenshot(page, "landing-1440.png", true);
 
-    // Verify app-launch CTA actions replace home-page pricing cards & open an FAQ item
+    // Verify Final CTA replaces home-page pricing cards & open an FAQ item
     await expect(page.getByTestId("landing-start-cta")).toBeVisible();
     await expect(page.getByTestId("paid-plan-cards-grid")).toHaveCount(0);
     await page
       .getByRole("button", {
-        name: /Can I use my own colors, fonts, and custom domain/i,
+        name: /Can I use my own colors and fonts\?/i,
       })
       .click();
-    await expect(page.getByText(/Plus also includes custom domains/i)).toBeVisible();
+    await expect(
+      page.getByText(/editable color tokens and curated font pairs/i),
+    ).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await assertNoHorizontalOverflow(page, "/ at 390px");
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("/");
     await expect(
       page.getByRole("heading", {
-        name: /Turn finished UI screens into published case studies/i,
+        name: /Turn finished projects into publishable case studies/i,
       }),
     ).toBeVisible();
+    await expect
+      .poll(() =>
+        page
+          .locator("[data-hero-visual]")
+          .evaluate((el) => window.getComputedStyle(el).opacity),
+      )
+      .toBe("1");
     await assertNoHorizontalOverflow(page, "/ at 375px");
     await maybeSaveScreenshot(page, "landing-hero-375.png", false);
     await maybeSaveScreenshot(page, "landing-375.png", true);
@@ -130,7 +150,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await page.goto("/pricing");
     await expect(
       page.getByRole("heading", {
-        name: /Simple pricing for solo designers, studios, and agencies/i,
+        name: /Simple tiers for solo designers & scaling studios\./i,
       }),
     ).toBeVisible();
     await page
@@ -139,7 +159,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
       .click();
     await expect(page.getByText("$7.99").first()).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: /Compare every feature & quota/i }),
+      page.getByRole("heading", { name: /See exactly what's included & what's not/i }),
     ).toBeVisible();
     await assertNoHorizontalOverflow(page, "/pricing at 1440px");
     await maybeSaveScreenshot(page, "pricing-1440.png", true);

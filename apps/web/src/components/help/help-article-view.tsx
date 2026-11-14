@@ -2,7 +2,6 @@ import { AlertTriangle, ArrowLeft, Info, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type {
   HelpArticle,
   HelpArticleSummary,
@@ -75,26 +74,26 @@ export function HelpArticleView({
       <div>
         <Link
           href="/help"
-          className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-1.5"
+          className="v3-btn-secondary w-fit py-2 px-3.5 text-xs font-semibold"
         >
-          <ArrowLeft className="size-4" />
+          <ArrowLeft className="size-3.5" />
           <span>Back to Help center</span>
         </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <article className="border-border bg-card flex flex-col gap-6 rounded-xl border p-6 sm:p-8 lg:col-span-8">
-          <header className="border-border flex flex-col gap-3 border-b pb-6">
+        <article className="flex flex-col gap-6 rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-card)] sm:p-9 lg:col-span-8">
+          <header className="flex flex-col gap-3 border-b border-[var(--cf-border-subtle)] pb-6">
             <div className="flex flex-wrap items-center gap-2.5">
               <Badge tone="accent" withDot={false}>
                 {article.category}
               </Badge>
-              <span className="text-muted-foreground type-caption">
+              <span className="type-caption text-[var(--cf-text-tertiary)]">
                 Updated {article.updatedAt}
               </span>
             </div>
-            <h1 className="text-foreground type-display-m">{article.title}</h1>
-            <p className="text-muted-foreground type-body-l">
+            <h1 className="v3-display-l text-[var(--cf-text-primary)]">{article.title}</h1>
+            <p className="v3-body-l text-[var(--cf-text-secondary)]">
               {article.summary}
             </p>
           </header>
@@ -105,12 +104,12 @@ export function HelpArticleView({
                 return block.level === 2 ? (
                   <h2
                     key={idx}
-                    className="text-foreground type-heading-m pt-2"
+                    className="v3-heading-m pt-2 text-[var(--cf-text-primary)]"
                   >
                     {block.text}
                   </h2>
                 ) : (
-                  <h3 key={idx} className="text-foreground type-heading-s pt-1">
+                  <h3 key={idx} className="v3-heading-s pt-1 text-[var(--cf-text-primary)]">
                     {block.text}
                   </h3>
                 );
@@ -118,7 +117,7 @@ export function HelpArticleView({
 
               if (block.type === "paragraph") {
                 return (
-                  <p key={idx} className="text-muted-foreground type-body-m">
+                  <p key={idx} className="v3-body-m text-[var(--cf-text-secondary)]">
                     {renderInlineFormatting(block.text)}
                   </p>
                 );
@@ -129,7 +128,7 @@ export function HelpArticleView({
                 return (
                   <ListTag
                     key={idx}
-                    className={`text-muted-foreground type-body-m flex flex-col gap-2 pl-5 ${
+                    className={`v3-body-m flex flex-col gap-2 pl-5 text-[var(--cf-text-secondary)] ${
                       block.ordered ? "list-decimal" : "list-disc"
                     }`}
                   >
@@ -150,14 +149,14 @@ export function HelpArticleView({
         </article>
 
         <aside className="flex flex-col gap-5 lg:col-span-4">
-          <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
-            <h2 className="text-foreground type-heading-s">More guides</h2>
+          <div className="flex flex-col gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-soft)]">
+            <h2 className="v3-heading-s text-[var(--cf-text-primary)]">More guides</h2>
             <ul className="flex flex-col gap-2">
               {relatedArticles.map((related) => (
                 <li key={related.slug}>
                   <Link
                     href={`/help/${related.slug}`}
-                    className="text-muted-foreground hover:text-foreground type-body-s block py-1 transition-colors"
+                    className="v3-body-s block rounded-xl border border-transparent px-3 py-2 text-[var(--cf-text-secondary)] transition-colors hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-royal-text)]"
                   >
                     {related.title} →
                   </Link>
@@ -166,15 +165,15 @@ export function HelpArticleView({
             </ul>
           </div>
 
-          <div className="border-border bg-sunken flex flex-col gap-3 rounded-xl border p-5">
-            <h2 className="text-foreground type-heading-s">Need a hand?</h2>
-            <p className="text-muted-foreground type-body-s">
+          <div className="v3-pattern-dots-dark flex flex-col gap-3.5 rounded-[1.75rem] border border-[var(--cf-border-on-royal)] p-6 text-[var(--cf-text-on-royal)] shadow-[var(--cf-shadow-soft)]">
+            <h2 className="v3-heading-s text-[var(--cf-text-on-royal)]">Need a hand?</h2>
+            <p className="v3-body-s text-[var(--cf-text-on-royal-muted)]">
               Send us your project name and question — we’ll reply by email.
             </p>
             <div>
-              <Button size="sm" asChild>
-                <Link href="/help/contact">Contact support</Link>
-              </Button>
+              <Link href="/help/contact" className="v3-btn-lime py-2.5 px-4 text-xs">
+                Contact support
+              </Link>
             </div>
           </div>
         </aside>

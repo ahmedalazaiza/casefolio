@@ -147,19 +147,31 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps): P
             {!published.project.whiteLabelEnabled ? (
               <div
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 38,
+                  height: 38,
                   borderRadius: 10,
-                  backgroundColor: primary,
+                  backgroundColor: "#2650F2",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: bg,
-                  fontSize: 20,
-                  fontWeight: 700,
+                  position: "relative",
+                  color: "#FFFFFF",
+                  fontSize: 19,
+                  fontWeight: 800,
                 }}
               >
-                C
+                <span>C</span>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    width: 7,
+                    height: 7,
+                    borderRadius: 999,
+                    backgroundColor: "#D1F800",
+                  }}
+                />
               </div>
             ) : null}
             <span

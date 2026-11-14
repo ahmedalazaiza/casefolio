@@ -25,7 +25,12 @@ export function CasefolioWatermark({
         interactive && "hover:border-primary/45 hover:bg-surface transition-colors",
       )}
     >
-      <Sparkles className="text-primary size-3.5 shrink-0" />
+      <span
+        aria-hidden="true"
+        className="bg-brand-royal inline-flex size-4.5 shrink-0 items-center justify-center rounded-md"
+      >
+        <Sparkles className="size-2.5 text-[var(--brand-lime)]" />
+      </span>
       <span>Made with Casefolio</span>
     </span>
   );

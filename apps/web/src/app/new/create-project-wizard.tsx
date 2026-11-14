@@ -52,10 +52,10 @@ import type { SpaceSummaryItem } from "@/lib/workspaces/service";
 
 export type WizardStepKey = "type" | "template" | "details";
 
-const WIZARD_STEPS: ReadonlyArray<{ key: WizardStepKey; number: number; label: string }> = [
-  { key: "type", number: 1, label: "Type" },
-  { key: "template", number: 2, label: "Template" },
-  { key: "details", number: 3, label: "Details" },
+const WIZARD_STEPS: ReadonlyArray<{ key: WizardStepKey; number: string; label: string }> = [
+  { key: "type", number: "01", label: "Type" },
+  { key: "template", number: "02", label: "Template" },
+  { key: "details", number: "03", label: "Details" },
 ];
 
 function formatProjectTypeLabel(type: TemplateProjectType): string {
@@ -272,27 +272,32 @@ export function CreateProjectWizard({
   const previewThemeStyle = buildTemplateThemeStyle(selectedTemplate?.document.template.theme);
 
   return (
-    <div className="bg-wash-top bg-surface text-foreground flex min-h-screen flex-col">
-      {/* Top Flow Bar */}
-      <header className="border-border/70 bg-elevated/88 sticky top-0 z-40 border-b backdrop-blur-xl">
+    <div className="bg-wash-top text-foreground flex min-h-screen flex-col">
+      {/* Top Studio Stepper Bar */}
+      <header className="sticky top-0 z-40 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]/92 backdrop-blur-xl">
         <div className="mx-auto grid h-17 max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-8 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
           <div className="flex max-w-full min-w-0 items-center gap-3 justify-self-start">
             <button
               type="button"
               onClick={handleFlowBack}
               aria-label="Go back"
-              className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-9 shrink-0 items-center justify-center rounded-full border shadow-2xs transition-colors outline-none focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
             >
               <ArrowLeft className="size-4" />
             </button>
-            <span className="text-foreground font-display min-w-0 truncate text-base font-medium tracking-tight">
-              {name.trim() || "New project"}
-            </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="v3-label text-[var(--cf-text-tertiary)] uppercase">
+                Case Study Studio
+              </span>
+              <span className="text-foreground font-display min-w-0 truncate text-sm font-bold tracking-tight sm:text-base">
+                {name.trim() || "New project"}
+              </span>
+            </div>
           </div>
 
           <nav
             aria-label="Create project steps"
-            className="border-border/70 bg-surface/80 hidden shrink-0 items-center gap-2 justify-self-center rounded-full border px-3 py-1 md:flex"
+            className="hidden shrink-0 items-center gap-1.5 justify-self-center rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1 md:flex"
           >
             {WIZARD_STEPS.map((item, idx) => {
               const isCompleted = idx < stepIndex;
@@ -303,27 +308,31 @@ export function CreateProjectWizard({
                 (item.key === "details" && Boolean(selectedTemplate));
 
               return (
-                <div key={item.key} className="flex items-center gap-2">
+                <div key={item.key} className="flex items-center gap-1.5">
                   <button
                     type="button"
                     disabled={!canJump}
                     onClick={() => canJump && setStep(item.key)}
                     aria-current={isCurrent ? "step" : undefined}
                     className={cn(
-                      "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-full px-2.5 py-1 transition-colors outline-none focus-visible:ring-2 disabled:cursor-not-allowed",
+                      "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-2 disabled:cursor-not-allowed",
                       isCurrent
-                        ? "bg-elevated text-foreground type-body-s-strong shadow-2xs"
+                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
                         : isCompleted
-                          ? "text-foreground type-body-s"
-                          : "text-tertiary type-body-s",
+                          ? "text-[var(--cf-text-primary)] hover:bg-[var(--cf-bg-elevated)]"
+                          : "text-[var(--cf-text-tertiary)]",
                     )}
                   >
                     <span
                       className={cn(
-                        "inline-flex size-5.5 items-center justify-center rounded-full text-xs font-medium",
-                        isCompleted && "bg-success text-success-foreground",
-                        isCurrent && "bg-inverse text-inverse-foreground",
-                        !isCompleted && !isCurrent && "bg-sunken text-tertiary",
+                        "inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-md px-1 text-[0.6875rem] font-bold tracking-wider",
+                        isCompleted &&
+                          "bg-[var(--cf-bg-surface)] text-[var(--cf-royal-text)]",
+                        isCurrent &&
+                          "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]",
+                        !isCompleted &&
+                          !isCurrent &&
+                          "bg-[var(--cf-bg-surface)] text-[var(--cf-text-tertiary)]",
                       )}
                     >
                       {isCompleted ? <Check className="size-3.5" /> : item.number}
@@ -334,8 +343,10 @@ export function CreateProjectWizard({
                     <span
                       aria-hidden="true"
                       className={cn(
-                        "h-px w-6",
-                        idx < stepIndex ? "bg-success" : "bg-border",
+                        "h-px w-4",
+                        idx < stepIndex
+                          ? "bg-[var(--cf-royal)]"
+                          : "bg-[var(--cf-border-subtle)]",
                       )}
                     />
                   )}
@@ -345,18 +356,21 @@ export function CreateProjectWizard({
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 justify-self-end">
-            <Badge tone="neutral" withDot={false} className="md:hidden">
-              Step {stepIndex + 1}/3
-            </Badge>
-            <Button asChild variant="secondary" size="sm">
-              <Link href="/dashboard">Exit</Link>
-            </Button>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-2.5 py-1 font-mono text-xs font-bold text-[var(--cf-text-primary)] md:hidden">
+              0{stepIndex + 1}/03
+            </span>
+            <Link href="/dashboard" className="v3-btn-secondary px-3.5 py-2 text-xs font-semibold">
+              Exit
+            </Link>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 sm:px-8 sm:py-12">
+      <main
+        id="main-content"
+        className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 sm:px-8 sm:py-12"
+      >
         {isFreeQuotaReached && (
           <div
             role="alert"
@@ -401,20 +415,23 @@ export function CreateProjectWizard({
         {step === "type" && (
           <div data-testid="wizard-step-type" className="flex flex-1 flex-col justify-between gap-10">
             <div className="flex flex-col gap-8">
-              <div className="flex flex-col items-start gap-3">
-                <Eyebrow>Step 1 of 3</Eyebrow>
-                <h1 className="type-display-m sm:type-display-l text-foreground">
-                  What are you presenting?
-                </h1>
-                <p className="text-muted-foreground type-body-l max-w-xl">
-                  Pick a type to see the templates available for it.
-                </p>
+              <div className="v3-pattern-grid relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-9">
+                <div className="flex flex-col items-start gap-3">
+                  <Eyebrow>Step 1 of 3</Eyebrow>
+                  <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+                    What are you presenting?
+                  </h1>
+                  <p className="v3-body-l max-w-xl text-[var(--cf-text-secondary)]">
+                    Pick a platform canvas to filter ratio-locked Casefolio studio templates built
+                    specifically for your screens.
+                  </p>
+                </div>
               </div>
 
               <div
                 role="radiogroup"
                 aria-label="Project type"
-                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
               >
                 <button
                   type="button"
@@ -422,7 +439,7 @@ export function CreateProjectWizard({
                   aria-checked={selectedType === "mobile"}
                   data-testid="type-card-mobile"
                   onClick={() => handleSelectType("mobile")}
-                  className="focus-visible:ring-ring/40 rounded-xl text-left outline-none focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 rounded-[1.5rem] text-left outline-none focus-visible:ring-2"
                 >
                   <TemplateTypeCard
                     title="Mobile app"
@@ -440,7 +457,7 @@ export function CreateProjectWizard({
                   aria-checked={selectedType === "web"}
                   data-testid="type-card-web"
                   onClick={() => handleSelectType("web")}
-                  className="focus-visible:ring-ring/40 rounded-xl text-left outline-none focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 rounded-[1.5rem] text-left outline-none focus-visible:ring-2"
                 >
                   <TemplateTypeCard
                     title="Website"
@@ -458,7 +475,7 @@ export function CreateProjectWizard({
                   aria-checked={selectedType === "both"}
                   data-testid="type-card-both"
                   onClick={() => handleSelectType("both")}
-                  className="focus-visible:ring-ring/40 rounded-xl text-left outline-none focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 rounded-[1.5rem] text-left outline-none focus-visible:ring-2"
                 >
                   <TemplateTypeCard
                     title="Mobile & Web"
@@ -481,20 +498,22 @@ export function CreateProjectWizard({
               </div>
             </div>
 
-            <div className="border-border flex flex-col-reverse items-stretch justify-between gap-3 border-t pt-6 sm:flex-row sm:items-center">
-              <Button asChild variant="secondary" size="lg">
-                <Link href="/dashboard">Cancel</Link>
-              </Button>
+            <div className="flex flex-col-reverse items-stretch justify-between gap-3 rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 sm:flex-row sm:items-center sm:px-6">
+              <Link href="/dashboard" className="v3-btn-secondary py-2.5 text-sm">
+                Cancel
+              </Link>
 
-              <Button
+              <button
                 type="button"
-                size="lg"
                 data-testid="wizard-next-to-template"
                 onClick={() => setStep("template")}
+                className="v3-btn-primary py-2.5 pr-3 pl-5 text-sm"
               >
-                Continue to templates
-                <ArrowRight className="size-4" />
-              </Button>
+                <span>Continue to templates</span>
+                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                  <ArrowRight className="size-3.5" />
+                </span>
+              </button>
             </div>
           </div>
         )}
@@ -506,19 +525,22 @@ export function CreateProjectWizard({
             className="flex flex-1 flex-col justify-between gap-10"
           >
             <div className="flex flex-col gap-6">
-              <div className="flex flex-col items-start gap-3">
-                <Eyebrow>Step 2 of 3</Eyebrow>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="type-display-m sm:type-display-l text-foreground">
-                    {formatProjectTypeLabel(selectedType)} templates
-                  </h1>
-                  <Badge tone="neutral" withDot={false} className="w-fit">
-                    From Casefolio library
-                  </Badge>
+              <div className="v3-pattern-grid relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+                <div className="flex flex-col items-start gap-3">
+                  <Eyebrow>Step 2 of 3</Eyebrow>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+                      {formatProjectTypeLabel(selectedType)} templates
+                    </h1>
+                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3 py-1.5 text-xs font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
+                      From Casefolio library
+                    </span>
+                  </div>
+                  <p className="v3-body-l max-w-xl text-[var(--cf-text-secondary)]">
+                    Templates are designed by the Casefolio team — pick a studio layout, then make
+                    the narrative and screens yours.
+                  </p>
                 </div>
-                <p className="text-muted-foreground type-body-l max-w-xl">
-                  Templates are designed by the Casefolio team — you choose the layout, then customize.
-                </p>
               </div>
 
               {compatibleTemplates.length === 0 ? (
@@ -547,11 +569,13 @@ export function CreateProjectWizard({
                 <div
                   role="radiogroup"
                   aria-label="Choose template"
-                  className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                  className="grid gap-6 lg:grid-cols-2"
                 >
-                  {compatibleTemplates.map((item) => {
+                  {compatibleTemplates.map((item, idx) => {
                     const isLocked = item.tier === "pro" && !canUseProTemplates;
                     const isSelected = selectedTemplateId === item.id;
+                    const themeColors = item.document.template.theme.colors;
+                    const indexBadge = String(idx + 1).padStart(2, "0");
 
                     return (
                       <article
@@ -561,10 +585,10 @@ export function CreateProjectWizard({
                         data-selected={isSelected ? "true" : "false"}
                         data-locked={isLocked ? "true" : "false"}
                         className={cn(
-                          "bg-elevated flex flex-col justify-between gap-4 rounded-3xl border p-4 transition-all duration-300",
+                          "group flex flex-col justify-between overflow-hidden rounded-[2rem] border bg-[var(--cf-bg-elevated)] transition-all duration-300",
                           isSelected
-                            ? "border-primary shadow-float border-2"
-                            : "border-border/70 shadow-card hover:border-border-strong hover:-translate-y-0.5",
+                            ? "border-2 border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
+                            : "border-[var(--cf-border-subtle)] hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
                         )}
                       >
                         <button
@@ -583,77 +607,106 @@ export function CreateProjectWizard({
                               });
                             }
                           }}
-                          className="focus-visible:ring-ring/40 flex flex-col gap-3.5 text-left outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
+                          className="focus-visible:ring-ring/40 flex flex-col text-left outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
                         >
-                          <div className="border-border/60 group relative aspect-[4/3] w-full overflow-hidden rounded-2xl border">
-                            <TemplateThumbnail
-                              testId={`wizard-template-thumb-${item.slug}`}
-                              coverUrl={item.coverUrl}
-                              slug={item.slug}
-                              name={item.name}
-                              theme={{
-                                bg: item.document.template.theme.colors.background,
-                                fg: item.document.template.theme.colors.text,
-                                accent: item.document.template.theme.colors.primary,
-                              }}
-                              className="size-full"
-                              imageClassName="group-hover:scale-[1.03]"
-                            />
-
-                            <div className="pointer-events-none absolute top-3 right-3 z-10 flex items-center gap-1.5">
-                              {item.tier === "pro" ? (
-                                <ProBadge />
-                              ) : (
-                                <Badge tone="published">Free</Badge>
-                              )}
-                              {isSelected && (
-                                <span className="bg-primary text-primary-foreground inline-flex size-6 items-center justify-center rounded-full shadow-xs">
-                                  <Check className="size-3.5" />
-                                </span>
-                              )}
+                          {/* Architectural Spec Bar */}
+                          <div className="flex w-full items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex h-5 items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
+                                {indexBadge}
+                              </span>
+                              <span className="font-mono text-[0.6875rem] font-medium text-[var(--cf-text-tertiary)]">
+                                casefolio.app/t/{item.slug}
+                              </span>
                             </div>
-
-                            {isLocked && (
-                              <div className="bg-inverse/90 text-inverse-foreground type-caption absolute right-3 bottom-3 z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1">
-                                <Lock className="size-3" />
-                                <span>Pro required</span>
-                              </div>
-                            )}
+                            <span className="font-mono text-[0.6875rem] font-semibold text-[var(--cf-text-secondary)]">
+                              v{item.version}
+                            </span>
                           </div>
 
-                          <div className="flex flex-col gap-1 px-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-foreground type-heading-s truncate">
-                                {item.name}
-                              </span>
-                              <Badge tone="neutral" withDot={false}>
-                                v{item.version}
-                              </Badge>
+                          <div className="p-3.5 pb-0">
+                            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)]">
+                              <TemplateThumbnail
+                                testId={`wizard-template-thumb-${item.slug}`}
+                                coverUrl={item.coverUrl}
+                                slug={item.slug}
+                                name={item.name}
+                                theme={{
+                                  bg: themeColors.background,
+                                  fg: themeColors.text,
+                                  accent: themeColors.primary,
+                                }}
+                                className="size-full"
+                                imageClassName="group-hover:scale-[1.03]"
+                              />
+
+                              <div className="pointer-events-none absolute top-3 right-3 z-10 flex items-center gap-1.5">
+                                {item.tier === "pro" ? (
+                                  <ProBadge />
+                                ) : (
+                                  <Badge tone="published">Free</Badge>
+                                )}
+                                {isSelected && (
+                                  <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--cf-bg-accent)] px-2 py-1 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+                                    <Check className="size-3" />
+                                    Selected
+                                  </span>
+                                )}
+                              </div>
+
+                              {isLocked && (
+                                <div className="bg-inverse/90 text-inverse-foreground type-caption absolute right-3 bottom-3 z-10 inline-flex items-center gap-1.5 rounded-lg px-3 py-1">
+                                  <Lock className="size-3" />
+                                  <span>Pro required</span>
+                                </div>
+                              )}
                             </div>
-                            <span className="text-tertiary type-caption">
-                              {item.sectionCount} sections · {item.slotCount} screen slots
-                            </span>
+                          </div>
+
+                          <div className="flex flex-col gap-3 p-5 pb-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="v3-heading-s text-[var(--cf-text-primary)]">
+                                  {item.name}
+                                </span>
+                                <span className="v3-body-s text-[var(--cf-text-secondary)]">
+                                  {item.categoryName} · {item.sectionCount} sections ·{" "}
+                                  {item.slotCount} screen slots
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  aria-hidden="true"
+                                  className="flex items-center -space-x-1 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1"
+                                >
+                                  <span
+                                    className="size-3 rounded-full border border-white/50"
+                                    style={{ backgroundColor: themeColors.background }}
+                                  />
+                                  <span
+                                    className="size-3 rounded-full border border-white/50"
+                                    style={{ backgroundColor: themeColors.primary }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </button>
 
-                        <div className="border-border flex items-center gap-2 border-t pt-3">
-                          <Button
+                        <div className="flex items-center gap-2.5 border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]/55 px-5 py-3.5">
+                          <button
                             type="button"
-                            variant="secondary"
-                            size="sm"
-                            className="flex-1"
+                            className="v3-btn-secondary flex-1 py-2 text-xs font-semibold"
                             onClick={() => setPreviewItem(item)}
                           >
                             <Eye className="size-3.5" />
                             Preview
-                          </Button>
+                          </button>
 
                           {isLocked ? (
-                            <Button
+                            <button
                               type="button"
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
+                              className="v3-btn-lime flex-1 py-2 text-xs font-bold"
                               onClick={() =>
                                 setUpgradePrompt({
                                   title: `Unlock the ${item.name} Pro template`,
@@ -664,13 +717,14 @@ export function CreateProjectWizard({
                             >
                               <Lock className="size-3.5" />
                               Upgrade
-                            </Button>
+                            </button>
                           ) : (
-                            <Button
+                            <button
                               type="button"
-                              variant={isSelected ? "default" : "outline"}
-                              size="sm"
-                              className="flex-1"
+                              className={cn(
+                                "flex-1 py-2 text-xs font-semibold",
+                                isSelected ? "v3-btn-primary" : "v3-btn-secondary",
+                              )}
                               onClick={() => {
                                 setSelectedTemplateId(item.id);
                                 trackClientProductEvent("template_selected", {
@@ -681,8 +735,15 @@ export function CreateProjectWizard({
                                 });
                               }}
                             >
-                              {isSelected ? "Selected" : "Select"}
-                            </Button>
+                              {isSelected ? (
+                                <>
+                                  <Check className="size-3.5" />
+                                  Selected
+                                </>
+                              ) : (
+                                "Select"
+                              )}
+                            </button>
                           )}
                         </div>
                       </article>
@@ -692,26 +753,24 @@ export function CreateProjectWizard({
               )}
             </div>
 
-            <div className="border-border flex flex-col-reverse items-stretch justify-between gap-4 border-t pt-6 sm:flex-row sm:items-center">
-              <Button
+            <div className="flex flex-col-reverse items-stretch justify-between gap-4 rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 sm:flex-row sm:items-center sm:px-6">
+              <button
                 type="button"
-                variant="secondary"
-                size="lg"
                 data-testid="wizard-back-to-type"
                 onClick={() => setStep("type")}
+                className="v3-btn-secondary py-2.5 text-sm"
               >
                 Back
-              </Button>
+              </button>
 
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
                 {selectedTemplate && (
-                  <span className="text-muted-foreground type-body-s text-center sm:text-right">
+                  <span className="rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3.5 py-2 text-center text-xs font-semibold text-[var(--cf-text-primary)] sm:text-right">
                     Selected: {formatProjectTypeLabel(selectedType)} · {selectedTemplate.name}
                   </span>
                 )}
-                <Button
+                <button
                   type="button"
-                  size="lg"
                   disabled={!selectedTemplate}
                   data-testid="wizard-next-to-details"
                   onClick={() => {
@@ -725,35 +784,41 @@ export function CreateProjectWizard({
                     }
                     setStep("details");
                   }}
+                  className="v3-btn-primary py-2.5 pr-3 pl-5 text-sm disabled:pointer-events-none disabled:opacity-50"
                 >
-                  Use this template
-                  <ArrowRight className="size-4" />
-                </Button>
+                  <span>Use this template</span>
+                  <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                    <ArrowRight className="size-3.5" />
+                  </span>
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 3: DETAILS (matches Figma 2:3962) */}
+        {/* STEP 3: DETAILS */}
         {step === "details" && (
           <div
             data-testid="wizard-step-details"
-            className="grid items-start gap-8 lg:grid-cols-[minmax(0,640px)_minmax(0,400px)] lg:justify-between"
+            className="grid items-start gap-8 lg:grid-cols-[minmax(0,640px)_minmax(0,420px)] lg:justify-between"
           >
-            <Card className="rounded-3xl p-6 sm:p-10">
+            <Card className="rounded-[2rem] border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-10">
               <form onSubmit={handleSubmitCreate} noValidate className="flex flex-col gap-6">
                 <div className="flex flex-col items-start gap-3">
                   <Eyebrow>Step 3 of 3</Eyebrow>
-                  <h1 className="type-display-m text-foreground">Name your case study</h1>
-                  <p className="text-muted-foreground type-body-m">
-                    This is what visitors see first. You can change everything later.
+                  <h1 className="v3-heading-m sm:v3-display-l text-[var(--cf-text-primary)]">
+                    Name your case study
+                  </h1>
+                  <p className="v3-body-m text-[var(--cf-text-secondary)]">
+                    This is what hiring leads see first. You can customize every slot, font, and
+                    section later.
                   </p>
                 </div>
 
                 {submitError && (
                   <div
                     role="alert"
-                    className="border-destructive/30 bg-destructive/10 text-destructive type-body-s flex items-start gap-2.5 rounded-lg border p-3.5"
+                    className="border-destructive/30 bg-destructive/10 text-destructive type-body-s flex items-start gap-2.5 rounded-xl border p-3.5"
                   >
                     <AlertCircle className="mt-0.5 size-4 shrink-0" />
                     <span>{submitError}</span>
@@ -863,7 +928,7 @@ export function CreateProjectWizard({
                       data-testid="wizard-space-select"
                       value={selectedSpaceId}
                       onChange={(e) => setSelectedSpaceId(e.target.value)}
-                      className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 type-body-s h-11 rounded-2xl border px-3.5 outline-none focus-visible:ring-2"
+                      className="focus-visible:ring-ring/40 type-body-s h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-[var(--cf-text-primary)] outline-none focus-visible:ring-2"
                     >
                       {spaces.map((sp) => (
                         <option key={sp.id} value={sp.id}>
@@ -881,7 +946,7 @@ export function CreateProjectWizard({
                   </div>
                 )}
 
-                <div className="bg-sunken text-muted-foreground type-caption flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5">
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-4 py-3 text-xs text-[var(--cf-text-secondary)]">
                   <div className="flex items-center gap-3">
                     {selectedTemplate && (
                       <TemplateThumbnail
@@ -889,12 +954,12 @@ export function CreateProjectWizard({
                         slug={selectedTemplate.slug}
                         name={selectedTemplate.name}
                         hideFallbackLabel
-                        className="border-border/70 aspect-[4/3] w-12 shrink-0 rounded-lg border p-1.5"
+                        className="aspect-[4/3] w-13 shrink-0 rounded-lg border border-[var(--cf-border-subtle)] p-1.5"
                       />
                     )}
                     <span>
                       Template:{" "}
-                      <strong className="text-foreground">
+                      <strong className="font-semibold text-[var(--cf-text-primary)]">
                         {selectedTemplate
                           ? `${selectedTemplate.name} (v${selectedTemplate.version})`
                           : "None selected"}
@@ -905,90 +970,110 @@ export function CreateProjectWizard({
                   <button
                     type="button"
                     onClick={() => setStep("template")}
-                    className="text-primary shrink-0 hover:underline"
+                    className="v3-btn-secondary shrink-0 px-3 py-1.5 text-xs font-semibold"
                   >
                     Change
                   </button>
                 </div>
 
-                <div className="border-border flex flex-col-reverse items-stretch justify-between gap-3 border-t pt-5 sm:flex-row sm:items-center">
-                  <Button
+                <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-[var(--cf-border-subtle)] pt-5 sm:flex-row sm:items-center">
+                  <button
                     type="button"
-                    variant="secondary"
-                    size="lg"
                     data-testid="wizard-back-to-template"
                     onClick={() => setStep("template")}
+                    className="v3-btn-secondary py-2.5 text-sm"
                   >
                     Back
-                  </Button>
+                  </button>
 
-                  <Button
+                  <button
                     type="submit"
-                    size="lg"
                     disabled={isPending || isFreeQuotaReached || !selectedTemplate}
                     data-testid="wizard-submit-create"
+                    className="v3-btn-primary py-2.5 pr-3 pl-5 text-sm disabled:pointer-events-none disabled:opacity-50"
                   >
-                    {isPending ? "Creating project..." : "Create case study"}
-                    {!isPending && <ArrowRight className="size-4" />}
-                  </Button>
+                    <span>{isPending ? "Creating project..." : "Create case study"}</span>
+                    {!isPending && (
+                      <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                        <ArrowRight className="size-3.5" />
+                      </span>
+                    )}
+                  </button>
                 </div>
               </form>
             </Card>
 
-            {/* Live Preview Mini Cover (matches Figma 2:4053) */}
+            {/* Studio Live Cover Preview */}
             <aside aria-label="Live cover preview" className="flex flex-col gap-3">
-              <span className="text-tertiary type-overline">Live preview</span>
-
-              <div
-                style={{
-                  ...previewThemeStyle,
-                  backgroundColor: "var(--tpl-color-background, var(--color-inverse))",
-                  color: "var(--tpl-color-text, var(--color-inverse-foreground))",
-                }}
-                className="shadow-float flex flex-col gap-4 rounded-3xl p-8"
-              >
-                <span
-                  style={{ color: "var(--tpl-color-primary, var(--color-primary))" }}
-                  className="type-overline"
-                >
-                  CASE STUDY · {year.trim() || "2026"}
+              <div className="flex items-center justify-between gap-2">
+                <Eyebrow>Cover preview</Eyebrow>
+                <span className="v3-label text-[var(--cf-text-tertiary)] uppercase">
+                  Auto-synced
                 </span>
-
-                <h2 className="type-heading-l line-clamp-3">
-                  {name.trim() || "Untitled case study"}
-                </h2>
-
-                <p
-                  style={{ color: "var(--tpl-color-textMuted, var(--color-tertiary))" }}
-                  className="type-body-s"
-                >
-                  {[client.trim() || "Client", role.trim() || "Lead product designer"].join(" · ")}
-                </p>
-
-                {selectedTemplate ? (
-                  <TemplateThumbnail
-                    testId="wizard-step3-cover-preview"
-                    coverUrl={selectedTemplate.coverUrl}
-                    slug={selectedTemplate.slug}
-                    name={selectedTemplate.name}
-                    theme={{
-                      bg: selectedTemplate.document.template.theme.colors.background,
-                      fg: selectedTemplate.document.template.theme.colors.text,
-                      accent: selectedTemplate.document.template.theme.colors.primary,
-                    }}
-                    className="border-border/30 mt-2 aspect-[4/3] w-full rounded-xl border"
-                  />
-                ) : (
-                  <div
-                    style={{ backgroundColor: "var(--tpl-color-primary, var(--color-primary))" }}
-                    className="mt-2 h-44 w-full rounded-xl opacity-95"
-                  />
-                )}
               </div>
 
-              <p className="text-tertiary type-caption truncate">
-                casefolio.app/p/{slugPreview}
-              </p>
+              <div className="overflow-hidden rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
+                {/* Architectural Spec Chrome */}
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="inline-flex shrink-0 items-center rounded-md bg-[var(--cf-ink)] px-2 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-text-on-ink)] uppercase">
+                      URL
+                    </span>
+                    <p className="truncate font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)]">
+                      casefolio.app/p/{slugPreview}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    ...previewThemeStyle,
+                    backgroundColor: "var(--tpl-color-background, var(--color-inverse))",
+                    color: "var(--tpl-color-text, var(--color-inverse-foreground))",
+                  }}
+                  className="flex flex-col gap-4 p-7 sm:p-8"
+                >
+                  <span
+                    style={{ color: "var(--tpl-color-primary, var(--color-primary))" }}
+                    className="type-overline"
+                  >
+                    CASE STUDY · {year.trim() || "2026"}
+                  </span>
+
+                  <h2 className="type-heading-l line-clamp-3">
+                    {name.trim() || "Untitled case study"}
+                  </h2>
+
+                  <p
+                    style={{ color: "var(--tpl-color-textMuted, var(--color-tertiary))" }}
+                    className="type-body-s"
+                  >
+                    {[client.trim() || "Client", role.trim() || "Lead product designer"].join(
+                      " · ",
+                    )}
+                  </p>
+
+                  {selectedTemplate ? (
+                    <TemplateThumbnail
+                      testId="wizard-step3-cover-preview"
+                      coverUrl={selectedTemplate.coverUrl}
+                      slug={selectedTemplate.slug}
+                      name={selectedTemplate.name}
+                      theme={{
+                        bg: selectedTemplate.document.template.theme.colors.background,
+                        fg: selectedTemplate.document.template.theme.colors.text,
+                        accent: selectedTemplate.document.template.theme.colors.primary,
+                      }}
+                      className="border-border/30 mt-2 aspect-[4/3] w-full rounded-xl border"
+                    />
+                  ) : (
+                    <div
+                      style={{ backgroundColor: "var(--tpl-color-primary, var(--color-primary))" }}
+                      className="mt-2 h-44 w-full rounded-xl opacity-95"
+                    />
+                  )}
+                </div>
+              </div>
             </aside>
           </div>
         )}

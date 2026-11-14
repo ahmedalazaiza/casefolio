@@ -174,7 +174,7 @@ export function TemplateCoverUploader({
             coverUrl={trimmedUrl}
             slug={templateSlug}
             name={templateName}
-            className="border-border/80 aspect-[4/3] w-full rounded-xl border shadow-2xs"
+            className="border-border/80 aspect-[4/3] w-full rounded-xl border"
           />
 
           <div className="flex flex-col gap-3">
@@ -252,7 +252,7 @@ export function TemplateCoverUploader({
             </>
           ) : (
             <>
-              <div className="border-border/70 bg-surface inline-flex size-11 items-center justify-center rounded-2xl border shadow-2xs">
+              <div className="border-border/70 bg-surface inline-flex size-11 items-center justify-center rounded-2xl border">
                 <ImagePlus className="text-primary size-5" />
               </div>
               <div className="flex flex-col gap-0.5">

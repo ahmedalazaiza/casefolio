@@ -26,8 +26,8 @@ if (typeof window !== "undefined") {
 export const REDUCED_MOTION_MEDIA_QUERY = "(prefers-reduced-motion: reduce)" as const;
 
 export const ANIMATION_DURATIONS = {
-  fast: 0.35,
-  base: 0.55,
+  fast: 0.2,
+  base: 0.25,
   slow: 0.75,
 } as const;
 

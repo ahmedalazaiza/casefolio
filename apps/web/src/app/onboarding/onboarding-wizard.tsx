@@ -204,7 +204,7 @@ export function OnboardingWizard({
       return;
     }
 
-    router.push("/dashboard?welcome=1");
+    router.push("/dashboard");
     router.refresh();
   }
 
@@ -227,32 +227,38 @@ export function OnboardingWizard({
       return;
     }
 
-    router.push("/dashboard?welcome=1");
+    router.push("/dashboard");
     router.refresh();
   }
 
   const initials = computeInitials(displayName, initialEmail);
 
   return (
-    <div className="bg-background bg-wash-top text-foreground flex min-h-screen flex-col">
-      <header className="border-border/60 bg-background/80 sticky top-0 z-30 grid h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b px-6 backdrop-blur-xl sm:px-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+    <div className="bg-wash-top text-foreground flex min-h-screen flex-col">
+      <header className="sticky top-0 z-30 grid h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]/92 px-6 backdrop-blur-xl sm:px-10 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <div className="justify-self-start">
           <BrandLogo href="/dashboard" />
         </div>
 
         <nav
           aria-label="Onboarding steps"
-          className="border-border/70 bg-elevated/85 shadow-card hidden shrink-0 items-center gap-3 justify-self-center rounded-full border px-4 py-2 backdrop-blur-md md:flex"
+          className="hidden shrink-0 items-center gap-3 justify-self-center rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2 md:flex"
         >
           <StepIndicator step={1} label="Your role" state={resolveStepState(1)} />
           <span
             aria-hidden="true"
-            className={cn("h-px w-8", step > 1 ? "bg-success/50" : "bg-border")}
+            className={cn(
+              "h-px w-6",
+              step > 1 ? "bg-[var(--cf-royal)]" : "bg-[var(--cf-border-subtle)]",
+            )}
           />
           <StepIndicator step={2} label="What you present" state={resolveStepState(2)} />
           <span
             aria-hidden="true"
-            className={cn("h-px w-8", step > 2 ? "bg-success/50" : "bg-border")}
+            className={cn(
+              "h-px w-6",
+              step > 2 ? "bg-[var(--cf-royal)]" : "bg-[var(--cf-border-subtle)]",
+            )}
           />
           <StepIndicator step={3} label="Profile" state={resolveStepState(3)} />
         </nav>
@@ -261,7 +267,7 @@ export function OnboardingWizard({
           type="button"
           disabled={submitting}
           onClick={handleSkip}
-          className="border-border/70 bg-elevated/80 text-foreground hover:bg-surface hover:text-primary focus-visible:ring-ring/40 type-body-s-strong justify-self-end rounded-full border px-4 py-1.5 shadow-xs transition-colors outline-none focus-visible:ring-2 disabled:opacity-50"
+          className="v3-btn-secondary justify-self-end py-2 px-4 text-xs disabled:opacity-50"
         >
           Skip for now
         </button>
@@ -269,16 +275,18 @@ export function OnboardingWizard({
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-6 py-12 sm:py-16">
         {step === 1 && (
-          <section aria-labelledby="onboarding-step-1-heading" className="flex flex-col gap-9">
-            <div className="flex flex-col gap-3">
-              <Eyebrow className="w-fit">Step 1 of 3</Eyebrow>
+          <section aria-labelledby="onboarding-step-1-heading" className="flex flex-col gap-8">
+            <div className="v3-pattern-grid flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+              <Eyebrow className="w-fit">
+                Step 1 of 3
+              </Eyebrow>
               <h1
                 id="onboarding-step-1-heading"
-                className="type-display-m sm:type-display-l text-foreground"
+                className="v3-display-l text-[var(--cf-text-primary)]"
               >
                 What best describes you?
               </h1>
-              <p className="text-muted-foreground type-body-m max-w-xl">
+              <p className="v3-body-m max-w-xl text-[var(--cf-text-secondary)]">
                 We&apos;ll tailor templates and tips. You can change this later.
               </p>
             </div>
@@ -294,10 +302,10 @@ export function OnboardingWizard({
                     aria-pressed={active}
                     onClick={() => handleSelectRole(option)}
                     className={cn(
-                      "focus-visible:ring-ring/40 flex flex-col gap-6 rounded-3xl border p-6 text-left transition-all duration-200 outline-none focus-visible:ring-2",
+                      "focus-visible:ring-ring/40 flex flex-col gap-6 rounded-[1.5rem] border p-6 text-left transition-all duration-200 outline-none focus-visible:ring-2",
                       active
-                        ? "border-primary bg-elevated shadow-float ring-primary/15 ring-4 -translate-y-0.5"
-                        : "border-border/80 bg-elevated/90 shadow-card hover:border-border-strong hover:shadow-float hover:-translate-y-0.5",
+                        ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)] hover:shadow-[var(--cf-shadow-hover)]"
+                        : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:-translate-y-0.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
                     )}
                   >
                     <div className="flex w-full items-start justify-between">
@@ -306,8 +314,8 @@ export function OnboardingWizard({
                         className={cn(
                           "inline-flex size-11 items-center justify-center rounded-2xl transition-colors",
                           active
-                            ? "bg-primary text-primary-foreground shadow-xs"
-                            : "bg-accent text-accent-foreground",
+                            ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+                            : "border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]",
                         )}
                       >
                         <Icon className="size-5" />
@@ -318,8 +326,8 @@ export function OnboardingWizard({
                         className={cn(
                           "inline-flex size-6 items-center justify-center rounded-full border transition-colors",
                           active
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border-strong bg-surface",
+                            ? "border-[var(--cf-bg-accent)] bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+                            : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]",
                         )}
                       >
                         {active && <Check className="size-3.5" />}
@@ -327,8 +335,26 @@ export function OnboardingWizard({
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <span className="text-foreground type-heading-s">{option.title}</span>
-                      <span className="text-muted-foreground type-body-s">{option.subtitle}</span>
+                      <span
+                        className={cn(
+                          "v3-heading-s",
+                          active
+                            ? "text-[var(--cf-text-on-royal)]"
+                            : "text-[var(--cf-text-primary)]",
+                        )}
+                      >
+                        {option.title}
+                      </span>
+                      <span
+                        className={cn(
+                          "v3-body-s",
+                          active
+                            ? "text-[var(--cf-text-on-royal-muted)]"
+                            : "text-[var(--cf-text-secondary)]",
+                        )}
+                      >
+                        {option.subtitle}
+                      </span>
                     </div>
                   </button>
                 );
@@ -336,25 +362,33 @@ export function OnboardingWizard({
             </div>
 
             <div className="flex items-center justify-end pt-2">
-              <Button type="button" size="lg" onClick={() => setStep(2)}>
-                Continue
-                <ArrowRight className="size-4" />
-              </Button>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="v3-btn-primary py-3 pr-3.5 pl-5 text-sm"
+              >
+                <span>Continue</span>
+                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                  <ArrowRight className="size-3.5" />
+                </span>
+              </button>
             </div>
           </section>
         )}
 
         {step === 2 && (
-          <section aria-labelledby="onboarding-step-2-heading" className="flex flex-col gap-9">
-            <div className="flex flex-col gap-3">
-              <Eyebrow className="w-fit">Step 2 of 3</Eyebrow>
+          <section aria-labelledby="onboarding-step-2-heading" className="flex flex-col gap-8">
+            <div className="v3-pattern-grid flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+              <Eyebrow className="w-fit">
+                Step 2 of 3
+              </Eyebrow>
               <h1
                 id="onboarding-step-2-heading"
-                className="type-display-m sm:type-display-l text-foreground"
+                className="v3-display-l text-[var(--cf-text-primary)]"
               >
                 What will you present first?
               </h1>
-              <p className="text-muted-foreground type-body-m max-w-xl">
+              <p className="v3-body-m max-w-xl text-[var(--cf-text-secondary)]">
                 Pick one or more — we&apos;ll show matching templates first.
               </p>
             </div>
@@ -364,7 +398,7 @@ export function OnboardingWizard({
                 type="button"
                 aria-pressed={mobileSelected}
                 onClick={() => handleToggleFocus("mobile")}
-                className="focus-visible:ring-ring/40 rounded-3xl text-left outline-none focus-visible:ring-2"
+                className="focus-visible:ring-ring/40 rounded-[1.5rem] text-left outline-none focus-visible:ring-2"
               >
                 <TemplateTypeCard
                   title="Mobile app"
@@ -380,7 +414,7 @@ export function OnboardingWizard({
                 type="button"
                 aria-pressed={webSelected}
                 onClick={() => handleToggleFocus("web")}
-                className="focus-visible:ring-ring/40 rounded-3xl text-left outline-none focus-visible:ring-2"
+                className="focus-visible:ring-ring/40 rounded-[1.5rem] text-left outline-none focus-visible:ring-2"
               >
                 <TemplateTypeCard
                   title="Website"
@@ -410,13 +444,23 @@ export function OnboardingWizard({
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <Button type="button" variant="secondary" size="lg" onClick={() => setStep(1)}>
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="v3-btn-secondary py-3 px-5 text-sm"
+              >
                 Back
-              </Button>
-              <Button type="button" size="lg" onClick={() => setStep(3)}>
-                Continue
-                <ArrowRight className="size-4" />
-              </Button>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="v3-btn-primary py-3 pr-3.5 pl-5 text-sm"
+              >
+                <span>Continue</span>
+                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                  <ArrowRight className="size-3.5" />
+                </span>
+              </button>
             </div>
           </section>
         )}
@@ -427,29 +471,33 @@ export function OnboardingWizard({
             onSubmit={handleComplete}
             className="flex flex-col gap-8"
           >
-            <div className="flex flex-col gap-3">
-              <Eyebrow className="w-fit">Step 3 of 3</Eyebrow>
+            <div className="v3-pattern-grid flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+              <Eyebrow className="w-fit">
+                Step 3 of 3
+              </Eyebrow>
               <h1
                 id="onboarding-step-3-heading"
-                className="type-display-m sm:type-display-l text-foreground"
+                className="v3-display-l text-[var(--cf-text-primary)]"
               >
                 Set up your public profile
               </h1>
-              <p className="text-muted-foreground type-body-m">Shown on published case studies.</p>
+              <p className="v3-body-m text-[var(--cf-text-secondary)]">
+                Shown on published case studies.
+              </p>
             </div>
 
-            <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-6 rounded-3xl border p-6 sm:p-8">
+            <div className="flex flex-col gap-6 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
               <div className="flex items-center gap-5">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
                     alt={displayName || "Profile avatar"}
-                    className="border-border size-20 rounded-full border object-cover"
+                    className="size-20 rounded-2xl border border-[var(--cf-border-subtle)] object-cover"
                   />
                 ) : (
                   <div
                     aria-hidden="true"
-                    className="bg-inverse text-inverse-foreground inline-flex size-20 shrink-0 items-center justify-center rounded-full type-heading-m"
+                    className="v3-heading-m inline-flex size-20 shrink-0 items-center justify-center rounded-2xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
                   >
                     {initials}
                   </div>
@@ -529,19 +577,24 @@ export function OnboardingWizard({
             )}
 
             <div className="flex items-center justify-between">
-              <Button
+              <button
                 type="button"
-                variant="secondary"
-                size="lg"
                 disabled={submitting}
                 onClick={() => setStep(2)}
+                className="v3-btn-secondary py-3 px-5 text-sm disabled:opacity-50"
               >
                 Back
-              </Button>
-              <Button type="submit" size="lg" disabled={submitting}>
-                {submitting ? "Saving..." : "Continue"}
-                <ArrowRight className="size-4" />
-              </Button>
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="v3-btn-primary py-3 pr-3.5 pl-5 text-sm disabled:opacity-50"
+              >
+                <span>{submitting ? "Saving..." : "Continue"}</span>
+                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                  <ArrowRight className="size-3.5" />
+                </span>
+              </button>
             </div>
           </form>
         )}

@@ -979,7 +979,7 @@ export function ConstrainedEditor({
               <Link
                 href="/dashboard"
                 aria-label="Back to projects"
-                className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-8.5 shrink-0 items-center justify-center rounded-full border shadow-2xs transition-colors outline-none focus-visible:ring-2 sm:size-9"
+                className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 inline-flex size-8.5 shrink-0 items-center justify-center rounded-md border transition-colors outline-none focus-visible:ring-2 sm:size-9"
               >
                 <ArrowLeft className="size-4" />
               </Link>
@@ -992,7 +992,7 @@ export function ConstrainedEditor({
                 title={leftPanelOpen ? "Close left panel ([)" : "Open left panel ([)"}
                 onClick={() => setLeftPanelOpen((prev) => !prev)}
                 className={cn(
-                  "focus-visible:ring-ring/40 hidden size-9 shrink-0 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 lg:inline-flex",
+                  "focus-visible:ring-ring/40 hidden size-9 shrink-0 items-center justify-center rounded-md border transition-colors outline-none focus-visible:ring-2 lg:inline-flex",
                   leftPanelOpen
                     ? "border-border/80 bg-surface text-foreground hover:bg-sunken"
                     : "border-primary/40 bg-accent text-accent-foreground",
@@ -1012,7 +1012,7 @@ export function ConstrainedEditor({
                   <span className="text-foreground font-display truncate text-sm font-medium tracking-tight sm:text-base">
                     {puckData.root.props.title || initialPayload.project.name}
                   </span>
-                  <Badge tone="neutral" withDot={false} className="hidden shrink-0 2xl:inline-flex">
+                  <Badge tone="neutral" withDot={false} className="hidden shrink-0 rounded-md 2xl:inline-flex">
                     {initialPayload.template.name}
                   </Badge>
                 </div>
@@ -1059,17 +1059,17 @@ export function ConstrainedEditor({
             <div
               role="group"
               aria-label="Preview viewport"
-              className="border-border/70 bg-surface hidden shrink-0 items-center rounded-full border p-1 md:inline-flex xl:justify-self-center"
+              className="border-border/70 bg-surface hidden shrink-0 items-center rounded-lg border p-1 md:inline-flex xl:justify-self-center"
             >
               <button
                 type="button"
                 aria-pressed={viewport === "desktop"}
                 onClick={() => setViewport("desktop")}
                 className={cn(
-                  "type-body-s-strong inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.25 transition-all",
+                  "type-body-s-strong inline-flex items-center gap-1.5 rounded-md border px-3 py-1 transition-all",
                   viewport === "desktop"
-                    ? "bg-elevated text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "border-border bg-elevated text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Monitor className="size-3.5" />
@@ -1080,10 +1080,10 @@ export function ConstrainedEditor({
                 aria-pressed={viewport === "mobile"}
                 onClick={() => setViewport("mobile")}
                 className={cn(
-                  "type-body-s-strong inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.25 transition-all",
+                  "type-body-s-strong inline-flex items-center gap-1.5 rounded-md border px-3 py-1 transition-all",
                   viewport === "mobile"
-                    ? "bg-elevated text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "border-border bg-elevated text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Smartphone className="size-3.5" />
@@ -1093,14 +1093,14 @@ export function ConstrainedEditor({
 
             {/* Right Actions */}
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 xl:justify-self-end">
-              <div className="border-border/75 bg-surface hidden items-center rounded-full border p-0.5 sm:inline-flex">
+              <div className="border-border/75 bg-surface hidden items-center rounded-lg border p-0.5 sm:inline-flex">
                 <button
                   type="button"
                   aria-label="Undo"
                   title="Undo (⌘Z)"
                   disabled={!canUndo}
                   onClick={handleUndo}
-                  className="text-foreground hover:bg-elevated inline-flex size-7.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:size-8"
+                  className="text-foreground hover:bg-elevated inline-flex size-7.5 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:size-8"
                 >
                   <Undo2 className="size-3.5" />
                 </button>
@@ -1110,7 +1110,7 @@ export function ConstrainedEditor({
                   title="Redo (⇧⌘Z)"
                   disabled={!canRedo}
                   onClick={handleRedo}
-                  className="text-foreground hover:bg-elevated inline-flex size-7.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:size-8"
+                  className="text-foreground hover:bg-elevated inline-flex size-7.5 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:size-8"
                 >
                   <Redo2 className="size-3.5" />
                 </button>
@@ -1122,7 +1122,7 @@ export function ConstrainedEditor({
                 size="sm"
                 aria-label="Preview case study"
                 onClick={() => setPreviewModalOpen(true)}
-                className="size-8.5 p-0 sm:h-9 sm:w-auto sm:px-3.5"
+                className="size-8.5 rounded-md p-0 sm:h-9 sm:w-auto sm:px-3.5"
               >
                 <Eye className="size-3.5" />
                 <span className="hidden sm:inline">Preview</span>
@@ -1132,7 +1132,7 @@ export function ConstrainedEditor({
                 asChild
                 variant="secondary"
                 size="sm"
-                className="size-8.5 p-0 sm:h-9 sm:w-auto sm:px-3.5"
+                className="size-8.5 rounded-md p-0 sm:h-9 sm:w-auto sm:px-3.5"
               >
                 <Link
                   href={`/projects/${initialPayload.project.id}/exports`}
@@ -1143,7 +1143,7 @@ export function ConstrainedEditor({
                 </Link>
               </Button>
 
-              <Button asChild variant="accent" size="sm" className="px-3 sm:px-4">
+              <Button asChild variant="accent" size="sm" className="rounded-md px-3 sm:px-4">
                 <Link href={`/projects/${initialPayload.project.id}/share`}>
                   <Globe className="size-3.5" />
                   <span>Publish</span>
@@ -1158,7 +1158,7 @@ export function ConstrainedEditor({
                 title={rightPanelOpen ? "Close right panel (])" : "Open right panel (])"}
                 onClick={() => setRightPanelOpen((prev) => !prev)}
                 className={cn(
-                  "focus-visible:ring-ring/40 hidden size-9 shrink-0 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 lg:inline-flex",
+                  "focus-visible:ring-ring/40 hidden size-9 shrink-0 items-center justify-center rounded-md border transition-colors outline-none focus-visible:ring-2 lg:inline-flex",
                   rightPanelOpen
                     ? "border-border/80 bg-surface text-foreground hover:bg-sunken"
                     : "border-primary/40 bg-accent text-accent-foreground",
@@ -1216,7 +1216,7 @@ export function ConstrainedEditor({
                 <div
                   role="tablist"
                   aria-label="Editor sidebar tabs"
-                  className="bg-surface border-border/60 grid flex-1 grid-cols-3 rounded-full border p-1"
+                  className="bg-surface border-border/60 grid flex-1 grid-cols-3 rounded-lg border p-1"
                 >
                   {(
                     [
@@ -1234,10 +1234,10 @@ export function ConstrainedEditor({
                         aria-selected={leftTab === tab.key}
                         onClick={() => setLeftTab(tab.key)}
                         className={cn(
-                          "type-caption inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 font-medium transition-all",
+                          "type-caption inline-flex items-center justify-center gap-1.5 rounded-md border py-1.5 font-medium transition-all",
                           leftTab === tab.key
-                            ? "bg-elevated text-foreground shadow-xs"
-                            : "text-muted-foreground hover:text-foreground",
+                            ? "border-border bg-elevated text-foreground"
+                            : "border-transparent text-muted-foreground hover:text-foreground",
                         )}
                       >
                         <TabIcon className="size-3.5 shrink-0" />
@@ -1253,7 +1253,7 @@ export function ConstrainedEditor({
                   aria-label="Collapse left panel"
                   title="Collapse left panel ([)"
                   onClick={() => setLeftPanelOpen(false)}
-                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-full transition-colors"
+                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors"
                 >
                   <PanelLeftClose className="size-4" />
                 </button>
@@ -1263,12 +1263,12 @@ export function ConstrainedEditor({
                 {/* TAB: SECTIONS */}
                 {leftTab === "sections" && (
                   <div data-testid="editor-sections-panel" className="flex flex-col gap-3.5">
-                    <div className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-3.5 shadow-2xs">
+                    <div className="border-border/70 bg-elevated flex flex-col gap-3 rounded-xl border p-3.5">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
                             <h2 className="text-foreground type-heading-s">Sections</h2>
-                            <Badge tone="neutral" withDot={false}>
+                            <Badge tone="neutral" withDot={false} className="rounded-md">
                               {visibleSectionCount}/{puckData.content.length}
                             </Badge>
                           </div>
@@ -1284,7 +1284,7 @@ export function ConstrainedEditor({
                             size="sm"
                             data-testid="open-insert-section-menu"
                             onClick={() => setInsertPickerOpen((prev) => !prev)}
-                            className="h-8 gap-1.5 px-3"
+                            className="h-8 gap-1.5 rounded-md px-3"
                           >
                             <Plus className="size-3.5" />
                             <span>Insert section</span>
@@ -1301,14 +1301,14 @@ export function ConstrainedEditor({
                             onChange={(e) => setSectionSearchQuery(e.target.value)}
                             placeholder="Filter sections..."
                             aria-label="Filter sections"
-                            className="border-border/70 bg-surface/70 text-foreground placeholder:text-tertiary focus:border-ring h-8.5 w-full rounded-full border pr-7 pl-8.5 text-xs outline-none"
+                            className="border-border/70 bg-surface/70 text-foreground placeholder:text-tertiary focus:border-ring h-8.5 w-full rounded-md border pr-7 pl-8.5 text-xs outline-none"
                           />
                           {sectionSearchQuery && (
                             <button
                               type="button"
                               aria-label="Clear section filter"
                               onClick={() => setSectionSearchQuery("")}
-                              className="text-tertiary hover:text-foreground absolute top-1/2 right-2.5 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded-full"
+                              className="text-tertiary hover:text-foreground absolute top-1/2 right-2.5 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded-xs"
                             >
                               <X className="size-3" />
                             </button>
@@ -1320,7 +1320,7 @@ export function ConstrainedEditor({
                     {allowSectionMutations && insertPickerOpen && (
                       <div
                         data-testid="insert-section-preset-picker"
-                        className="border-primary/30 bg-wash-panel flex flex-col gap-2 rounded-2xl border p-3.5 shadow-2xs"
+                        className="border-primary/30 bg-wash-panel flex flex-col gap-2 rounded-xl border p-3.5"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-accent-foreground type-overline">
@@ -1330,7 +1330,7 @@ export function ConstrainedEditor({
                             type="button"
                             aria-label="Close preset picker"
                             onClick={() => setInsertPickerOpen(false)}
-                            className="text-muted-foreground hover:text-foreground inline-flex size-5 items-center justify-center rounded-full"
+                            className="text-muted-foreground hover:text-foreground inline-flex size-5 items-center justify-center rounded-xs"
                           >
                             <X className="size-3.5" />
                           </button>
@@ -1342,7 +1342,7 @@ export function ConstrainedEditor({
                               type="button"
                               data-testid={`insert-preset-${preset.key}`}
                               onClick={() => handleInsertSectionPreset(preset.key)}
-                              className="border-border/70 bg-elevated hover:border-primary/60 flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left shadow-2xs transition-all"
+                              className="border-border/70 bg-elevated hover:border-primary/60 flex flex-col items-start gap-0.5 rounded-md border px-3 py-2.5 text-left transition-all hover:shadow-[var(--cf-shadow-hover)]"
                             >
                               <span className="text-foreground type-body-s-strong">
                                 {preset.label}
@@ -1383,9 +1383,9 @@ export function ConstrainedEditor({
                             data-testid={`section-row-${rowTestKey}`}
                             data-hidden={hidden ? "true" : "false"}
                             className={cn(
-                              "group/row flex flex-col gap-2 rounded-2xl border p-3 transition-all",
+                              "group/row flex flex-col gap-2 rounded-xl border p-3 transition-all",
                               isSelected
-                                ? "border-primary bg-accent/50 shadow-2xs"
+                                ? "border-primary bg-accent/50"
                                 : "border-border/70 bg-elevated hover:border-border-strong",
                               hidden && "opacity-65",
                             )}
@@ -1399,7 +1399,7 @@ export function ConstrainedEditor({
                                 <span
                                   aria-hidden="true"
                                   className={cn(
-                                    "inline-flex size-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-medium",
+                                    "inline-flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-medium",
                                     isSelected
                                       ? "bg-primary text-primary-foreground"
                                       : "bg-surface text-tertiary",
@@ -1423,7 +1423,7 @@ export function ConstrainedEditor({
                               </button>
 
                               {required ? (
-                                <Badge tone="neutral" withDot={false}>
+                                <Badge tone="neutral" withDot={false} className="rounded-md">
                                   Locked
                                 </Badge>
                               ) : (
@@ -1442,7 +1442,7 @@ export function ConstrainedEditor({
                                   <span
                                     aria-hidden="true"
                                     className={cn(
-                                      "bg-background inline-block size-4 rounded-full shadow-xs transition-transform",
+                                      "bg-background inline-block size-4 rounded-full transition-transform",
                                       !hidden ? "translate-x-5" : "translate-x-0.75",
                                     )}
                                   />
@@ -1459,7 +1459,7 @@ export function ConstrainedEditor({
                                     aria-label={`Move ${summaryLabel} up`}
                                     data-testid={`move-up-section-${rowTestKey}`}
                                     onClick={() => handleMoveSection(idx, "up")}
-                                    className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6.5 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35"
                                   >
                                     <ArrowUp className="size-3.5" />
                                   </button>
@@ -1469,7 +1469,7 @@ export function ConstrainedEditor({
                                     aria-label={`Move ${summaryLabel} down`}
                                     data-testid={`move-down-section-${rowTestKey}`}
                                     onClick={() => handleMoveSection(idx, "down")}
-                                    className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-6.5 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-35"
                                   >
                                     <ArrowDown className="size-3.5" />
                                   </button>
@@ -1481,7 +1481,7 @@ export function ConstrainedEditor({
                                     aria-label={`Duplicate ${summaryLabel}`}
                                     data-testid={`duplicate-section-${rowTestKey}`}
                                     onClick={() => handleDuplicateSection(idx)}
-                                    className="text-muted-foreground hover:bg-surface hover:text-foreground type-caption inline-flex h-6.5 items-center gap-1 rounded-full px-2 transition-colors"
+                                    className="text-muted-foreground hover:bg-surface hover:text-foreground type-caption inline-flex h-6.5 items-center gap-1 rounded-md px-2 transition-colors"
                                   >
                                     <Copy className="size-3" />
                                     <span>Duplicate</span>
@@ -1491,7 +1491,7 @@ export function ConstrainedEditor({
                                     aria-label={`Remove ${summaryLabel}`}
                                     data-testid={`remove-section-${rowTestKey}`}
                                     onClick={() => handleRemoveSection(idx)}
-                                    className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive inline-flex size-6.5 items-center justify-center rounded-full transition-colors"
+                                    className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive inline-flex size-6.5 items-center justify-center rounded-md transition-colors"
                                   >
                                     <Trash2 className="size-3.5" />
                                   </button>
@@ -1508,7 +1508,7 @@ export function ConstrainedEditor({
                 {/* TAB: CONTENT */}
                 {leftTab === "content" && (
                   <div data-testid="editor-content-panel" className="flex flex-col gap-4">
-                    <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-4 shadow-2xs">
+                    <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-xl border p-4">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-foreground type-body-s-strong">Document info</span>
                         <span className="text-tertiary type-caption">
@@ -1525,7 +1525,7 @@ export function ConstrainedEditor({
                         />
                       </div>
 
-                      <div className="border-border/60 bg-surface/60 grid grid-cols-2 gap-2 rounded-xl border p-2.5">
+                      <div className="border-border/60 bg-surface/60 grid grid-cols-2 gap-2 rounded-md border p-2.5">
                         <div className="flex flex-col">
                           <span className="text-tertiary type-caption">Template</span>
                           <span className="text-foreground type-body-s-strong truncate">
@@ -1541,7 +1541,7 @@ export function ConstrainedEditor({
                       </div>
                     </section>
 
-                    <section className="border-border/70 bg-elevated flex flex-col gap-2.5 rounded-2xl border p-4 shadow-2xs">
+                    <section className="border-border/70 bg-elevated flex flex-col gap-2.5 rounded-xl border p-4">
                       <span className="text-tertiary type-overline">Jump to section fields</span>
                       <div className="flex flex-col gap-1.5">
                         {puckData.content.map((section, idx) => {
@@ -1553,7 +1553,7 @@ export function ConstrainedEditor({
                               type="button"
                               onClick={() => handleSelectSection(idx)}
                               className={cn(
-                                "flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition-all",
+                                "flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-left transition-all",
                                 selectedSectionIndex === idx
                                   ? "border-primary bg-accent/50 text-foreground type-body-s-strong"
                                   : "border-border/60 bg-surface/60 text-muted-foreground hover:text-foreground hover:bg-surface type-body-s",
@@ -1594,7 +1594,7 @@ export function ConstrainedEditor({
                   data-testid="reopen-left-panel"
                   aria-label="Open left panel"
                   onClick={() => setLeftPanelOpen(true)}
-                  className="border-border/80 bg-elevated/95 text-foreground shadow-float hover:bg-elevated type-caption absolute top-3.5 left-3.5 z-20 hidden items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium backdrop-blur-xl transition-all lg:inline-flex"
+                  className="border-border/80 bg-elevated/95 text-foreground shadow-float hover:bg-elevated type-caption absolute top-3.5 left-3.5 z-20 hidden items-center gap-1.5 rounded-md border px-3 py-1.5 font-medium backdrop-blur-xl transition-all lg:inline-flex"
                 >
                   <PanelLeftOpen className="size-3.5" />
                   <span>Sections</span>
@@ -1607,7 +1607,7 @@ export function ConstrainedEditor({
                   data-testid="reopen-right-panel"
                   aria-label="Open right panel"
                   onClick={() => setRightPanelOpen(true)}
-                  className="border-border/80 bg-elevated/95 text-foreground shadow-float hover:bg-elevated type-caption absolute top-3.5 right-3.5 z-20 hidden items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium backdrop-blur-xl transition-all lg:inline-flex"
+                  className="border-border/80 bg-elevated/95 text-foreground shadow-float hover:bg-elevated type-caption absolute top-3.5 right-3.5 z-20 hidden items-center gap-1.5 rounded-md border px-3 py-1.5 font-medium backdrop-blur-xl transition-all lg:inline-flex"
                 >
                   <span>Inspector</span>
                   <PanelRightOpen className="size-3.5" />
@@ -1621,7 +1621,7 @@ export function ConstrainedEditor({
                 className="bg-editor-canvas flex min-h-0 min-w-0 flex-1 flex-col overflow-x-auto overflow-y-auto overscroll-contain px-3 pt-4 pb-20 sm:px-8 sm:pt-6 sm:pb-24"
               >
                 <div className="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center gap-2 text-center sm:mb-5">
-                  <Badge tone="neutral" withDot={false}>
+                  <Badge tone="neutral" withDot={false} className="rounded-md">
                     {initialPayload.template.name} · v{initialPayload.template.version}
                   </Badge>
                   <span className="text-tertiary type-caption">
@@ -1641,12 +1641,12 @@ export function ConstrainedEditor({
                 />
               </main>
 
-              {/* Floating Glass Zoom Pill Bar */}
+              {/* Floating Zoom Bar */}
               <div
                 data-testid="editor-zoom-controls"
                 onWheel={handleZoomBarWheel}
                 title="Zoom canvas (+/- keys, trackpad pinch, or ⌘/Ctrl + scroll)"
-                className="border-border/80 bg-elevated/92 shadow-float pointer-events-auto absolute bottom-4 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1 rounded-full border p-1 backdrop-blur-xl"
+                className="border-border/80 bg-elevated/92 shadow-float pointer-events-auto absolute bottom-4 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1 rounded-lg border p-1 backdrop-blur-xl"
               >
                 <button
                   type="button"
@@ -1654,7 +1654,7 @@ export function ConstrainedEditor({
                   aria-label="Zoom out"
                   disabled={canvasZoom <= MIN_CANVAS_ZOOM}
                   onClick={handleZoomOut}
-                  className="text-foreground hover:bg-surface inline-flex size-7.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  className="text-foreground hover:bg-surface inline-flex size-7.5 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Minus className="size-3.5" />
                 </button>
@@ -1665,7 +1665,7 @@ export function ConstrainedEditor({
                   aria-label={`${zoomPercent}% — Reset zoom (0)`}
                   title="Reset zoom (0)"
                   onClick={handleZoomReset}
-                  className="text-foreground hover:bg-surface min-w-14 rounded-full px-2.5 py-1 text-center font-mono text-xs font-medium transition-colors"
+                  className="text-foreground hover:bg-surface min-w-14 rounded-md px-2.5 py-1 text-center font-mono text-xs font-medium transition-colors"
                 >
                   {zoomPercent}%
                 </button>
@@ -1676,7 +1676,7 @@ export function ConstrainedEditor({
                   aria-label="Zoom in"
                   disabled={canvasZoom >= MAX_CANVAS_ZOOM}
                   onClick={handleZoomIn}
-                  className="text-foreground hover:bg-surface inline-flex size-7.5 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  className="text-foreground hover:bg-surface inline-flex size-7.5 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Plus className="size-3.5" />
                 </button>
@@ -1687,7 +1687,7 @@ export function ConstrainedEditor({
                     <button
                       type="button"
                       onClick={handleZoomReset}
-                      className="text-muted-foreground hover:text-foreground hover:bg-surface type-caption inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors"
+                      className="text-muted-foreground hover:text-foreground hover:bg-surface type-caption inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition-colors"
                     >
                       <RotateCcw className="size-3" />
                       <span>100%</span>
@@ -1711,7 +1711,7 @@ export function ConstrainedEditor({
                 <div
                   role="tablist"
                   aria-label="Inspector tabs"
-                  className="bg-surface border-border/60 grid flex-1 grid-cols-2 rounded-full border p-1"
+                  className="bg-surface border-border/60 grid flex-1 grid-cols-2 rounded-lg border p-1"
                 >
                   <button
                     type="button"
@@ -1719,10 +1719,10 @@ export function ConstrainedEditor({
                     aria-selected={rightTab === "fields"}
                     onClick={() => setRightTab("fields")}
                     className={cn(
-                      "type-caption inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 font-medium transition-all",
+                      "type-caption inline-flex items-center justify-center gap-1.5 rounded-md border py-1.5 font-medium transition-all",
                       rightTab === "fields"
-                        ? "bg-elevated text-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "border-border bg-elevated text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <SlidersHorizontal className="size-3.5" />
@@ -1734,10 +1734,10 @@ export function ConstrainedEditor({
                     aria-selected={rightTab === "slots"}
                     onClick={() => setRightTab("slots")}
                     className={cn(
-                      "type-caption inline-flex items-center justify-center gap-1.5 rounded-full py-1.5 font-medium transition-all",
+                      "type-caption inline-flex items-center justify-center gap-1.5 rounded-md border py-1.5 font-medium transition-all",
                       rightTab === "slots"
-                        ? "bg-elevated text-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "border-border bg-elevated text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <ImageIcon className="size-3.5" />
@@ -1754,7 +1754,7 @@ export function ConstrainedEditor({
                   aria-label="Collapse right panel"
                   title="Collapse right panel (])"
                   onClick={() => setRightPanelOpen(false)}
-                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-full transition-colors"
+                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors"
                 >
                   <PanelRightClose className="size-4" />
                 </button>
@@ -1765,7 +1765,7 @@ export function ConstrainedEditor({
                   <div data-testid="editor-fields-inspector" className="flex flex-col gap-4">
                     {selectedSection && selectedSectionIndex !== null ? (
                       <>
-                        <div className="border-border/70 bg-elevated flex flex-col gap-2.5 rounded-2xl border p-3.5 shadow-2xs">
+                        <div className="border-border/70 bg-elevated flex flex-col gap-2.5 rounded-xl border p-3.5">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-tertiary type-overline">
                               Section {selectedSectionIndex + 1} of {puckData.content.length} ·{" "}
@@ -1778,7 +1778,7 @@ export function ConstrainedEditor({
                                 aria-label="Previous section"
                                 disabled={selectedSectionIndex <= 0}
                                 onClick={() => handleSelectSection(selectedSectionIndex - 1)}
-                                className="border-border/70 bg-surface text-foreground hover:bg-sunken inline-flex size-6.5 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                                className="border-border/70 bg-surface text-foreground hover:bg-sunken inline-flex size-6.5 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
                               >
                                 <ChevronLeft className="size-3.5" />
                               </button>
@@ -1787,7 +1787,7 @@ export function ConstrainedEditor({
                                 aria-label="Next section"
                                 disabled={selectedSectionIndex >= puckData.content.length - 1}
                                 onClick={() => handleSelectSection(selectedSectionIndex + 1)}
-                                className="border-border/70 bg-surface text-foreground hover:bg-sunken inline-flex size-6.5 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                                className="border-border/70 bg-surface text-foreground hover:bg-sunken inline-flex size-6.5 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
                               >
                                 <ChevronRight className="size-3.5" />
                               </button>
@@ -1799,7 +1799,7 @@ export function ConstrainedEditor({
                               {formatSectionSummaryLabel(selectedSection)}
                             </h2>
                             {Boolean(selectedSection.props.hidden) && (
-                              <Badge tone="draft">Hidden</Badge>
+                              <Badge tone="draft" className="rounded-md">Hidden</Badge>
                             )}
                           </div>
                         </div>
@@ -1807,7 +1807,7 @@ export function ConstrainedEditor({
                         {mobileSheetTab !== "fields" && <Puck.Fields wrapFields={false} />}
                       </>
                     ) : (
-                      <div className="border-border/70 bg-elevated text-muted-foreground type-body-s rounded-2xl border p-6 text-center">
+                      <div className="border-border/70 bg-elevated text-muted-foreground type-body-s rounded-xl border p-6 text-center">
                         Click any section on the canvas or in the Sections list to edit its content.
                       </div>
                     )}
@@ -1817,7 +1817,7 @@ export function ConstrainedEditor({
                 {rightTab === "slots" && (
                   <div data-testid="editor-slots-panel" className="flex flex-col gap-3.5">
                     {/* Upload readiness summary card */}
-                    <div className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-4 shadow-2xs">
+                    <div className="border-border/70 bg-elevated flex flex-col gap-3 rounded-xl border p-4">
                       <div className="flex items-baseline justify-between gap-2">
                         <h2 className="text-foreground type-heading-s">Screenshots</h2>
                         <span className="text-foreground font-mono text-xs font-medium">
@@ -1845,7 +1845,7 @@ export function ConstrainedEditor({
                             type="button"
                             onClick={() => setSlotFilter(filterItem.key)}
                             className={cn(
-                              "type-caption rounded-full border px-2.5 py-1 font-medium transition-colors",
+                              "type-caption rounded-md border px-2.5 py-1 font-medium transition-colors",
                               slotFilter === filterItem.key
                                 ? "border-primary bg-accent/60 text-foreground"
                                 : "border-border/70 bg-surface text-muted-foreground hover:text-foreground",
@@ -1858,7 +1858,7 @@ export function ConstrainedEditor({
                     </div>
 
                     {emptyRequiredSlots.length > 0 && (
-                      <div className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-2xl border p-3.5">
+                      <div className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-xl border p-3.5">
                         <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
                         <span className="type-caption">
                           {emptyRequiredSlots.length} required{" "}
@@ -1874,10 +1874,10 @@ export function ConstrainedEditor({
                           key={slot.id}
                           type="button"
                           onClick={() => handleSelectSection(slot.sectionIndex)}
-                          className="border-border/70 bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-2xl border p-3 text-left shadow-2xs transition-all"
+                          className="border-border/70 bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-all hover:shadow-[var(--cf-shadow-hover)]"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="bg-surface border-border/80 inline-flex h-11 w-8.5 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
+                            <span className="bg-surface border-border/80 inline-flex h-11 w-8.5 shrink-0 items-center justify-center overflow-hidden rounded-md border">
                               {slot.filled && slot.src ? (
                                 <img
                                   src={slot.src}
@@ -1901,14 +1901,14 @@ export function ConstrainedEditor({
                             </div>
                           </div>
 
-                          <Badge tone={slot.filled ? "published" : "draft"}>
+                          <Badge tone={slot.filled ? "published" : "draft"} className="rounded-md">
                             {slot.filled ? "Filled" : "Empty"}
                           </Badge>
                         </button>
                       ))}
 
                       {filteredSlotItems.length === 0 && (
-                        <div className="border-border/60 bg-elevated text-muted-foreground type-caption rounded-2xl border p-5 text-center">
+                        <div className="border-border/60 bg-elevated text-muted-foreground type-caption rounded-xl border p-5 text-center">
                           No screenshot slots match this filter.
                         </div>
                       )}
@@ -1931,7 +1931,7 @@ export function ConstrainedEditor({
               aria-expanded={mobileSheetTab === "fields"}
               onClick={() => setMobileSheetTab("fields")}
               className={cn(
-                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
                 mobileSheetTab === "fields"
                   ? "bg-accent text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -1947,7 +1947,7 @@ export function ConstrainedEditor({
               aria-expanded={mobileSheetTab === "sections"}
               onClick={() => setMobileSheetTab("sections")}
               className={cn(
-                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
                 mobileSheetTab === "sections"
                   ? "bg-accent text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -1963,7 +1963,7 @@ export function ConstrainedEditor({
               aria-expanded={mobileSheetTab === "style"}
               onClick={() => setMobileSheetTab("style")}
               className={cn(
-                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
                 mobileSheetTab === "style"
                   ? "bg-accent text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -1979,7 +1979,7 @@ export function ConstrainedEditor({
               aria-expanded={mobileSheetTab === "slots"}
               onClick={() => setMobileSheetTab("slots")}
               className={cn(
-                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring/40 flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors outline-none focus-visible:ring-2",
                 mobileSheetTab === "slots"
                   ? "bg-accent text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -2002,7 +2002,7 @@ export function ConstrainedEditor({
             <SheetContent
               side="bottom"
               data-testid="editor-mobile-sheet"
-              className="border-border bg-background flex max-h-[82dvh] flex-col gap-0 rounded-t-3xl p-0"
+              className="border-border bg-background flex max-h-[82dvh] flex-col gap-0 rounded-t-2xl p-0"
             >
               <SheetHeader className="border-border shrink-0 gap-3 border-b px-4 pt-4 pr-12 pb-3 text-left">
                 <div className="flex flex-col gap-0.5">
@@ -2024,7 +2024,7 @@ export function ConstrainedEditor({
                 <div
                   role="tablist"
                   aria-label="Mobile editor panels"
-                  className="bg-surface border-border/60 grid grid-cols-4 rounded-full border p-1"
+                  className="bg-surface border-border/60 grid grid-cols-4 rounded-lg border p-1"
                 >
                   {(
                     [
@@ -2041,10 +2041,10 @@ export function ConstrainedEditor({
                       aria-selected={mobileSheetTab === tab.key}
                       onClick={() => setMobileSheetTab(tab.key)}
                       className={cn(
-                        "type-caption rounded-full py-1.5 text-center font-medium transition-colors",
+                        "type-caption rounded-md border py-1.5 text-center font-medium transition-colors",
                         mobileSheetTab === tab.key
-                          ? "bg-elevated text-foreground shadow-xs"
-                          : "text-muted-foreground hover:text-foreground",
+                          ? "border-border bg-elevated text-foreground"
+                          : "border-transparent text-muted-foreground hover:text-foreground",
                       )}
                     >
                       {tab.label}
@@ -2071,7 +2071,7 @@ export function ConstrainedEditor({
                             aria-pressed={active}
                             onClick={() => handleSelectSection(idx)}
                             className={cn(
-                              "type-caption inline-flex max-w-44 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium transition-colors",
+                              "type-caption inline-flex max-w-44 shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 font-medium transition-colors",
                               active
                                 ? "border-primary bg-accent text-foreground"
                                 : "border-border bg-elevated text-muted-foreground hover:text-foreground",
@@ -2108,7 +2108,7 @@ export function ConstrainedEditor({
                           variant={insertPickerOpen ? "accent" : "outline"}
                           size="sm"
                           onClick={() => setInsertPickerOpen((prev) => !prev)}
-                          className="h-8 shrink-0 gap-1 px-2.5"
+                          className="h-8 shrink-0 gap-1 rounded-md px-2.5"
                         >
                           <Plus className="size-3.5" />
                           <span>Insert section</span>
@@ -2117,7 +2117,7 @@ export function ConstrainedEditor({
                     </div>
 
                     {allowSectionMutations && insertPickerOpen && (
-                      <div className="border-primary/35 bg-wash-panel grid gap-1.5 rounded-2xl border p-2.5">
+                      <div className="border-primary/35 bg-wash-panel grid gap-1.5 rounded-xl border p-2.5">
                         {SECTION_PRESET_OPTIONS.map((preset) => (
                           <button
                             key={preset.key}
@@ -2126,7 +2126,7 @@ export function ConstrainedEditor({
                               handleInsertSectionPreset(preset.key);
                               setMobileSheetTab("fields");
                             }}
-                            className="border-border bg-elevated flex flex-col items-start rounded-xl border px-3 py-2 text-left"
+                            className="border-border bg-elevated flex flex-col items-start rounded-md border px-3 py-2 text-left"
                           >
                             <span className="text-foreground type-body-s-strong">
                               {preset.label}
@@ -2153,7 +2153,7 @@ export function ConstrainedEditor({
                           <div
                             key={section.props.id}
                             className={cn(
-                              "flex flex-col gap-2 rounded-2xl border p-3 transition-colors",
+                              "flex flex-col gap-2 rounded-xl border p-3 transition-colors",
                               isSelected
                                 ? "border-primary bg-accent/50"
                                 : "border-border bg-elevated",
@@ -2182,7 +2182,7 @@ export function ConstrainedEditor({
                               </button>
 
                               {required ? (
-                                <Badge tone="neutral" withDot={false}>
+                                <Badge tone="neutral" withDot={false} className="rounded-md">
                                   Locked
                                 </Badge>
                               ) : (
@@ -2201,7 +2201,7 @@ export function ConstrainedEditor({
                                   <span
                                     aria-hidden="true"
                                     className={cn(
-                                      "bg-background inline-block size-4 rounded-full shadow-xs transition-transform",
+                                      "bg-background inline-block size-4 rounded-full transition-transform",
                                       !hidden ? "translate-x-5" : "translate-x-0.75",
                                     )}
                                   />
@@ -2217,7 +2217,7 @@ export function ConstrainedEditor({
                                     disabled={idx <= 1}
                                     aria-label={`Move ${summaryLabel} up`}
                                     onClick={() => handleMoveSection(idx, "up")}
-                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-full disabled:opacity-35"
+                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-md disabled:opacity-35"
                                   >
                                     <ArrowUp className="size-3.5" />
                                   </button>
@@ -2226,7 +2226,7 @@ export function ConstrainedEditor({
                                     disabled={idx >= puckData.content.length - 1}
                                     aria-label={`Move ${summaryLabel} down`}
                                     onClick={() => handleMoveSection(idx, "down")}
-                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-full disabled:opacity-35"
+                                    className="text-muted-foreground inline-flex size-6 items-center justify-center rounded-md disabled:opacity-35"
                                   >
                                     <ArrowDown className="size-3.5" />
                                   </button>
@@ -2236,7 +2236,7 @@ export function ConstrainedEditor({
                                     type="button"
                                     aria-label={`Duplicate ${summaryLabel}`}
                                     onClick={() => handleDuplicateSection(idx)}
-                                    className="text-muted-foreground type-caption inline-flex h-6 items-center gap-1 rounded-full px-1.5"
+                                    className="text-muted-foreground type-caption inline-flex h-6 items-center gap-1 rounded-md px-1.5"
                                   >
                                     <Copy className="size-3" />
                                     <span>Duplicate</span>
@@ -2245,7 +2245,7 @@ export function ConstrainedEditor({
                                     type="button"
                                     aria-label={`Remove ${summaryLabel}`}
                                     onClick={() => handleRemoveSection(idx)}
-                                    className="text-muted-foreground hover:text-destructive inline-flex size-6 items-center justify-center rounded-full"
+                                    className="text-muted-foreground hover:text-destructive inline-flex size-6 items-center justify-center rounded-md"
                                   >
                                     <Trash2 className="size-3.5" />
                                   </button>
@@ -2261,7 +2261,7 @@ export function ConstrainedEditor({
 
                 {mobileSheetTab === "style" && (
                   <div data-testid="mobile-style-drawer" className="flex flex-col gap-4">
-                    <div className="border-border/70 bg-elevated flex flex-col gap-2 rounded-2xl border p-3.5">
+                    <div className="border-border/70 bg-elevated flex flex-col gap-2 rounded-xl border p-3.5">
                       <Label htmlFor="mobile-editor-case-study-title">Case study title</Label>
                       <Input
                         id="mobile-editor-case-study-title"
@@ -2285,17 +2285,17 @@ export function ConstrainedEditor({
                       <div
                         role="group"
                         aria-label="Mobile preview viewport"
-                        className="bg-surface border-border/60 inline-flex items-center rounded-full border p-1"
+                        className="bg-surface border-border/60 inline-flex items-center rounded-lg border p-1"
                       >
                         <button
                           type="button"
                           aria-pressed={viewport === "desktop"}
                           onClick={() => setViewport("desktop")}
                           className={cn(
-                            "type-caption inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium transition-colors",
+                            "type-caption inline-flex items-center gap-1 rounded-md border px-3 py-1 font-medium transition-colors",
                             viewport === "desktop"
-                              ? "bg-elevated text-foreground shadow-xs"
-                              : "text-muted-foreground hover:text-foreground",
+                              ? "border-border bg-elevated text-foreground"
+                              : "border-transparent text-muted-foreground hover:text-foreground",
                           )}
                         >
                           <Monitor className="size-3.5" />
@@ -2306,10 +2306,10 @@ export function ConstrainedEditor({
                           aria-pressed={viewport === "mobile"}
                           onClick={() => setViewport("mobile")}
                           className={cn(
-                            "type-caption inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium transition-colors",
+                            "type-caption inline-flex items-center gap-1 rounded-md border px-3 py-1 font-medium transition-colors",
                             viewport === "mobile"
-                              ? "bg-elevated text-foreground shadow-xs"
-                              : "text-muted-foreground hover:text-foreground",
+                              ? "border-border bg-elevated text-foreground"
+                              : "border-transparent text-muted-foreground hover:text-foreground",
                           )}
                         >
                           <Smartphone className="size-3.5" />
@@ -2335,10 +2335,10 @@ export function ConstrainedEditor({
                               handleSelectSection(slot.sectionIndex);
                               setMobileSheetTab("fields");
                             }}
-                            className="border-border bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-2xl border p-3 text-left transition-colors"
+                            className="border-border bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors"
                           >
                             <div className="flex min-w-0 items-center gap-3">
-                              <span className="bg-surface border-border inline-flex h-11 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
+                              <span className="bg-surface border-border inline-flex h-11 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border">
                                 {slot.filled ? (
                                   <Check className="text-success size-3.5" />
                                 ) : (
@@ -2355,7 +2355,7 @@ export function ConstrainedEditor({
                               </div>
                             </div>
 
-                            <Badge tone={slot.filled ? "published" : "draft"}>
+                            <Badge tone={slot.filled ? "published" : "draft"} className="rounded-md">
                               {slot.filled ? "Filled" : "Empty"}
                             </Badge>
                           </button>
@@ -2375,10 +2375,10 @@ export function ConstrainedEditor({
         <div
           role="alert"
           data-testid="editor-save-toast"
-          className="bg-inverse text-inverse-foreground shadow-float fixed bottom-20 left-1/2 z-50 flex w-[min(92vw,26rem)] -translate-x-1/2 items-center justify-between gap-3 rounded-full px-4 py-2.5 lg:bottom-6"
+          className="bg-inverse text-inverse-foreground shadow-overlay fixed bottom-20 left-1/2 z-50 flex w-[min(92vw,26rem)] -translate-x-1/2 items-center justify-between gap-3 rounded-xl px-4 py-2.5 lg:bottom-6"
         >
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="bg-destructive text-primary-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full">
+            <span className="bg-destructive text-primary-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-md">
               <AlertCircle className="size-3.5" />
             </span>
             <span className="type-body-s truncate">
@@ -2411,7 +2411,7 @@ export function ConstrainedEditor({
 
       {/* Full Clean Preview Modal */}
       <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
-        <DialogContent className="max-w-5xl rounded-3xl">
+        <DialogContent className="max-w-5xl rounded-2xl">
           <DialogHeader>
             <DialogTitle>
               {puckData.root.props.title || initialPayload.project.name}
@@ -2422,7 +2422,7 @@ export function ConstrainedEditor({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="border-border max-h-[70vh] overflow-y-auto rounded-2xl border">
+          <div className="border-border max-h-[70vh] overflow-y-auto rounded-xl border">
             <TemplatePuckRenderer
               puckData={puckData}
               theme={theme}

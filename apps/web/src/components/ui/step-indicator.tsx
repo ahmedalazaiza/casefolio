@@ -29,7 +29,7 @@ export function StepIndicator({
         className={cn(
           "inline-flex size-6 items-center justify-center rounded-full type-caption",
           state === "done" && "bg-success text-success-foreground",
-          state === "current" && "bg-inverse text-inverse-foreground",
+          state === "current" && "bg-primary text-primary-foreground font-semibold",
           state === "upcoming" && "bg-sunken text-tertiary",
         )}
       >

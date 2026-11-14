@@ -186,18 +186,18 @@ describe("GSAP animation setup, presets, reduced-motion & architecture rules", (
       1,
       "[data-hero-copy]",
       expect.objectContaining({
-        opacity: 0,
-        y: ANIMATION_DISTANCES.baseY,
-        delay: ANIMATION_DELAYS.none,
+        y: 18,
+        clearProps: "transform",
       }),
     );
     expect(fromSpy).toHaveBeenNthCalledWith(
       2,
       "[data-hero-visual]",
       expect.objectContaining({
-        opacity: 0,
-        y: ANIMATION_DISTANCES.baseY,
+        y: 26,
+        scale: 0.985,
         delay: ANIMATION_DELAYS.short,
+        clearProps: "transform",
       }),
     );
 

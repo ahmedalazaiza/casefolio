@@ -1,43 +1,52 @@
-/* Generated 1:1 from Figma file 4otk3FXD0q1TJ7aPGEIeGO (All in One: Colors — Light 2:491, Colors — Dark 2:583, Type scale 2:675, Spacing 2:710, Radius 2:751) */
+/* Casefolio Brand Design System Tokens — Electric Royal Blue (#2650F2) + Acid Lime (#D1F800) + Bricolage Grotesque */
 :root {
-  /* Figma color tokens — Light mode */
-  --bg-canvas: #ffffff;
-  --bg-surface: #fafafa;
+  /* Semantic color tokens — Light mode (Pure Neutral Gallery + Electric Royal & Acid Lime) */
+  --bg-canvas: #fafafa;
+  --bg-surface: #f3f3f5;
   --bg-elevated: #ffffff;
-  --bg-sunken: #f4f4f5;
-  --bg-inverse: #0a0a0a;
+  --bg-sunken: #ebebee;
+  --bg-inverse: #0c0d12;
 
-  --text-primary: #0a0a0a;
-  --text-secondary: #52525b;
-  --text-tertiary: #a1a1aa;
+  --text-primary: #0c0d12;
+  --text-secondary: #474a54;
+  --text-tertiary: #5a5e6b;
   --text-inverse: #ffffff;
 
-  --border-default: #ededef;
-  --border-strong: #d4d4d8;
+  --border-default: #e2e2e7;
+  --border-strong: #c4c5ce;
 
-  --accent-primary: #4f46e5;
+  --accent-primary: #2650f2;
   --accent-on-primary: #ffffff;
-  --accent-soft: #eef2ff;
-  --accent-secondary: #18181b;
-  --accent-secondary-soft: #f4f4f5;
+  --accent-soft: #f3f3f5;
+  --accent-secondary: #0c0d12;
+  --accent-secondary-soft: #ebebee;
 
-  --status-success: #16a34a;
-  --status-success-soft: #f0fdf4;
-  --status-warning: #d97706;
+  --status-success: #15803d;
+  --status-success-soft: #ecfdf3;
+  --status-warning: #b45309;
   --status-warning-soft: #fffbeb;
-  --status-danger: #dc2626;
+  --status-danger: #c81e1e;
   --status-danger-soft: #fef2f2;
 
-  /* Figma radius tokens */
-  --radius-xs: 0.375rem;
-  --radius-sm: 0.625rem;
-  --radius-md: 0.875rem;
-  --radius-lg: 1.25rem;
-  --radius-xl: 1.75rem;
+  /* Signature Brand Palette — 01 Electric Royal Blue & 02 Lime Green */
+  --brand-royal: #2650f2;
+  --brand-royal-deep: #1b3fd6;
+  --brand-on-royal: #ffffff;
+  --brand-lime: #d1f800;
+  --brand-on-lime: #090d16;
+  --brand-primary-hover: #1b3fd6;
+  --brand-primary-soft: #f3f3f5;
+
+  /* Radius tokens — crisp architectural studio scale (4px -> 6px -> 8px -> 10px -> 12px) */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
   --radius-full: 999px;
   --radius: var(--radius-md);
 
-  /* Figma spacing tokens */
+  /* Spacing tokens */
   --space-0: 0rem;
   --space-2: 0.125rem;
   --space-4: 0.25rem;
@@ -53,8 +62,9 @@
   --space-80: 5rem;
   --space-120: 7.5rem;
 
-  /* Figma type scale tokens */
+  /* Type scale tokens — Bricolage Grotesque display + Geist UI + JetBrains Mono */
   --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-editorial: var(--font-instrument-serif), Georgia, serif;
   --font-ui: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-code: var(--font-geist-mono), ui-monospace, monospace;
 
@@ -70,15 +80,17 @@
   --size-caption: 0.75rem;
   --size-overline: 0.6875rem;
 
-  /* Figma elevation effects */
-  --elevation-card: 0 1px 2px 0 #0d0a0809, 0 18px 40px -18px #0d0a0818;
-  --elevation-overlay: 0 32px 80px -24px #0d0a0830;
-  --elevation-float: 0 2px 4px 0 #0d0a0808, 0 24px 48px -16px #0d0a0822;
+  /* Flat architectural rest states; overlay reserved strictly for floating menus/dialogs */
+  --elevation-card: none;
+  --elevation-overlay: 0 18px 44px -14px rgba(12, 13, 18, 0.16), 0 4px 12px -4px rgba(12, 13, 18, 0.08);
+  --elevation-float: none;
 
-  /* Brand wash — tints derived from the accent token (never raw colours) */
-  --wash-accent: color-mix(in oklab, var(--accent-primary) 9%, var(--bg-canvas));
-  --wash-accent-strong: color-mix(in oklab, var(--accent-primary) 20%, var(--bg-canvas));
-  --wash-accent-deep: color-mix(in oklab, var(--accent-primary) 34%, var(--bg-canvas));
+  /* Pure neutral surface washes (zero pale-blue tinting) */
+  --wash-accent: var(--bg-surface);
+  --wash-accent-strong: var(--bg-sunken);
+  --wash-accent-deep: var(--bg-sunken);
+  --wash-royal-glow: transparent;
+  --wash-soft-lavender: var(--bg-surface);
 
   /* Layout rhythm — generous white space */
   --section-space: clamp(4rem, 10vw, 10rem);
@@ -137,26 +149,26 @@
 }
 
 .dark {
-  /* Figma color tokens — Dark mode (node 2:583) */
-  --bg-canvas: #0a0a0a;
-  --bg-surface: #111113;
-  --bg-elevated: #18181b;
-  --bg-sunken: #09090b;
-  --bg-inverse: #fafafa;
+  /* Semantic color tokens — Dark mode (Midnight Cobalt + Luminous Royal & Lime) */
+  --bg-canvas: #070b19;
+  --bg-surface: #0e152c;
+  --bg-elevated: #141e3b;
+  --bg-sunken: #050813;
+  --bg-inverse: #f5f7ff;
 
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-tertiary: #71717a;
-  --text-inverse: #0a0a0a;
+  --text-primary: #f5f7ff;
+  --text-secondary: #b4c0df;
+  --text-tertiary: #8e9ec7;
+  --text-inverse: #070b19;
 
-  --border-default: #27272a;
-  --border-strong: #3f3f46;
+  --border-default: #1f2c52;
+  --border-strong: #354982;
 
-  --accent-primary: #818cf8;
-  --accent-on-primary: #0a0a0a;
-  --accent-soft: #1e1b4b;
-  --accent-secondary: #e4e4e7;
-  --accent-secondary-soft: #27272a;
+  --accent-primary: #85a3ff;
+  --accent-on-primary: #070b19;
+  --accent-soft: #16244f;
+  --accent-secondary: #e6ecff;
+  --accent-secondary-soft: #1c2951;
 
   --status-success: #4ade80;
   --status-success-soft: #052e16;
@@ -164,4 +176,12 @@
   --status-warning-soft: #2d1f05;
   --status-danger: #f87171;
   --status-danger-soft: #2a0a0a;
+
+  --brand-royal: #2650f2;
+  --brand-royal-deep: #1b3fd6;
+  --brand-on-royal: #ffffff;
+  --brand-lime: #d1f800;
+  --brand-on-lime: #090d16;
+  --brand-primary-hover: #9db5ff;
+  --brand-primary-soft: #16244f;
 }

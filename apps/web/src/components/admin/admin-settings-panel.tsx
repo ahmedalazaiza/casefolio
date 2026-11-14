@@ -72,7 +72,7 @@ function PlatformSwitch({
         <span
           aria-hidden="true"
           className={cn(
-            "bg-background inline-block size-4 rounded-full shadow-xs transition-transform",
+            "bg-background inline-block size-4 rounded-full transition-transform",
             checked ? "translate-x-5" : "translate-x-0.5",
           )}
         />

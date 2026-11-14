@@ -91,7 +91,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
             <Link
               href={`/editor/${analytics.projectId}`}
               aria-label="Back to case study editor"
-              className="border-border/80 bg-elevated text-foreground hover:bg-surface shadow-xs mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
             >
               <ArrowLeft className="size-4" />
             </Link>

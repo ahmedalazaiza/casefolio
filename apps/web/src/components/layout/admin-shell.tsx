@@ -71,38 +71,38 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="bg-background bg-wash-top text-foreground flex min-h-screen flex-col">
+    <div className="bg-wash-top text-foreground flex min-h-screen flex-col">
       <a
         href="#main-content"
-        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:px-4 focus:py-2"
+        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:px-4 focus:py-2"
       >
         Skip to main content
       </a>
 
-      <header className="border-border/60 bg-background/80 sticky top-0 z-40 border-b backdrop-blur-xl">
-        <div className="flex h-17 items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
+      <header className="fixed inset-x-0 top-0 z-40 h-17 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]/95 backdrop-blur-xl">
+        <div className="flex h-full items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <button
                   type="button"
                   aria-label="Open admin navigation"
-                  className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 shadow-card inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2 lg:hidden"
+                  className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2 lg:hidden"
                 >
                   <Menu className="size-4" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 rounded-r-3xl p-5">
+              <SheetContent side="left" className="w-72 rounded-r-2xl border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5">
                 <SheetHeader className="px-2 pt-1 pb-2 text-left">
                   <div className="flex items-center gap-2">
-                    <SheetTitle className="type-overline text-tertiary">
+                    <SheetTitle className="type-overline text-[var(--cf-royal-text)]">
                       Admin panel
                     </SheetTitle>
                     <Badge tone="accent">Internal</Badge>
                   </div>
                   <SheetDescription>Platform administration and governance.</SheetDescription>
                 </SheetHeader>
-                <nav aria-label="Mobile admin navigation" className="flex flex-col gap-1">
+                <nav aria-label="Mobile admin navigation" className="flex flex-col gap-1.5">
                   {ADMIN_NAV_ITEMS.map((item) => {
                     const Icon = item.icon;
                     const active = isAdminItemActive(pathname, item);
@@ -113,16 +113,18 @@ export function AdminShell({
                         aria-current={active ? "page" : undefined}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
-                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-full border px-3.5 py-2 transition-all outline-none focus-visible:ring-2",
+                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors outline-none focus-visible:ring-2",
                           active
-                            ? "border-border/80 bg-elevated text-foreground shadow-card type-body-s-strong"
-                            : "text-muted-foreground hover:bg-surface/80 hover:text-foreground type-body-s border-transparent",
+                            ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-sm font-semibold text-[var(--cf-text-on-royal)]"
+                            : "type-body-s border-transparent text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
                         )}
                       >
                         <Icon
                           className={cn(
                             "size-4 shrink-0",
-                            active ? "text-primary" : "text-tertiary",
+                            active
+                              ? "text-[var(--cf-text-on-royal)]"
+                              : "text-[var(--cf-text-tertiary)]",
                           )}
                         />
                         <span>{item.label}</span>
@@ -140,7 +142,7 @@ export function AdminShell({
             <Link
               href="/admin/templates"
               aria-label="Search admin templates"
-              className="border-border/80 bg-elevated text-foreground hover:bg-surface focus-visible:ring-ring/40 shadow-card inline-flex size-9 items-center justify-center rounded-full border transition-colors outline-none focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
             >
               <Search className="size-4" />
             </Link>
@@ -155,48 +157,50 @@ export function AdminShell({
         </div>
       </header>
 
-      <div className="flex min-w-0 flex-1">
-        <aside
-          aria-label="Admin sidebar"
-          className="border-border/60 bg-background/60 hidden w-64 shrink-0 flex-col gap-3 border-r p-4 backdrop-blur-md lg:flex"
-        >
-          <div className="flex items-center gap-2 px-3 pt-1">
-            <span className="text-tertiary type-overline">Admin panel</span>
-            <Badge tone="accent">Internal</Badge>
-          </div>
+      <aside
+        aria-label="Admin sidebar"
+        className="hidden border-r border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 lg:fixed lg:top-17 lg:bottom-0 lg:left-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:gap-3 lg:overflow-y-auto"
+      >
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3 py-2">
+          <span className="v3-label text-[var(--cf-text-primary)] uppercase">Admin panel</span>
+          <Badge tone="accent">Internal</Badge>
+        </div>
 
-          <nav aria-label="Admin navigation" className="flex flex-col gap-1">
-            {ADMIN_NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = isAdminItemActive(pathname, item);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
+        <nav aria-label="Admin navigation" className="flex flex-col gap-1.5">
+          {ADMIN_NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = isAdminItemActive(pathname, item);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "focus-visible:ring-ring/40 flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors outline-none focus-visible:ring-2",
+                  active
+                    ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-sm font-semibold text-[var(--cf-text-on-royal)]"
+                    : "type-body-s border-transparent text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
+                )}
+              >
+                <Icon
                   className={cn(
-                    "focus-visible:ring-ring/40 flex items-center gap-3 rounded-full border px-3.5 py-2 transition-all outline-none focus-visible:ring-2",
+                    "size-4 shrink-0",
                     active
-                      ? "border-border/80 bg-elevated text-foreground shadow-card type-body-s-strong"
-                      : "text-muted-foreground hover:bg-surface/80 hover:text-foreground type-body-s border-transparent",
+                      ? "text-[var(--cf-text-on-royal)]"
+                      : "text-[var(--cf-text-tertiary)]",
                   )}
-                >
-                  <Icon
-                    className={cn(
-                      "size-4 shrink-0",
-                      active ? "text-primary" : "text-tertiary",
-                    )}
-                  />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
 
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col pt-17 lg:pl-64">
         <main
           id="main-content"
-          className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10"
+          className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10 xl:px-10"
         >
           {children}
         </main>

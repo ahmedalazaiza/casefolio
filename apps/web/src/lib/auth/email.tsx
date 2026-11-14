@@ -52,21 +52,21 @@ function CasefolioAuthEmail({
     <Html lang="en">
       <Head />
       <Preview>{previewText}</Preview>
-      <Body style={{ fontFamily: "system-ui, -apple-system, sans-serif", margin: 0, padding: "32px 16px" }}>
-        <Container style={{ maxWidth: "480px", margin: "0 auto", padding: "32px", border: "1px solid #ededef", borderRadius: "16px" }}>
-          <Text style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 12px" }}>
+      <Body style={{ fontFamily: "system-ui, -apple-system, sans-serif", backgroundColor: "#f7f8fc", color: "#0a1024", margin: 0, padding: "32px 16px" }}>
+        <Container style={{ maxWidth: "480px", margin: "0 auto", padding: "32px", backgroundColor: "#ffffff", border: "1px solid #dce2f2", borderRadius: "16px" }}>
+          <Text style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#2650f2", margin: "0 0 12px" }}>
             CASEFOLIO
           </Text>
-          <Heading as="h1" style={{ fontSize: "24px", fontWeight: 600, margin: "0 0 12px" }}>
+          <Heading as="h1" style={{ fontSize: "24px", fontWeight: 700, color: "#0a1024", margin: "0 0 12px" }}>
             {heading}
           </Heading>
-          <Text style={{ fontSize: "15px", lineHeight: "1.55", margin: "0 0 20px" }}>
+          <Text style={{ fontSize: "15px", lineHeight: "1.55", color: "#3f4865", margin: "0 0 20px" }}>
             {body}
           </Text>
 
           {code && (
-            <Section style={{ padding: "16px", borderRadius: "12px", backgroundColor: "#f4f4f5", textAlign: "center", marginBottom: "20px" }}>
-              <Text style={{ fontFamily: "ui-monospace, monospace", fontSize: "28px", fontWeight: 700, letterSpacing: "0.22em", margin: 0 }}>
+            <Section style={{ padding: "16px", borderRadius: "12px", backgroundColor: "#eef1f9", border: "1px solid #dce2f2", textAlign: "center", marginBottom: "20px" }}>
+              <Text style={{ fontFamily: "ui-monospace, monospace", fontSize: "28px", fontWeight: 700, letterSpacing: "0.22em", color: "#0a1024", margin: 0 }}>
                 {code}
               </Text>
             </Section>
@@ -77,9 +77,9 @@ function CasefolioAuthEmail({
               <Button
                 href={ctaUrl}
                 style={{
-                  backgroundColor: "#4f46e5",
+                  backgroundColor: "#2650f2",
                   color: "#ffffff",
-                  borderRadius: "999px",
+                  borderRadius: "12px",
                   padding: "12px 24px",
                   fontSize: "14px",
                   fontWeight: 600,
@@ -92,8 +92,8 @@ function CasefolioAuthEmail({
             </Section>
           )}
 
-          <Hr style={{ borderColor: "#ededef", margin: "24px 0 16px" }} />
-          <Text style={{ fontSize: "12px", color: "#71717a", margin: 0 }}>
+          <Hr style={{ borderColor: "#dce2f2", margin: "24px 0 16px" }} />
+          <Text style={{ fontSize: "12px", color: "#525c7a", margin: 0 }}>
             {footerNote}
           </Text>
         </Container>

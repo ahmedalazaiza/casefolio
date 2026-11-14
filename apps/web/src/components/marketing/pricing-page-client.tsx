@@ -14,7 +14,6 @@ import {
   MessageCircleQuestion,
   Rocket,
   ShieldCheck,
-  Sparkles,
   Users,
   X,
 } from "lucide-react";
@@ -22,9 +21,8 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
+import { ScrollRise, SectionStackSheet } from "@/components/marketing/motion";
 import { TeamsSeatCalculator } from "@/components/marketing/teams-seat-calculator";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   BILLING_PLAN_CATALOG,
@@ -402,328 +400,402 @@ export function PricingPageClient({
 
   return (
     <div className="relative flex min-w-0 flex-col overflow-x-clip">
-      {/* 1. Header + Top Subscription Plans (bg-background) */}
-      <div className="bg-background py-10 sm:py-16 lg:py-20">
-        <div className="container-page flex min-w-0 flex-col gap-10 sm:gap-14">
-          <header className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-            <Eyebrow icon={<Sparkles className="text-primary" />}>
-              Pricing &amp; Plans
-            </Eyebrow>
-            <h1 className="font-display text-foreground text-3xl leading-[1.12] font-medium tracking-tight text-balance sm:text-4xl lg:text-[2.75rem]">
-              Simple pricing for solo designers, studios, and agencies
+      {/* 1. Landing v3 Architectural Grid Pricing Hero */}
+      <div className="v3-pattern-grid relative z-10 overflow-hidden pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24">
+        <div className="v3-container">
+          <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
+            <Eyebrow step="01">Pricing &amp; Plans</Eyebrow>
+            <h1 className="v3-display-xl text-balance text-[var(--cf-text-primary)]">
+              Simple tiers for solo designers &amp;{" "}
+              <span className="v3-sticker-lime">scaling studios.</span>
             </h1>
-            <p className="text-muted-foreground type-body-l max-w-xl text-pretty">
-              Start free forever with {FREE_PROJECT_LIMIT} active Case Study — or
-              choose Pro, Team, or Plus as your portfolio or client practice grows
-              and save 20% with annual billing.
+
+            <p className="v3-body-l max-w-2xl text-[var(--cf-text-secondary)]">
+              Start free forever with {FREE_PROJECT_LIMIT} active Case Study—then
+              unlock unlimited stories, watermark-free Behance &amp; PDF exports,
+              shared brand kits, or flat-rate agency seats.
             </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
-              <Button variant="secondary" size="sm" asChild>
-                <a href="#plan-comparison">
-                  <span>Compare all plans &amp; features</span>
-                  <ArrowDown className="size-3.5" />
-                </a>
-              </Button>
-              <Button variant="secondary" size="sm" asChild>
-                <a href="#seat-calculator">
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-3">
+              <a
+                href="#plan-comparison"
+                className="v3-btn-secondary focus-visible:ring-ring/40 py-3 px-5 text-sm outline-none focus-visible:ring-2"
+              >
+                <span>Compare all plans &amp; features</span>
+                <ArrowDown className="size-4" />
+              </a>
+              <a
+                href="#seat-calculator"
+                className="v3-btn-primary focus-visible:ring-ring/40 py-3 pr-3.5 pl-5 text-sm outline-none focus-visible:ring-2"
+              >
+                <span>Seat calculator</span>
+                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
                   <Calculator className="size-3.5" />
-                  <span>Seat calculator</span>
-                </a>
-              </Button>
+                </span>
+              </a>
             </div>
+          </header>
 
-            {isAuthenticated && currentTier && (
-              <div className="border-border bg-surface mt-1 flex flex-wrap items-center justify-center gap-3 rounded-xl border px-4 py-2">
-                <span className="text-muted-foreground type-caption">
+          {isAuthenticated && currentTier && (
+            <div className="mt-6 flex justify-center">
+              <div className="inline-flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-4 py-2.5">
+                <span className="v3-body-s text-[var(--cf-text-secondary)]">
                   Signed in on{" "}
-                  <strong className="text-foreground capitalize">
+                  <strong className="text-[var(--cf-text-primary)] capitalize">
                     {currentTier}
                   </strong>{" "}
                   plan
                 </span>
-                <Button variant="secondary" size="sm" asChild>
-                  <Link href="/account/billing">
-                    <span>Manage billing &amp; seats</span>
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                </Button>
+                <Link
+                  href="/account/billing"
+                  className="v3-btn-secondary py-1.5 text-xs"
+                >
+                  <span>Manage billing &amp; seats</span>
+                  <ArrowRight className="size-3.5" />
+                </Link>
               </div>
-            )}
-          </header>
-
-          {/* 2. Top Pricing Cards + Monthly/Annual toggle */}
-          <section aria-label="Subscription plans" className="flex flex-col gap-6">
-            <LandingPricingSection
-              interval={selectedInterval}
-              onIntervalChange={setSelectedInterval}
-              currentTier={currentTier}
-              onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
-            />
-
-            {/* Merchant of Record note */}
-            <div
-              data-testid="paddle-config-summary"
-              data-pro-monthly={paddlePriceMap.pro_monthly}
-              data-pro-yearly={paddlePriceMap.pro_yearly}
-              data-team-monthly={paddlePriceMap.team_monthly}
-              data-team-yearly={paddlePriceMap.team_yearly}
-              data-plus-monthly={paddlePriceMap.plus_monthly}
-              data-plus-yearly={paddlePriceMap.plus_yearly}
-              className="border-border bg-surface text-muted-foreground mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-center"
-            >
-              <ShieldCheck className="text-success size-4 shrink-0" aria-hidden="true" />
-              <span className="type-caption">
-                Secure checkout powered by Paddle ({paddlePriceMap.environment} environment) · Instant
-                tax &amp; VAT receipts · Cancel anytime.
-              </span>
             </div>
-          </section>
+          )}
         </div>
       </div>
 
-      {/* 3. Plan Differences: What's Included & What's Not (bg-surface band) */}
-      <section
-        id="plan-comparison"
-        data-testid="plan-comparison-matrix"
-        aria-labelledby="plan-comparison-heading"
-        className="border-border bg-surface scroll-mt-20 border-y py-16 sm:py-20 lg:py-24"
+      {/* 2. Overlapping Studio Tiers + Free Admission Sheet */}
+      <SectionStackSheet
+        overlapY={48}
+        startScale={0.982}
+        className="z-20 -mt-8 lg:-mt-12"
       >
-        <div className="container-page flex min-w-0 flex-col gap-8">
-          <div className="mx-auto flex max-w-2xl flex-col items-center gap-3.5 text-center">
-            <Eyebrow icon={<FolderKanban />}>Plan comparison</Eyebrow>
-            <h2
-              id="plan-comparison-heading"
-              className="font-display text-foreground text-2xl leading-[1.15] font-medium tracking-tight text-balance sm:text-3xl lg:text-[2.25rem]"
-            >
-              Compare every feature &amp; quota
-            </h2>
-            <p className="text-muted-foreground type-body-l max-w-xl text-pretty">
-              Review the exact difference between Free, Pro, Team, and Plus —
-              every included feature, usage allowance, and upgrade threshold side
-              by side.
-            </p>
+        <div className="v3-sheet-elevated rounded-t-[2rem] border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pt-10 pb-20 sm:rounded-t-[2.75rem] sm:pt-14 sm:pb-24 lg:rounded-t-[3.5rem]">
+          <div className="v3-container flex min-w-0 flex-col gap-8">
+            <section aria-label="Subscription plans" className="flex flex-col gap-7">
+              <LandingPricingSection
+                interval={selectedInterval}
+                onIntervalChange={setSelectedInterval}
+                currentTier={currentTier}
+                onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
+              />
 
-            {/* Included vs Not Included Legend */}
-            <div className="mt-1 flex flex-wrap items-center justify-center gap-2.5">
-              <span className="bg-success-soft text-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium">
-                <Check className="text-success size-3.5 shrink-0" aria-hidden="true" />
-                <span>Included in plan</span>
-              </span>
-              <span className="border-border bg-elevated text-muted-foreground type-caption inline-flex items-center gap-1.5 rounded-full border px-3 py-1">
-                <X className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
-                <span>Not included</span>
-              </span>
-              <span className="border-border bg-elevated text-muted-foreground type-caption inline-flex items-center rounded-full border px-3 py-1 font-mono">
-                Team: {TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats · Plus: up to {PLUS_INCLUDED_SEATS} seats
-              </span>
-            </div>
-          </div>
-
-          {/* Desktop aligned 4-tier plan summary strip */}
-          <div className="border-border bg-elevated hidden items-center rounded-2xl border px-6 py-4 md:grid md:grid-cols-[32%_17%_17%_17%_17%]">
-            <div className="pr-4">
-              <p className="text-foreground type-body-s-strong">Capability &amp; quota breakdown</p>
-              <p className="text-muted-foreground type-caption">
-                Showing {selectedInterval === "yearly" ? "annual" : "monthly"} billing rates
-              </p>
-            </div>
-            <div className="px-2">
-              <p className="text-foreground type-body-s-strong">
-                {BILLING_PLAN_CATALOG.free.name}
-              </p>
-              <p className="text-muted-foreground type-caption">$0 / forever</p>
-            </div>
-            <div className="px-2">
-              <p className="text-foreground type-body-s-strong">
-                {BILLING_PLAN_CATALOG.pro.name}
-              </p>
-              <p className="text-muted-foreground type-caption">{proDisplayedLabel}/mo</p>
-            </div>
-            <div className="flex flex-col gap-0.5 px-2">
-              <div className="flex items-center gap-1.5">
-                <span className="text-foreground type-body-s-strong">
-                  {BILLING_PLAN_CATALOG.team.name}
-                </span>
-                <Badge tone="accent" withDot={false}>
-                  Popular
-                </Badge>
-              </div>
-              <p className="text-muted-foreground type-caption">{teamDisplayedLabel}/seat/mo</p>
-            </div>
-            <div className="px-2">
-              <p className="text-foreground type-body-s-strong">
-                {BILLING_PLAN_CATALOG.plus.name}
-              </p>
-              <p className="text-muted-foreground type-caption">{plusDisplayedLabel}/mo flat</p>
-            </div>
-          </div>
-
-          {/* Categorized Comparison Cards */}
-          <div className="flex flex-col gap-5">
-            {COMPARISON_GROUPS.map((group) => (
+              {/* Merchant of Record note */}
               <div
-                key={group.id}
-                className="border-border bg-elevated overflow-hidden rounded-2xl border"
+                data-testid="paddle-config-summary"
+                data-pro-monthly={paddlePriceMap.pro_monthly}
+                data-pro-yearly={paddlePriceMap.pro_yearly}
+                data-team-monthly={paddlePriceMap.team_monthly}
+                data-team-yearly={paddlePriceMap.team_yearly}
+                data-plus-monthly={paddlePriceMap.plus_monthly}
+                data-plus-yearly={paddlePriceMap.plus_yearly}
+                className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-3 text-center text-[var(--cf-text-secondary)]"
               >
-                {/* Category header with aligned plan column labels on desktop */}
-                <div className="border-border bg-surface border-b px-5 py-4 sm:px-6 md:grid md:grid-cols-[32%_17%_17%_17%_17%] md:items-center">
-                  <div className="flex items-center gap-3 pr-4">
-                    <span
-                      aria-hidden="true"
-                      className="border-border bg-elevated text-foreground inline-flex size-9 shrink-0 items-center justify-center rounded-lg border"
-                    >
-                      {group.icon}
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="text-foreground type-heading-s">{group.title}</h3>
-                      <p className="text-muted-foreground type-caption">{group.description}</p>
-                    </div>
-                  </div>
-                  <span className="text-muted-foreground type-overline hidden px-2 md:block">
-                    {BILLING_PLAN_CATALOG.free.name}
-                  </span>
-                  <span className="text-muted-foreground type-overline hidden px-2 md:block">
-                    {BILLING_PLAN_CATALOG.pro.name}
-                  </span>
-                  <span className="text-accent-foreground type-overline hidden px-2 md:block">
-                    {BILLING_PLAN_CATALOG.team.name}
-                  </span>
-                  <span className="text-muted-foreground type-overline hidden px-2 md:block">
-                    {BILLING_PLAN_CATALOG.plus.name}
+                <ShieldCheck className="text-success size-4 shrink-0" aria-hidden="true" />
+                <span className="type-caption">
+                  Secure checkout powered by Paddle ({paddlePriceMap.environment} environment) ·
+                  Instant tax &amp; VAT receipts · Cancel anytime.
+                </span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </SectionStackSheet>
+
+      {/* 3. Overlapping Plan Comparison Matrix Sheet */}
+      <SectionStackSheet
+        overlapY={44}
+        startScale={0.985}
+        className="z-30 -mt-8 lg:-mt-12"
+      >
+        <section
+          id="plan-comparison"
+          data-testid="plan-comparison-matrix"
+          aria-labelledby="plan-comparison-heading"
+          className="v3-sheet-elevated scroll-mt-20 rounded-t-[2rem] border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] pt-16 pb-20 sm:rounded-t-[2.75rem] sm:pt-20 sm:pb-24 lg:rounded-t-[3.5rem] lg:pt-24"
+        >
+          <div className="v3-container flex min-w-0 flex-col gap-8">
+            <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+              <Eyebrow step="02" icon={<FolderKanban className="size-3.5" />}>
+                Plan comparison
+              </Eyebrow>
+              <h2
+                id="plan-comparison-heading"
+                className="v3-display-l text-balance text-[var(--cf-text-primary)]"
+              >
+                See exactly what&apos;s{" "}
+                <span className="v3-sticker-lime">included</span> &amp; what&apos;s not
+              </h2>
+              <p className="v3-body-l max-w-xl text-pretty text-[var(--cf-text-secondary)]">
+                Every feature, monthly quota, seat allowance, and export capability across Free,
+                Pro, Team, and Plus—mapped side by side with zero hidden footnotes.
+              </p>
+
+              {/* Included vs Not Included Legend */}
+              <div className="mt-1 flex flex-wrap items-center justify-center gap-2.5">
+                <span className="bg-success-soft text-foreground type-caption inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 font-semibold">
+                  <Check className="text-success size-3.5 shrink-0" aria-hidden="true" />
+                  <span>Included in plan</span>
+                </span>
+                <span className="type-caption inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 text-[var(--cf-text-secondary)]">
+                  <X className="size-3.5 shrink-0" aria-hidden="true" />
+                  <span>Not included</span>
+                </span>
+                <span className="type-caption inline-flex items-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 font-mono font-semibold text-[var(--cf-text-primary)]">
+                  Team: {TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats · Plus: up to{" "}
+                  {PLUS_INCLUDED_SEATS} seats
+                </span>
+              </div>
+            </div>
+
+            {/* Desktop aligned 4-tier plan summary strip */}
+            <div className="hidden items-center rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-4 md:grid md:grid-cols-[32%_17%_17%_17%_17%]">
+              <div className="pr-4">
+                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
+                  Capability &amp; quota breakdown
+                </p>
+                <p className="type-caption text-[var(--cf-text-secondary)]">
+                  Showing {selectedInterval === "yearly" ? "annual" : "monthly"} billing rates
+                </p>
+              </div>
+              <div className="px-2">
+                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
+                  {BILLING_PLAN_CATALOG.free.name}
+                </p>
+                <p className="type-caption text-[var(--cf-text-secondary)]">$0 / forever</p>
+              </div>
+              <div className="px-2">
+                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
+                  {BILLING_PLAN_CATALOG.pro.name}
+                </p>
+                <p className="type-caption text-[var(--cf-text-secondary)]">{proDisplayedLabel}/mo</p>
+              </div>
+              <div className="flex flex-col gap-0.5 rounded-xl bg-[var(--cf-royal)] px-3 py-2 text-[var(--cf-text-on-royal)]">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-bold">{BILLING_PLAN_CATALOG.team.name}</span>
+                  <span className="rounded-md bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+                    Popular
                   </span>
                 </div>
-
-                <table
-                  aria-label={`${group.title} comparison`}
-                  className="block w-full border-collapse text-left md:table md:table-fixed"
-                >
-                  <thead className="sr-only">
-                    <tr>
-                      <th scope="col">Capability</th>
-                      <th scope="col">{BILLING_PLAN_CATALOG.free.name}</th>
-                      <th scope="col">{BILLING_PLAN_CATALOG.pro.name}</th>
-                      <th scope="col">{BILLING_PLAN_CATALOG.team.name}</th>
-                      <th scope="col">{BILLING_PLAN_CATALOG.plus.name}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-border flex flex-col divide-y md:table-row-group">
-                    {group.rows.map((row) => (
-                      <tr
-                        key={row.feature}
-                        className="md:hover:bg-surface/60 flex flex-col gap-2.5 p-4 sm:p-5 md:table-row md:p-0"
-                      >
-                        <td className="md:w-[32%] md:py-4 md:pr-4 md:pl-6">
-                          <p className="text-foreground type-body-s-strong">{row.feature}</p>
-                          {row.hint && (
-                            <p className="text-muted-foreground type-caption mt-0.5">{row.hint}</p>
-                          )}
-                        </td>
-                        <td
-                          data-label={BILLING_PLAN_CATALOG.free.name}
-                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
-                        >
-                          {renderCellValue(row.free)}
-                        </td>
-                        <td
-                          data-label={BILLING_PLAN_CATALOG.pro.name}
-                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
-                        >
-                          {renderCellValue(row.pro)}
-                        </td>
-                        <td
-                          data-label={BILLING_PLAN_CATALOG.team.name}
-                          className="before:text-accent-foreground md:bg-accent/20 flex items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
-                        >
-                          {renderCellValue(row.team)}
-                        </td>
-                        <td
-                          data-label={BILLING_PLAN_CATALOG.plus.name}
-                          className="before:text-muted-foreground flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:pr-6 md:before:content-none"
-                        >
-                          {renderCellValue(row.plus)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <p className="type-caption text-[var(--cf-text-on-royal-muted)]">
+                  {teamDisplayedLabel}/seat/mo
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Interactive Teams Seat Calculator (bg-background band) */}
-      <section
-        id="seat-calculator"
-        aria-label="Teams seat calculator"
-        className="bg-background scroll-mt-20 py-16 sm:py-20 lg:py-24"
-      >
-        <div className="container-page min-w-0">
-          <TeamsSeatCalculator
-            interval={selectedInterval}
-            onIntervalChange={setSelectedInterval}
-            onStartTeamsCheckout={
-              isAuthenticated ? handleStartCalculatorCheckout : undefined
-            }
-          />
-        </div>
-      </section>
-
-      {/* 5. Billing FAQ Cards + Action CTA Bar (bg-surface band) */}
-      <section
-        aria-label="Billing questions"
-        className="border-border bg-surface border-t py-16 sm:py-20 lg:py-24"
-      >
-        <div className="container-page flex flex-col gap-10">
-          <div className="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
-            <Eyebrow icon={<MessageCircleQuestion />}>Billing FAQ</Eyebrow>
-            <h2 className="font-display text-foreground text-2xl leading-[1.15] font-medium tracking-tight text-balance sm:text-3xl">
-              Questions about plans, seats, or downgrades
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {PRICING_FAQ_STRIP.map((item) => (
-              <article
-                key={item.question}
-                className="border-border bg-elevated flex flex-col gap-2.5 rounded-2xl border p-6"
-              >
-                <h3 className="text-foreground type-heading-s">{item.question}</h3>
-                <p className="text-muted-foreground type-body-s">{item.answer}</p>
-              </article>
-            ))}
-          </div>
-
-          <div className="border-border bg-elevated flex flex-col items-start justify-between gap-5 rounded-2xl border p-6 sm:flex-row sm:items-center sm:px-8">
-            <div className="flex items-start gap-3.5">
-              <span className="border-border bg-surface text-primary inline-flex size-10 shrink-0 items-center justify-center rounded-lg border">
-                <Rocket className="size-4" />
-              </span>
-              <div className="flex flex-col gap-1">
-                <h3 className="text-foreground type-heading-s">
-                  Not ready to pick a paid plan yet?
-                </h3>
-                <p className="text-muted-foreground type-body-s">
-                  Start free forever with {FREE_PROJECT_LIMIT} active Case Study — no credit card required.
+              <div className="px-2">
+                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
+                  {BILLING_PLAN_CATALOG.plus.name}
+                </p>
+                <p className="type-caption text-[var(--cf-text-secondary)]">
+                  {plusDisplayedLabel}/mo flat
                 </p>
               </div>
             </div>
 
-            <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
-              <Button size="default" asChild>
-                <Link href="/sign-up">
-                  <span>Start free</span>
-                  <ArrowRight className="size-4" />
+            {/* Categorized Comparison Cards */}
+            <ScrollRise stagger y={18} className="flex flex-col gap-5">
+              {COMPARISON_GROUPS.map((group, groupIdx) => (
+                <div
+                  key={group.id}
+                  className="overflow-hidden rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
+                >
+                  {/* Category header */}
+                  <div className="border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-5 py-4 sm:px-6 md:grid md:grid-cols-[32%_17%_17%_17%_17%] md:items-center">
+                    <div className="flex items-center gap-3 pr-4">
+                      <span
+                        aria-hidden="true"
+                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
+                      >
+                        {group.icon}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="v3-label text-[var(--cf-royal-text)]">
+                            0{groupIdx + 1}
+                          </span>
+                          <h3 className="v3-heading-s text-[var(--cf-text-primary)]">
+                            {group.title}
+                          </h3>
+                        </div>
+                        <p className="type-caption text-[var(--cf-text-secondary)]">
+                          {group.description}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="type-overline hidden px-2 text-[var(--cf-text-tertiary)] md:block">
+                      {BILLING_PLAN_CATALOG.free.name}
+                    </span>
+                    <span className="type-overline hidden px-2 text-[var(--cf-text-tertiary)] md:block">
+                      {BILLING_PLAN_CATALOG.pro.name}
+                    </span>
+                    <span className="type-overline hidden px-2 text-[var(--cf-royal-text)] md:block">
+                      {BILLING_PLAN_CATALOG.team.name}
+                    </span>
+                    <span className="type-overline hidden px-2 text-[var(--cf-text-tertiary)] md:block">
+                      {BILLING_PLAN_CATALOG.plus.name}
+                    </span>
+                  </div>
+
+                  <table
+                    aria-label={`${group.title} comparison`}
+                    className="block w-full border-collapse text-left md:table md:table-fixed"
+                  >
+                    <thead className="sr-only">
+                      <tr>
+                        <th scope="col">Capability</th>
+                        <th scope="col">{BILLING_PLAN_CATALOG.free.name}</th>
+                        <th scope="col">{BILLING_PLAN_CATALOG.pro.name}</th>
+                        <th scope="col">{BILLING_PLAN_CATALOG.team.name}</th>
+                        <th scope="col">{BILLING_PLAN_CATALOG.plus.name}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="flex flex-col divide-y divide-[var(--cf-border-subtle)] md:table-row-group">
+                      {group.rows.map((row) => (
+                        <tr
+                          key={row.feature}
+                          className="flex flex-col gap-2.5 p-4 transition-colors sm:p-5 md:table-row md:p-0 md:hover:bg-[var(--cf-bg-canvas)]/60"
+                        >
+                          <td className="md:w-[32%] md:py-4 md:pr-4 md:pl-6">
+                            <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
+                              {row.feature}
+                            </p>
+                            {row.hint && (
+                              <p className="type-caption mt-0.5 text-[var(--cf-text-secondary)]">
+                                {row.hint}
+                              </p>
+                            )}
+                          </td>
+                          <td
+                            data-label={BILLING_PLAN_CATALOG.free.name}
+                            className="flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
+                          >
+                            {renderCellValue(row.free)}
+                          </td>
+                          <td
+                            data-label={BILLING_PLAN_CATALOG.pro.name}
+                            className="flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:before:content-none"
+                          >
+                            {renderCellValue(row.pro)}
+                          </td>
+                          <td
+                            data-label={BILLING_PLAN_CATALOG.team.name}
+                            className="flex items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-royal-text)] before:content-[attr(data-label)] md:table-cell md:w-[17%] md:bg-[var(--cf-bg-surface)]/75 md:px-2 md:py-4 md:before:content-none"
+                          >
+                            {renderCellValue(row.team)}
+                          </td>
+                          <td
+                            data-label={BILLING_PLAN_CATALOG.plus.name}
+                            className="flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:w-[17%] md:px-2 md:py-4 md:pr-6 md:before:content-none"
+                          >
+                            {renderCellValue(row.plus)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </ScrollRise>
+          </div>
+        </section>
+      </SectionStackSheet>
+
+      {/* 4. Overlapping Seat Calculator + Billing FAQ Sheet */}
+      <SectionStackSheet
+        overlapY={40}
+        startScale={0.986}
+        className="z-40 -mt-8 lg:-mt-12"
+      >
+        <div className="v3-sheet-elevated rounded-t-[2rem] border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pt-16 pb-20 sm:rounded-t-[2.75rem] sm:pt-20 sm:pb-24 lg:rounded-t-[3.5rem]">
+          <div className="v3-container flex flex-col gap-16">
+            <section id="seat-calculator" aria-label="Teams seat calculator" className="scroll-mt-20">
+              <TeamsSeatCalculator
+                interval={selectedInterval}
+                onIntervalChange={setSelectedInterval}
+                onStartTeamsCheckout={
+                  isAuthenticated ? handleStartCalculatorCheckout : undefined
+                }
+              />
+            </section>
+
+            <section aria-label="Billing questions" className="flex flex-col gap-8">
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+                <div className="flex flex-col items-start gap-2.5">
+                  <Eyebrow step="04" icon={<MessageCircleQuestion className="size-3.5" />}>
+                    Billing FAQ
+                  </Eyebrow>
+                  <h2 className="v3-display-l text-balance text-[var(--cf-text-primary)]">
+                    Answers on plans, seats &amp;{" "}
+                    <span className="v3-sticker-lime">downgrades</span>
+                  </h2>
+                </div>
+                <Link href="/help/billing-and-plans" className="v3-btn-secondary py-2.5 px-4 text-xs">
+                  <span>Read full billing FAQ</span>
+                  <ArrowRight className="size-3.5" />
                 </Link>
-              </Button>
-              <Button variant="secondary" size="default" asChild>
-                <Link href="/help/billing-and-plans">Billing guide</Link>
-              </Button>
-            </div>
+              </div>
+
+              <ScrollRise stagger y={14} className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                {PRICING_FAQ_STRIP.map((item, idx) => (
+                  <article
+                    key={item.question}
+                    className="flex flex-col gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
+                  >
+                    <span
+                      className={cn(
+                        "inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-xs font-bold tracking-wider uppercase",
+                        idx === 1
+                          ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+                          : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
+                      )}
+                    >
+                      0{idx + 1}
+                    </span>
+                    <h3 className="v3-heading-s text-[var(--cf-text-primary)]">{item.question}</h3>
+                    <p className="v3-body-s leading-relaxed text-[var(--cf-text-secondary)]">
+                      {item.answer}
+                    </p>
+                  </article>
+                ))}
+              </ScrollRise>
+            </section>
           </div>
         </div>
-      </section>
+      </SectionStackSheet>
+
+      {/* 5. Overlapping Electric Royal Blue Launch Sheet + Dual Signature Ribbon */}
+      <SectionStackSheet
+        overlapY={40}
+        startScale={0.988}
+        className="z-50 -mt-8 lg:-mt-12"
+      >
+        <section className="v3-pattern-dots-dark v3-sheet-royal overflow-hidden rounded-t-[2rem] pt-14 sm:rounded-t-[2.75rem] lg:rounded-t-[3.5rem] lg:pt-20">
+          <div className="v3-container flex flex-col items-center pb-14 text-center lg:pb-20">
+            <span className="v3-label mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)] px-3.5 py-1 text-[var(--cf-bg-accent)] uppercase">
+              <Rocket className="size-3.5" />
+              <span>05 · Start Free Forever</span>
+            </span>
+            <h2 className="v3-display-l max-w-2xl text-[var(--cf-text-inverse)]">
+              Test the canvas before paying{" "}
+              <span className="v3-sticker-lime">a single cent</span>
+            </h2>
+            <p className="v3-body-l mt-4 max-w-xl text-[var(--cf-text-inverse-muted)]">
+              Start free forever with {FREE_PROJECT_LIMIT} active Case Study — no credit card
+              required. Upgrade whenever you need unlimited stories or team seats.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/sign-up" className="v3-btn-lime py-3.5 px-6 text-base">
+                <span>Start free</span>
+                <ArrowRight className="size-4" />
+              </Link>
+              <Link
+                href="/help/billing-and-plans"
+                className="inline-flex items-center justify-center gap-2 rounded-[0.625rem] border border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)] px-5 py-3.5 text-base font-semibold text-[var(--cf-text-inverse)] transition-colors hover:bg-[var(--cf-bg-elevated)]/15"
+              >
+                <span>Billing guide</span>
+              </Link>
+            </div>
+          </div>
+          <div aria-hidden="true" className="grid h-2.5 w-full grid-cols-12">
+            <div className="col-span-8 bg-[var(--cf-royal-deep)]" />
+            <div className="col-span-4 bg-[var(--cf-bg-accent)]" />
+          </div>
+        </section>
+      </SectionStackSheet>
 
       {isAuthenticated && (
         <PaddleCheckoutModal

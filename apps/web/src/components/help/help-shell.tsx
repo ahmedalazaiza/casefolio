@@ -26,7 +26,7 @@ export async function HelpShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <MarketingShell>
+    <MarketingShell activeNavHref="/help">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
         {children}
       </div>

@@ -1,9 +1,8 @@
 import { and, desc, eq, isNotNull } from "@casefolio/db";
-import { BarChart3, ExternalLink, Globe, Settings2 } from "lucide-react";
+import { ArrowRight, BarChart3, ExternalLink, Globe, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { requireSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
@@ -41,91 +40,119 @@ export default async function WorkspacePublishedPagesList() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-2 py-4 sm:px-6 sm:py-6 lg:px-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Eyebrow className="w-fit">Live Portfolio</Eyebrow>
-          <h1 className="text-foreground type-display-m">Published Case Studies</h1>
-          <p className="text-muted-foreground type-body-m">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 sm:gap-8">
+      <header className="v3-pattern-grid relative flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+        <div className="flex flex-col gap-2.5">
+          <Eyebrow className="w-fit">
+            Live Portfolio
+          </Eyebrow>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            Published case studies
+          </h1>
+          <p className="max-w-xl text-sm text-[var(--cf-text-secondary)] sm:text-base">
             Manage live share links and discovery settings across your portfolio.
           </p>
         </div>
-        <Button asChild variant="secondary">
-          <Link href="/dashboard">All Projects</Link>
-        </Button>
-      </div>
+        <Link href="/dashboard" className="v3-btn-secondary">
+          <span>All Projects</span>
+        </Link>
+      </header>
 
       {liveProjects.length === 0 ? (
-        <div className="border-border/80 bg-elevated shadow-card flex flex-col items-center justify-center gap-4 rounded-3xl border px-6 py-20 text-center">
-          <span className="bg-accent text-primary inline-flex size-14 items-center justify-center rounded-2xl">
-            <Globe className="size-6" />
+        <div className="v3-pattern-dots-light flex flex-col items-center justify-center gap-5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-20 text-center">
+          <span className="inline-flex size-16 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
+            <Globe className="size-7" />
           </span>
-          <div className="flex flex-col gap-1.5">
-            <p className="text-foreground type-heading-m">No published case studies yet</p>
-            <p className="text-muted-foreground type-body-s max-w-md">
+          <div className="flex flex-col gap-2">
+            <p className="v3-heading-m text-[var(--cf-text-primary)]">
+              No published case studies yet
+            </p>
+            <p className="max-w-md text-sm leading-relaxed text-[var(--cf-text-secondary)]">
               Open any project and click Publish to claim a custom /p/slug URL with OpenGraph social
               previews.
             </p>
           </div>
-          <Button asChild size="sm" className="mt-1">
-            <Link href="/dashboard">Go to Projects</Link>
-          </Button>
+          <Link href="/dashboard" className="v3-btn-primary mt-1">
+            <span>Go to Projects</span>
+            <ArrowRight className="size-3.5" />
+          </Link>
         </div>
       ) : (
-        <div className="border-border/80 bg-elevated shadow-card divide-border/70 divide-y rounded-3xl border p-6 sm:p-8">
-          {liveProjects.map(({ project, templateName, templateSlug, templateCoverUrl }) => {
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          {liveProjects.map(({ project, templateName, templateSlug, templateCoverUrl }, index) => {
             const thumb = resolveProjectOrTemplateThumbnailUrl(
               project.puckData,
               templateCoverUrl,
               templateSlug,
             );
+            const stepNum = String(index + 1).padStart(2, "0");
             return (
-              <div
+              <article
                 key={project.id}
-                className="flex flex-wrap items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+                className="flex flex-col overflow-hidden rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all hover:-translate-y-0.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
               >
-                <div className="flex items-center gap-4">
-                  <TemplateThumbnail
-                    coverUrl={thumb ?? templateCoverUrl}
-                    slug={templateSlug}
-                    name={project.name}
-                    hideFallbackLabel
-                    className="border-border/80 aspect-[4/3] w-20 shrink-0 rounded-xl border p-2 shadow-2xs"
-                  />
-                  <div className="flex flex-col gap-1">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <span className="text-foreground type-heading-s">{project.name}</span>
-                      <Badge tone="published">
-                        {project.visibility === "unlisted" ? "Unlisted" : "Public"}
-                      </Badge>
-                    </div>
-                    <span className="text-tertiary type-caption font-mono">
-                      /p/{project.slug} · {templateName}
+                <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-text-primary)]">
+                      {stepNum}
+                    </span>
+                    <span className="truncate font-mono text-[0.6875rem] font-medium text-[var(--cf-text-secondary)]">
+                      casefolio.app/p/{project.slug}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button asChild variant="secondary" size="sm">
-                    <Link href={`/projects/${project.id}/analytics`}>
-                      <BarChart3 className="size-3.5" />
+                <div className="flex flex-1 flex-col gap-4 p-5 sm:p-6">
+                  <div className="flex items-center gap-4">
+                    <TemplateThumbnail
+                      coverUrl={thumb ?? templateCoverUrl}
+                      slug={templateSlug}
+                      name={project.name}
+                      hideFallbackLabel
+                      className="aspect-[16/10] w-28 shrink-0 rounded-xl border border-[var(--cf-border-subtle)] p-2"
+                    />
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="v3-heading-s truncate text-[var(--cf-text-primary)]">
+                          {project.name}
+                        </span>
+                        <Badge tone="published">
+                          {project.visibility === "unlisted" ? "Unlisted" : "Public"}
+                        </Badge>
+                      </div>
+                      <span className="font-mono text-xs text-[var(--cf-text-secondary)]">
+                        {templateName}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-[var(--cf-border-subtle)] pt-4">
+                    <Link
+                      href={`/projects/${project.id}/analytics`}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)]"
+                    >
+                      <BarChart3 className="size-3.5 text-[var(--cf-royal-text)]" />
                       <span>Analytics</span>
                     </Link>
-                  </Button>
-                  <Button asChild variant="secondary" size="sm">
-                    <Link href={`/projects/${project.id}/share`}>
-                      <Settings2 className="size-3.5" />
+                    <Link
+                      href={`/projects/${project.id}/share`}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)]"
+                    >
+                      <Settings2 className="size-3.5 text-[var(--cf-royal-text)]" />
                       <span>Share Settings</span>
                     </Link>
-                  </Button>
-                  <Button asChild size="sm">
-                    <Link href={`/p/${project.slug}`} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="size-3.5" />
+                    <Link
+                      href={`/p/${project.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--cf-royal)] px-3.5 text-xs font-semibold text-[var(--cf-text-on-royal)] transition-all hover:-translate-y-0.5 hover:bg-[var(--cf-bg-action-hover)] hover:shadow-[var(--cf-shadow-hover)]"
+                    >
+                      <ExternalLink className="size-3.5 text-[var(--cf-bg-accent)]" />
                       <span>Open Live</span>
                     </Link>
-                  </Button>
+                  </div>
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>

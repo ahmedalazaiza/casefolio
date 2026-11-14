@@ -109,7 +109,7 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
         <div
           role="alert"
           data-testid="theme-contrast-warning"
-          className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-2xl border p-3.5"
+          className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-xl border p-3.5"
         >
           <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
           <div className="flex flex-col gap-1">
@@ -127,10 +127,10 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
       )}
 
       {/* Card 1: Curated Palette Presets */}
-      <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-4 shadow-2xs">
+      <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-xl border p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="bg-accent text-accent-foreground inline-flex size-6 items-center justify-center rounded-full">
+            <span className="bg-accent text-accent-foreground inline-flex size-6 items-center justify-center rounded-md">
               <Palette className="size-3.5" />
             </span>
             <span className="text-foreground type-body-s-strong">Palette presets</span>
@@ -151,9 +151,9 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
                 data-testid={`palette-preset-${preset.id}`}
                 onClick={() => handleApplyPalettePreset(preset.colors)}
                 className={cn(
-                  "group relative flex flex-col items-start gap-2 rounded-xl border p-2.5 text-left transition-all",
+                  "group relative flex flex-col items-start gap-2 rounded-md border p-2.5 text-left transition-all",
                   isActive
-                    ? "border-primary bg-accent/55 shadow-2xs"
+                    ? "border-primary bg-accent/55"
                     : "border-border/70 bg-surface/60 hover:border-border-strong hover:bg-surface",
                 )}
               >
@@ -163,12 +163,12 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
                       <span
                         key={tokenKey}
                         style={{ backgroundColor: preset.colors[tokenKey] }}
-                        className="border-elevated inline-block size-4.5 rounded-full border-2 shadow-2xs"
+                        className="border-elevated inline-block size-4.5 rounded-full border-2"
                       />
                     ))}
                   </div>
                   {isActive && (
-                    <span className="bg-primary text-primary-foreground inline-flex size-4 items-center justify-center rounded-full">
+                    <span className="bg-primary text-primary-foreground inline-flex size-4 items-center justify-center rounded-xs">
                       <Check className="size-2.5" />
                     </span>
                   )}
@@ -181,16 +181,16 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
       </section>
 
       {/* Card 2: Individual Template Color Tokens */}
-      <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-4 shadow-2xs">
+      <section className="border-border/70 bg-elevated flex flex-col gap-3 rounded-xl border p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-foreground type-body-s-strong">Color tokens</span>
           {contrastIssues.length === 0 ? (
-            <Badge tone="published" withDot={false} className="gap-1">
+            <Badge tone="published" withDot={false} className="gap-1 rounded-md">
               <ShieldCheck className="size-3" />
               <span>WCAG AA</span>
             </Badge>
           ) : (
-            <Badge tone="draft" withDot={false}>
+            <Badge tone="draft" withDot={false} className="rounded-md">
               Check contrast
             </Badge>
           )}
@@ -204,10 +204,10 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
             return (
               <div
                 key={tokenName}
-                className="border-border/60 bg-surface/60 hover:border-border-strong flex items-center justify-between gap-2.5 rounded-xl border px-3 py-2 transition-colors"
+                className="border-border/60 bg-surface/60 hover:border-border-strong flex items-center justify-between gap-2.5 rounded-md border px-2.5 py-2 transition-colors"
               >
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <label className="border-border relative inline-flex size-7 shrink-0 cursor-pointer overflow-hidden rounded-full border shadow-2xs">
+                  <label className="border-border relative inline-flex size-6.5 shrink-0 cursor-pointer overflow-hidden rounded-xs border">
                     <span
                       aria-hidden="true"
                       style={{ backgroundColor: colorValue }}
@@ -251,7 +251,7 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
                       return next;
                     });
                   }}
-                  className="text-muted-foreground focus:text-foreground focus:border-ring bg-elevated/80 w-21 rounded-full border border-transparent px-2.5 py-1 text-right font-mono text-xs uppercase outline-none"
+                  className="text-muted-foreground focus:text-foreground focus:border-ring border-border/70 bg-elevated w-21 rounded-xs border px-2 py-1 text-right font-mono text-xs uppercase outline-none"
                 />
               </div>
             );
@@ -260,10 +260,10 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
       </section>
 
       {/* Card 3: Curated Licensed Fonts */}
-      <section className="border-border/70 bg-elevated flex flex-col gap-3.5 rounded-2xl border p-4 shadow-2xs">
+      <section className="border-border/70 bg-elevated flex flex-col gap-3.5 rounded-xl border p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="bg-accent text-accent-foreground inline-flex size-6 items-center justify-center rounded-full">
+            <span className="bg-accent text-accent-foreground inline-flex size-6 items-center justify-center rounded-md">
               <Type className="size-3.5" />
             </span>
             <span className="text-foreground type-body-s-strong">Typography</span>
@@ -272,7 +272,7 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
         </div>
 
         {/* Live specimen preview */}
-        <div className="border-border/60 bg-surface/70 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5">
+        <div className="border-border/60 bg-surface/70 flex items-center justify-between gap-3 rounded-md border px-3.5 py-2.5">
           <div className="flex min-w-0 flex-col gap-0.5">
             <span
               style={{ fontFamily: `"${theme.fonts.heading.family}", sans-serif` }}
@@ -305,7 +305,7 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
             aria-label="Font pair"
             value={activeFontPairId}
             onChange={(e) => handleApplyFontPair(e.target.value)}
-            className="border-border bg-surface/60 text-foreground type-body-s focus-visible:ring-ring/40 h-10 w-full rounded-xl border px-3 outline-none focus-visible:ring-2"
+            className="border-border bg-surface/60 text-foreground type-body-s focus-visible:ring-ring/40 h-10 w-full rounded-md border px-3 outline-none focus-visible:ring-2"
           >
             {CURATED_FONT_PAIRS.map((pair) => (
               <option key={pair.id} value={pair.id}>
@@ -326,7 +326,7 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
               aria-label="Heading font"
               value={theme.fonts.heading.family}
               onChange={(e) => handleUpdateFontFamily("heading", e.target.value)}
-              className="border-border bg-surface/60 text-foreground type-body-s-strong focus-visible:ring-ring/40 h-9.5 w-full rounded-xl border px-2.5 outline-none focus-visible:ring-2"
+              className="border-border bg-surface/60 text-foreground type-body-s-strong focus-visible:ring-ring/40 h-9.5 w-full rounded-md border px-2.5 outline-none focus-visible:ring-2"
             >
               {availableFontFamilies.map((family) => (
                 <option key={family} value={family}>
@@ -345,7 +345,7 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
               aria-label="Body font"
               value={theme.fonts.body.family}
               onChange={(e) => handleUpdateFontFamily("body", e.target.value)}
-              className="border-border bg-surface/60 text-foreground type-body-s-strong focus-visible:ring-ring/40 h-9.5 w-full rounded-xl border px-2.5 outline-none focus-visible:ring-2"
+              className="border-border bg-surface/60 text-foreground type-body-s-strong focus-visible:ring-ring/40 h-9.5 w-full rounded-md border px-2.5 outline-none focus-visible:ring-2"
             >
               {availableFontFamilies.map((family) => (
                 <option key={family} value={family}>

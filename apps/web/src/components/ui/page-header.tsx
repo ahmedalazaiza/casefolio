@@ -27,7 +27,9 @@ export function MarketingPageHeader({
         className,
       )}
     >
-      <Eyebrow icon={icon}>{eyebrow}</Eyebrow>
+      <Eyebrow tone="accent" icon={icon}>
+        {eyebrow}
+      </Eyebrow>
       <h1 className="type-section text-foreground text-balance">{title}</h1>
       {description && (
         <p className="text-muted-foreground type-lead max-w-xl text-pretty">

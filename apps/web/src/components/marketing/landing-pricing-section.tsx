@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { ScrollRise } from "@/components/marketing/motion";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PlanCard } from "@/components/ui/domain-cards";
+import { PlanCard, type PlanSpecItem } from "@/components/ui/domain-cards";
 import {
   BILLING_PLAN_CATALOG,
   computeTeamsPrice,
@@ -26,21 +26,13 @@ import {
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
+import {
+  PRO_MONTHLY_EXPORT_LIMIT,
+  TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT,
+} from "@/lib/exports/types";
 import { cn } from "@/lib/utils";
 
 const PAID_PLAN_ORDER: readonly PaidPlanTier[] = ["pro", "team", "plus"];
-
-const PAID_CARD_EXCLUSIONS: Record<PaidPlanTier, readonly string[]> = {
-  pro: [
-    "Shared Team Workspace & Brand Kit",
-    "Custom domain & complete PDF/live white-labeling",
-  ],
-  team: [
-    "Custom domain & complete PDF/live white-labeling",
-    `11–${PLUS_INCLUDED_SEATS} seats & priority 24/7 support`,
-  ],
-  plus: [],
-};
 
 const PAID_PLAN_ICONS: Record<PaidPlanTier, ReactNode> = {
   pro: <Crown />,
@@ -52,7 +44,11 @@ export interface LandingPricingSectionProps {
   defaultInterval?: BillingInterval;
   interval?: BillingInterval;
   onIntervalChange?: (interval: BillingInterval) => void;
-  onSelectPaidPlan?: (plan: PaidPlanTier, interval: BillingInterval, seats?: number) => void;
+  onSelectPaidPlan?: (
+    plan: PaidPlanTier,
+    interval: BillingInterval,
+    seats?: number,
+  ) => void;
   currentTier?: PlanTier | null;
   showComparisonLink?: boolean;
 }
@@ -77,7 +73,10 @@ export function LandingPricingSection({
 
   function adjustTeamSeats(delta: number) {
     setTeamSeats((prev) =>
-      Math.max(TEAMS_MIN_SEATS, Math.min(TEAMS_MAX_SELF_SERVE_SEATS, prev + delta)),
+      Math.max(
+        TEAMS_MIN_SEATS,
+        Math.min(TEAMS_MAX_SELF_SERVE_SEATS, prev + delta),
+      ),
     );
   }
 
@@ -90,21 +89,21 @@ export function LandingPricingSection({
 
   return (
     <div className="flex w-full flex-col items-center gap-8">
-      {/* Clean flat billing interval segmented toggle */}
+      {/* Studio Command Billing Interval Dock */}
       <div
         role="group"
         aria-label="Billing interval"
-        className="border-border bg-surface inline-flex items-center gap-1 rounded-full border p-1"
+        className="inline-flex items-center gap-1.5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5"
       >
         <button
           type="button"
           aria-pressed={interval === "monthly"}
           onClick={() => setInterval("monthly")}
           className={cn(
-            "type-body-s-strong focus-visible:ring-ring/40 rounded-full px-5 py-2 transition-colors outline-none focus-visible:ring-2",
+            "focus-visible:ring-ring/40 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-2",
             interval === "monthly"
-              ? "bg-elevated border-border text-foreground border shadow-xs"
-              : "text-muted-foreground hover:text-foreground",
+              ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+              : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
           )}
         >
           Monthly
@@ -114,23 +113,25 @@ export function LandingPricingSection({
           aria-pressed={interval === "yearly"}
           onClick={() => setInterval("yearly")}
           className={cn(
-            "type-body-s-strong focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-full px-5 py-2 transition-colors outline-none focus-visible:ring-2",
+            "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-2",
             interval === "yearly"
-              ? "bg-elevated border-border text-foreground border shadow-xs"
-              : "text-muted-foreground hover:text-foreground",
+              ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+              : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
           )}
         >
           <span>Annual</span>
-          <span className="bg-accent text-accent-foreground type-caption rounded-full px-2.5 py-0.5 font-semibold">
+          <span className="rounded-lg bg-[var(--cf-bg-accent)] px-2.5 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
             Save {roundedSavingsPercent}%
             <span className="hidden sm:inline"> · 2 months free</span>
           </span>
         </button>
       </div>
 
-      {/* 3 clean flat paid plan cards (Pro, Team, Plus) */}
-      <div
+      {/* 3 Sculpted Paid Plan Cards (Pro, Electric Royal Blue Team Stage, Plus) */}
+      <ScrollRise
         data-testid="paid-plan-cards-grid"
+        stagger
+        y={20}
         className="grid w-full grid-cols-1 items-stretch gap-6 lg:grid-cols-3"
       >
         {PAID_PLAN_ORDER.map((tier) => {
@@ -157,15 +158,13 @@ export function LandingPricingSection({
             ? `Small & mid-sized studios · ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`
             : isPlus
               ? `Agencies & enterprises · Up to ${PLUS_INCLUDED_SEATS} seats flat`
-              : "Freelancers & solo creators · 1 seat";
+              : "Freelancers & solo designers · 1 personal seat";
 
           const badgeLabel = isHighlighted
             ? "Most popular"
             : tier === "pro"
-              ? "1 seat"
-              : isTeams
-                ? `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`
-                : `Up to ${PLUS_INCLUDED_SEATS} seats`;
+              ? "Solo creator"
+              : `Up to ${PLUS_INCLUDED_SEATS} seats`;
 
           const featuresHeading =
             tier === "pro"
@@ -173,6 +172,31 @@ export function LandingPricingSection({
               : tier === "team"
                 ? "Includes everything in Pro, plus"
                 : "Includes everything in Team, plus";
+
+          const specs: readonly PlanSpecItem[] =
+            tier === "pro"
+              ? [
+                  { label: "Case studies", value: "Unlimited" },
+                  { label: "Exports / mo", value: `${PRO_MONTHLY_EXPORT_LIMIT}/mo` },
+                  { label: "Cloud storage", value: "5 GB" },
+                  { label: "Watermarks", value: "None" },
+                ]
+              : tier === "team"
+                ? [
+                    { label: "Team seats", value: `${teamSeats} seats` },
+                    {
+                      label: "Pooled exports",
+                      value: `${teamSeats * TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT}/mo`,
+                    },
+                    { label: "Pooled storage", value: `${teamSeats * 10} GB` },
+                    { label: "Collaboration", value: "Brand Kit + Roles" },
+                  ]
+                : [
+                    { label: "Flat seats", value: `Up to ${PLUS_INCLUDED_SEATS}` },
+                    { label: "Exports / mo", value: "2,000/mo" },
+                    { label: "Pooled storage", value: "200 GB" },
+                    { label: "Branding", value: "100% White-label" },
+                  ];
 
           const isCurrent = currentTier === tier;
           const ctaLabel = isCurrent
@@ -191,10 +215,22 @@ export function LandingPricingSection({
             isTeams && teamCalc.ok ? (
               <div
                 data-testid="team-card-seat-stepper"
-                className="border-border bg-surface mt-2.5 flex items-center justify-between gap-2 rounded-xl border px-3 py-2"
+                className={cn(
+                  "mt-3 flex items-center justify-between gap-2 rounded-2xl border px-3.5 py-2.5",
+                  isHighlighted
+                    ? "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)]/80"
+                    : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]",
+                )}
               >
                 <div className="flex flex-col">
-                  <span className="text-foreground type-caption font-semibold tabular-nums">
+                  <span
+                    className={cn(
+                      "type-caption font-bold tabular-nums",
+                      isHighlighted
+                        ? "text-[var(--cf-text-on-royal)]"
+                        : "text-[var(--cf-text-primary)]",
+                    )}
+                  >
                     {teamSeats} seats ·{" "}
                     {formatUsdFromCents(
                       interval === "yearly"
@@ -203,7 +239,14 @@ export function LandingPricingSection({
                     )}
                     /mo
                   </span>
-                  <span className="text-muted-foreground type-caption tabular-nums">
+                  <span
+                    className={cn(
+                      "type-caption tabular-nums",
+                      isHighlighted
+                        ? "text-[var(--cf-text-on-royal-muted)]"
+                        : "text-[var(--cf-text-secondary)]",
+                    )}
+                  >
                     {interval === "yearly"
                       ? `${formatUsdFromCents(teamCalc.yearlyTotalCents)}/yr total`
                       : "Dynamic per-seat total"}
@@ -216,13 +259,23 @@ export function LandingPricingSection({
                     data-testid="team-card-seats-decrement"
                     disabled={teamSeats <= TEAMS_MIN_SEATS}
                     onClick={() => adjustTeamSeats(-1)}
-                    className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40"
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40",
+                      isHighlighted
+                        ? "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-elevated)]/15 text-[var(--cf-text-on-royal)] hover:bg-[var(--cf-bg-elevated)]/25"
+                        : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)]",
+                    )}
                   >
                     <Minus className="size-3.5" aria-hidden="true" />
                   </button>
                   <span
                     data-testid="team-card-seats-value"
-                    className="text-foreground type-caption min-w-5 text-center font-semibold tabular-nums"
+                    className={cn(
+                      "type-caption min-w-5 text-center font-bold tabular-nums",
+                      isHighlighted
+                        ? "text-[var(--cf-bg-accent)]"
+                        : "text-[var(--cf-text-primary)]",
+                    )}
                   >
                     {teamSeats}
                   </span>
@@ -232,7 +285,12 @@ export function LandingPricingSection({
                     data-testid="team-card-seats-increment"
                     disabled={teamSeats >= TEAMS_MAX_SELF_SERVE_SEATS}
                     onClick={() => adjustTeamSeats(1)}
-                    className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40"
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40",
+                      isHighlighted
+                        ? "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-elevated)]/15 text-[var(--cf-text-on-royal)] hover:bg-[var(--cf-bg-elevated)]/25"
+                        : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)]",
+                    )}
                   >
                     <Plus className="size-3.5" aria-hidden="true" />
                   </button>
@@ -251,46 +309,50 @@ export function LandingPricingSection({
               scopeLabel={scopeLabel}
               billingNote={billingNote}
               priceExtra={teamPriceExtra}
+              specs={specs}
               description={plan.tagline}
               ctaLabel={ctaLabel}
               ctaHref={onSelectPaidPlan ? undefined : ctaHref}
               onSelectPlan={
                 onSelectPaidPlan
-                  ? () => onSelectPaidPlan(tier, interval, isTeams ? teamSeats : 1)
+                  ? () =>
+                      onSelectPaidPlan(tier, interval, isTeams ? teamSeats : 1)
                   : undefined
               }
               featuresHeading={featuresHeading}
               features={plan.features}
-              excludedFeatures={PAID_CARD_EXCLUSIONS[tier]}
               icon={PAID_PLAN_ICONS[tier]}
               highlighted={isHighlighted}
             />
           );
         })}
-      </div>
+      </ScrollRise>
 
-      {/* Clean flat Free default onboarding callout */}
+      {/* Studio 00 · Free Forever Admission Card */}
       <div
         data-testid="free-onboarding-callout"
-        className="border-border bg-elevated flex w-full flex-col items-start justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:px-6"
+        className="v3-pattern-dots-light flex w-full flex-col items-start justify-between gap-5 rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:flex-row sm:items-center sm:px-8 sm:py-7"
       >
-        <div className="flex flex-wrap items-center gap-3.5">
+        <div className="flex flex-wrap items-center gap-4">
           <span
             aria-hidden="true"
-            className="border-border bg-surface text-foreground inline-flex size-9 shrink-0 items-center justify-center rounded-lg border"
+            className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
           >
-            <Sparkles className="size-4" />
+            <Sparkles className="size-5" />
           </span>
-          <div className="flex flex-col gap-0.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-foreground type-body-s-strong">
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center rounded-md bg-[var(--cf-bg-accent)] px-2 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+                00 · Free Forever
+              </span>
+              <span className="v3-heading-s text-[var(--cf-text-primary)]">
                 {freePlan.name} — $0 / forever
               </span>
               <Badge tone="neutral">Included at signup</Badge>
             </div>
-            <p className="text-muted-foreground type-caption">
-              1 personal seat · 1 active Case Study · Standard templates · PNG &amp; PDF exports
-              with subtle Casefolio watermark + Live Shareable Link.
+            <p className="v3-body-s text-[var(--cf-text-secondary)]">
+              1 personal seat · 1 active Case Study · Standard templates · 5 exports/mo (1440px PNG
+              &amp; PDF) · 250 MB storage · Live shareable link.
             </p>
           </div>
         </div>
@@ -298,33 +360,35 @@ export function LandingPricingSection({
           {isCurrentFree ? (
             <Badge tone="neutral">Current plan</Badge>
           ) : (
-            <Button variant="default" size="sm" className="w-full sm:w-auto" asChild>
-              <Link href="/sign-up">
-                <span>Start free</span>
+            <Link
+              href="/sign-up"
+              className="v3-btn-primary w-full py-2.5 pr-3 pl-5 text-sm sm:w-auto"
+            >
+              <span>Start free</span>
+              <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
                 <ArrowRight className="size-3.5" />
-              </Link>
-            </Button>
+              </span>
+            </Link>
           )}
         </div>
       </div>
 
       {showComparisonLink && (
-        <div className="border-border bg-elevated flex w-full flex-col items-center justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:px-6">
+        <div className="flex w-full flex-col items-center justify-between gap-4 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 sm:flex-row sm:px-6">
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-center sm:justify-start sm:text-left">
-            <span className="text-foreground type-body-s-strong inline-flex items-center gap-2">
+            <span className="v3-body-s-strong inline-flex items-center gap-2 text-[var(--cf-text-primary)]">
               <ShieldCheck className="text-success size-4 shrink-0" />
               <span>Need a side-by-side breakdown of all plans?</span>
             </span>
-            <span className="text-muted-foreground type-caption">
-              Compare Free, Pro, Team, and Plus features, limits, and the interactive per-seat calculator.
+            <span className="type-caption text-[var(--cf-text-secondary)]">
+              Compare Free, Pro, Team, and Plus features, limits, and the interactive per-seat
+              calculator.
             </span>
           </div>
-          <Button variant="secondary" size="sm" asChild>
-            <Link href="/pricing#plan-comparison">
-              <span>Compare all plans</span>
-              <ArrowRight className="size-3.5" />
-            </Link>
-          </Button>
+          <Link href="/pricing#plan-comparison" className="v3-btn-secondary py-2 text-xs">
+            <span>Compare all plans</span>
+            <ArrowRight className="size-3.5" />
+          </Link>
         </div>
       )}
     </div>

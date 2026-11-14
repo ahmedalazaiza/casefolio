@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { BarChart3, ExternalLink } from "lucide-react";
+import { ArrowRight, BarChart3, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { getWorkspaceAnalyticsOverview } from "@/lib/analytics/page-views";
 import { requireSession } from "@/lib/auth/session";
@@ -31,42 +30,65 @@ export default async function WorkspaceAnalyticsOverviewPage() {
   return (
     <div
       data-testid="workspace-analytics-overview"
-      className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-2 py-4 sm:px-6 sm:py-8 lg:px-8"
+      className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6 sm:gap-8"
     >
-      {/* Page Header (Matches Figma 2:8707) */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Eyebrow className="w-fit">Analytics</Eyebrow>
-          <h1 className="text-foreground type-display-m">All published case studies</h1>
+      <header className="v3-pattern-grid relative flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+        <div className="flex flex-col gap-2.5">
+          <Eyebrow className="w-fit">
+            Analytics
+          </Eyebrow>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            All published case studies
+          </h1>
+          <p className="max-w-xl text-sm text-[var(--cf-text-secondary)]">
+            Privacy-first readership telemetry across your live portfolio links.
+          </p>
         </div>
-        <Button asChild variant="secondary" size="sm">
-          <Link href="/published">Manage Published Links</Link>
-        </Button>
-      </div>
+        <Link href="/published" className="v3-btn-secondary">
+          <span>Manage Published Links</span>
+        </Link>
+      </header>
 
-      {/* 3 KPI Cards (Matches Figma 2:8711) */}
       <div className="grid gap-4 md:grid-cols-3">
         <article
           data-testid="overview-kpi-total-views"
-          className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
+          className="v3-pattern-dots-dark v3-sheet-royal flex flex-col justify-between gap-3 rounded-2xl border border-[var(--cf-border-on-royal)] p-6"
         >
-          <span className="text-tertiary type-overline">TOTAL VIEWS</span>
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs font-bold tracking-wider text-[var(--cf-text-on-royal-muted)] uppercase">
+              TOTAL VIEWS
+            </span>
+            <span className="rounded-md bg-[var(--cf-bg-accent)] px-2 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-text-on-accent)]">
+              01
+            </span>
+          </div>
           <span
             data-testid="overview-total-views-value"
-            className="text-foreground type-display-m"
+            className="v3-display-l text-[var(--cf-text-on-royal)]"
           >
             {overview.totalViews30d.toLocaleString()}
           </span>
-          <span className="text-muted-foreground type-caption">Last 30 days</span>
+          <span className="text-xs font-medium text-[var(--cf-text-on-royal-muted)]">
+            Last 30 days
+          </span>
         </article>
 
         <article
           data-testid="overview-kpi-published"
-          className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
+          className="flex flex-col justify-between gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-soft)]"
         >
-          <span className="text-tertiary type-overline">PUBLISHED</span>
-          <span className="text-foreground type-display-m">{overview.publishedCount}</span>
-          <span className="text-muted-foreground type-caption">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+              PUBLISHED
+            </span>
+            <span className="rounded-md bg-[var(--cf-royal-soft)] px-2 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+              02
+            </span>
+          </div>
+          <span className="v3-display-l text-[var(--cf-text-primary)]">
+            {overview.publishedCount}
+          </span>
+          <span className="text-xs font-medium text-[var(--cf-text-secondary)]">
             of {overview.totalProjectsCount} project
             {overview.totalProjectsCount === 1 ? "" : "s"}
           </span>
@@ -74,13 +96,20 @@ export default async function WorkspaceAnalyticsOverviewPage() {
 
         <article
           data-testid="overview-kpi-top-page"
-          className="border-border/80 bg-elevated shadow-card flex min-w-0 flex-col gap-2 rounded-3xl border p-6"
+          className="flex min-w-0 flex-col justify-between gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-soft)]"
         >
-          <span className="text-tertiary type-overline">TOP PAGE</span>
-          <span className="text-foreground type-heading-l truncate">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+              TOP PAGE
+            </span>
+            <span className="rounded-md bg-[var(--cf-royal-soft)] px-2 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+              03
+            </span>
+          </div>
+          <span className="v3-heading-m truncate text-[var(--cf-text-primary)]">
             {overview.topPage ? overview.topPage.projectName : "—"}
           </span>
-          <span className="text-muted-foreground type-caption">
+          <span className="text-xs font-medium text-[var(--cf-text-secondary)]">
             {overview.topPage
               ? `${overview.topPage.views30d.toLocaleString()} view${overview.topPage.views30d === 1 ? "" : "s"}`
               : "Publish a project to start tracking"}
@@ -88,50 +117,71 @@ export default async function WorkspaceAnalyticsOverviewPage() {
         </article>
       </div>
 
-      {/* Case studies table (Matches Figma 2:8724) */}
       {overview.projects.length === 0 ? (
-        <section className="border-border/80 bg-elevated shadow-card flex flex-col items-center justify-center gap-4 rounded-3xl border px-6 py-20 text-center">
-          <span className="bg-accent text-primary inline-flex size-14 items-center justify-center rounded-2xl">
-            <BarChart3 className="size-6" />
+        <section className="v3-pattern-dots-light flex flex-col items-center justify-center gap-5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-20 text-center">
+          <span className="inline-flex size-16 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
+            <BarChart3 className="size-7" />
           </span>
-          <div className="flex flex-col gap-1.5">
-            <h2 className="text-foreground type-heading-m">No case studies yet</h2>
-            <p className="text-muted-foreground type-body-s max-w-md">
+          <div className="flex flex-col gap-2">
+            <h2 className="v3-heading-m text-[var(--cf-text-primary)]">No case studies yet</h2>
+            <p className="max-w-md text-sm leading-relaxed text-[var(--cf-text-secondary)]">
               Create and publish your first case study to track views, unique visitors, and top
               traffic sources.
             </p>
           </div>
-          <Button asChild size="sm" className="mt-1">
-            <Link href="/new">New case study</Link>
-          </Button>
+          <Link href="/new" className="v3-btn-primary mt-1">
+            <span>New case study</span>
+            <ArrowRight className="size-3.5" />
+          </Link>
         </section>
       ) : (
         <section
           data-testid="overview-projects-table"
-          className="border-border/80 bg-elevated shadow-card w-full max-w-full min-w-0 overflow-x-auto rounded-3xl border"
+          className="w-full max-w-full min-w-0 overflow-x-auto rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
         >
+          <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-6 py-3">
+            <div className="flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-[var(--cf-royal)]" />
+              <span className="size-2.5 rounded-full bg-[var(--cf-bg-accent)]" />
+              <span className="ml-1 font-mono text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+                analytics.casefolio.app/projects
+              </span>
+            </div>
+            <span className="rounded-md bg-[var(--cf-royal-soft)] px-2.5 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+              30-day window
+            </span>
+          </div>
+
           <table className="w-full min-w-[600px] border-collapse text-left">
             <thead>
-              <tr className="border-border/70 bg-surface/50 border-b">
-                <th className="text-tertiary type-overline px-6 py-4">CASE STUDY</th>
-                <th className="text-tertiary type-overline px-6 py-4">VIEWS</th>
-                <th className="text-tertiary type-overline px-6 py-4">VISITORS</th>
-                <th className="text-tertiary type-overline px-6 py-4">PUBLISHED</th>
+              <tr className="border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]/60">
+                <th className="px-6 py-3.5 font-mono text-xs font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+                  CASE STUDY
+                </th>
+                <th className="px-6 py-3.5 font-mono text-xs font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+                  VIEWS
+                </th>
+                <th className="px-6 py-3.5 font-mono text-xs font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+                  VISITORS
+                </th>
+                <th className="px-6 py-3.5 font-mono text-xs font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+                  PUBLISHED
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-border divide-y">
+            <tbody className="divide-y divide-[var(--cf-border-subtle)]">
               {overview.projects.map((row) => (
                 <tr
                   key={row.projectId}
                   data-testid="overview-project-row"
                   data-project-id={row.projectId}
-                  className="hover:bg-surface/60 transition-colors"
+                  className="transition-colors hover:bg-[var(--cf-bg-canvas)]"
                 >
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <Link
                         href={`/projects/${row.projectId}/analytics`}
-                        className="text-foreground hover:text-primary type-body-m-strong transition-colors"
+                        className="font-semibold text-[var(--cf-text-primary)] transition-colors hover:text-[var(--cf-royal-text)]"
                       >
                         {row.projectName}
                       </Link>
@@ -148,26 +198,26 @@ export default async function WorkspaceAnalyticsOverviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label={`Open live page for ${row.projectName}`}
-                          className="text-tertiary hover:text-foreground inline-flex items-center"
+                          className="inline-flex items-center text-[var(--cf-text-tertiary)] hover:text-[var(--cf-royal-text)]"
                         >
                           <ExternalLink className="size-3.5" />
                         </Link>
                       )}
                     </div>
                   </td>
-                  <td className="text-foreground type-body-m px-6 py-4">
+                  <td className="px-6 py-4 font-mono text-sm font-semibold text-[var(--cf-text-primary)]">
                     {row.views30d.toLocaleString()}
                   </td>
-                  <td className="text-foreground type-body-m px-6 py-4">
+                  <td className="px-6 py-4 font-mono text-sm font-semibold text-[var(--cf-text-primary)]">
                     {row.visitors30d.toLocaleString()}
                   </td>
-                  <td className="text-muted-foreground type-body-s px-6 py-4">
+                  <td className="px-6 py-4 text-sm text-[var(--cf-text-secondary)]">
                     {row.isPublished ? (
                       formatPublishedDate(row.publishedAtIso)
                     ) : (
                       <Link
                         href={`/projects/${row.projectId}/share`}
-                        className="text-primary hover:underline"
+                        className="font-semibold text-[var(--cf-royal-text)] hover:underline"
                       >
                         Publish →
                       </Link>

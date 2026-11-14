@@ -796,7 +796,7 @@ export function TemplateDetailClient({
                     }
                   : null
               }
-              className="border-border/80 aspect-[4/3] w-full rounded-2xl border shadow-2xs"
+              className="border-border/80 aspect-[4/3] w-full rounded-2xl border"
             />
           </Card>
 
@@ -814,7 +814,7 @@ export function TemplateDetailClient({
                     className={cn(
                       "flex flex-col gap-2 rounded-2xl border p-4 transition-all",
                       isSelected
-                        ? "border-primary/50 bg-accent/25 shadow-xs"
+                        ? "border-primary/50 bg-accent/25"
                         : "border-border/70 bg-surface/40 hover:border-border-strong",
                     )}
                   >

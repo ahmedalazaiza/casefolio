@@ -4,172 +4,150 @@ import { describe, expect, it } from "vitest";
 import { LandingExperience } from "@/components/marketing/landing-experience";
 import { buildLandingSnapshot } from "@/lib/marketing/landing-stats";
 
-describe("HomePage — Minimalist Split-Hero Experience & App-Launch CTAs", () => {
-  it("renders all landing sections with real numbers and removes 'Trusted by designers from'", () => {
+describe("HomePage — Landing v3 (Figma 85:7700 Desktop & 87:9604 Mobile)", () => {
+  it("renders Hero, Features panels, 3-card grid, Dark Showcase, FAQ, and Final CTA marquee", () => {
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
 
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Turn finished UI screens into published case studies",
+        name: /Turn finished projects into publishable case studies/i,
       }),
     ).toBeInTheDocument();
 
-    // Verify "Trusted by designers from" section and gamification/XP are completely absent
-    expect(screen.queryByText(/Trusted by designers from/i)).toBeNull();
-    expect(screen.queryByText(/Studio Quest/i)).toBeNull();
-    expect(screen.queryByText(/Studio XP/i)).toBeNull();
-    expect(screen.queryByText(/\+20 XP/i)).toBeNull();
+    expect(
+      screen.getByText(
+        /Pick a template made by the Casefolio team, drop in your screens, tweak colors and text — then publish a page or export PNG & PDF\./i,
+      ),
+    ).toBeInTheDocument();
 
     expect(
       screen.getByRole("figure", {
-        name: /Interactive preview of the Casefolio/i,
+        name: /Interactive preview of the Casefolio editor and curated templates/i,
       }),
     ).toBeInTheDocument();
 
-    // Core section headings
+    // Features section headings & split panels
     expect(
       screen.getByRole("heading", {
-        name: "From finished UI to published case study in four steps",
+        name: /Built for case studies ready the moment you are/i,
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", {
-        name: "Start from a case study structure that already works",
-      }),
+      screen.getByRole("heading", { name: "Templates made for case studies" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", {
-        name: "Structured editing, without formatting busywork",
-      }),
+      screen.getByRole("heading", { name: "Edit only what matters" }),
+    ).toBeInTheDocument();
+
+    // 3-column feature grid
+    const featureGrid = screen.getByTestId("landing-feature-grid");
+    expect(
+      within(featureGrid).getByRole("heading", { name: "Publish a public page" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", {
-        name: "One case study, ready for live links, Behance, and PDFs",
-      }),
+      within(featureGrid).getByRole("heading", { name: "Export PNG & PDF" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", {
-        name: "Ready to publish your next case study?",
-      }),
+      within(featureGrid).getByRole("heading", { name: "Versioned templates" }),
     ).toBeInTheDocument();
+
+    // Dark Showcase heading
     expect(
       screen.getByRole("heading", {
-        name: "Common questions, answered",
+        name: /Details that keep every case study consistent/i,
       }),
     ).toBeInTheDocument();
 
-    // Real published template names rendered
-    expect(screen.getAllByText("Cinema").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Orbit").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Meridian").length).toBeGreaterThanOrEqual(1);
+    // FAQ & Final CTA headings
+    expect(
+      screen.getByRole("heading", {
+        name: /Got questions\? We have the answers\./i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: /Your next case study is one template away/i,
+      }),
+    ).toBeInTheDocument();
   });
 
-  it("renders 4 horizontal How It Works cards, up to 6 templates (3 per row) with Browse all templates CTA, and public URL state toggle", async () => {
+  it("switches Dark Showcase interactive tabs and toggles Hero editor device preview", async () => {
     const user = userEvent.setup();
-    const baseSnapshot = buildLandingSnapshot();
-    const extraTemplates = [
-      ...baseSnapshot.templates,
-      {
-        ...baseSnapshot.templates[0]!,
-        slug: "extra-seven",
-        name: "Extra Seven",
-      },
-      {
-        ...baseSnapshot.templates[1]!,
-        slug: "extra-eight",
-        name: "Extra Eight",
-      },
-    ];
-    const snapshot = buildLandingSnapshot(extraTemplates);
-    render(<LandingExperience snapshot={snapshot} />);
-
-    // Hero frame renders crisp high-resolution editor images instead of an HTML form mockup
-    const heroFigure = screen.getByRole("figure", {
-      name: /Interactive preview of the Casefolio/i,
-    });
-    const heroImages = heroFigure.querySelectorAll("img");
-    expect(heroImages.length).toBe(2);
-    expect(heroImages[0]).toHaveAttribute("src", "/landing/hero-editor-light.png");
-    expect(heroImages[1]).toHaveAttribute("src", "/landing/hero-editor-dark.png");
-
-    // How it works: 4 horizontal cards in one row (lg:grid-cols-4)
-    const howItWorksStage = screen.getByTestId("how-it-works-stage");
-    expect(howItWorksStage.className).toContain("lg:grid-cols-4");
-    expect(screen.getByTestId("how-it-works-step-1")).toBeInTheDocument();
-    expect(screen.getByTestId("how-it-works-step-2")).toBeInTheDocument();
-    expect(screen.getByTestId("how-it-works-step-3")).toBeInTheDocument();
-    expect(screen.getByTestId("how-it-works-step-4")).toBeInTheDocument();
-
-    // Templates showcase: max 6 cards shown on home page in a 3-column row + Browse all templates link
-    const templateShowcase = screen.getByTestId("landing-template-showcase");
-    expect(templateShowcase.className).toContain("lg:grid-cols-3");
-    expect(templateShowcase.querySelectorAll("[data-stack-card]")).toHaveLength(6);
-    expect(screen.queryByRole("heading", { name: "Extra Seven" })).toBeNull();
-    expect(
-      screen.getByRole("link", { name: /Browse all templates/i }),
-    ).toHaveAttribute("href", "/templates");
-
-    // Toggle public URL preview state
-    await user.click(
-      screen.getByRole("button", { name: /Preview live public URL state/i }),
-    );
-    expect(screen.getByText(/Published · Live/i)).toBeInTheDocument();
-  });
-
-  it("replaces home-page pricing cards with direct CTA actions driving into the app while linking to separate /pricing", () => {
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
 
-    // Pricing plan cards live separately on /pricing — never rendered on /
+    const slotsTab = screen.getByRole("tab", {
+      name: "Ratio-locked image slots",
+    });
+    const tokensTab = screen.getByRole("tab", {
+      name: "Template color tokens",
+    });
+    const fontsTab = screen.getByRole("tab", {
+      name: "Font pairs per template",
+    });
+    const sectionsTab = screen.getByRole("tab", {
+      name: "Show or hide sections",
+    });
+
+    expect(slotsTab).toHaveAttribute("aria-selected", "true");
+    expect(tokensTab).toHaveAttribute("aria-selected", "false");
+
+    await user.click(tokensTab);
+    expect(tokensTab).toHaveAttribute("aria-selected", "true");
+    expect(slotsTab).toHaveAttribute("aria-selected", "false");
+
+    await user.click(fontsTab);
+    expect(fontsTab).toHaveAttribute("aria-selected", "true");
+
+    await user.click(sectionsTab);
+    expect(sectionsTab).toHaveAttribute("aria-selected", "true");
+
+    // Hero editor Desktop / Mobile switch
+    const mobileBtn = screen.getByRole("button", { name: "Mobile" });
+    expect(mobileBtn).toHaveAttribute("aria-pressed", "false");
+    await user.click(mobileBtn);
+    expect(mobileBtn).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps pricing plan cards off the home page and drives CTAs into /sign-up and /templates", () => {
+    const snapshot = buildLandingSnapshot();
+    render(<LandingExperience snapshot={snapshot} />);
+
     expect(screen.queryByTestId("paid-plan-cards-grid")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Annual/i })).toBeNull();
 
     const startCtaSection = screen.getByTestId("landing-start-cta");
     expect(
-      within(startCtaSection).getByRole("link", { name: /^Start free/i }),
+      within(startCtaSection).getByRole("link", { name: /Make it happen/i }),
     ).toHaveAttribute("href", "/sign-up");
-    expect(
-      within(startCtaSection).getByRole("link", { name: /Choose a template/i }),
-    ).toHaveAttribute("href", "/templates");
-    expect(
-      within(startCtaSection).getByRole("link", { name: /View pricing plans/i }),
-    ).toHaveAttribute("href", "/pricing");
 
-    const startActions = screen.getByTestId("landing-start-actions");
-    expect(
-      within(startActions).getByRole("link", {
-        name: /Create your free workspace/i,
-      }),
-    ).toHaveAttribute("href", "/sign-up");
-    expect(
-      within(startActions).getByRole("link", {
-        name: /Start with the Cinema template/i,
-      }),
-    ).toHaveAttribute("href", "/new?template=cinema");
+    const marquee = screen.getByTestId("landing-template-marquee");
+    expect(within(marquee).getAllByText("Orbit").length).toBeGreaterThanOrEqual(1);
+    expect(within(marquee).getAllByText("Frame").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("expands and collapses FAQ accordion items", async () => {
+  it("expands and collapses the 5 Landing v3 FAQ accordion items", async () => {
     const user = userEvent.setup();
     const snapshot = buildLandingSnapshot();
     render(<LandingExperience snapshot={snapshot} />);
 
     expect(
       screen.getByText(
-        /The Casefolio team designs, maintains, and versions every template/i,
+        "The Casefolio team designs, versions and uploads every template.",
       ),
     ).toBeInTheDocument();
 
     const secondTrigger = screen.getByRole("button", {
-      name: "Can I use my own colors, fonts, and custom domain?",
+      name: "Can I use my own colors and fonts?",
     });
     expect(secondTrigger).toHaveAttribute("aria-expanded", "false");
 
     await user.click(secondTrigger);
     expect(secondTrigger).toHaveAttribute("aria-expanded", "true");
     expect(
-      screen.getByText(/Plus also includes custom domains/i),
+      screen.getByText(/editable color tokens and curated font pairs/i),
     ).toBeInTheDocument();
   });
 });

@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist, JetBrains_Mono } from "next/font/google";
+import {
+  Bricolage_Grotesque,
+  Geist,
+  Instrument_Serif,
+  JetBrains_Mono,
+  Plus_Jakarta_Sans,
+} from "next/font/google";
 import type { ReactNode } from "react";
 import { PostHogProvider } from "@/components/analytics/posthog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -9,6 +15,22 @@ import "@/styles/globals.css";
 const bricolageGrotesque = Bricolage_Grotesque({
   variable: "--font-bricolage",
   subsets: ["latin"],
+  weight: ["600", "700"],
+  display: "swap",
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -23,17 +45,18 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Casefolio — UI/UX Case Study Builder for Product Designers",
+  title: "Casefolio — Turn Finished Projects Into Publishable Case Studies",
   description:
-    "Build portfolio-ready UI/UX case studies in minutes. Start with curated templates, frame your screens in realistic mockups, and publish live or export for Behance and PDF.",
+    "Pick a template made by the Casefolio team, drop in your screens, tweak colors and text — then publish a page or export PNG & PDF.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
-      className={`${bricolageGrotesque.variable} ${geistSans.variable} ${jetbrainsMono.variable}`}
+      className={`${bricolageGrotesque.variable} ${plusJakartaSans.variable} ${instrumentSerif.variable} ${geistSans.variable} ${jetbrainsMono.variable}`}
     >
       <body>
         <ThemeProvider>

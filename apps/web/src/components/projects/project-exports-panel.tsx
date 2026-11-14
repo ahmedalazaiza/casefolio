@@ -225,7 +225,7 @@ export function ProjectExportsPanel({
             <Link
               href={`/editor/${overview.projectId}`}
               aria-label="Back to case study editor"
-              className="border-border/80 bg-elevated text-foreground hover:bg-surface shadow-xs mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
             >
               <ArrowLeft className="size-4" />
             </Link>
@@ -366,7 +366,7 @@ export function ProjectExportsPanel({
               >
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="bg-elevated border-border/70 inline-flex size-10 items-center justify-center rounded-xl border shadow-2xs">
+                    <span className="bg-elevated border-border/70 inline-flex size-10 items-center justify-center rounded-xl border">
                       <PresetBadgeIcon format={preset.format} />
                     </span>
                     <div className="flex items-center gap-1.5">
@@ -420,10 +420,10 @@ export function ProjectExportsPanel({
                 aria-pressed={pngScale === 1}
                 onClick={() => setPngScale(1)}
                 className={cn(
-                  "type-caption rounded-full px-3 py-1 font-medium transition-all",
+                  "type-caption rounded-full border px-3 py-1 font-medium transition-all",
                   pngScale === 1
-                    ? "bg-elevated text-foreground shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "border-border bg-elevated text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
                 1× · 1,440 px
@@ -440,10 +440,10 @@ export function ProjectExportsPanel({
                   setPngScale(2);
                 }}
                 className={cn(
-                  "type-caption inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium transition-all",
+                  "type-caption inline-flex items-center gap-1 rounded-full border px-3 py-1 font-medium transition-all",
                   pngScale === 2
-                    ? "bg-elevated text-foreground shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "border-border bg-elevated text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
                 {!canUsePng2x && <Lock className="size-3" />}

@@ -79,12 +79,12 @@ test("Phase 2 E2E: sign up -> verify OTP -> 3-step onboarding -> dashboard, onbo
     await page.getByLabel("Headline").fill("Principal Product Designer");
     await page.getByRole("button", { name: /Continue/i }).click();
 
-    // 5. Lands on first-run /dashboard with welcome checklist & toast
+    // 5. Lands directly on /dashboard empty state to create first project
     await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.getByTestId("dashboard-empty-state")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: /Let’s make your first case study|Let's make your first case study/i }),
+      page.getByRole("heading", { name: /Your first case study starts here/i }),
     ).toBeVisible();
-    await expect(page.getByText(/Welcome, Rami/i)).toBeVisible();
 
     // Verify onboarding only runs once (revisiting /onboarding redirects back to /dashboard)
     await page.goto("/onboarding");

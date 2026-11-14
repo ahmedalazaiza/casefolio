@@ -231,7 +231,7 @@ export function ProjectSharePanel({
             <Link
               href={`/editor/${initialSettings.projectId}`}
               aria-label="Back to case study editor"
-              className="border-border/80 bg-elevated text-foreground hover:bg-surface shadow-xs mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
+              className="border-border/80 bg-elevated text-foreground hover:bg-surface mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors"
             >
               <ArrowLeft className="size-4" />
             </Link>
@@ -570,7 +570,7 @@ export function ProjectSharePanel({
             <div
               data-testid="og-card-preview"
               style={buildTemplateThemeStyle(initialSettings.theme)}
-              className="border-border/80 shadow-xs overflow-hidden rounded-2xl border"
+              className="border-border/80 overflow-hidden rounded-2xl border"
             >
               <div
                 style={{

@@ -373,11 +373,11 @@ export function ImageSlotField({
       data-testid={`image-slot-field-${effectiveSlotKey}`}
       data-slot-key={effectiveSlotKey}
       data-slot-ratio={ratioText}
-      className="border-border/70 bg-elevated flex flex-col gap-3 rounded-2xl border p-3.5 shadow-2xs"
+      className="border-border/70 bg-elevated flex flex-col gap-3 rounded-xl border p-3.5"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-foreground type-body-s-strong truncate">{label}</span>
-        <Badge tone="neutral" withDot={false}>
+        <Badge tone="neutral" withDot={false} className="rounded-md">
           {activeDeviceBadge ? `${activeDeviceBadge} · ${ratioText}` : ratioText}
         </Badge>
       </div>
@@ -461,7 +461,7 @@ export function ImageSlotField({
                 type="button"
                 onClick={handleTriggerFilePicker}
                 data-testid={`slot-replace-btn-${effectiveSlotKey}`}
-                className="bg-inverse/85 text-inverse-foreground hover:bg-inverse type-caption absolute right-2 bottom-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium shadow-sm transition-colors"
+                className="bg-inverse/90 text-inverse-foreground hover:bg-inverse type-caption absolute right-2 bottom-2 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors"
               >
                 <RefreshCw className="size-3" />
                 <span>Replace</span>
@@ -525,14 +525,14 @@ export function ImageSlotField({
           onDrop={handleDrop}
           data-testid={`slot-dropzone-${effectiveSlotKey}`}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-5 text-center transition-all outline-none",
+            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-5 text-center transition-all outline-none",
             isDragging
               ? "border-primary bg-accent/60"
               : "border-border-strong/60 bg-surface/70 hover:border-primary/60 hover:bg-accent/30",
             readOnly && "cursor-not-allowed opacity-60",
           )}
         >
-          <span className="bg-accent text-accent-foreground inline-flex size-9 items-center justify-center rounded-full">
+          <span className="bg-accent text-accent-foreground inline-flex size-9 items-center justify-center rounded-md">
             <Upload className="size-4" />
           </span>
           <div className="flex flex-col gap-0.5">

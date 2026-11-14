@@ -692,13 +692,15 @@ export function DashboardProjectsClient({
 
       <div
         data-testid="dashboard-workspace-bar"
-        className="border-border/70 bg-elevated/90 shadow-card flex flex-col gap-3 rounded-2xl border p-3.5"
+        className="flex flex-col gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3.5"
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {/* Workspace Switcher + Space Pills */}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="flex items-center gap-2">
-              <Building2 className="text-primary size-4 shrink-0" />
+              <span className="inline-flex size-8 items-center justify-center rounded-xl bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]">
+                <Building2 className="size-4 shrink-0" />
+              </span>
               <label htmlFor="dashboard-workspace-select" className="sr-only">
                 Active workspace
               </label>
@@ -710,7 +712,7 @@ export function DashboardProjectsClient({
                 onChange={(e) =>
                   handleSwitchWorkspace(e.target.value === "personal" ? null : e.target.value)
                 }
-                className="border-border bg-surface text-foreground type-body-s-strong h-9 rounded-xl border px-3"
+                className="type-body-s-strong h-9 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-[var(--cf-text-primary)]"
               >
                 {workspaceContext.workspaces.map((ws) => (
                   <option key={ws.workspaceId} value={ws.organizationId ?? "personal"}>
@@ -726,16 +728,16 @@ export function DashboardProjectsClient({
               <div
                 role="group"
                 aria-label="Filter by space"
-                className="border-border/70 bg-sunken/70 flex flex-wrap items-center gap-1 rounded-xl border p-1"
+                className="flex flex-wrap items-center gap-1 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1"
               >
                 <button
                   type="button"
                   onClick={() => setSpaceFilter("all")}
                   className={cn(
-                    "type-caption rounded-lg px-2.5 py-1 font-medium transition-colors",
+                    "type-caption rounded-lg px-2.5 py-1 font-semibold transition-colors",
                     spaceFilter === "all"
-                      ? "bg-elevated text-foreground shadow-2xs"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                      : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                   )}
                 >
                   All visible spaces
@@ -746,10 +748,10 @@ export function DashboardProjectsClient({
                     type="button"
                     onClick={() => setSpaceFilter(sp.id)}
                     className={cn(
-                      "type-caption inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition-colors",
+                      "type-caption inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold transition-colors",
                       spaceFilter === sp.id
-                        ? "bg-elevated text-foreground shadow-2xs"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                        : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                     )}
                   >
                     {sp.visibility === "private" ? (
@@ -810,17 +812,18 @@ export function DashboardProjectsClient({
           </div>
 
           {/* Numeric Quota Meters (`80%` soft warning / `100%` hard cap — Spec §5.9) */}
-          <div className="text-muted-foreground type-caption flex flex-wrap items-center gap-3">
+          <div className="type-caption flex flex-wrap items-center gap-2 text-[var(--cf-text-secondary)]">
             <span
               className={cn(
+                "rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1",
                 !isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit) &&
                   activeWorkspace.usage.activeProjects >= activeWorkspace.quotas.activeProjectsLimit
-                  ? "text-destructive font-medium"
+                  ? "text-destructive font-semibold"
                   : !isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit) &&
                       activeWorkspace.usage.activeProjects /
                         Math.max(1, activeWorkspace.quotas.activeProjectsLimit) >=
                         0.8
-                    ? "text-warning font-medium"
+                    ? "text-warning font-semibold"
                     : "",
               )}
             >
@@ -829,30 +832,28 @@ export function DashboardProjectsClient({
                 ? "Unlimited"
                 : activeWorkspace.quotas.activeProjectsLimit}
             </span>
-            <span>·</span>
-            <span>
+            <span className="rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1">
               Published: {activeWorkspace.usage.publishedProjects}/
               {isUnlimitedProjectsLimit(activeWorkspace.quotas.publishedProjectsLimit)
                 ? "Unlimited"
                 : activeWorkspace.quotas.publishedProjectsLimit}
             </span>
-            <span>·</span>
             <span
               className={cn(
+                "rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1",
                 activeWorkspace.usage.storageBytes >= activeWorkspace.quotas.storageBytesLimit
-                  ? "text-destructive font-medium"
+                  ? "text-destructive font-semibold"
                   : activeWorkspace.usage.storageBytes /
                         Math.max(1, activeWorkspace.quotas.storageBytesLimit) >=
                       0.8
-                    ? "text-warning font-medium"
+                    ? "text-warning font-semibold"
                     : "",
               )}
             >
               Storage: {formatBytesCompact(activeWorkspace.usage.storageBytes)}/
               {formatBytesCompact(activeWorkspace.quotas.storageBytesLimit)}
             </span>
-            <span>·</span>
-            <span>
+            <span className="rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1">
               Exports: {activeWorkspace.usage.monthlyExportsUsed}/
               {activeWorkspace.quotas.monthlyExportsLimit}
             </span>
@@ -1060,79 +1061,100 @@ export function DashboardProjectsClient({
     </>
   );
 
-  // Empty state matching Figma 2:2172 1:1
+  // Empty state — Studio Stage + Numbered Bento Steps
   if (projects.length === 0) {
     return (
-      <div className="mx-auto flex max-w-6xl flex-col gap-9">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8">
         {workspaceBar}
 
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <header className="v3-pattern-grid relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
           <div className="flex flex-col gap-2.5">
-            <Eyebrow className="w-fit">Case Study Builder</Eyebrow>
-            <h1 className="type-display-m sm:type-display-l text-foreground">Your case studies</h1>
-            <p className="text-muted-foreground type-body-m">
+            <Eyebrow className="w-fit">
+              Case Study Builder
+            </Eyebrow>
+            <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+              Your case studies
+            </h1>
+            <p className="v3-body-m text-[var(--cf-text-secondary)]">
               Turn finished projects into polished, publishable stories.
             </p>
           </div>
 
-          <Button asChild size="lg" className="w-fit">
-            <Link href={createProjectHref}>
-              <Plus className="size-4" />
-              New project
-            </Link>
-          </Button>
+          <Link href={createProjectHref} className="v3-btn-primary w-fit py-2.5 pr-3 pl-5 text-sm">
+            <span>New project</span>
+            <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+              <Plus className="size-3.5" />
+            </span>
+          </Link>
         </header>
 
         <section
           data-testid="dashboard-empty-state"
           aria-labelledby="empty-dashboard-heading"
-          className="border-border/80 bg-elevated shadow-card flex flex-col items-center justify-between gap-12 rounded-3xl border px-6 py-16 text-center sm:px-14 sm:py-20"
+          className="v3-pattern-dots-light flex flex-col items-center justify-between gap-12 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center sm:px-14 sm:py-20"
         >
           <div className="flex flex-col items-center gap-6">
-            <div aria-hidden="true" className="relative flex h-44 w-64 items-center justify-center">
-              <div className="bg-accent/80 absolute h-34 w-48 -rotate-4 rounded-2xl" />
-              <div className="bg-sunken absolute h-34 w-48 translate-x-2 translate-y-1 rotate-3 rounded-2xl" />
-              <div className="border-border/80 bg-elevated shadow-float relative flex h-34 w-48 flex-col justify-between rounded-2xl border p-5 text-left">
-                <span className="text-accent-foreground type-display-m leading-none">Aa</span>
-                <div className="flex flex-col gap-2">
-                  <span className="bg-sunken block h-2 w-28 rounded-full" />
-                  <span className="bg-sunken block h-2 w-18 rounded-full" />
-                </div>
+            <div aria-hidden="true" className="grid w-full max-w-xs grid-cols-3 gap-2.5">
+              <div className="flex h-28 flex-col justify-between rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3 text-left">
+                <span className="font-mono text-xs font-bold text-[var(--cf-royal-text)]">01</span>
+                <span className="font-display text-xs font-bold text-[var(--cf-text-primary)]">
+                  Template
+                </span>
+              </div>
+              <div className="flex h-28 flex-col justify-between rounded-2xl bg-[var(--cf-royal)] p-3 text-left text-[var(--cf-text-on-royal)]">
+                <span className="font-mono text-xs font-bold text-[var(--cf-bg-accent)]">02</span>
+                <span className="font-display text-xs font-bold">Screens</span>
+              </div>
+              <div className="flex h-28 flex-col justify-between rounded-2xl bg-[var(--cf-bg-accent)] p-3 text-left text-[var(--cf-text-on-accent)]">
+                <span className="font-mono text-xs font-bold">03</span>
+                <span className="font-display text-xs font-bold">Publish</span>
               </div>
             </div>
 
             <div className="flex max-w-lg flex-col gap-2.5">
-              <h2 id="empty-dashboard-heading" className="text-foreground type-heading-l">
+              <h2
+                id="empty-dashboard-heading"
+                className="v3-heading-m text-[var(--cf-text-primary)]"
+              >
                 Your first case study starts here
               </h2>
-              <p className="text-muted-foreground type-body-m">
+              <p className="v3-body-m text-[var(--cf-text-secondary)]">
                 Create a project, pick a curated Casefolio template, and drop in your screens.
                 Publish a live link or export high-resolution PNG and PDF files.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-              <Button size="lg" asChild>
-                <Link href={createProjectHref}>
-                  <Plus className="size-4" />
-                  Create your first project
-                </Link>
-              </Button>
-              <Button variant="secondary" size="lg" asChild>
-                <Link href="/templates">Browse templates</Link>
-              </Button>
+              <Link href={createProjectHref} className="v3-btn-primary py-3 pr-3.5 pl-5 text-sm">
+                <span>Create your first project</span>
+                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                  <Plus className="size-3.5" />
+                </span>
+              </Link>
+              <Link href="/templates" className="v3-btn-secondary py-3 px-5 text-sm">
+                Browse templates
+              </Link>
             </div>
           </div>
 
           <div className="grid w-full max-w-4xl grid-cols-1 gap-4 pt-2 text-left sm:grid-cols-3">
-            {EMPTY_STATE_HINTS.map((hint) => (
+            {EMPTY_STATE_HINTS.map((hint, index) => (
               <div
                 key={hint.step}
-                className="border-border/70 bg-surface/70 flex flex-col gap-1.5 rounded-2xl border p-5"
+                className="flex flex-col gap-2.5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-5"
               >
-                <span className="text-primary type-overline font-mono">{hint.step}</span>
-                <h3 className="text-foreground type-body-m-strong">{hint.title}</h3>
-                <p className="text-muted-foreground type-body-s">{hint.description}</p>
+                <span
+                  className={cn(
+                    "inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-xs font-bold tracking-wider uppercase",
+                    index === 1
+                      ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+                      : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
+                  )}
+                >
+                  {hint.step}
+                </span>
+                <h3 className="v3-heading-s text-[var(--cf-text-primary)]">{hint.title}</h3>
+                <p className="v3-body-s text-[var(--cf-text-secondary)]">{hint.description}</p>
               </div>
             ))}
           </div>
@@ -1159,7 +1181,7 @@ export function DashboardProjectsClient({
   ];
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8">
+    <div className="mx-auto flex max-w-6xl flex-col gap-7">
       {workspaceBar}
 
       {lockedByDowngradeCount > 0 && (
@@ -1193,12 +1215,16 @@ export function DashboardProjectsClient({
         </div>
       )}
 
-      {/* Header + status segments + New project CTA (Figma 2:2076) */}
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      {/* Studio Header Banner + Status Command Tabs + New Project CTA */}
+      <header className="v3-pattern-grid relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-2.5">
-          <Eyebrow className="w-fit">Case Study Builder</Eyebrow>
-          <h1 className="type-display-m sm:type-display-l text-foreground">Your case studies</h1>
-          <p className="text-muted-foreground type-body-m">
+          <Eyebrow className="w-fit">
+            Case Study Builder
+          </Eyebrow>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            Your case studies
+          </h1>
+          <p className="v3-body-m text-[var(--cf-text-secondary)]">
             Turn finished projects into polished, publishable stories.
           </p>
         </div>
@@ -1207,7 +1233,7 @@ export function DashboardProjectsClient({
           <div
             role="group"
             aria-label="Filter projects by status"
-            className="border-border/70 bg-sunken/80 inline-flex flex-wrap items-center gap-1 rounded-full border p-1"
+            className="inline-flex flex-wrap items-center gap-1 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1"
           >
             {statusTabs.map((tab) => {
               const active = statusFilter === tab.id;
@@ -1218,10 +1244,10 @@ export function DashboardProjectsClient({
                   aria-pressed={active}
                   onClick={() => setStatusFilter(tab.id)}
                   className={cn(
-                    "type-body-s-strong focus-visible:ring-ring/40 rounded-full px-4 py-1.5 transition-all outline-none focus-visible:ring-2",
+                    "focus-visible:ring-ring/40 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
                     active
-                      ? "bg-elevated text-foreground shadow-card"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                      : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                   )}
                 >
                   {tab.label}
@@ -1230,29 +1256,31 @@ export function DashboardProjectsClient({
             })}
           </div>
 
-          <Button asChild size="lg">
-            <Link href={createProjectHref}>
-              <Plus className="size-4" />
-              New project
-            </Link>
-          </Button>
+          <Link href={createProjectHref} className="v3-btn-primary py-2.5 pr-3 pl-5 text-sm">
+            <span>New project</span>
+            <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+              <Plus className="size-3.5" />
+            </span>
+          </Link>
         </div>
       </header>
 
-      {/* Search, type filter, sort & quick-create bar (Figma 2:3534) */}
-      <div className="border-border/70 bg-elevated/85 shadow-card flex flex-col gap-3 rounded-3xl border p-3 backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search
+      {/* Studio Command Filter Dock */}
+      <div className="flex flex-col gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <span
             aria-hidden="true"
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
-          />
+            className="pointer-events-none absolute top-1/2 left-2.5 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-lg bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]"
+          >
+            <Search className="size-3.5" />
+          </span>
           <input
             type="search"
             aria-label="Search projects"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search projects…"
-            className="border-border/80 bg-surface/80 text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/40 type-body-s h-10 w-full rounded-full border pr-4 pl-10 transition-colors outline-none focus-visible:bg-elevated focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 type-body-s h-11 w-full rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pr-4 pl-11 text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-royal)] focus-visible:bg-[var(--cf-bg-elevated)] focus-visible:ring-2"
           />
         </div>
 
@@ -1264,7 +1292,7 @@ export function DashboardProjectsClient({
             id="dashboard-type-filter"
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
-            className="border-border/80 bg-surface/80 text-foreground focus-visible:ring-ring/40 type-body-s h-10 rounded-full border px-4 outline-none focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 type-body-s h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 font-medium text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
           >
             <option value="all">Type: Any</option>
             <option value="mobile">Type: Mobile app</option>
@@ -1279,27 +1307,27 @@ export function DashboardProjectsClient({
             id="dashboard-sort-select"
             value={sortMode}
             onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className="border-border/80 bg-surface/80 text-foreground focus-visible:ring-ring/40 type-body-s h-10 rounded-full border px-4 outline-none focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 type-body-s h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 font-medium text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
           >
             <option value="updated">Sort: Last edited</option>
             <option value="created">Sort: Newest</option>
             <option value="name">Sort: Name (A–Z)</option>
           </select>
 
-          <div className="border-border/70 hidden items-center gap-1.5 border-l pl-3 xl:flex">
-            <span className="text-muted-foreground type-caption">Quick create:</span>
+          <div className="hidden items-center gap-2 border-l border-[var(--cf-border-subtle)] pl-3 xl:flex">
+            <span className="v3-label text-[var(--cf-text-tertiary)] uppercase">Quick create</span>
             <Link
               href="/new?type=mobile"
-              className="border-border/80 bg-surface hover:bg-elevated text-foreground type-caption inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-2xs transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-royal-border)] bg-[var(--cf-royal-soft)] px-3 py-2 text-xs font-semibold text-[var(--cf-royal-text)] transition-colors hover:bg-[var(--cf-royal)] hover:text-[var(--cf-text-on-royal)]"
             >
-              <Smartphone className="size-3" />
+              <Smartphone className="size-3.5" />
               Mobile
             </Link>
             <Link
               href="/new?type=web"
-              className="border-border/80 bg-surface hover:bg-elevated text-foreground type-caption inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-2xs transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 py-2 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)]"
             >
-              <Monitor className="size-3" />
+              <Monitor className="size-3.5" />
               Website
             </Link>
           </div>
@@ -1313,36 +1341,36 @@ export function DashboardProjectsClient({
         </p>
       )}
 
-      {/* No search results matching Figma 2:3694 */}
+      {/* No search results */}
       {visibleProjects.length === 0 && hasFilters ? (
         <div
           data-testid="dashboard-no-results"
-          className="border-border/80 bg-elevated shadow-card flex flex-col items-center justify-center gap-3.5 rounded-3xl border px-6 py-16 text-center"
+          className="v3-pattern-dots-light flex flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center"
         >
           <span
             aria-hidden="true"
-            className="bg-sunken text-muted-foreground inline-flex size-14 items-center justify-center rounded-2xl"
+            className="inline-flex size-14 items-center justify-center rounded-2xl bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]"
           >
             <Search className="size-6" />
           </span>
-          <h2 className="text-foreground type-heading-m">
+          <h2 className="v3-heading-m text-[var(--cf-text-primary)]">
             {searchQuery.trim()
               ? `No projects match “${searchQuery.trim()}”`
               : "No matching projects"}
           </h2>
-          <p className="text-muted-foreground type-body-s">Try another name, or clear filters.</p>
-          <Button
+          <p className="v3-body-s text-[var(--cf-text-secondary)]">
+            Try another name, or clear filters.
+          </p>
+          <button
             type="button"
-            variant="secondary"
-            size="sm"
             onClick={handleClearFilters}
-            className="mt-1"
+            className="v3-btn-secondary mt-1 py-2 text-xs font-semibold"
           >
             Clear filters
-          </Button>
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {visibleProjects.map((project, idx) => {
             const palette = ARTWORK_PALETTES[idx % ARTWORK_PALETTES.length]!;
             const badge = resolveProjectStatusBadge(project);
@@ -1352,55 +1380,75 @@ export function DashboardProjectsClient({
                 : "";
             const subtitle = `${formatProjectTypeLabel(project.type)} · ${formatRelativeEdited(project.updatedAtIso, mountedNowMs)}${spaceLabel}`;
             const isBusy = busyProjectId === project.id;
+            const indexLabel = String(idx + 1).padStart(2, "0");
+            const windowPath = project.slug ? `p/${project.slug}` : `draft/${project.templateName.toLowerCase()}`;
 
             return (
               <article
                 key={project.id}
                 data-slot="project-card"
                 data-project-id={project.id}
-                className="border-border/80 bg-elevated text-card-foreground shadow-card hover:border-border-strong hover:shadow-float group relative flex min-w-0 flex-col gap-3.5 rounded-3xl border p-3.5 transition-all duration-200 hover:-translate-y-0.5"
+                className="group relative flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground transition-all duration-200 hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
               >
-                <Link
-                  href={`/editor/${project.id}`}
-                  aria-label={`Open ${project.name} in editor`}
-                  className="focus-visible:ring-ring/40 block overflow-hidden rounded-2xl outline-none focus-visible:ring-2"
-                >
-                  {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
-                    <TemplateThumbnail
-                      testId={`dashboard-project-thumb-${project.id}`}
-                      coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
-                      slug={project.templateSlug}
-                      name={project.name}
-                      className="h-48 w-full rounded-2xl"
-                      imageClassName="group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div
-                      className={`relative h-48 w-full overflow-hidden rounded-2xl ${palette.surface}`}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={`type-heading-l absolute top-5 left-5 select-none ${palette.glyph}`}
-                      >
-                        Aa
-                      </span>
-                      <div
-                        aria-hidden="true"
-                        className={`absolute right-34 bottom-0 h-32 w-24 rounded-t-xl transition-transform duration-300 group-hover:-translate-y-1 ${palette.leftBar}`}
-                      />
-                      <div
-                        aria-hidden="true"
-                        className="bg-elevated shadow-card border-border/60 absolute right-5 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
-                      />
-                    </div>
-                  )}
-                </Link>
+                {/* Architectural Spec Bar */}
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="inline-flex h-5 shrink-0 items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
+                      {indexLabel}
+                    </span>
+                    <span className="truncate font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)]">
+                      {windowPath}
+                    </span>
+                  </div>
+                </div>
 
-                <div className="flex min-w-0 flex-col gap-1 px-1.5 pb-1.5">
+                <div className="p-3.5 pb-0">
+                  <Link
+                    href={`/editor/${project.id}`}
+                    aria-label={`Open ${project.name} in editor`}
+                    className="focus-visible:ring-ring/40 block overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] outline-none focus-visible:ring-2"
+                  >
+                    {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
+                      <TemplateThumbnail
+                        testId={`dashboard-project-thumb-${project.id}`}
+                        coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
+                        slug={project.templateSlug}
+                        name={project.name}
+                        className="aspect-[16/10] w-full"
+                        imageClassName="group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div
+                        className={`relative aspect-[16/10] w-full overflow-hidden ${palette.surface}`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`type-heading-l absolute top-5 left-5 select-none ${palette.glyph}`}
+                        >
+                          Aa
+                        </span>
+                        <div
+                          aria-hidden="true"
+                          className="absolute right-30 bottom-0 h-32 w-24 rounded-t-xl bg-[var(--cf-royal)] transition-transform duration-300 group-hover:-translate-y-1"
+                        />
+                        <div
+                          aria-hidden="true"
+                          className="absolute right-20 bottom-0 h-22 w-14 rounded-t-xl bg-[var(--cf-bg-accent)] transition-transform duration-300 group-hover:-translate-y-2"
+                        />
+                        <div
+                          aria-hidden="true"
+                          className="bg-elevated shadow-card border-border/60 absolute right-4 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
+                        />
+                      </div>
+                    )}
+                  </Link>
+                </div>
+
+                <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 p-4 pt-3.5">
                   <div className="flex min-w-0 items-center justify-between gap-2">
                     <Link
                       href={`/editor/${project.id}`}
-                      className="text-foreground type-heading-s hover:text-primary min-w-0 truncate transition-colors"
+                      className="v3-heading-s min-w-0 truncate text-[var(--cf-text-primary)] transition-colors hover:text-[var(--cf-royal)]"
                     >
                       {project.name}
                     </Link>
@@ -1420,7 +1468,7 @@ export function DashboardProjectsClient({
                             type="button"
                             aria-label={`Actions for ${project.name}`}
                             disabled={isBusy}
-                            className="text-muted-foreground hover:bg-surface hover:text-foreground focus-visible:ring-ring/40 inline-flex size-8 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-2"
+                            className="focus-visible:ring-ring/40 inline-flex size-8 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] hover:text-[var(--cf-royal-text)] focus-visible:ring-2"
                           >
                             {isBusy ? (
                               <Loader2 className="size-4 animate-spin" />
@@ -1430,7 +1478,7 @@ export function DashboardProjectsClient({
                           </button>
                         </DropdownMenuTrigger>
 
-                        {/* Context menu matching Figma 2:2583 + Space & Archive actions */}
+                        {/* Context menu + Space & Archive actions */}
                         <DropdownMenuContent align="end" className="w-56">
                           {project.isLockedByDowngrade && (
                             <>
@@ -1448,7 +1496,9 @@ export function DashboardProjectsClient({
                           <DropdownMenuItem asChild>
                             <Link href={`/editor/${project.id}`}>
                               <ExternalLink className="size-4" />
-                              <span>{project.isLockedByDowngrade ? "View read-only" : "Open editor"}</span>
+                              <span>
+                                {project.isLockedByDowngrade ? "View read-only" : "Open editor"}
+                              </span>
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => openRenameModal(project)}>
@@ -1518,7 +1568,12 @@ export function DashboardProjectsClient({
                     </div>
                   </div>
 
-                  <p className="text-muted-foreground type-body-s truncate">{subtitle}</p>
+                  <div className="flex items-center justify-between gap-2 border-t border-[var(--cf-border-subtle)]/70 pt-2">
+                    <p className="v3-body-s truncate text-[var(--cf-text-secondary)]">{subtitle}</p>
+                    <span className="shrink-0 rounded-md bg-[var(--cf-bg-canvas)] px-2 py-0.5 text-[0.6875rem] font-semibold text-[var(--cf-text-tertiary)]">
+                      {project.templateName}
+                    </span>
+                  </div>
                 </div>
               </article>
             );

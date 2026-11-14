@@ -89,13 +89,19 @@ export function NotificationsPageClient({
   return (
     <div
       data-testid="notifications-page"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-2 py-4 sm:px-6 sm:py-6 lg:px-8"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-6 sm:gap-8"
     >
-      {/* Page header (Matches Figma 2:9726) */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Eyebrow className="w-fit">Inbox</Eyebrow>
-          <h1 className="text-foreground type-display-m">Notifications</h1>
+      <header className="v3-pattern-grid relative flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+        <div className="flex flex-col gap-2.5">
+          <Eyebrow className="w-fit">
+            Inbox
+          </Eyebrow>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            Notifications
+          </h1>
+          <p className="max-w-xl text-sm text-[var(--cf-text-secondary)]">
+            Real-time updates on completed exports, published case studies, and billing events.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -118,15 +124,14 @@ export function NotificationsPageClient({
             </Link>
           </Button>
         </div>
-      </div>
+      </header>
 
-      {/* Filter segments (Matches Figma 2:9742) */}
       <div>
         <div
           role="group"
           aria-label="Filter notifications"
           data-testid="notifications-filter-bar"
-          className="border-border/70 bg-sunken/80 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border p-1"
+          className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5"
         >
           {FILTER_TABS.map((tab) => {
             const isActive = activeFilter === tab.key;
@@ -138,10 +143,10 @@ export function NotificationsPageClient({
                 aria-pressed={isActive}
                 onClick={() => setActiveFilter(tab.key)}
                 className={cn(
-                  "focus-visible:ring-ring/40 shrink-0 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2 sm:px-4",
+                  "shrink-0 rounded-md px-4 py-2 text-sm transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/40",
                   isActive
-                    ? "bg-elevated text-foreground shadow-card type-body-s-strong"
-                    : "text-muted-foreground hover:text-foreground type-body-s",
+                    ? "bg-[var(--cf-royal)] font-semibold text-[var(--cf-text-on-royal)]"
+                    : "font-medium text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
                 )}
               >
                 {tab.label}
@@ -151,18 +156,17 @@ export function NotificationsPageClient({
         </div>
       </div>
 
-      {/* List or Empty state (Matches Figma 2:9753 & 2:9892) */}
       {visibleItems.length === 0 ? (
         <section
           data-testid="notifications-empty-state"
-          className="border-border/80 bg-elevated shadow-card flex flex-col items-start gap-4 rounded-3xl border p-8 sm:p-14"
+          className="v3-pattern-dots-light flex flex-col items-start gap-4 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-8 sm:p-14"
         >
-          <div className="bg-success-soft text-success flex size-14 items-center justify-center rounded-2xl">
+          <div className="flex size-14 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
             <Check className="size-6" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <h2 className="text-foreground type-heading-l">You’re all caught up</h2>
-            <p className="text-muted-foreground type-body-m max-w-md">
+            <h2 className="v3-heading-m text-[var(--cf-text-primary)]">You’re all caught up</h2>
+            <p className="max-w-md text-sm leading-relaxed text-[var(--cf-text-secondary)]">
               We’ll let you know when exports finish or pages go live.
             </p>
           </div>
@@ -170,7 +174,7 @@ export function NotificationsPageClient({
       ) : (
         <section
           data-testid="notifications-page-list"
-          className="border-border/80 bg-elevated shadow-card divide-border/70 divide-y overflow-hidden rounded-3xl border"
+          className="divide-y divide-[var(--cf-border-subtle)] overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
         >
           {visibleItems.map((item) => (
             <NotificationRow

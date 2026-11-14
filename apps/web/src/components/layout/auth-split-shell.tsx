@@ -12,28 +12,50 @@ export function AuthSplitShell({ children }: { children: ReactNode }) {
         Skip to main content
       </a>
 
-      {/* Left value-prop panel — brand wash with floating UI cards */}
+      {/* Left value-prop panel — Electric Royal Blue & Acid Lime studio showcase */}
       <aside
         aria-label="Casefolio overview"
         className="hidden p-3 lg:flex lg:w-5/12 xl:w-[34rem]"
       >
-        <div className="bg-wash-panel relative flex w-full flex-col justify-between overflow-hidden rounded-[2rem] p-10">
-          <BrandLogo href="/" />
+        <div className="v3-pattern-dots-dark v3-sheet-royal relative flex w-full flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--cf-border-on-royal)] p-10">
+          <BrandLogo href="/" inverted subtitle="STUDIO" />
 
-          <div className="flex flex-col gap-5 py-12">
-            <h2 className="type-section text-foreground text-balance">
-              Your work deserves a clearer story.
+          <div className="flex flex-col gap-5 py-10">
+            <span className="bg-brand-lime text-brand-on-lime type-overline inline-flex w-fit items-center rounded-md px-2.5 py-1">
+              01 · Case Study System
+            </span>
+            <h2 className="type-section text-inherit text-balance">
+              Your work deserves an unforgettable{" "}
+              <span className="v3-sticker-lime">story.</span>
             </h2>
-            <p className="text-muted-foreground type-lead max-w-sm">
-              Choose a curated case study template, frame your screens in device mockups, and
-              publish live or export for Behance and PDF in minutes.
+            <p className="type-lead max-w-sm text-inherit">
+              Choose a curated case study template, frame your screens in ratio-locked mockups,
+              and publish live or export for Behance and PDF in minutes.
             </p>
           </div>
 
-          <div aria-hidden="true" className="grid grid-cols-3 items-end gap-3.5">
-            <div className="bg-primary shadow-float h-40 -rotate-3 rounded-2xl" />
-            <div className="bg-elevated shadow-float h-32 rotate-2 rounded-2xl" />
-            <div className="bg-inverse shadow-float h-44 rotate-3 rounded-2xl" />
+          <div aria-hidden="true" className="grid grid-cols-3 items-stretch gap-3">
+            <div className="bg-elevated text-foreground flex h-36 flex-col justify-between rounded-2xl border border-border p-3.5">
+              <span className="text-primary font-mono text-xs font-bold">01</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-display text-xs font-bold">Ratio-locked</span>
+                <span className="text-muted-foreground text-[0.6875rem]">9:19.5 · 16:10</span>
+              </div>
+            </div>
+            <div className="bg-brand-lime text-brand-on-lime flex h-36 flex-col justify-between rounded-2xl p-3.5">
+              <span className="font-mono text-xs font-bold">02</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-display text-xs font-bold">1-click themes</span>
+                <span className="text-[0.6875rem] font-medium">AA contrast</span>
+              </div>
+            </div>
+            <div className="bg-inverse text-inverse-foreground flex h-36 flex-col justify-between rounded-2xl p-3.5">
+              <span className="font-mono text-xs font-bold text-[var(--cf-bg-accent)]">03</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-display text-xs font-bold">Live &amp; PDF</span>
+                <span className="text-[0.6875rem] font-medium">1440w Behance</span>
+              </div>
+            </div>
           </div>
         </div>
       </aside>

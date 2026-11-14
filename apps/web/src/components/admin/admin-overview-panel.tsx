@@ -29,12 +29,16 @@ export function AdminOverviewPanel({ metrics }: { metrics: AdminOverviewMetrics 
 
   return (
     <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-8">
-      {/* Page header (Figma 31:6749) */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-2">
-          <Eyebrow className="w-fit">Platform Overview</Eyebrow>
-          <h1 className="type-display-m text-foreground">Overview</h1>
-          <p className="text-muted-foreground type-body-s">
+      {/* Page header */}
+      <header className="v3-pattern-grid relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
+        <div className="flex min-w-0 flex-col gap-2.5">
+          <Eyebrow className="w-fit">
+            Platform Overview
+          </Eyebrow>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            Overview
+          </h1>
+          <p className="text-sm text-[var(--cf-text-secondary)]">
             Platform health for the last {metrics.rangeDays} days.
           </p>
         </div>
@@ -43,7 +47,7 @@ export function AdminOverviewPanel({ metrics }: { metrics: AdminOverviewMetrics 
           <div
             role="group"
             aria-label="Overview date range"
-            className="border-border/70 bg-sunken/80 inline-flex items-center gap-1 rounded-full border p-1"
+            className="inline-flex items-center gap-1 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1"
           >
             {ADMIN_OVERVIEW_RANGES.map((r) => {
               const active = metrics.range === r;
@@ -53,10 +57,10 @@ export function AdminOverviewPanel({ metrics }: { metrics: AdminOverviewMetrics 
                   href={`/admin?range=${r}`}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2",
+                    "rounded-lg px-3.5 py-1.5 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/40",
                     active
-                      ? "bg-elevated text-foreground shadow-card type-caption font-medium"
-                      : "text-muted-foreground hover:text-foreground type-caption",
+                      ? "bg-[var(--cf-royal)] font-semibold text-[var(--cf-text-on-royal)]"
+                      : "font-medium text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                   )}
                 >
                   {r}
@@ -69,7 +73,7 @@ export function AdminOverviewPanel({ metrics }: { metrics: AdminOverviewMetrics 
             <Link href="/admin/templates/new">Upload template</Link>
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* KPI cards (Figma 31:6765 + C-901 KPIs) */}
       <div

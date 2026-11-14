@@ -207,8 +207,8 @@ export function EditorCanvasPreview({
           className={cn(
             "shadow-float mx-auto w-full shrink-0 overflow-hidden transition-[border-radius,box-shadow] duration-200",
             viewport === "mobile"
-              ? "border-border/60 max-w-[390px] rounded-[28px] border"
-              : "border-border/60 max-w-[1440px] rounded-[28px] border",
+              ? "border-border/60 max-w-[390px] rounded-2xl border"
+              : "border-border/60 max-w-[1440px] rounded-xl border",
           )}
         >
           {puckData.content.map((section, index) => {
@@ -252,10 +252,10 @@ export function EditorCanvasPreview({
                     onSelectSection(index);
                   }}
                   className={cn(
-                    "type-caption focus-visible:ring-ring/40 absolute top-3 left-3 z-20 max-w-56 truncate rounded-full px-3 py-1 shadow-xs backdrop-blur-md transition-all outline-none focus-visible:ring-2",
+                    "type-caption focus-visible:ring-ring/40 absolute top-3 left-3 z-20 max-w-56 truncate rounded-md border border-transparent px-2.5 py-1 backdrop-blur-md transition-all outline-none focus-visible:ring-2",
                     isSelected
                       ? "bg-primary text-primary-foreground"
-                      : "bg-inverse/85 text-inverse-foreground opacity-85 group-hover/sec:opacity-100",
+                      : "bg-inverse/90 text-inverse-foreground opacity-85 group-hover/sec:opacity-100",
                   )}
                 >
                   {pillText}

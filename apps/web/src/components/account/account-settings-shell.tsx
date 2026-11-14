@@ -33,21 +33,29 @@ export function AccountSettingsShell({ activeTab, children }: AccountSettingsShe
   return (
     <div
       data-testid="account-settings-shell"
-      className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 sm:gap-8"
+      className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6 sm:gap-8"
     >
-      <header className="flex flex-col gap-2">
-        <Eyebrow className="w-fit">Settings</Eyebrow>
-        <h1 className="text-foreground type-heading-l sm:type-display-m">
-          Account settings
-        </h1>
+      <header className="v3-pattern-grid relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+        <div className="flex flex-col gap-2.5">
+          <Eyebrow className="w-fit">
+            Settings
+          </Eyebrow>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            Account settings
+          </h1>
+          <p className="max-w-xl text-sm text-[var(--cf-text-secondary)]">
+            Manage your profile, security credentials, subscription billing, invoices, and studio
+            team seats.
+          </p>
+        </div>
       </header>
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-[210px_minmax(0,1fr)] md:gap-10">
+      <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-[230px_minmax(0,1fr)] md:gap-8">
         <nav
           aria-label="Account sections"
-          className="flex min-w-0 flex-wrap gap-1.5 self-start md:flex-col md:gap-1"
+          className="flex min-w-0 flex-wrap gap-1.5 self-start rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2 md:flex-col"
         >
-          {ACCOUNT_TABS.map((tab) => {
+          {ACCOUNT_TABS.map((tab, index) => {
             const isActive = tab.key === activeTab;
             return (
               <Link
@@ -56,13 +64,23 @@ export function AccountSettingsShell({ activeTab, children }: AccountSettingsShe
                 aria-current={isActive ? "page" : undefined}
                 data-testid={`account-tab-${tab.key}`}
                 className={cn(
-                  "focus-visible:ring-ring/40 inline-flex items-center rounded-full border px-4 py-2 transition-all outline-none focus-visible:ring-2",
+                  "inline-flex items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/40",
                   isActive
-                    ? "border-border/80 bg-elevated text-foreground shadow-card type-body-s-strong"
-                    : "text-muted-foreground hover:bg-elevated/70 hover:text-foreground type-body-s border-transparent",
+                    ? "bg-[var(--cf-royal)] font-semibold text-[var(--cf-text-on-royal)]"
+                    : "font-medium text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
                 )}
               >
-                {tab.label}
+                <span>{tab.label}</span>
+                <span
+                  className={cn(
+                    "rounded-md px-1.5 py-0.5 font-mono text-[0.6875rem] font-bold",
+                    isActive
+                      ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+                      : "bg-[var(--cf-bg-sunken)] text-[var(--cf-text-tertiary)]",
+                  )}
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
               </Link>
             );
           })}

@@ -61,7 +61,7 @@ describe("Onboarding 3-step wizard UI (C-203)", () => {
       designFocus: "both",
       image: null,
     });
-    expect(pushMock).toHaveBeenCalledWith("/dashboard?welcome=1");
+    expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 });
 

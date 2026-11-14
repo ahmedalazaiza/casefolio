@@ -39,7 +39,7 @@ describe("PricingPageClient (3 Paid Cards + Free Onboarding + 4-Tier Matrix)", (
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Simple pricing for solo designers, studios, and agencies",
+        name: "Simple tiers for solo designers & scaling studios.",
       }),
     ).toBeInTheDocument();
 
