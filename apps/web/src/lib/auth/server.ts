@@ -32,6 +32,7 @@ import {
   normalizeInviteEmail,
 } from "@/lib/entitlements/team-invitations";
 import { sanitizeErrorForLogging } from "@/lib/security/redact";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
 export const auth = betterAuth({
   appName: "Casefolio",
@@ -59,6 +60,9 @@ export const auth = betterAuth({
     },
   }),
   advanced: {
+    ipAddress: {
+      ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"],
+    },
     database: {
       generateId: "uuid",
     },
@@ -70,6 +74,32 @@ export const auth = betterAuth({
         const gate = checkPlatformAuthGate({ path: ctx.path, platform });
         if (!gate.allowed) {
           throw new APIError("FORBIDDEN", { message: gate.message });
+        }
+      }
+
+      if (
+        ctx.path === "/email-otp/send-verification-otp" ||
+        ctx.path === "/email-otp/request-email-change"
+      ) {
+        const body = (ctx.body ?? {}) as { email?: unknown; newEmail?: unknown };
+        const candidate =
+          typeof body.email === "string"
+            ? body.email
+            : typeof body.newEmail === "string"
+              ? body.newEmail
+              : null;
+        const rawEmail = candidate ? candidate.trim().toLowerCase() : null;
+        if (rawEmail) {
+          const resendGate = await consumeSharedRateLimit({
+            key: `otp-resend:${ctx.path}:${rawEmail}`,
+            limit: 1,
+            windowMs: 60_000,
+          });
+          if (!resendGate.allowed) {
+            throw new APIError("TOO_MANY_REQUESTS", {
+              message: `Please wait ${resendGate.retryAfterSeconds}s before requesting another code.`,
+            });
+          }
         }
       }
 
@@ -94,9 +124,15 @@ export const auth = betterAuth({
             .where(eq(dbSchema.users.email, rawEmail))
             .limit(1);
 
-          if (targetUser?.suspended) {
+          // S4 anti-enumeration: never reveal account suspension before password/OTP verification!
+          // `databaseHooks.session.create.before` enforces suspension AFTER valid credentials.
+          if (
+            targetUser?.suspended &&
+            (ctx.path === "/sign-in/magic-link" ||
+              ctx.path === "/email-otp/send-verification-otp")
+          ) {
             throw new APIError("FORBIDDEN", {
-              message: "Your account has been suspended. Please contact support.",
+              message: "Unable to send sign-in code right now. Please contact support if this persists.",
             });
           }
 
@@ -223,10 +259,25 @@ export const auth = betterAuth({
         required: false,
         input: false,
       },
+      deletionRequestedAt: {
+        type: "date",
+        required: false,
+        input: false,
+      },
+      deletionScheduledFor: {
+        type: "date",
+        required: false,
+        input: false,
+      },
     },
+  },
+  emailVerification: {
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
   },
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
     autoSignIn: true,
@@ -274,6 +325,10 @@ export const auth = betterAuth({
       otpLength: 6,
       expiresIn: 600,
       sendVerificationOnSignUp: true,
+      overrideDefaultEmailVerification: true,
+      changeEmail: {
+        enabled: true,
+      },
       async sendVerificationOTP({ email, otp, type }) {
         try {
           await sendVerificationOtpEmail({ email, otp, type });

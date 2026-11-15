@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
+import { isSimulatedBillingAllowed } from "@/env";
 import { getServerSession } from "@/lib/auth/session";
 import { completeSandboxCheckoutForUser } from "@/lib/billing/service";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  if (!isSimulatedBillingAllowed(process.env)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "SANDBOX_ONLY",
+        error: "Simulated sandbox checkout is disabled in this environment.",
+      },
+      { status: 403 },
+    );
+  }
+
   const sessionData = await getServerSession();
   if (!sessionData) {
     return NextResponse.json(

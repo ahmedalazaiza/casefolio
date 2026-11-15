@@ -95,7 +95,7 @@ export const paddleWebhookEnvelopeSchema = z.object({
   event_id: z.string().min(3).max(200),
   event_type: z.string().min(3).max(120),
   occurred_at: z.string().optional(),
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
 });
 
 export type PaddleWebhookEnvelope = z.infer<typeof paddleWebhookEnvelopeSchema>;

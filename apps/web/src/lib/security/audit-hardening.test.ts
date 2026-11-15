@@ -471,7 +471,7 @@ describe("Principal Security & Architectural Audit Regression Suite", () => {
   it("5. prevents /api/help/contact from acting as an anonymous third-party email relay", async () => {
     const { POST } = await import("@/app/api/help/contact/route");
     getServerSessionMock.mockResolvedValue(null);
-    renderAndDeliverEmailMock.mockResolvedValue(undefined);
+    renderAndDeliverEmailMock.mockResolvedValue({ delivered: true });
 
     const req = new Request("http://localhost:3000/api/help/contact", {
       method: "POST",
@@ -489,9 +489,18 @@ describe("Principal Security & Architectural Audit Regression Suite", () => {
 
     const res = await POST(req);
     expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; ticketCode: string; delivery: string };
+    expect(body.delivery).toBe("sent");
     expect(renderAndDeliverEmailMock).toHaveBeenCalledTimes(1);
     expect(renderAndDeliverEmailMock.mock.calls[0]?.[0]?.to).toBe("support@casefolio.com");
     expect(renderAndDeliverEmailMock.mock.calls[0]?.[0]?.department).toBe("support");
+    const [stored] = await db
+      .select()
+      .from(dbSchema.supportTickets)
+      .where(eq(dbSchema.supportTickets.code, body.ticketCode));
+    expect(stored?.email).toBe("victim@external-domain.example");
+    expect(stored?.subject).not.toMatch(/[\r\n]/);
+    await db.delete(dbSchema.supportTickets).where(eq(dbSchema.supportTickets.code, body.ticketCode));
   });
 
   it("6. neutralizes CSV formula injection, hardens proxy IP extraction, and bounds rate-limit buckets", () => {

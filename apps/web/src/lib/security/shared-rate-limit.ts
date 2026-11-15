@@ -2,20 +2,43 @@ import { sql } from "@casefolio/db";
 import { db } from "@/lib/db";
 import { consumeUploadRateLimit, type RateLimitCheckResult } from "@/lib/storage/rate-limit";
 
+export interface SharedRateLimitInput {
+  key: string;
+  limit: number;
+  windowMs: number;
+  now?: Date;
+}
+
 /**
  * Database-backed fixed-window limiter shared by every serverless instance.
  *
- * Use it for anonymous or abuse-prone endpoints (support form, reports, exports, invitation resend,
- * admin email, ...). The in-memory `consumeUploadRateLimit` is per-instance and only a best-effort
- * second line of defence. One atomic UPSERT per call; on a database error we degrade to the in-memory
- * limiter instead of failing open or taking the endpoint down.
+ * Supports both positional `(key, limit, windowMs, nowMs)` and object `{ key, limit, windowMs, now }`
+ * call styles. One atomic UPSERT per call; on a database error we degrade to the in-memory limiter
+ * instead of failing open or taking the endpoint down.
  */
+export async function consumeSharedRateLimit(
+  input: SharedRateLimitInput,
+): Promise<RateLimitCheckResult>;
 export async function consumeSharedRateLimit(
   key: string,
   limit: number,
   windowMs: number,
-  nowMs = Date.now(),
+  nowMs?: number,
+): Promise<RateLimitCheckResult>;
+export async function consumeSharedRateLimit(
+  keyOrInput: string | SharedRateLimitInput,
+  limitArg?: number,
+  windowMsArg?: number,
+  nowMsArg?: number,
 ): Promise<RateLimitCheckResult> {
+  const key = typeof keyOrInput === "string" ? keyOrInput : keyOrInput.key;
+  const limit = typeof keyOrInput === "string" ? (limitArg ?? 10) : keyOrInput.limit;
+  const windowMs = typeof keyOrInput === "string" ? (windowMsArg ?? 60_000) : keyOrInput.windowMs;
+  const nowMs =
+    typeof keyOrInput === "string"
+      ? (nowMsArg ?? Date.now())
+      : (keyOrInput.now?.getTime() ?? Date.now());
+
   const boundedKey = key.slice(0, 200);
   try {
     const result = await db.execute<{ count: number; window_start: string | number }>(sql`

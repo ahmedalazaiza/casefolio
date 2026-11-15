@@ -26,11 +26,18 @@ import { cn } from "@/lib/utils";
 type StudioTab = "catalog" | "compose";
 type PreviewViewport = "desktop" | "mobile" | "plaintext";
 
+interface RecipientOption {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export function AdminEmailsPanel({
   departments,
   templates,
   initialPreview,
   adminEmail,
+  isSuperadmin,
   liveResendConfigured,
   emailDomain,
 }: {
@@ -38,6 +45,7 @@ export function AdminEmailsPanel({
   templates: AdminEmailTemplateSummary[];
   initialPreview: AdminEmailPreviewPayload;
   adminEmail: string;
+  isSuperadmin: boolean;
   liveResendConfigured: boolean;
   emailDomain: string;
 }) {
@@ -48,14 +56,15 @@ export function AdminEmailsPanel({
   const [preview, setPreview] = useState<AdminEmailPreviewPayload>(initialPreview);
   const [loadingPreviewKey, setLoadingPreviewKey] = useState<string | null>(null);
 
-  const [testRecipient, setTestRecipient] = useState(adminEmail);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Direct Admin Notice form state
-  const [composeRecipientEmail, setComposeRecipientEmail] = useState("");
-  const [composeRecipientName, setComposeRecipientName] = useState("");
+  const [recipientQuery, setRecipientQuery] = useState("");
+  const [recipientMatches, setRecipientMatches] = useState<RecipientOption[]>([]);
+  const [recipientSearching, setRecipientSearching] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<RecipientOption | null>(null);
   const [composeSubject, setComposeSubject] = useState("");
   const [composeHeading, setComposeHeading] = useState("");
   const [composeMessage, setComposeMessage] = useState("");
@@ -114,7 +123,6 @@ export function AdminEmailsPanel({
         body: JSON.stringify({
           action: "send_test",
           templateKey: preview.key,
-          recipientEmail: testRecipient,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -129,16 +137,43 @@ export function AdminEmailsPanel({
       }
       setStatusNotice(
         data.delivered
-          ? `Test email delivered via Resend from ${data.from} to ${testRecipient}.`
+          ? `Test email delivered via Resend from ${data.from} to your address (${adminEmail}).`
           : `Rendered & verified from ${data.from} (local dev key active — add live RESEND_API_KEY on ${emailDomain} to deliver externally).`,
       );
     });
+  }
+
+  async function handleSearchRecipients() {
+    const q = recipientQuery.trim();
+    if (q.length < 2) {
+      setRecipientMatches([]);
+      return;
+    }
+    setRecipientSearching(true);
+    try {
+      const res = await fetch(`/api/admin/users?q=${encodeURIComponent(q)}&limit=5`, {
+        cache: "no-store",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        users?: Array<{ id: string; name: string; email: string }>;
+      };
+      setRecipientMatches(
+        (data.users ?? []).map((u) => ({ id: u.id, name: u.name, email: u.email })),
+      );
+    } finally {
+      setRecipientSearching(false);
+    }
   }
 
   function handleSendAdminNotice(event: React.FormEvent) {
     event.preventDefault();
     setErrorNotice(null);
     setStatusNotice(null);
+    if (!selectedRecipient) {
+      setErrorNotice("Choose an existing user to notify.");
+      return;
+    }
+    const recipient = selectedRecipient;
 
     startTransition(async () => {
       const res = await fetch("/api/admin/emails", {
@@ -146,8 +181,7 @@ export function AdminEmailsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "send_admin_notice",
-          recipientEmail: composeRecipientEmail,
-          recipientName: composeRecipientName || undefined,
+          targetUserId: recipient.id,
           subject: composeSubject,
           heading: composeHeading,
           message: composeMessage,
@@ -167,8 +201,8 @@ export function AdminEmailsPanel({
       }
       setStatusNotice(
         data.delivered
-          ? `Official notice sent from ${data.from} to ${composeRecipientEmail}.`
-          : `Official notice prepared from ${data.from} for ${composeRecipientEmail} (local dev mode active).`,
+          ? `Official notice sent from ${data.from} to ${recipient.email}.`
+          : `Official notice prepared from ${data.from} for ${recipient.email} (local dev mode active).`,
       );
       setComposeSubject("");
       setComposeHeading("");
@@ -417,21 +451,13 @@ export function AdminEmailsPanel({
                 </div>
               </dl>
 
-              {/* Send Test Dispatch Bar */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  type="email"
-                  value={testRecipient}
-                  onChange={(e) => setTestRecipient(e.target.value)}
-                  placeholder="Recipient email for test dispatch..."
-                  aria-label="Test email recipient"
-                  className="sm:flex-1"
-                />
-                <Button
-                  type="button"
-                  disabled={isPending || !testRecipient.trim()}
-                  onClick={handleSendTestEmail}
-                >
+              {/* Send Test Dispatch Bar: always delivered to the signed-in admin's own address */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-muted-foreground type-body-s min-w-0 truncate">
+                  Test emails are delivered only to your own address:{" "}
+                  <span className="text-foreground font-mono font-semibold">{adminEmail}</span>
+                </p>
+                <Button type="button" disabled={isPending} onClick={handleSendTestEmail}>
                   <Send className="size-4" />
                   Send test ({preview.senderAddress})
                 </Button>
@@ -458,6 +484,14 @@ export function AdminEmailsPanel({
             </Card>
           </div>
         </div>
+      ) : !isSuperadmin ? (
+        <Card className="mx-auto flex w-full max-w-3xl flex-col gap-2 p-6">
+          <h2 className="text-foreground type-heading-s">Superadmin only</h2>
+          <p className="text-muted-foreground type-body-s">
+            Official notices to users can only be sent by a superadmin. You can still preview
+            templates and send test emails to your own address.
+          </p>
+        </Card>
       ) : (
         /* Compose Official Admin Email Tab */
         <Card className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-6">
@@ -476,32 +510,65 @@ export function AdminEmailsPanel({
           </div>
 
           <form onSubmit={handleSendAdminNotice} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-foreground text-xs font-semibold" htmlFor="admin-to-email">
-                  Recipient email
-                </label>
-                <Input
-                  id="admin-to-email"
-                  type="email"
-                  required
-                  value={composeRecipientEmail}
-                  onChange={(e) => setComposeRecipientEmail(e.target.value)}
-                  placeholder="designer@studio.com"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-foreground text-xs font-semibold" htmlFor="admin-to-name">
-                  Recipient name (optional)
-                </label>
-                <Input
-                  id="admin-to-name"
-                  value={composeRecipientName}
-                  onChange={(e) => setComposeRecipientName(e.target.value)}
-                  placeholder="Lina Haddad"
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-foreground text-xs font-semibold" htmlFor="admin-to-search">
+                Recipient (existing user)
+              </label>
+              {selectedRecipient ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="accent">
+                    {selectedRecipient.name} · {selectedRecipient.email}
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedRecipient(null)}
+                  >
+                    Change
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      id="admin-to-search"
+                      value={recipientQuery}
+                      onChange={(e) => setRecipientQuery(e.target.value)}
+                      placeholder="Search users by name or email"
+                      className="sm:flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={recipientSearching || recipientQuery.trim().length < 2}
+                      onClick={() => void handleSearchRecipients()}
+                    >
+                      Search
+                    </Button>
+                  </div>
+                  {recipientMatches.length > 0 && (
+                    <ul className="flex flex-col gap-1" aria-label="Matching users">
+                      {recipientMatches.map((match) => (
+                        <li key={match.id}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => {
+                              setSelectedRecipient(match);
+                              setRecipientMatches([]);
+                            }}
+                          >
+                            {match.name} · {match.email}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -559,20 +626,20 @@ export function AdminEmailsPanel({
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-foreground text-xs font-semibold" htmlFor="admin-cta-url">
-                  Button URL (optional — defaults to /dashboard)
+                  Button URL (optional — must be a link on this site; defaults to /dashboard)
                 </label>
                 <Input
                   id="admin-cta-url"
                   type="url"
                   value={composeCtaUrl}
                   onChange={(e) => setComposeCtaUrl(e.target.value)}
-                  placeholder="https://casefolio.com/dashboard"
+                  placeholder={`https://${emailDomain}/dashboard`}
                 />
               </div>
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" disabled={isPending || !selectedRecipient}>
                 <Send className="size-4" />
                 Dispatch from {adminDept?.address ?? `admin@${emailDomain}`}
               </Button>

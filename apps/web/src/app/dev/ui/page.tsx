@@ -1,5 +1,6 @@
 import { Globe, Layers, Plus, Smartphone } from "lucide-react";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { DevUiInteractive } from "@/app/dev/ui/dev-ui-interactive";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AvatarBadge } from "@/components/ui/avatar-badge";
@@ -30,6 +31,11 @@ const PLAN_FEATURES = [
 ] as const;
 
 export default function DevUiPage() {
+  // The design-system showcase is a development tool: never served in production (staging included).
+  if (process.env.NODE_ENV === "production") {
+    notFound();
+  }
+
   return (
     <div className="bg-surface text-foreground min-h-screen">
       <header className="border-border bg-background/90 sticky top-0 z-30 border-b backdrop-blur-sm">

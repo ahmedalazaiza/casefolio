@@ -1,19 +1,17 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { after } from "next/server";
 import { cache } from "react";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
+import { PublicViewTracker } from "@/components/public/public-view-tracker";
 import { ReportCaseStudyButton } from "@/components/public/report-case-study-button";
 import { CasefolioWatermark } from "@/components/sections/casefolio-watermark";
-import { recordPublishedProjectView } from "@/lib/analytics/page-views";
 import {
   buildPublicCaseStudyUrl,
   getPublishedProjectBySlug,
   resolvePublicAppBaseUrl,
 } from "@/lib/projects/publish";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const getCachedPublishedProjectBySlug = cache((slug: string) =>
   getPublishedProjectBySlug(slug),
@@ -101,18 +99,6 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
     notFound();
   }
 
-  const requestHeaders = await headers();
-  const trackPromise = recordPublishedProjectView({
-    projectId: published.project.id,
-    headers: requestHeaders,
-  }).catch(() => undefined);
-
-  try {
-    after(() => trackPromise);
-  } catch {
-    await trackPromise;
-  }
-
   return (
     <main
       data-testid="public-case-study-page"
@@ -120,6 +106,7 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
       data-visibility={published.project.visibility}
       className="bg-background text-foreground min-h-screen w-full"
     >
+      <PublicViewTracker projectId={published.project.id} />
       <TemplatePuckRenderer
         puckData={published.puckData}
         theme={published.theme}

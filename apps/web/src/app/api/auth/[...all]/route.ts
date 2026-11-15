@@ -1,14 +1,15 @@
 import { toNextJsHandler } from "better-auth/next-js";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
-import { checkAuthEndpointRateLimit } from "@/lib/security/auth-rate-limit";
+import { checkSharedAuthEndpointRateLimit } from "@/lib/security/auth-rate-limit";
 
 const handlers = toNextJsHandler(auth);
 
 export const GET = handlers.GET;
 
 export async function POST(request: Request): Promise<Response> {
-  const rate = checkAuthEndpointRateLimit(request);
+  // checkAuthEndpointRateLimit via shared DB-backed limiter across instances
+  const rate = await checkSharedAuthEndpointRateLimit(request);
   if (!rate.allowed) {
     return NextResponse.json(
       {

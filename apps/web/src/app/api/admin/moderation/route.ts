@@ -8,6 +8,7 @@ import {
 import { adminModerationPatchSchema } from "@/lib/admin/moderation-types";
 import { hasAdminRole } from "@/lib/auth/guards";
 import { getServerSession } from "@/lib/auth/session";
+import { revalidatePublicProject } from "@/lib/projects/public-cache";
 
 async function ensureAdminApi() {
   const session = await getServerSession();
@@ -17,7 +18,9 @@ async function ensureAdminApi() {
   if (!hasAdminRole(session.user.role)) {
     return { error: NextResponse.json({ error: "Admin access required." }, { status: 403 }) };
   }
-  return { user: session.user };
+  const actorRole: "admin" | "superadmin" =
+    session.user.role === "superadmin" ? "superadmin" : "admin";
+  return { user: session.user, actorRole };
 }
 
 export async function GET() {
@@ -42,7 +45,15 @@ export async function PATCH(request: Request) {
   }
 
   if (parsed.data.action === "dismiss_all_open") {
-    await dismissAllOpenModerationReports({ actorId: auth.user.id });
+    const bulkRes = await dismissAllOpenModerationReports({
+      actorId: auth.user.id,
+      actorRole: auth.actorRole,
+      confirmed: parsed.data.confirmed,
+      reason: parsed.data.reason,
+    });
+    if (!bulkRes.ok) {
+      return NextResponse.json({ error: bulkRes.error }, { status: bulkRes.status });
+    }
     revalidatePath("/admin/moderation");
     revalidatePath("/admin");
     const overview = await listAdminModerationQueue();
@@ -53,6 +64,7 @@ export async function PATCH(request: Request) {
     actorId: auth.user.id,
     projectId: parsed.data.projectId,
     decision: parsed.data.action,
+    reason: parsed.data.action === "restore" ? parsed.data.reason : undefined,
   });
 
   if (!res.ok) {
@@ -61,9 +73,7 @@ export async function PATCH(request: Request) {
 
   revalidatePath("/admin/moderation");
   revalidatePath("/admin");
-  if (res.slug) {
-    revalidatePath(`/p/${res.slug}`);
-  }
+  revalidatePublicProject(res.slug);
 
   const overview = await listAdminModerationQueue();
   return NextResponse.json({ ok: true, decision: res.decision, overview });

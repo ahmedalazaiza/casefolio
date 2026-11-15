@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import {
-  CreateProjectWizard,
-  type WizardStepKey,
-} from "@/app/new/create-project-wizard";
+import type { WizardStepKey } from "@/app/new/create-project-wizard";
+import { WizardClient } from "@/app/new/wizard-client";
 import { requireSession } from "@/lib/auth/session";
 import { createProjectAction } from "@/lib/projects/actions";
 import { listPublishedLibraryTemplates } from "@/lib/template/service";
@@ -50,7 +48,7 @@ export default async function NewProjectWizardPage({
   ]);
 
   return (
-    <CreateProjectWizard
+    <WizardClient
       templates={templates}
       userPlan={workspaceContext.activeWorkspace.plan}
       existingProjectCount={workspaceContext.activeWorkspace.usage.activeProjects}

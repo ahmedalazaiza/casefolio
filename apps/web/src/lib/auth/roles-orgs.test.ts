@@ -109,7 +109,7 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
         returnHeaders: true,
       });
 
-      // Mark emails verified so invitation acceptance passes strict verification checks if enabled
+      // Mark emails verified and sign in so session cookies are issued under requireEmailVerification
       for (const uid of [
         ownerSignUp.response.user.id,
         editorSignUp.response.user.id,
@@ -121,14 +121,20 @@ describe("Roles, guards & Better Auth organizations/teams (C-202)", () => {
           .where(eq(dbSchema.users.id, uid));
       }
 
+      const [ownerSignIn, editorSignIn, viewerSignIn] = await Promise.all([
+        auth.api.signInEmail({ body: { email: ownerEmail, password }, returnHeaders: true }),
+        auth.api.signInEmail({ body: { email: editorEmail, password }, returnHeaders: true }),
+        auth.api.signInEmail({ body: { email: viewerEmail, password }, returnHeaders: true }),
+      ]);
+
       const ownerHeaders = new Headers({
-        cookie: extractCookieHeader(ownerSignUp.headers.get("set-cookie")),
+        cookie: extractCookieHeader(ownerSignIn.headers.get("set-cookie")),
       });
       const editorHeaders = new Headers({
-        cookie: extractCookieHeader(editorSignUp.headers.get("set-cookie")),
+        cookie: extractCookieHeader(editorSignIn.headers.get("set-cookie")),
       });
       const viewerHeaders = new Headers({
-        cookie: extractCookieHeader(viewerSignUp.headers.get("set-cookie")),
+        cookie: extractCookieHeader(viewerSignIn.headers.get("set-cookie")),
       });
 
       // 2. Owner creates organization -> inserts into `organizations` and `memberships` (role = owner)

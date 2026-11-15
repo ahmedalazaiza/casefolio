@@ -35,7 +35,18 @@ export const adminModerationPatchSchema = z.discriminatedUnion("action", [
     projectId: z.string().uuid("Invalid project ID."),
   }),
   z.object({
+    action: z.literal("restore"),
+    projectId: z.string().uuid("Invalid project ID."),
+    reason: z.string().trim().max(300, "Reason must be 300 characters or fewer.").optional(),
+  }),
+  z.object({
     action: z.literal("dismiss_all_open"),
+    confirmed: z.literal(true),
+    reason: z
+      .string()
+      .trim()
+      .min(5, "Enter an audit reason (at least 5 characters) to bulk-dismiss open reports.")
+      .max(300, "Reason must be 300 characters or fewer."),
   }),
 ]);
 

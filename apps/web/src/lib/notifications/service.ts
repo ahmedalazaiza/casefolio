@@ -7,6 +7,7 @@ import {
   inArray,
   isNull,
 } from "@casefolio/db";
+import { after } from "next/server";
 import { renderAndDeliverEmail } from "@/lib/auth/email";
 import { db, dbSchema } from "@/lib/db";
 import type { EmailDepartment } from "@/lib/email/senders";
@@ -35,8 +36,18 @@ const globalEmailAuditStore = globalThis as unknown as {
   __casefolioNotificationEmailAudits?: SentNotificationEmailAudit[];
 };
 
+function isDevEmailAuditDisabled(): boolean {
+  if (process.env.VERCEL_ENV === "production") {
+    return true;
+  }
+  return (
+    process.env.NODE_ENV === "production" &&
+    process.env.ENABLE_E2E_DEV_ENDPOINTS !== "1"
+  );
+}
+
 function recordNotificationEmailAudit(entry: SentNotificationEmailAudit): void {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevEmailAuditDisabled()) {
     return;
   }
   if (!globalEmailAuditStore.__casefolioNotificationEmailAudits) {
@@ -50,14 +61,14 @@ function recordNotificationEmailAudit(entry: SentNotificationEmailAudit): void {
 }
 
 export function getNotificationEmailAuditsForDev(): SentNotificationEmailAudit[] {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevEmailAuditDisabled()) {
     return [];
   }
   return [...(globalEmailAuditStore.__casefolioNotificationEmailAudits ?? [])];
 }
 
 export function clearNotificationEmailAuditsForDev(): void {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevEmailAuditDisabled()) {
     return;
   }
   globalEmailAuditStore.__casefolioNotificationEmailAudits = [];
@@ -287,14 +298,34 @@ export async function listNotificationsForUser(
   const limit = Math.min(100, Math.max(1, options?.limit ?? 50));
   const filter = options?.filter ?? "all";
 
+  const whereClause =
+    filter === "unread"
+      ? and(eq(dbSchema.notifications.userId, userId), isNull(dbSchema.notifications.readAt))
+      : filter === "exports"
+        ? and(
+            eq(dbSchema.notifications.userId, userId),
+            inArray(dbSchema.notifications.kind, ["export_ready", "export_failed"]),
+          )
+        : filter === "billing"
+          ? and(
+              eq(dbSchema.notifications.userId, userId),
+              eq(dbSchema.notifications.kind, "payment_failed"),
+            )
+          : filter === "team"
+            ? and(
+                eq(dbSchema.notifications.userId, userId),
+                eq(dbSchema.notifications.kind, "team_invite"),
+              )
+            : eq(dbSchema.notifications.userId, userId);
+
   const [unreadCount, rows] = await Promise.all([
     getUnreadNotificationCount(userId),
     db
       .select()
       .from(dbSchema.notifications)
-      .where(eq(dbSchema.notifications.userId, userId))
+      .where(whereClause)
       .orderBy(desc(dbSchema.notifications.createdAt))
-      .limit(100),
+      .limit(limit),
   ]);
 
   const mapped = rows.map(serializeNotificationRow);
@@ -587,6 +618,15 @@ export async function notifyTemplateVersionPublished(args: {
   return countSent;
 }
 
+function dispatchDeferredEmail(task: () => Promise<void>): Promise<void> {
+  try {
+    after(() => task().catch(() => undefined));
+    return Promise.resolve();
+  } catch {
+    return task().catch(() => undefined);
+  }
+}
+
 export async function notifyProjectPublished(args: {
   userId: string;
   projectId: string;
@@ -597,18 +637,20 @@ export async function notifyProjectPublished(args: {
     return;
   }
 
-  await createUserNotification({
-    userId: args.userId,
-    kind: "published",
-    title: "Published",
-    message: `${args.projectName} is live at /p/${args.slug}.`,
-    href: `/p/${args.slug}`,
-    meta: {
-      projectId: args.projectId,
-      slug: args.slug,
-    },
-    sendEmail: true,
-    emailSubject: `“${args.projectName}” is now live on Casefolio`,
-    emailCtaLabel: "View live case study",
+  await dispatchDeferredEmail(async () => {
+    await createUserNotification({
+      userId: args.userId,
+      kind: "published",
+      title: "Published",
+      message: `${args.projectName} is live at /p/${args.slug}.`,
+      href: `/p/${args.slug}`,
+      meta: {
+        projectId: args.projectId,
+        slug: args.slug,
+      },
+      sendEmail: true,
+      emailSubject: `“${args.projectName}” is now live on Casefolio`,
+      emailCtaLabel: "View live case study",
+    });
   });
 }

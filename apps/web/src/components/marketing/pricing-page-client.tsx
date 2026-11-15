@@ -162,8 +162,8 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
   },
   {
     id: "publishing",
-    title: "Live Links, Custom Domains & White-Labeling",
-    description: "Shareable web URLs, watermark removal, custom agency domains, and full white-label branding.",
+    title: "Live Links & White-Labeling",
+    description: "Shareable web URLs, watermark removal, and full white-label agency branding.",
     icon: <Globe className="size-4" />,
     rows: [
       {
@@ -178,13 +178,6 @@ const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
         free: { included: false, detail: "Subtle watermark" },
         pro: true,
         team: true,
-        plus: true,
-      },
-      {
-        feature: "Custom Domain (e.g., work.youragency.com)",
-        free: false,
-        pro: false,
-        team: false,
         plus: true,
       },
       {
@@ -291,7 +284,7 @@ const PRICING_FAQ_STRIP = [
   {
     question: "How do Pro, Team, and Plus compare?",
     answer:
-      "Pro ($9.99/mo or $7.99/mo billed annually) gives solo designers unlimited Case Studies and watermark-free exports. Team ($6.99/seat/mo or $5.59/seat/mo annually, 2–10 seats) adds shared workspaces, a Brand Kit, and team review. Plus ($99/mo or $79/mo annually flat) includes up to 20 seats, custom domains, complete white-labeling, and 24/7 priority support.",
+      "Pro ($9.99/mo or $7.99/mo billed annually) gives solo designers unlimited Case Studies and watermark-free exports. Team ($6.99/seat/mo or $5.59/seat/mo annually, 2–10 seats) adds shared workspaces, a Brand Kit, and team review. Plus ($99/mo or $79/mo annually flat) includes up to 20 seats, complete white-labeling, and 24/7 priority support.",
   },
   {
     question: "What happens if our team grows past 10 seats?",

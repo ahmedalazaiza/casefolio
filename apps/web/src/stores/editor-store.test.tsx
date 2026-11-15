@@ -4,7 +4,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createEditorStore } from "./editor-store";
 import { ConstrainedEditor } from "@/components/editor/constrained-editor";
-import type { ProjectEditorPayload, SaveProjectEditorResult } from "@/lib/projects/types";
+import type {
+  ProjectEditorPayload,
+  SaveProjectEditorInput,
+  SaveProjectEditorResult,
+} from "@/lib/projects/types";
 import { validateTemplateDocument, type TemplateDocument } from "@/lib/template/schema";
 
 function loadOrbitDoc(): TemplateDocument {
@@ -158,5 +162,63 @@ describe("Zustand + zundo editor store & autosave (C-405)", () => {
     // Press Ctrl+Shift+Z -> redoes Problem hide
     fireEvent.keyDown(window, { key: "z", ctrlKey: true, shiftKey: true });
     expect(screen.getByTestId("section-row-Problem")).toHaveAttribute("data-hidden", "true");
+  });
+
+  it("offers non-destructive conflict resolution ('Keep my changes' & 'Download a copy') instead of Reload-only (B5)", async () => {
+    const payload = buildEditorPayload();
+    let callCount = 0;
+
+    const onSaveProject = vi.fn(
+      async (input: SaveProjectEditorInput): Promise<SaveProjectEditorResult> => {
+        callCount += 1;
+        if (callCount === 1) {
+          return {
+            ok: false,
+            code: "CONFLICT",
+            error: "This project was updated in another tab or session.",
+            serverUpdatedAtIso: "2026-11-04T12:05:00.000Z",
+            serverRevision: 7,
+          };
+        }
+        expect(input.expectedUpdatedAtIso).toBe("2026-11-04T12:05:00.000Z");
+        expect(input.expectedRevision).toBe(7);
+        return {
+          ok: true,
+          updatedAtIso: "2026-11-04T12:06:00.000Z",
+          revision: 8,
+        };
+      },
+    );
+
+    render(
+      <ConstrainedEditor
+        initialPayload={payload}
+        onSaveProject={onSaveProject}
+        autosaveDebounceMs={20}
+      />,
+    );
+
+    const indicator = screen.getByTestId("editor-save-indicator");
+    fireEvent.click(screen.getByTestId("toggle-section-Problem"));
+
+    await waitFor(() => {
+      expect(onSaveProject).toHaveBeenCalledTimes(1);
+      expect(indicator).toHaveAttribute("data-save-status", "conflict");
+    });
+
+    expect(screen.getByTestId("editor-conflict-keep-mine")).toHaveTextContent(
+      "Keep my changes",
+    );
+    expect(screen.getByTestId("editor-conflict-download-copy")).toHaveTextContent(
+      "Download a copy",
+    );
+    expect(screen.getByTestId("editor-conflict-reload")).toHaveTextContent("Reload");
+
+    // Clicking "Keep my changes" rebases onto server revision 7 and saves local edits as revision 8
+    fireEvent.click(screen.getByTestId("editor-conflict-keep-mine"));
+    await waitFor(() => {
+      expect(onSaveProject).toHaveBeenCalledTimes(2);
+      expect(indicator).toHaveAttribute("data-save-status", "saved");
+    });
   });
 });

@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   getAdminSettingsOverview,
+  listAdminAuditLogs,
   promoteAdminByEmail,
   updateAdminUserRole,
   updatePlatformSettings,
@@ -21,9 +22,20 @@ async function ensureAdminApi() {
   return { user: session.user, role: session.user.role };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await ensureAdminApi();
   if ("error" in auth) return auth.error;
+
+  const url = new URL(request.url);
+  const limitParam = url.searchParams.get("limit");
+  const offsetParam = url.searchParams.get("offset");
+  if (limitParam !== null || offsetParam !== null) {
+    const auditLogs = await listAdminAuditLogs({
+      limit: limitParam ? Number(limitParam) || 200 : 200,
+      offset: offsetParam ? Number(offsetParam) || 0 : 0,
+    });
+    return NextResponse.json({ auditLogs });
+  }
 
   const overview = await getAdminSettingsOverview();
   return NextResponse.json(overview);

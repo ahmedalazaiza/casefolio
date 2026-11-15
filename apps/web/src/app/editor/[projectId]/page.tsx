@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { forbidden, notFound, redirect } from "next/navigation";
-import { ConstrainedEditor } from "@/components/editor/constrained-editor";
+import { EditorClient } from "@/app/editor/[projectId]/editor-client";
 import { requireSession } from "@/lib/auth/session";
 import { saveProjectEditorAction } from "@/lib/projects/actions";
 import { getProjectEditorAccess } from "@/lib/projects/service";
@@ -33,5 +33,5 @@ export default async function ProjectEditorPage({
     forbidden();
   }
 
-  return <ConstrainedEditor initialPayload={access.payload} onSaveProject={saveProjectEditorAction} />;
+  return <EditorClient initialPayload={access.payload} onSaveProject={saveProjectEditorAction} />;
 }

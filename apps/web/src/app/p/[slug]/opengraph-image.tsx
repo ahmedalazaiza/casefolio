@@ -3,7 +3,7 @@ import { getPublishedProjectBySlug } from "@/lib/projects/publish";
 import { CURATED_COLOR_PRESETS } from "@/lib/template/curated-themes";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 export const alt = "Casefolio Case Study Preview";
 export const size = {
   width: 1200,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth/session";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 import {
   copyProjectAcrossWorkspaces,
   exportProjectPortabilityJson,
@@ -44,7 +44,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const rate = consumeUploadRateLimit(`recovery:${ctx.user.id}`, 20, 60_000);
+  const rate = await consumeSharedRateLimit({
+    key: `recovery:${ctx.user.id}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
   if (!rate.allowed) {
     return NextResponse.json(
       {
@@ -52,7 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         code: "RATE_LIMITED",
         error: `Too many recovery requests. Retry in ${rate.retryAfterSeconds}s.`,
       },
-      { status: 429 },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
 

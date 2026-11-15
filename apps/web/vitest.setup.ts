@@ -14,6 +14,9 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
+// The signed local billing simulator needs an explicit opt-in (see isSimulatedBillingAllowed).
+process.env.ALLOW_SIMULATED_BILLING ??= "1";
+
 afterEach(() => {
   cleanup();
 });

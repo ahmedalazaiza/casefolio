@@ -107,14 +107,22 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
       returnHeaders: true,
     });
     const userId = signUp.response.user.id;
-    const cookieHeaders = new Headers({
-      cookie: extractCookieHeader(signUp.headers.get("set-cookie")),
-    });
 
     await db
       .update(dbSchema.users)
       .set({ emailVerified: true })
       .where(eq(dbSchema.users.id, userId));
+
+    const signIn = await auth.api.signInEmail({
+      body: {
+        email: userEmail,
+        password,
+      },
+      returnHeaders: true,
+    });
+    const cookieHeaders = new Headers({
+      cookie: extractCookieHeader(signIn.headers.get("set-cookie")),
+    });
 
     try {
       const [orbitTpl] = await db

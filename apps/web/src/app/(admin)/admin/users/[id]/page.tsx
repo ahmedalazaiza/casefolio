@@ -21,5 +21,11 @@ export default async function AdminUserDetailPage({
     notFound();
   }
 
-  return <AdminUserDetailPanel detail={detail} currentAdminId={user.id} />;
+  return (
+    <AdminUserDetailPanel
+      detail={detail}
+      currentAdminId={user.id}
+      currentAdminRole={user.role === "superadmin" ? "superadmin" : "admin"}
+    />
+  );
 }

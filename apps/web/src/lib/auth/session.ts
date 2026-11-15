@@ -1,6 +1,7 @@
 import { eq } from "@casefolio/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 import { auth } from "@/lib/auth/server";
 import { db, dbSchema } from "@/lib/db";
 
@@ -60,7 +61,7 @@ export function computeUserInitials(name: string, email: string): string {
 export async function requireSession(callbackPath = "/dashboard"): Promise<AuthenticatedContext> {
   const ctx = await getServerSession();
   if (!ctx) {
-    const encoded = encodeURIComponent(callbackPath);
+    const encoded = encodeURIComponent(sanitizeCallbackUrl(callbackPath));
     redirect(`/sign-in?callbackUrl=${encoded}`);
   }
   return ctx;

@@ -16,11 +16,24 @@ import {
 const mirrorClientEventSchema = z.object({
   event: productAnalyticsEventNameSchema,
   distinctId: z.string().max(120).optional(),
-  properties: z.record(z.unknown()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
 });
 
+function isDevAnalyticsEndpointDisabled(): boolean {
+  if (process.env.VERCEL_ENV === "production") {
+    return true;
+  }
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.ENABLE_E2E_DEV_ENDPOINTS !== "1"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function GET() {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevAnalyticsEndpointDisabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -31,7 +44,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevAnalyticsEndpointDisabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -61,7 +74,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevAnalyticsEndpointDisabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

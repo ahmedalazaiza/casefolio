@@ -1,13 +1,22 @@
 "use client";
 
-import { CheckCircle2, ExternalLink } from "lucide-react";
+import { CheckCircle2, ExternalLink, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { Input } from "@/components/ui/input";
 import {
   filterModerationItems,
   type AdminModerationOverview,
@@ -29,8 +38,10 @@ function reasonBadgeTone(reason: string): "danger" | "draft" | "neutral" {
 
 export function AdminModerationPanel({
   initialOverview,
+  currentAdminRole = "admin",
 }: {
   initialOverview: AdminModerationOverview;
+  currentAdminRole?: "admin" | "superadmin";
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -44,6 +55,9 @@ export function AdminModerationPanel({
   );
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [bulkDismissOpen, setBulkDismissOpen] = useState(false);
+  const [bulkDismissReason, setBulkDismissReason] = useState("");
 
   const filtered = useMemo(
     () => filterModerationItems(overview.items, filter),
@@ -63,7 +77,7 @@ export function AdminModerationPanel({
     setSelectedId(firstInBucket?.id ?? null);
   }
 
-  function handleResolve(projectId: string, action: "dismiss" | "takedown") {
+  function handleResolve(projectId: string, action: "dismiss" | "takedown" | "restore") {
     setErrorMessage(null);
     setFeedback(null);
 
@@ -90,21 +104,34 @@ export function AdminModerationPanel({
       setFeedback(
         action === "takedown"
           ? "Case study unpublished (public URL now returns 404) and owner notified."
-          : "Report dismissed.",
+          : action === "restore"
+            ? "Moderation takedown lifted. The owner can now re-publish from their editor."
+            : "Report dismissed.",
       );
       router.refresh();
     });
   }
 
-  function handleDismissAllOpen() {
+  function handleDismissAllOpen(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setErrorMessage(null);
     setFeedback(null);
+
+    const trimmedReason = bulkDismissReason.trim();
+    if (trimmedReason.length < 5) {
+      setErrorMessage("Enter an audit reason (at least 5 characters) before dismissing all reports.");
+      return;
+    }
 
     startTransition(async () => {
       const response = await fetch("/api/admin/moderation", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "dismiss_all_open" }),
+        body: JSON.stringify({
+          action: "dismiss_all_open",
+          confirmed: true,
+          reason: trimmedReason,
+        }),
       });
 
       const payload = (await response.json().catch(() => ({}))) as {
@@ -119,7 +146,9 @@ export function AdminModerationPanel({
 
       setOverview(payload.overview);
       setSelectedId(null);
-      setFeedback("All open reports marked as dismissed.");
+      setBulkDismissOpen(false);
+      setBulkDismissReason("");
+      setFeedback("All open reports marked as dismissed and recorded in audit log.");
       router.refresh();
     });
   }
@@ -152,7 +181,7 @@ export function AdminModerationPanel({
         <div
           role="tablist"
           aria-label="Moderation status filter"
-          className="border-border/70 bg-sunken/80 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border p-1 whitespace-nowrap"
+          className="border-border/70 bg-sunken/80 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 whitespace-nowrap"
         >
           {segments.map((seg) => {
             const active = filter === seg.key;
@@ -164,10 +193,10 @@ export function AdminModerationPanel({
                 aria-selected={active}
                 onClick={() => handleSelectFilter(seg.key)}
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 transition-all outline-none type-caption",
+                  "rounded-lg px-3.5 py-1.5 transition-all outline-none type-caption",
                   active
-                    ? "bg-elevated text-foreground shadow-card font-medium"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "border-border bg-elevated text-foreground border font-medium"
+                    : "text-muted-foreground hover:text-foreground border border-transparent",
                 )}
               >
                 {seg.label}
@@ -176,13 +205,16 @@ export function AdminModerationPanel({
           })}
         </div>
 
-        {filter === "open" && overview.openCount > 0 && (
+        {filter === "open" && overview.openCount > 0 && currentAdminRole === "superadmin" && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             disabled={isPending}
-            onClick={handleDismissAllOpen}
+            onClick={() => {
+              setErrorMessage(null);
+              setBulkDismissOpen(true);
+            }}
           >
             Dismiss all
           </Button>
@@ -192,7 +224,7 @@ export function AdminModerationPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive rounded-2xl border px-4 py-3 type-body-s"
+          className="border-destructive/30 bg-destructive-soft text-destructive rounded-xl border px-4 py-3 type-body-s"
         >
           {errorMessage}
         </div>
@@ -201,7 +233,7 @@ export function AdminModerationPanel({
       {feedback && (
         <div
           role="status"
-          className="border-success/30 bg-success-soft text-success rounded-2xl border px-4 py-3 type-body-s"
+          className="border-success/30 bg-success-soft text-success rounded-xl border px-4 py-3 type-body-s"
         >
           {feedback}
         </div>
@@ -213,7 +245,7 @@ export function AdminModerationPanel({
           data-testid="moderation-empty-state"
           className="items-center justify-center gap-3 px-6 py-16 text-center"
         >
-          <span className="bg-success-soft text-success inline-flex size-12 items-center justify-center rounded-2xl">
+          <span className="bg-success-soft text-success inline-flex size-12 items-center justify-center rounded-xl">
             <CheckCircle2 className="size-5" />
           </span>
           <h2 className="text-foreground type-heading-m">Nothing to review</h2>
@@ -262,7 +294,9 @@ export function AdminModerationPanel({
                               {item.projectName}
                             </span>
                             <span className="text-muted-foreground type-caption">
-                              {item.projectSlug ? `casefolio.app/p/${item.projectSlug}` : "Unpublished"}
+                              {item.projectSlug
+                                ? `casefolio.app/p/${item.projectSlug}`
+                                : "Unpublished"}
                             </span>
                           </div>
                         </td>
@@ -313,12 +347,22 @@ export function AdminModerationPanel({
                                 Take down
                               </Button>
                             </div>
+                          ) : item.queueBucket === "takedown" ? (
+                            <div className="inline-flex items-center justify-end gap-2">
+                              <Badge tone="danger">Taken down</Badge>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                disabled={isPending}
+                                onClick={() => handleResolve(item.projectId, "restore")}
+                              >
+                                <RotateCcw className="size-3.5" />
+                                Lift takedown
+                              </Button>
+                            </div>
                           ) : (
-                            <Badge
-                              tone={item.queueBucket === "takedown" ? "danger" : "neutral"}
-                            >
-                              {item.queueBucket === "takedown" ? "Taken down" : "Dismissed"}
-                            </Badge>
+                            <Badge tone="neutral">Dismissed</Badge>
                           )}
                         </td>
                       </tr>
@@ -393,11 +437,60 @@ export function AdminModerationPanel({
                     </Button>
                   </>
                 )}
+
+                {activeCase.queueBucket === "takedown" && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => handleResolve(activeCase.projectId, "restore")}
+                  >
+                    <RotateCcw className="size-3.5" />
+                    Lift takedown hold
+                  </Button>
+                )}
               </div>
             </Card>
           )}
         </>
       )}
+
+      <Dialog open={bulkDismissOpen} onOpenChange={setBulkDismissOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dismiss all open reports</DialogTitle>
+            <DialogDescription>
+              This marks all {overview.openCount} currently open moderation reports as dismissed.
+              Provide an audit reason for the permanent log.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleDismissAllOpen} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="bulk-dismiss-reason" className="text-foreground type-body-s-strong">
+                Audit reason
+              </label>
+              <Input
+                id="bulk-dismiss-reason"
+                required
+                minLength={5}
+                maxLength={300}
+                placeholder="e.g. Cleared automated spam wave after review"
+                value={bulkDismissReason}
+                onChange={(e) => setBulkDismissReason(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setBulkDismissOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Dismissing..." : "Confirm bulk dismiss"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

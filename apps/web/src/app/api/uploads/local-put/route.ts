@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { stripImageExifAndMetadata } from "@/lib/storage/exif";
 import { detectImageMimeFromMagicBytes, formatBytesHuman } from "@/lib/storage/quotas";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 import {
   verifyStorageToken,
   writeStoredObject,
   type LocalPutTokenPayload,
 } from "@/lib/storage/r2";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
 
 async function readStreamWithLimit(
   request: Request,
@@ -62,7 +62,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     );
   }
 
-  const keyRate = consumeUploadRateLimit(`local-put:${payload.r2Key}`, 4, 300_000);
+  const keyRate = await consumeSharedRateLimit(`local-put:${payload.r2Key}`, 4, 300_000);
   if (!keyRate.allowed) {
     return NextResponse.json(
       { ok: false, code: "RATE_LIMITED", error: "Too many upload attempts for this signed URL." },

@@ -22,7 +22,16 @@ import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog"
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { InputField } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input, InputField } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 import { createOrganizationSchema, inviteTeamMemberSchema } from "@/lib/auth/schemas";
 import {
@@ -146,11 +155,22 @@ export function TeamWorkspaceClient({
   const [memberError, setMemberError] = useState<string | null>(null);
 
   const [transferTargetUserId, setTransferTargetUserId] = useState<string>("");
-  const [transferReauthConfirmed, setTransferReauthConfirmed] = useState(false);
-  const [acceptTransferReauth, setAcceptTransferReauth] = useState<Record<string, boolean>>({});
   const [transferBusy, setTransferBusy] = useState(false);
   const [transferNotice, setTransferNotice] = useState<string | null>(null);
   const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferStepUpTarget, setTransferStepUpTarget] = useState<
+    | { mode: "request" }
+    | { mode: "accept"; transferRequestId: string; organizationName: string }
+    | null
+  >(null);
+  const [transferStepUpMethod, setTransferStepUpMethod] = useState<"password" | "otp">(
+    "password",
+  );
+  const [transferStepUpPassword, setTransferStepUpPassword] = useState("");
+  const [transferStepUpOtp, setTransferStepUpOtp] = useState("");
+  const [transferOtpSent, setTransferOtpSent] = useState(false);
+  const [transferOtpSending, setTransferOtpSending] = useState(false);
+  const [transferModalError, setTransferModalError] = useState<string | null>(null);
 
   const [teamUpgradeOpen, setTeamUpgradeOpen] = useState(false);
   const [upgradeTargetPlan, setUpgradeTargetPlan] = useState<PaidPlanTier>("team");
@@ -440,41 +460,152 @@ export function TeamWorkspaceClient({
     }
   }
 
-  async function handleRequestOwnershipTransfer(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!currentOrg || !transferTargetUserId) return;
-    setTransferBusy(true);
+  function openTransferStepUp(
+    target:
+      | { mode: "request" }
+      | { mode: "accept"; transferRequestId: string; organizationName: string },
+  ) {
     setTransferError(null);
     setTransferNotice(null);
+    setTransferModalError(null);
+    setTransferStepUpPassword("");
+    setTransferStepUpOtp("");
+    setTransferOtpSent(false);
+    setTransferStepUpMethod("password");
+    setTransferStepUpTarget(target);
+  }
+
+  function handleRequestOwnershipTransfer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!currentOrg || !transferTargetUserId) return;
+    openTransferStepUp({ mode: "request" });
+  }
+
+  async function handleSendTransferStepUpOtp() {
+    setTransferModalError(null);
+    setTransferOtpSending(true);
     try {
-      const response = await fetch("/api/team/transfer-ownership", {
+      const res = await fetch("/api/account/step-up", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "request",
-          organizationId: currentOrg.id,
-          targetMemberUserId: transferTargetUserId,
-          reauthenticated: transferReauthConfirmed,
+          action: "send_otp",
+          purpose: "ownership_transfer",
         }),
       });
-      const json = (await response.json()) as { ok: boolean; error?: string };
-      if (!response.ok || !json.ok) {
-        setTransferError(json.error ?? "Could not initiate ownership transfer.");
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setTransferModalError(json.error ?? "Could not send confirmation code.");
         return;
       }
-      setTransferNotice(
-        "Ownership transfer requested. The recipient must confirm within 48 hours to complete the swap.",
-      );
-      setTransferReauthConfirmed(false);
-      router.refresh();
+      setTransferOtpSent(true);
     } catch {
-      setTransferError("Network error while requesting ownership transfer.");
+      setTransferModalError("Network error while sending confirmation code.");
+    } finally {
+      setTransferOtpSending(false);
+    }
+  }
+
+  async function handleConfirmTransferStepUp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!transferStepUpTarget) return;
+    if (transferStepUpTarget.mode === "request" && (!currentOrg || !transferTargetUserId)) {
+      return;
+    }
+
+    setTransferBusy(true);
+    setTransferModalError(null);
+    setTransferError(null);
+    setTransferNotice(null);
+
+    try {
+      const stepUpBody =
+        transferStepUpMethod === "password"
+          ? {
+              action: "verify_password" as const,
+              purpose: "ownership_transfer" as const,
+              password: transferStepUpPassword,
+            }
+          : {
+              action: "verify_otp" as const,
+              purpose: "ownership_transfer" as const,
+              otp: transferStepUpOtp.trim(),
+            };
+
+      const stepUpRes = await fetch("/api/account/step-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(stepUpBody),
+      });
+      const stepUpJson = (await stepUpRes.json()) as
+        | { ok: true; stepUpToken: string }
+        | { ok: false; code?: string; error?: string };
+
+      if (!stepUpRes.ok || !stepUpJson.ok) {
+        if ("code" in stepUpJson && stepUpJson.code === "NO_PASSWORD_ACCOUNT") {
+          setTransferStepUpMethod("otp");
+        }
+        setTransferModalError(
+          ("error" in stepUpJson && stepUpJson.error) ||
+            "Identity verification failed. Please check your credentials.",
+        );
+        return;
+      }
+
+      if (transferStepUpTarget.mode === "request" && currentOrg) {
+        const response = await fetch("/api/team/transfer-ownership", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "request",
+            organizationId: currentOrg.id,
+            targetMemberUserId: transferTargetUserId,
+            stepUpToken: stepUpJson.stepUpToken,
+          }),
+        });
+        const json = (await response.json()) as { ok: boolean; error?: string };
+        if (!response.ok || !json.ok) {
+          setTransferModalError(json.error ?? "Could not initiate ownership transfer.");
+          return;
+        }
+        setTransferNotice(
+          "Ownership transfer requested. The recipient must confirm within 48 hours to complete the swap.",
+        );
+        setTransferStepUpTarget(null);
+        router.refresh();
+        return;
+      }
+
+      if (transferStepUpTarget.mode === "accept") {
+        const response = await fetch("/api/team/transfer-ownership", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "accept",
+            transferRequestId: transferStepUpTarget.transferRequestId,
+            stepUpToken: stepUpJson.stepUpToken,
+          }),
+        });
+        const json = (await response.json()) as { ok: boolean; error?: string };
+        if (!response.ok || !json.ok) {
+          setTransferModalError(json.error ?? "Could not accept ownership transfer.");
+          return;
+        }
+        setTransferNotice("Workspace ownership transferred to your account.");
+        setTransferStepUpTarget(null);
+        router.refresh();
+      }
+    } catch {
+      setTransferModalError("Network error while confirming ownership transfer.");
     } finally {
       setTransferBusy(false);
     }
   }
 
-  async function handleAcceptOwnershipTransfer(transferRequestId: string) {
+  async function handleCancelOrDeclineTransfer(
+    transferRequestId: string,
+    action: "cancel" | "decline",
+  ) {
     setTransferBusy(true);
     setTransferError(null);
     setTransferNotice(null);
@@ -483,20 +614,28 @@ export function TeamWorkspaceClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "accept",
+          action,
           transferRequestId,
-          reauthenticated: Boolean(acceptTransferReauth[transferRequestId]),
         }),
       });
       const json = (await response.json()) as { ok: boolean; error?: string };
       if (!response.ok || !json.ok) {
-        setTransferError(json.error ?? "Could not accept ownership transfer.");
+        setTransferError(
+          json.error ??
+            (action === "cancel"
+              ? "Could not cancel ownership transfer."
+              : "Could not decline ownership transfer."),
+        );
         return;
       }
-      setTransferNotice("Workspace ownership transferred to your account.");
+      setTransferNotice(
+        action === "cancel"
+          ? "Pending ownership transfer canceled."
+          : "Ownership transfer request declined.",
+      );
       router.refresh();
     } catch {
-      setTransferError("Network error while accepting ownership transfer.");
+      setTransferError("Network error while updating ownership transfer.");
     } finally {
       setTransferBusy(false);
     }
@@ -528,29 +667,30 @@ export function TeamWorkspaceClient({
                     Workspace Owner and transitions {tr.fromOwnerName} to Admin.
                   </p>
                 </div>
-                <label className="text-foreground type-caption flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(acceptTransferReauth[tr.id])}
-                    onChange={(e) =>
-                      setAcceptTransferReauth((prev) => ({
-                        ...prev,
-                        [tr.id]: e.target.checked,
-                      }))
-                    }
-                    className="size-4 rounded"
-                  />
-                  I confirm my identity and accept billing &amp; workspace ownership responsibility.
-                </label>
-                <div>
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
                     size="sm"
-                    disabled={transferBusy || !acceptTransferReauth[tr.id]}
-                    onClick={() => handleAcceptOwnershipTransfer(tr.id)}
+                    disabled={transferBusy}
+                    onClick={() =>
+                      openTransferStepUp({
+                        mode: "accept",
+                        transferRequestId: tr.id,
+                        organizationName: tr.organizationName,
+                      })
+                    }
                   >
                     <ArrowRightLeft className="size-4" />
                     Accept workspace ownership
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={transferBusy}
+                    onClick={() => handleCancelOrDeclineTransfer(tr.id, "decline")}
+                  >
+                    Decline
                   </Button>
                 </div>
               </div>
@@ -961,7 +1101,7 @@ export function TeamWorkspaceClient({
               </div>
 
               {currentOrg.pendingTransfer && (
-                <div className="border-border bg-surface rounded-xl border p-3">
+                <div className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
                   <p className="text-foreground type-caption">
                     Pending transfer to{" "}
                     <span className="font-medium">{currentOrg.pendingTransfer.toMemberName}</span>{" "}
@@ -972,6 +1112,17 @@ export function TeamWorkspaceClient({
                     })}
                     ).
                   </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={transferBusy}
+                    onClick={() =>
+                      handleCancelOrDeclineTransfer(currentOrg.pendingTransfer!.id, "cancel")
+                    }
+                  >
+                    Cancel transfer
+                  </Button>
                 </div>
               )}
 
@@ -998,22 +1149,12 @@ export function TeamWorkspaceClient({
                   type="submit"
                   variant="secondary"
                   size="sm"
-                  disabled={transferBusy || !transferTargetUserId || !transferReauthConfirmed}
+                  disabled={transferBusy || !transferTargetUserId}
                 >
                   <ArrowRightLeft className="size-4" />
                   Request transfer
                 </Button>
               </div>
-
-              <label className="text-muted-foreground type-caption flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={transferReauthConfirmed}
-                  onChange={(e) => setTransferReauthConfirmed(e.target.checked)}
-                  className="size-4 rounded"
-                />
-                I confirm my session identity to hand off workspace &amp; billing ownership.
-              </label>
 
               {transferError && (
                 <p role="alert" className="text-destructive type-caption">
@@ -1095,10 +1236,131 @@ export function TeamWorkspaceClient({
         }
         featureDescription={
           upgradeTargetPlan === "plus"
-            ? `Casefolio Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) for up to ${PLUS_INCLUDED_SEATS} team seats, Custom Domain, and White-Labeling.`
+            ? `Casefolio Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) for up to ${PLUS_INCLUDED_SEATS} team seats and White-Labeling.`
             : `Subscribe to Casefolio Team ($6.99/seat/mo or $5.59/seat/mo billed annually, ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats) to collaborate in Shared Spaces with role-based permissions and Shared Brand Kit.`
         }
       />
+
+      {transferStepUpTarget && (
+        <Dialog
+          open={Boolean(transferStepUpTarget)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setTransferStepUpTarget(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-md" data-testid="transfer-stepup-dialog">
+            <DialogHeader>
+              <DialogTitle>Confirm your identity</DialogTitle>
+              <DialogDescription>
+                {transferStepUpTarget.mode === "request"
+                  ? "Verify your identity before initiating a workspace & billing ownership handoff."
+                  : `Verify your identity to accept sole Billing & Workspace Owner authority for ${transferStepUpTarget.organizationName}.`}
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleConfirmTransferStepUp} className="flex flex-col gap-4">
+              {transferStepUpMethod === "password" ? (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="transfer-stepup-password">Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTransferStepUpMethod("otp");
+                        setTransferModalError(null);
+                      }}
+                      className="text-primary type-caption underline-offset-4 hover:underline"
+                    >
+                      Use 6-digit email code
+                    </button>
+                  </div>
+                  <Input
+                    id="transfer-stepup-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={transferStepUpPassword}
+                    onChange={(e) => setTransferStepUpPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="transfer-stepup-otp">6-digit security code</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTransferStepUpMethod("password");
+                        setTransferModalError(null);
+                      }}
+                      className="text-primary type-caption underline-offset-4 hover:underline"
+                    >
+                      Use password instead
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="transfer-stepup-otp"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={transferStepUpOtp}
+                      onChange={(e) => setTransferStepUpOtp(e.target.value.replace(/\D/g, ""))}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={transferOtpSending}
+                      onClick={handleSendTransferStepUpOtp}
+                    >
+                      {transferOtpSending
+                        ? "Sending..."
+                        : transferOtpSent
+                          ? "Resend"
+                          : "Send code"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {transferModalError && (
+                <p
+                  role="alert"
+                  className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+                >
+                  {transferModalError}
+                </p>
+              )}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setTransferStepUpTarget(null)}
+                  disabled={transferBusy}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    transferBusy ||
+                    (transferStepUpMethod === "password"
+                      ? transferStepUpPassword.length === 0
+                      : transferStepUpOtp.trim().length !== 6)
+                  }
+                >
+                  {transferBusy ? "Verifying..." : "Confirm ownership handoff"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

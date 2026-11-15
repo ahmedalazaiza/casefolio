@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/session";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 import type { CompleteUploadInput } from "@/lib/storage/quotas";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
 import { completePresignedUpload } from "@/lib/storage/service";
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -13,7 +13,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const rateLimit = consumeUploadRateLimit(`complete:${ctx.user.id}`, 60);
+  const rateLimit = await consumeSharedRateLimit(`complete:${ctx.user.id}`, 60, 60_000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {

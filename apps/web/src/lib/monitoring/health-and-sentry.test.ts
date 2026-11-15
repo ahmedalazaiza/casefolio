@@ -4,12 +4,19 @@ import { join, resolve } from "node:path";
 import { buildWorkerHealthHttpResponse, getWorkerHealth } from "@casefolio/worker";
 import { describe, expect, it, vi } from "vitest";
 import { GET as getHealthRoute } from "@/app/api/health/route";
+import { getServerSession } from "@/lib/auth/session";
 import { checkWebHealth } from "@/lib/monitoring/health";
 import {
   buildSentryEventEnvelope,
   captureServerException,
   parseSentryDsn,
 } from "@/lib/monitoring/sentry";
+
+vi.mock("@/lib/auth/session", () => ({ getServerSession: vi.fn(async () => null) }));
+
+function fakeSession(role: "user" | "admin" | "superadmin") {
+  return { user: { id: "u1", role } } as unknown as Awaited<ReturnType<typeof getServerSession>>;
+}
 
 function resolveRepoRoot(): string {
   const cwd = process.cwd();
@@ -22,14 +29,37 @@ describe("Production Health Checks, Monitoring & Deployment Readiness (C-1104)",
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toContain("no-store");
 
+    const payload = (await response.json()) as Record<string, unknown>;
+    expect(payload).toEqual({
+      ok: true,
+      status: "healthy",
+      timestamp: expect.any(String),
+      database: true,
+    });
+  });
+
+  it("1b. anonymous callers never see environment/latency/catalog details, even with ?details=1", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(null);
+    const anon = await getHealthRoute(new Request("http://localhost/api/health?details=1"));
+    expect(anon.status).toBe(401);
+    expect(JSON.stringify(await anon.json())).not.toContain("environment");
+
+    vi.mocked(getServerSession).mockResolvedValue(fakeSession("user"));
+    const plainUser = await getHealthRoute(new Request("http://localhost/api/health?details=1"));
+    expect(plainUser.status).toBe(403);
+  });
+
+  it("1c. admins get the detailed report on ?details=1", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(fakeSession("admin"));
+    const response = await getHealthRoute(new Request("http://localhost/api/health?details=1"));
+    expect(response.status).toBe(200);
     const payload = (await response.json()) as Awaited<ReturnType<typeof checkWebHealth>>;
-    expect(payload.ok).toBe(true);
-    expect(payload.status).toBe("healthy");
     expect(payload.service).toBe("casefolio-web");
     expect(payload.environment.paddleEnv).toBe("sandbox");
     expect(payload.checks.database.status).toBe("up");
     expect(payload.checks.database.latencyMs).toBeGreaterThanOrEqual(0);
     expect(payload.checks.templates.publishedCount).toBeGreaterThanOrEqual(1);
+    vi.mocked(getServerSession).mockResolvedValue(null);
   });
 
   it("2. returns unhealthy status (503) when database probe fails without leaking connection secrets", async () => {

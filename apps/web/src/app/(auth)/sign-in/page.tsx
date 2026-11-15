@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SignInForm } from "@/app/(auth)/sign-in/sign-in-form";
+import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 
 export const metadata: Metadata = {
   title: "Log in — Casefolio",
@@ -13,6 +14,6 @@ export default async function SignInPage({
   searchParams: Promise<{ callbackUrl?: string }>;
 }) {
   const { callbackUrl } = await searchParams;
-  return <SignInForm callbackUrl={callbackUrl} />;
+  return <SignInForm callbackUrl={sanitizeCallbackUrl(callbackUrl)} />;
 }
 

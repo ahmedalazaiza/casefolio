@@ -86,11 +86,11 @@ export function buildSecurityHeaders(options: SecurityHeadersOptions): HttpHeade
     },
     {
       key: "Permissions-Policy",
-      value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+      value: "camera=(), microphone=(), geolocation=(), payment=(self), browsing-topics=()",
     },
     {
       key: "Cross-Origin-Opener-Policy",
-      value: "same-origin-allow-popups",
+      value: "same-origin",
     },
     {
       key: "X-DNS-Prefetch-Control",

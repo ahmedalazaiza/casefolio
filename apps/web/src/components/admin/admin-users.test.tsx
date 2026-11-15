@@ -117,6 +117,7 @@ describe("Admin users & subscriptions UI (C-904)", () => {
       <AdminUsersList
         initialUsers={sampleUsers}
         currentAdminId="99999999-9999-4999-8999-999999999999"
+        currentAdminRole="superadmin"
       />,
     );
 
@@ -134,6 +135,7 @@ describe("Admin users & subscriptions UI (C-904)", () => {
       <AdminUserDetailPanel
         detail={sampleDetail}
         currentAdminId="99999999-9999-4999-8999-999999999999"
+        currentAdminRole="superadmin"
       />,
     );
 

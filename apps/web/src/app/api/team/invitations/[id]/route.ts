@@ -6,6 +6,7 @@ import {
   resendTeamInvitation,
   revokeTeamInvitation,
 } from "@/lib/entitlements/team-invitations";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -27,6 +28,22 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     return NextResponse.json(
       { ok: false, code: "UNAUTHORIZED", error: "Sign in required." },
       { status: 401 },
+    );
+  }
+
+  const rate = await consumeSharedRateLimit({
+    key: `team-invite-action:${ctx.user.id}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "RATE_LIMITED",
+        error: `Too many invitation actions. Retry in ${rate.retryAfterSeconds}s.`,
+      },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
 
@@ -85,6 +102,22 @@ export async function DELETE(_request: Request, context: RouteContext): Promise<
     return NextResponse.json(
       { ok: false, code: "UNAUTHORIZED", error: "Sign in required." },
       { status: 401 },
+    );
+  }
+
+  const rate = await consumeSharedRateLimit({
+    key: `team-invite-action:${ctx.user.id}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "RATE_LIMITED",
+        error: `Too many invitation actions. Retry in ${rate.retryAfterSeconds}s.`,
+      },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
 

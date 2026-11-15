@@ -5,7 +5,7 @@ import {
   completeQueuedExportFromClient,
   MAX_CLIENT_EXPORT_BYTES,
 } from "@/lib/exports/service";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
 interface ExportCompleteContext {
   params: Promise<{ exportId: string }>;
@@ -59,7 +59,7 @@ export async function POST(
     );
   }
 
-  const rate = consumeUploadRateLimit(`export-complete:${session.user.id}`, 12, 60_000);
+  const rate = await consumeSharedRateLimit(`export-complete:${session.user.id}`, 12, 60_000);
   if (!rate.allowed) {
     return NextResponse.json(
       { ok: false, code: "RATE_LIMITED", error: "Too many export completion requests." },

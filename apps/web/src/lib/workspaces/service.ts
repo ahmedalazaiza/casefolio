@@ -5,7 +5,9 @@ import {
   count,
   desc,
   eq,
+  gt,
   inArray,
+  isNull,
   normalizeMembershipRole,
   or,
   sql,
@@ -24,7 +26,12 @@ import {
   ensureTeamWorkspaceForOrganization,
   resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
-import { readStoredObjectBytes, writeStoredObject } from "@/lib/storage/r2";
+import { revalidatePublicProject } from "@/lib/projects/public-cache";
+import {
+  deleteStoredObject,
+  readStoredObjectBytes,
+  writeStoredObject,
+} from "@/lib/storage/r2";
 import { getWorkspaceMonthlyMeterUsage } from "@/lib/usage/meter";
 import { authorizeProjectAccess, authorizeSpaceAccess } from "@/lib/workspaces/acl";
 import { revokeUserWorkspaceLeases } from "@/lib/workspaces/leases";
@@ -397,6 +404,7 @@ export async function listWorkspaceSwitcherState(
         and(
           eq(dbSchema.spaces.controllerUserId, userId),
           eq(dbSchema.spaces.recoveryState, "frozen_member_departed"),
+          or(isNull(dbSchema.spaces.recoveryUntil), gt(dbSchema.spaces.recoveryUntil, now)),
         ),
       ),
   ]);
@@ -717,29 +725,59 @@ export async function transitionSpaceVisibility(args: {
   }
 
   const spaceProjects = await db
-    .select({ id: dbSchema.projects.id, visibility: dbSchema.projects.visibility })
+    .select({
+      id: dbSchema.projects.id,
+      slug: dbSchema.projects.slug,
+      visibility: dbSchema.projects.visibility,
+    })
     .from(dbSchema.projects)
     .where(eq(dbSchema.projects.spaceId, auth.space.id));
 
   const projectIds = spaceProjects.map((p) => p.id);
-  const publishedIds = spaceProjects
-    .filter((p) => p.visibility !== "private")
-    .map((p) => p.id);
+  const publishedProjects = spaceProjects.filter((p) => p.visibility !== "private");
+  const publishedIds = publishedProjects.map((p) => p.id);
 
-  if (projectIds.length > 0) {
-    await db
-      .update(dbSchema.projects)
+  const updated = await db.transaction(async (tx) => {
+    if (projectIds.length > 0) {
+      await tx
+        .update(dbSchema.projects)
+        .set({
+          visibility: "private",
+          publishedAt: null,
+          updatedAt: now,
+        })
+        .where(inArray(dbSchema.projects.id, projectIds));
+
+      await tx
+        .delete(dbSchema.publishedSnapshots)
+        .where(inArray(dbSchema.publishedSnapshots.projectId, projectIds));
+    }
+
+    const [updatedSpace] = await tx
+      .update(dbSchema.spaces)
       .set({
         visibility: "private",
-        publishedAt: null,
+        aclVersion: auth.space.aclVersion + 1,
         updatedAt: now,
       })
-      .where(inArray(dbSchema.projects.id, projectIds));
+      .where(eq(dbSchema.spaces.id, auth.space.id))
+      .returning();
 
-    await db
-      .delete(dbSchema.publishedSnapshots)
-      .where(inArray(dbSchema.publishedSnapshots.projectId, projectIds));
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: args.actorUserId,
+      action: "space.visibility.private",
+      meta: {
+        workspaceId: auth.workspace.id,
+        spaceId: auth.space.id,
+        unpublishedCount: publishedIds.length,
+      },
+      at: now,
+    });
 
+    return updatedSpace!;
+  });
+
+  if (projectIds.length > 0) {
     await revokeUserWorkspaceLeases({
       workspaceId: auth.workspace.id,
       excludeUserId: args.actorUserId,
@@ -747,46 +785,31 @@ export async function transitionSpaceVisibility(args: {
     });
   }
 
-  const [updated] = await db
-    .update(dbSchema.spaces)
-    .set({
-      visibility: "private",
-      aclVersion: auth.space.aclVersion + 1,
-      updatedAt: now,
-    })
-    .where(eq(dbSchema.spaces.id, auth.space.id))
-    .returning();
-
-  await db.insert(dbSchema.auditLogs).values({
-    actorId: args.actorUserId,
-    action: "space.visibility.private",
-    meta: {
-      workspaceId: auth.workspace.id,
-      spaceId: auth.space.id,
-      unpublishedCount: publishedIds.length,
-    },
-    at: now,
-  });
+  for (const proj of publishedProjects) {
+    if (proj.slug) {
+      revalidatePublicProject(proj.slug);
+    }
+  }
 
   return {
     ok: true,
     space: {
-      id: updated!.id,
-      workspaceId: updated!.workspaceId,
-      name: updated!.name,
-      slug: updated!.slug,
-      visibility: updated!.visibility,
-      isDefault: updated!.isDefault,
-      controllerUserId: updated!.controllerUserId,
+      id: updated.id,
+      workspaceId: updated.workspaceId,
+      name: updated.name,
+      slug: updated.slug,
+      visibility: updated.visibility,
+      isDefault: updated.isDefault,
+      controllerUserId: updated.controllerUserId,
       isMine: true,
-      aclVersion: updated!.aclVersion,
+      aclVersion: updated.aclVersion,
     },
     unpublishedCount: publishedIds.length,
   };
 }
 
 /**
- * Moves a project between spaces within the SAME workspace (`Spec §10.5`).
+ * Moves a project between spaces within the SAME workspace (`Spec §10.5` & `N13`).
  */
 export async function moveProjectBetweenSpaces(args: {
   actorUserId: string;
@@ -856,36 +879,66 @@ export async function moveProjectBetweenSpaces(args: {
 
   const unpublishOnMove =
     sourceAuth.space.visibility === "shared" && destAuth.space.visibility === "private";
+  const wasPublishedSlug =
+    unpublishOnMove && sourceAuth.project.visibility !== "private"
+      ? sourceAuth.project.slug
+      : null;
 
-  await db
-    .update(dbSchema.projects)
-    .set({
-      spaceId: destAuth.space.id,
-      ...(unpublishOnMove ? { visibility: "private" as const, publishedAt: null } : {}),
-      updatedAt: now,
-    })
-    .where(eq(dbSchema.projects.id, args.projectId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(dbSchema.projects)
+      .set({
+        spaceId: destAuth.space.id,
+        ...(unpublishOnMove ? { visibility: "private" as const, publishedAt: null } : {}),
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.projects.id, args.projectId));
 
-  if (unpublishOnMove) {
-    await db
-      .delete(dbSchema.publishedSnapshots)
-      .where(eq(dbSchema.publishedSnapshots.projectId, args.projectId));
-    await revokeUserWorkspaceLeases({
-      workspaceId: sourceAuth.workspace.id,
-      excludeUserId: args.actorUserId,
-      projectIds: [args.projectId],
+    if (unpublishOnMove) {
+      await tx
+        .delete(dbSchema.publishedSnapshots)
+        .where(eq(dbSchema.publishedSnapshots.projectId, args.projectId));
+    } else {
+      await tx
+        .update(dbSchema.publishedSnapshots)
+        .set({ spaceId: destAuth.space.id, updatedAt: now })
+        .where(eq(dbSchema.publishedSnapshots.projectId, args.projectId));
+    }
+
+    // Revoke active edit leases on move so collaborators' stale space/ACL tokens cannot keep editing (`N13`)
+    await tx
+      .delete(dbSchema.editLeases)
+      .where(eq(dbSchema.editLeases.projectId, args.projectId));
+
+    await tx
+      .update(dbSchema.spaces)
+      .set({ aclVersion: sourceAuth.space.aclVersion + 1, updatedAt: now })
+      .where(eq(dbSchema.spaces.id, sourceAuth.space.id));
+
+    if (destAuth.space.id !== sourceAuth.space.id) {
+      await tx
+        .update(dbSchema.spaces)
+        .set({ aclVersion: destAuth.space.aclVersion + 1, updatedAt: now })
+        .where(eq(dbSchema.spaces.id, destAuth.space.id));
+    }
+
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: args.actorUserId,
+      action: "project.moved_between_spaces",
+      meta: {
+        workspaceId: sourceAuth.workspace.id,
+        projectId: args.projectId,
+        sourceSpaceId: sourceAuth.space.id,
+        destinationSpaceId: destAuth.space.id,
+        unpublishedOnMove: unpublishOnMove,
+      },
+      at: now,
     });
-  } else {
-    await db
-      .update(dbSchema.publishedSnapshots)
-      .set({ spaceId: destAuth.space.id, updatedAt: now })
-      .where(eq(dbSchema.publishedSnapshots.projectId, args.projectId));
-  }
+  });
 
-  await db
-    .update(dbSchema.spaces)
-    .set({ aclVersion: sourceAuth.space.aclVersion + 1, updatedAt: now })
-    .where(eq(dbSchema.spaces.id, sourceAuth.space.id));
+  if (wasPublishedSlug) {
+    revalidatePublicProject(wasPublishedSlug);
+  }
 
   return {
     ok: true,
@@ -985,83 +1038,196 @@ export async function copyProjectAcrossWorkspaces(args: {
   const newProjectId = randomUUID();
   const assetIdMap = new Map<string, string>();
   const clonedAssetRows: Array<typeof dbSchema.assets.$inferInsert> = [];
+  const writtenR2Keys: string[] = [];
 
-  for (const srcAsset of sourceAssets) {
-    const newAssetId = randomUUID();
-    assetIdMap.set(srcAsset.id, newAssetId);
-    const ext =
-      srcAsset.mimeType === "image/jpeg"
-        ? "jpg"
-        : srcAsset.mimeType === "image/webp"
-          ? "webp"
-          : "png";
-    const newR2Key = `workspaces/${destAuth.workspace.id}/projects/${newProjectId}/assets/${newAssetId}.${ext}`;
+  try {
+    for (const srcAsset of sourceAssets) {
+      const newAssetId = randomUUID();
+      assetIdMap.set(srcAsset.id, newAssetId);
+      const ext =
+        srcAsset.mimeType === "image/jpeg"
+          ? "jpg"
+          : srcAsset.mimeType === "image/webp"
+            ? "webp"
+            : "png";
+      // `N12`: Always assign a distinct destination R2 key so deleting the copy can never
+      // delete the source workspace's object.
+      const newR2Key = `workspaces/${destAuth.workspace.id}/projects/${newProjectId}/assets/${newAssetId}.${ext}`;
 
-    const rawBytes = await readStoredObjectBytes(srcAsset.r2Key);
-    if (rawBytes) {
-      await writeStoredObject(newR2Key, rawBytes, {
-        contentType: srcAsset.mimeType ?? "image/png",
+      const rawBytes = await readStoredObjectBytes(srcAsset.r2Key);
+      if (rawBytes) {
+        await writeStoredObject(newR2Key, rawBytes, {
+          contentType: srcAsset.mimeType ?? "image/png",
+        });
+        writtenR2Keys.push(newR2Key);
+      }
+
+      clonedAssetRows.push({
+        id: newAssetId,
+        projectId: newProjectId,
+        workspaceId: destAuth.workspace.id,
+        r2Key: newR2Key,
+        slot: srcAsset.slot,
+        crop: srcAsset.crop,
+        width: srcAsset.width,
+        height: srcAsset.height,
+        bytes: srcAsset.bytes,
+        mimeType: srcAsset.mimeType,
+        sha256: srcAsset.sha256,
+        createdAt: now,
       });
     }
 
-    clonedAssetRows.push({
-      id: newAssetId,
-      projectId: newProjectId,
-      workspaceId: destAuth.workspace.id,
-      r2Key: rawBytes ? newR2Key : srcAsset.r2Key,
-      slot: srcAsset.slot,
-      crop: srcAsset.crop,
-      width: srcAsset.width,
-      height: srcAsset.height,
-      bytes: srcAsset.bytes,
-      mimeType: srcAsset.mimeType,
-      sha256: srcAsset.sha256,
-      createdAt: now,
+    const remappedPuckData = remapAssetUrlsInPuckData(
+      structuredClone(sourceAuth.project.puckData),
+      assetIdMap,
+    ) as Record<string, unknown>;
+
+    const txResult = await db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM workspaces WHERE id = ${destAuth.workspace.id} FOR UPDATE
+      `);
+
+      const currentRows = await tx
+        .select({
+          archivedAt: dbSchema.projects.archivedAt,
+        })
+        .from(dbSchema.projects)
+        .innerJoin(dbSchema.spaces, eq(dbSchema.projects.spaceId, dbSchema.spaces.id))
+        .where(
+          and(
+            eq(dbSchema.projects.workspaceId, destAuth.workspace.id),
+            eq(dbSchema.spaces.recoveryState, "active"),
+          ),
+        );
+
+      const lockedActive = currentRows.filter((r) => r.archivedAt === null).length;
+      const lockedRetained = currentRows.length;
+
+      if (lockedActive >= destAuth.entitlement.quotas.activeProjectsLimit) {
+        return {
+          ok: false as const,
+          status: 403 as const,
+          code: "PROJECT_LIMIT_REACHED",
+          error: `Destination workspace has reached its limit of ${destAuth.entitlement.quotas.activeProjectsLimit} active projects.`,
+        };
+      }
+
+      if (lockedRetained >= destAuth.entitlement.quotas.retainedProjectsLimit) {
+        return {
+          ok: false as const,
+          status: 403 as const,
+          code: "RETAINED_PROJECT_LIMIT_REACHED",
+          error: `Destination workspace has reached its limit of ${destAuth.entitlement.quotas.retainedProjectsLimit} total retained projects.`,
+        };
+      }
+
+      const [[lockedAssetSum], [lockedRevSum]] = await Promise.all([
+        tx
+          .select({
+            totalBytes: sql<number>`coalesce(sum(${dbSchema.assets.bytes}), 0)::bigint`,
+          })
+          .from(dbSchema.assets)
+          .innerJoin(dbSchema.projects, eq(dbSchema.assets.projectId, dbSchema.projects.id))
+          .innerJoin(dbSchema.spaces, eq(dbSchema.projects.spaceId, dbSchema.spaces.id))
+          .where(
+            and(
+              eq(dbSchema.projects.workspaceId, destAuth.workspace.id),
+              eq(dbSchema.spaces.recoveryState, "active"),
+            ),
+          ),
+        tx
+          .select({
+            totalBytes: sql<number>`coalesce(sum(${dbSchema.projectRevisions.bytes}), 0)::bigint`,
+          })
+          .from(dbSchema.projectRevisions)
+          .innerJoin(
+            dbSchema.projects,
+            eq(dbSchema.projectRevisions.projectId, dbSchema.projects.id),
+          )
+          .innerJoin(dbSchema.spaces, eq(dbSchema.projects.spaceId, dbSchema.spaces.id))
+          .where(
+            and(
+              eq(dbSchema.projects.workspaceId, destAuth.workspace.id),
+              eq(dbSchema.spaces.recoveryState, "active"),
+            ),
+          ),
+      ]);
+
+      const lockedStorageBytes =
+        Number(lockedAssetSum?.totalBytes ?? 0) + Number(lockedRevSum?.totalBytes ?? 0);
+      const lockedStorageEval = evaluateQuotaUsage({
+        used: lockedStorageBytes,
+        adding: copiedBytes,
+        limit: destAuth.entitlement.quotas.storageBytesLimit,
+        isPaid: destAuth.entitlement.plan !== "free",
+        graceUsedAt: destAuth.entitlement.graceUsedAt,
+        graceExpiresAt: destAuth.entitlement.graceExpiresAt,
+        now,
+      });
+
+      if (!lockedStorageEval.allowed) {
+        return {
+          ok: false as const,
+          status: 403 as const,
+          code: "STORAGE_QUOTA_EXCEEDED",
+          error: "Destination workspace does not have enough storage quota for this copy.",
+        };
+      }
+
+      await tx.insert(dbSchema.projects).values({
+        id: newProjectId,
+        ownerId: args.actorUserId,
+        orgId: destAuth.workspace.organizationId,
+        workspaceId: destAuth.workspace.id,
+        spaceId: destAuth.space.id,
+        createdByUserId: args.actorUserId,
+        templateVersionId: sourceAuth.project.templateVersionId,
+        name: `${sourceAuth.project.name} (Copy)`.slice(0, 120),
+        type: sourceAuth.project.type,
+        puckData: remappedPuckData,
+        theme: structuredClone(sourceAuth.project.theme),
+        revision: 1,
+        slug: null,
+        visibility: "private",
+        brandingRemoved: false,
+        publicAcknowledgedAt: null,
+        publishedAt: null,
+        archivedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      if (clonedAssetRows.length > 0) {
+        await tx.insert(dbSchema.assets).values(clonedAssetRows);
+      }
+
+      await tx.insert(dbSchema.auditLogs).values({
+        actorId: args.actorUserId,
+        action: "project.copied_across_workspaces",
+        meta: {
+          sourceWorkspaceId: sourceAuth.workspace.id,
+          destinationWorkspaceId: destAuth.workspace.id,
+          copiedProjectId: newProjectId,
+        },
+        at: now,
+      });
+
+      return { ok: true as const };
     });
+
+    if (!txResult.ok) {
+      if (writtenR2Keys.length > 0) {
+        await Promise.all(writtenR2Keys.map((k) => deleteStoredObject(k).catch(() => undefined)));
+      }
+      return txResult;
+    }
+  } catch (error) {
+    if (writtenR2Keys.length > 0) {
+      await Promise.all(writtenR2Keys.map((k) => deleteStoredObject(k).catch(() => undefined)));
+    }
+    throw error;
   }
-
-  const remappedPuckData = remapAssetUrlsInPuckData(
-    structuredClone(sourceAuth.project.puckData),
-    assetIdMap,
-  ) as Record<string, unknown>;
-
-  await db.insert(dbSchema.projects).values({
-    id: newProjectId,
-    ownerId: args.actorUserId,
-    orgId: destAuth.workspace.organizationId,
-    workspaceId: destAuth.workspace.id,
-    spaceId: destAuth.space.id,
-    createdByUserId: args.actorUserId,
-    templateVersionId: sourceAuth.project.templateVersionId,
-    name: `${sourceAuth.project.name} (Copy)`.slice(0, 120),
-    type: sourceAuth.project.type,
-    puckData: remappedPuckData,
-    theme: structuredClone(sourceAuth.project.theme),
-    revision: 1,
-    slug: null,
-    visibility: "private",
-    brandingRemoved: false,
-    publicAcknowledgedAt: null,
-    publishedAt: null,
-    archivedAt: null,
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  if (clonedAssetRows.length > 0) {
-    await db.insert(dbSchema.assets).values(clonedAssetRows);
-  }
-
-  await db.insert(dbSchema.auditLogs).values({
-    actorId: args.actorUserId,
-    action: "project.copied_across_workspaces",
-    meta: {
-      sourceWorkspaceId: sourceAuth.workspace.id,
-      destinationWorkspaceId: destAuth.workspace.id,
-      copiedProjectId: newProjectId,
-    },
-    at: now,
-  });
 
   return {
     ok: true,
@@ -1091,7 +1257,10 @@ export interface RecoverySpaceBundle {
  * Lists the caller's departed-team private recovery spaces (`Spec §11.2 & §11.4`),
  * completely separate from team navigation and invisible to the former team.
  */
-export async function listRecoverySpacesForUser(userId: string): Promise<RecoverySpaceBundle[]> {
+export async function listRecoverySpacesForUser(
+  userId: string,
+  now: Date = new Date(),
+): Promise<RecoverySpaceBundle[]> {
   const recoverySpaces = await db
     .select({
       space: dbSchema.spaces,
@@ -1103,6 +1272,7 @@ export async function listRecoverySpacesForUser(userId: string): Promise<Recover
       and(
         eq(dbSchema.spaces.controllerUserId, userId),
         eq(dbSchema.spaces.recoveryState, "frozen_member_departed"),
+        or(isNull(dbSchema.spaces.recoveryUntil), gt(dbSchema.spaces.recoveryUntil, now)),
       ),
     )
     .orderBy(desc(dbSchema.spaces.departedAt));

@@ -27,9 +27,13 @@ This runbook documents the production topology, environment configuration, healt
 2. Enable **Protected Branch** on `main` and configure **Point-in-Time Restore (PITR)** retention to **14 days** (or 30 days on Scale).
 3. Run schema migrations and seed default templates against the pooled/direct Neon connection string:
    ```bash
+   CONFIRM_DB_HOST="<ep-prod>.us-east-2.aws.neon.tech" \
    DATABASE_URL="postgresql://<user>:<pass>@<ep-prod>.us-east-2.aws.neon.tech/casefolio?sslmode=require" \
-     pnpm db:migrate && pnpm db:seed
+     pnpm db:migrate:remote
    ```
+   `scripts/db-migrate-guarded.mjs` refuses a remote host unless `CONFIRM_DB_HOST` equals the `DATABASE_URL` host. Seeding a remote database is not part of a normal release: add `--seed` **and** `ALLOW_REMOTE_SEED=1` only for the very first bootstrap.
+
+   **Release procedure: migrate first, then deploy.** The Vercel build (`pnpm --filter @casefolio/web build`) no longer runs `db:migrate`/`db:seed`. Migrations are expand-only, so run `pnpm db:migrate:remote` against the target database, then deploy; rollback of the app never requires a schema rollback.
 4. For pull-request preview environments, create ephemeral Neon branches (`neonctl branches create --parent main`) so previews never mutate production data.
 
 ### 2.2 Export Worker (`@casefolio/worker` on Fly.io or Railway)
@@ -58,7 +62,7 @@ This runbook documents the production topology, environment configuration, healt
 ### 2.3 Web Application (`@casefolio/web` on Vercel)
 
 1. Import the repository into Vercel using root `vercel.json` (`buildCommand`: `pnpm --filter @casefolio/web build`, `outputDirectory`: `apps/web/.next`).
-2. Configure all required environment variables validated by `apps/web/src/env.ts` (keep `PADDLE_ENV="sandbox"` until owner sign-off).
+2. Configure all required environment variables validated by `apps/web/src/env.ts` (keep `PADDLE_ENV="sandbox"` until owner sign-off). `ALLOW_SIMULATED_BILLING=1` is for Preview/local only: the app refuses to boot on `VERCEL_ENV=production` if it is set, if `PADDLE_ENV` is not `production`, or if any `PADDLE_PRICE_*` is a placeholder `pri_*_id`. Optional: `EXPORT_WORKER_CONCURRENCY` (default `1`) sets concurrent export jobs per worker. Vercel Cron runs `/api/cron/billing-reconcile` (04:00 UTC) and `/api/cron/maintenance` (03:30 UTC; stale export sweep, retention, pruning; needs `CRON_SECRET`).
 3. Deploy to production and verify `GET /api/health` and HTTP security headers:
    ```bash
    curl -fsS https://casefolio.app/api/health

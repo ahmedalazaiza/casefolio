@@ -36,6 +36,8 @@ export function ContactSupportClient({
   const [sentTicket, setSentTicket] = useState<{
     ticketCode: string;
     replyToEmail: string;
+    delivery: "sent" | "queued";
+    expectedResponse: string;
   } | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -65,7 +67,13 @@ export function ContactSupportClient({
       });
 
       const json = (await response.json()) as
-        | { ok: true; ticketCode: string; replyToEmail: string }
+        | {
+            ok: true;
+            ticketCode: string;
+            replyToEmail: string;
+            delivery: "sent" | "queued";
+            expectedResponse: string;
+          }
         | { ok: false; error?: string };
 
       if (!response.ok || !json.ok) {
@@ -79,6 +87,8 @@ export function ContactSupportClient({
       setSentTicket({
         ticketCode: json.ticketCode,
         replyToEmail: json.replyToEmail,
+        delivery: json.delivery,
+        expectedResponse: json.expectedResponse,
       });
     } catch {
       setErrorMessage("Network error while sending support message.");
@@ -91,6 +101,8 @@ export function ContactSupportClient({
     return (
       <section
         data-testid="support-message-sent"
+        role="status"
+        aria-live="polite"
         className="v3-pattern-dots-light flex flex-col items-start gap-6 rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-8 shadow-[var(--cf-shadow-card)] sm:p-12"
       >
         <div className="flex items-center gap-3">
@@ -101,18 +113,31 @@ export function ContactSupportClient({
             <Check className="size-7" />
           </span>
           <span className="rounded-lg bg-[var(--cf-bg-accent)] px-3 py-1 font-mono text-xs font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-            01 · Dispatched
+            {sentTicket.delivery === "sent" ? "01 · Dispatched" : "01 · Saved"}
           </span>
         </div>
 
         <div className="flex flex-col gap-2">
-          <h1 className="v3-display-l text-[var(--cf-text-primary)]">Message sent</h1>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            {sentTicket.delivery === "sent" ? "Message sent" : "Request saved"}
+          </h1>
           <p className="text-base leading-relaxed text-[var(--cf-text-secondary)]">
-            Ticket #{sentTicket.ticketCode} · We’ll reply to{" "}
+            {sentTicket.delivery === "sent"
+              ? "We sent your message to the support team."
+              : "We saved your request and will follow up. Our email delivery is catching up, so it may reach the team a little later."}
+          </p>
+          <p
+            data-testid="support-ticket-code"
+            className="text-base leading-relaxed text-[var(--cf-text-secondary)]"
+          >
+            <span className="font-mono font-semibold text-[var(--cf-text-primary)]">
+              Ticket #{sentTicket.ticketCode}
+            </span>{" "}
+            · We’ll reply to{" "}
             <span className="font-semibold text-[var(--cf-text-primary)]">
               {sentTicket.replyToEmail}
-            </span>
-            .
+            </span>{" "}
+            {sentTicket.expectedResponse}. Keep the ticket code in case you need to follow up.
           </p>
         </div>
 

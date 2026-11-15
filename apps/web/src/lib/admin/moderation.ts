@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "@casefolio/db";
+import { and, desc, eq, inArray, sql } from "@casefolio/db";
 import {
   extractPrimaryReasonLabel,
   type AdminModerationCaseItem,
@@ -9,6 +9,7 @@ import {
 import { db, dbSchema } from "@/lib/db";
 import { sendAdminAbuseReportAlertEmail } from "@/lib/email";
 import { createUserNotification } from "@/lib/notifications/service";
+import { revalidatePublicProject } from "@/lib/projects/public-cache";
 import { recordAdminAuditLog } from "@/lib/template/service";
 
 export async function submitPublicProjectReport(args: {
@@ -87,7 +88,8 @@ export async function listAdminModerationQueue(): Promise<AdminModerationOvervie
     .from(dbSchema.reports)
     .innerJoin(dbSchema.projects, eq(dbSchema.reports.projectId, dbSchema.projects.id))
     .innerJoin(dbSchema.users, eq(dbSchema.projects.ownerId, dbSchema.users.id))
-    .orderBy(desc(dbSchema.reports.createdAt));
+    .orderBy(desc(dbSchema.reports.createdAt))
+    .limit(1000);
 
   const grouped = new Map<string, AdminModerationCaseItem>();
 
@@ -142,9 +144,10 @@ export async function listAdminModerationQueue(): Promise<AdminModerationOvervie
 export async function resolveModerationForProject(args: {
   actorId: string;
   projectId: string;
-  decision: "dismiss" | "takedown";
+  decision: "dismiss" | "takedown" | "restore";
+  reason?: string;
 }): Promise<
-  | { ok: true; slug: string | null; decision: "dismiss" | "takedown" }
+  | { ok: true; slug: string | null; decision: "dismiss" | "takedown" | "restore" }
   | { ok: false; error: string }
 > {
   const [project] = await db
@@ -157,17 +160,79 @@ export async function resolveModerationForProject(args: {
     return { ok: false, error: "Project not found." };
   }
 
-  const matchingReports = await db
-    .select()
-    .from(dbSchema.reports)
-    .where(
-      and(
-        eq(dbSchema.reports.projectId, project.id),
-        inArray(dbSchema.reports.status, ["open", "reviewed"]),
-      ),
-    );
+  if (args.decision === "restore") {
+    const cleanReason = args.reason?.trim() || "Takedown hold lifted after admin review";
+    const restoredCount = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM projects WHERE id = ${project.id} FOR UPDATE`);
+      const takedownRows = await tx
+        .select({ id: dbSchema.reports.id })
+        .from(dbSchema.reports)
+        .where(
+          and(
+            eq(dbSchema.reports.projectId, project.id),
+            eq(dbSchema.reports.status, "takedown"),
+          ),
+        );
+
+      if (takedownRows.length === 0) {
+        return 0;
+      }
+
+      await tx
+        .update(dbSchema.reports)
+        .set({ status: "reviewed" })
+        .where(
+          inArray(
+            dbSchema.reports.id,
+            takedownRows.map((r) => r.id),
+          ),
+        );
+
+      return takedownRows.length;
+    });
+
+    if (restoredCount === 0) {
+      return { ok: false, error: "No active moderation takedown found on this project." };
+    }
+
+    await createUserNotification({
+      userId: project.ownerId,
+      kind: "published",
+      title: `Moderation hold lifted for "${project.name}"`,
+      message:
+        "Our Trust & Safety team lifted the moderation takedown on your case study. Your draft can now be re-published from the editor.",
+      href: `/editor/${project.id}`,
+      meta: {
+        projectId: project.id,
+        slug: project.slug,
+      },
+      sendEmail: false,
+    }).catch(() => undefined);
+
+    await recordAdminAuditLog(args.actorId, "admin.moderation.restored", {
+      projectId: project.id,
+      projectName: project.name,
+      slug: project.slug,
+      ownerId: project.ownerId,
+      clearedReportCount: restoredCount,
+      reason: cleanReason,
+    });
+
+    revalidatePublicProject(project.slug);
+    return { ok: true, slug: project.slug, decision: "restore" };
+  }
 
   if (args.decision === "dismiss") {
+    const matchingReports = await db
+      .select({ id: dbSchema.reports.id })
+      .from(dbSchema.reports)
+      .where(
+        and(
+          eq(dbSchema.reports.projectId, project.id),
+          inArray(dbSchema.reports.status, ["open", "reviewed"]),
+        ),
+      );
+
     if (matchingReports.length > 0) {
       await db
         .update(dbSchema.reports)
@@ -190,41 +255,57 @@ export async function resolveModerationForProject(args: {
     return { ok: true, slug: project.slug, decision: "dismiss" };
   }
 
-  // Takedown: unpublish project & purge published snapshot immediately so /p/[slug] and /cdn/images/[assetId] return 404,
-  // keep owner draft, mark reports "takedown", notify owner & audit log
+  // N7: Atomic takedown inside a row-locked transaction so a concurrent publish cannot leave a live snapshot
   const now = new Date();
-  await db
-    .update(dbSchema.projects)
-    .set({
-      visibility: "private",
-      publishedAt: null,
-      updatedAt: now,
-    })
-    .where(eq(dbSchema.projects.id, project.id));
+  const reportCount = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM projects WHERE id = ${project.id} FOR UPDATE`);
 
-  await db
-    .delete(dbSchema.publishedSnapshots)
-    .where(eq(dbSchema.publishedSnapshots.projectId, project.id));
-
-  if (matchingReports.length > 0) {
-    await db
-      .update(dbSchema.reports)
-      .set({ status: "takedown" })
+    const matchingReports = await tx
+      .select({ id: dbSchema.reports.id })
+      .from(dbSchema.reports)
       .where(
-        inArray(
-          dbSchema.reports.id,
-          matchingReports.map((r) => r.id),
+        and(
+          eq(dbSchema.reports.projectId, project.id),
+          inArray(dbSchema.reports.status, ["open", "reviewed"]),
         ),
       );
-  } else {
-    // Even if taken down directly without an open report row, ensure a takedown record exists
-    await db.insert(dbSchema.reports).values({
-      projectId: project.id,
-      reporterId: args.actorId,
-      reason: "Admin policy takedown",
-      status: "takedown",
-    });
-  }
+
+    await tx
+      .update(dbSchema.projects)
+      .set({
+        visibility: "private",
+        publishedAt: null,
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.projects.id, project.id));
+
+    await tx
+      .delete(dbSchema.publishedSnapshots)
+      .where(eq(dbSchema.publishedSnapshots.projectId, project.id));
+
+    if (matchingReports.length > 0) {
+      await tx
+        .update(dbSchema.reports)
+        .set({ status: "takedown" })
+        .where(
+          inArray(
+            dbSchema.reports.id,
+            matchingReports.map((r) => r.id),
+          ),
+        );
+    } else {
+      await tx.insert(dbSchema.reports).values({
+        projectId: project.id,
+        reporterId: args.actorId,
+        reason: "Admin policy takedown",
+        status: "takedown",
+      });
+    }
+
+    return matchingReports.length;
+  });
+
+  revalidatePublicProject(project.slug);
 
   await createUserNotification({
     userId: project.ownerId,
@@ -247,35 +328,75 @@ export async function resolveModerationForProject(args: {
     projectName: project.name,
     slug: project.slug,
     ownerId: project.ownerId,
-    reportCount: matchingReports.length,
+    reportCount,
   });
 
   return { ok: true, slug: project.slug, decision: "takedown" };
 }
 
+export async function restoreModerationTakedown(args: {
+  actorId: string;
+  projectId: string;
+  reason?: string;
+}): Promise<{ ok: true; slug: string | null } | { ok: false; error: string }> {
+  const res = await resolveModerationForProject({
+    actorId: args.actorId,
+    projectId: args.projectId,
+    decision: "restore",
+    reason: args.reason,
+  });
+  if (!res.ok) return res;
+  return { ok: true, slug: res.slug };
+}
+
 export async function dismissAllOpenModerationReports(args: {
   actorId: string;
-}): Promise<{ ok: true; dismissedCount: number }> {
-  const openRows = await db
-    .select({ id: dbSchema.reports.id })
-    .from(dbSchema.reports)
-    .where(eq(dbSchema.reports.status, "open"));
-
-  if (openRows.length > 0) {
-    await db
-      .update(dbSchema.reports)
-      .set({ status: "dismissed" })
-      .where(
-        inArray(
-          dbSchema.reports.id,
-          openRows.map((r) => r.id),
-        ),
-      );
+  actorRole: "admin" | "superadmin";
+  confirmed: boolean;
+  reason: string;
+}): Promise<{ ok: true; dismissedCount: number } | { ok: false; status: number; error: string }> {
+  if (args.actorRole !== "superadmin") {
+    return {
+      ok: false,
+      status: 403,
+      error: "Only a superadmin can bulk-dismiss all open moderation reports.",
+    };
   }
 
-  await recordAdminAuditLog(args.actorId, "admin.moderation.bulk_dismissed", {
-    dismissedReportCount: openRows.length,
+  const trimmedReason = args.reason.trim();
+  if (!args.confirmed || trimmedReason.length < 5) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Explicit confirmation and an audit reason (at least 5 characters) are required.",
+    };
+  }
+
+  const dismissedCount = await db.transaction(async (tx) => {
+    const openRows = await tx
+      .select({ id: dbSchema.reports.id })
+      .from(dbSchema.reports)
+      .where(eq(dbSchema.reports.status, "open"));
+
+    if (openRows.length > 0) {
+      await tx
+        .update(dbSchema.reports)
+        .set({ status: "dismissed" })
+        .where(
+          inArray(
+            dbSchema.reports.id,
+            openRows.map((r) => r.id),
+          ),
+        );
+    }
+
+    return openRows.length;
   });
 
-  return { ok: true, dismissedCount: openRows.length };
+  await recordAdminAuditLog(args.actorId, "admin.moderation.bulk_dismissed", {
+    dismissedReportCount: dismissedCount,
+    reason: trimmedReason,
+  });
+
+  return { ok: true, dismissedCount };
 }

@@ -40,6 +40,8 @@ export const SERVER_ENV_SCHEMA = {
   EMAIL_FROM_SUPPORT: z.string().min(3).optional(),
   ADMIN_ALERT_EMAIL: z.string().email().default("admin@casefolio.com"),
   SUPPORT_INBOX_EMAIL: z.string().email().default("support@casefolio.com"),
+  ALLOW_SIMULATED_BILLING: z.string().optional(),
+  EXPORT_WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(1),
 } as const;
 
 export const CLIENT_ENV_SCHEMA = {
@@ -53,6 +55,39 @@ export const REQUIRED_ENV_KEYS = [
   ...Object.keys(REQUIRED_SERVER_ENV_SCHEMA),
   ...Object.keys(CLIENT_ENV_SCHEMA),
 ] as const;
+
+/**
+ * True only when the local signed billing simulator may run: explicit opt-in AND never in a
+ * production deployment (Vercel production or Paddle production).
+ */
+export function isSimulatedBillingAllowed(
+  source: Record<string, string | undefined> = process.env,
+): boolean {
+  if (source.VERCEL_ENV === "production" || source.PADDLE_ENV === "production") return false;
+  return source.ALLOW_SIMULATED_BILLING === "1";
+}
+
+/**
+ * Throws a clear error when a *production deployment* is configured with sandbox/simulated
+ * billing. Staging (preview) and local environments are never affected.
+ */
+export function assertProductionBillingEnvironment(
+  source: Record<string, string | undefined> = process.env,
+): void {
+  if (source.VERCEL_ENV !== "production") return;
+  const problems: string[] = [];
+  if (source.PADDLE_ENV !== "production") problems.push("PADDLE_ENV must be 'production'");
+  const placeholders = Object.entries(source)
+    .filter(([key, value]) => key.startsWith("PADDLE_PRICE_") && /^pri_.*_id$/.test(value ?? ""))
+    .map(([key]) => key);
+  if (placeholders.length > 0) {
+    problems.push(`placeholder Paddle price ids in ${placeholders.join(", ")}`);
+  }
+  if (source.ALLOW_SIMULATED_BILLING) problems.push("ALLOW_SIMULATED_BILLING must be unset");
+  if (problems.length > 0) {
+    throw new Error(`Unsafe billing configuration for a production deployment: ${problems.join("; ")}.`);
+  }
+}
 
 export function createValidatedEnv(
   source: Record<string, string | undefined>,
@@ -94,6 +129,8 @@ export function createValidatedEnv(
       EMAIL_FROM_SUPPORT: source.EMAIL_FROM_SUPPORT,
       ADMIN_ALERT_EMAIL: source.ADMIN_ALERT_EMAIL,
       SUPPORT_INBOX_EMAIL: source.SUPPORT_INBOX_EMAIL,
+      ALLOW_SIMULATED_BILLING: source.ALLOW_SIMULATED_BILLING,
+      EXPORT_WORKER_CONCURRENCY: source.EXPORT_WORKER_CONCURRENCY,
       EXPORT_WORKER_URL: source.EXPORT_WORKER_URL,
       EXPORT_SIGNING_SECRET: source.EXPORT_SIGNING_SECRET,
       NEXT_PUBLIC_POSTHOG_KEY: source.NEXT_PUBLIC_POSTHOG_KEY,
@@ -111,6 +148,7 @@ let cachedEnv: ReturnType<typeof createValidatedEnv> | null = null;
 
 export function getEnv() {
   if (!cachedEnv) {
+    assertProductionBillingEnvironment(process.env);
     cachedEnv = createValidatedEnv(process.env);
   }
   return cachedEnv;

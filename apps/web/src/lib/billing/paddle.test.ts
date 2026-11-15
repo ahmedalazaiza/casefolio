@@ -307,16 +307,22 @@ describe("Paddle Billing signature, checkout & idempotent webhooks (C-701)", () 
       expect(plusWs?.customDomainEnabled).toBe(true);
       expect(plusWs?.watermarkEnabled).toBe(false);
 
-      // Configure agency custom domain on Plus workspace
+      // Custom domains are not available yet: configuring one is refused
       const domainRes = await updateTeamCustomDomain({
         actorUserId: userId,
         organizationId: createdOrgId!,
         customDomain: "work.northstar.agency",
       });
       expect(domainRes).toEqual({
-        ok: true,
-        customDomain: "work.northstar.agency",
+        ok: false,
+        code: "NOT_AVAILABLE",
+        error: "Custom domains are not available yet.",
       });
+      const [afterWs] = await db
+        .select({ customDomain: dbSchema.workspaces.customDomain })
+        .from(dbSchema.workspaces)
+        .where(eq(dbSchema.workspaces.organizationId, createdOrgId!));
+      expect(afterWs?.customDomain ?? null).toBeNull();
     } finally {
       for (const eid of createdEventIds) {
         await db

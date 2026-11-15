@@ -13,7 +13,7 @@ import {
   type Database,
   type UsageMeterKey,
 } from "@casefolio/db";
-import { PgBoss, type Job } from "pg-boss";
+import { PgBoss, type JobWithMetadata } from "pg-boss";
 import {
   renderExportWithPlaywright,
   type ExportFormat,
@@ -56,6 +56,21 @@ export interface ProcessExportJobDependencies {
   renderFn?: (input: RenderExportInput) => Promise<RenderedExportArtifact>;
   storeFn?: typeof storeRenderedExportArtifact;
   onExportFinished?: (event: ExportFinishedEvent) => Promise<void>;
+  retryCount?: number;
+  retryLimit?: number;
+}
+
+export function isNonRetryableExportError(err: unknown): boolean {
+  if (err && typeof err === "object" && "retryable" in err && (err as { retryable?: unknown }).retryable === false) {
+    return true;
+  }
+  const msg = err instanceof Error ? err.message.toLowerCase() : "";
+  return (
+    msg.includes("exceeds maximum") ||
+    msg.includes("megapixel") ||
+    msg.includes("page limit") ||
+    msg.includes("unsupported export format")
+  );
 }
 
 async function commitWorkerExportReservation(
@@ -471,6 +486,20 @@ export async function processExportJob(
   } catch (err) {
     const rawMessage = err instanceof Error ? err.message : "Export rendering failed.";
     const safeError = rawMessage.slice(0, 500);
+    const retryCount = Math.max(0, Math.trunc(deps.retryCount ?? 0));
+    const retryLimit = Math.max(0, Math.trunc(deps.retryLimit ?? 2));
+    const canRetry = !isNonRetryableExportError(err) && retryCount < retryLimit;
+
+    if (canRetry) {
+      await deps.db
+        .update(exportsTable)
+        .set({
+          status: "queued",
+          error: `Attempt ${retryCount + 1} failed (${safeError}); retrying automatically.`,
+        })
+        .where(eq(exportsTable.id, payload.exportId));
+      throw err;
+    }
 
     await deps.db
       .update(exportsTable)
@@ -497,17 +526,21 @@ export async function processExportJob(
       await recordStandaloneWorkerNotification(deps.db, failedEvent, preAcl.requesterId);
     }
 
-    return {
-      status: "failed",
-      error: safeError,
-    };
+    throw err;
   }
 }
 
 export interface ExportWorkerConsumerHandle {
   boss: PgBoss;
   workerId: string;
+  concurrency: number;
   stop: () => Promise<void>;
+}
+
+export function resolveExportWorkerConcurrency(explicit?: number): number {
+  const raw = explicit ?? Number(process.env.EXPORT_WORKER_CONCURRENCY || 1);
+  if (!Number.isFinite(raw)) return 1;
+  return Math.max(1, Math.min(16, Math.trunc(raw)));
 }
 
 export async function startPgBossExportConsumer(options: {
@@ -519,13 +552,15 @@ export async function startPgBossExportConsumer(options: {
   storeFn?: typeof storeRenderedExportArtifact;
   onExportFinished?: (event: ExportFinishedEvent) => Promise<void>;
   pollingIntervalSeconds?: number;
+  concurrency?: number;
 }): Promise<ExportWorkerConsumerHandle> {
   const ownedDb = !options.db ? createDbConnection(options.databaseUrl) : null;
   const db = options.db ?? ownedDb!.db;
+  const concurrency = resolveExportWorkerConcurrency(options.concurrency);
 
   const boss = new PgBoss({
     connectionString: options.databaseUrl,
-    max: 4,
+    max: Math.max(4, concurrency + 2),
   });
 
   await boss.start();
@@ -533,13 +568,17 @@ export async function startPgBossExportConsumer(options: {
     // Queue already exists
   });
 
-  const workerId = await boss.work<ExportQueueJobPayload>(
+  const workOptions = {
+    pollingIntervalSeconds: options.pollingIntervalSeconds ?? 0.5,
+    batchSize: 1,
+    localConcurrency: concurrency,
+    includeMetadata: true as const,
+  };
+
+  const workerId = await boss.work<ExportQueueJobPayload, void, typeof workOptions>(
     EXPORT_QUEUE_NAME,
-    {
-      pollingIntervalSeconds: options.pollingIntervalSeconds ?? 0.5,
-      batchSize: 1,
-    },
-    async (jobs: Job<ExportQueueJobPayload>[]) => {
+    workOptions,
+    async (jobs: JobWithMetadata<ExportQueueJobPayload>[]) => {
       for (const job of jobs) {
         await processExportJob(job.data, {
           db,
@@ -548,6 +587,8 @@ export async function startPgBossExportConsumer(options: {
           renderFn: options.renderFn,
           storeFn: options.storeFn,
           onExportFinished: options.onExportFinished,
+          retryCount: job.retryCount,
+          retryLimit: job.retryLimit,
         });
       }
     },
@@ -556,6 +597,7 @@ export async function startPgBossExportConsumer(options: {
   return {
     boss,
     workerId,
+    concurrency,
     stop: async () => {
       await boss.stop({ graceful: true, timeout: 5_000 });
       if (ownedDb) {
@@ -576,6 +618,7 @@ export async function enqueueExportJobToPgBoss(
   return boss.send(EXPORT_QUEUE_NAME, payload, {
     retryLimit: 2,
     retryDelay: 3,
+    retryBackoff: true,
     expireInSeconds: 180,
   });
 }

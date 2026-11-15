@@ -63,10 +63,11 @@ describe("Phase 11 Security Review & Hardening Audit (C-1101)", () => {
       "api/paddle/webhook/route.ts": /handleSignedPaddleWebhookRequest/,
       // Machine-to-machine: fails closed (503) without CRON_SECRET and compares in constant time
       "api/cron/billing-reconcile/route.ts": /CRON_SECRET[\s\S]*timingSafeEqual|timingSafeEqual[\s\S]*CRON_SECRET/,
+      "api/cron/maintenance/route.ts": /CRON_SECRET[\s\S]*timingSafeEqual|timingSafeEqual[\s\S]*CRON_SECRET/,
       "api/uploads/local-put/route.ts": /verifyStorageToken/,
       "api/track/route.ts": /recordPublishedProjectView/,
-      "api/reports/route.ts": /consumeUploadRateLimit/,
-      "api/help/contact/route.ts": /consumeUploadRateLimit/,
+      "api/reports/route.ts": /consume(Upload|Shared)RateLimit/,
+      "api/help/contact/route.ts": /consume(Upload|Shared)RateLimit/,
       "api/dev/analytics-events/route.ts": /NODE_ENV\s*===\s*"production"/,
       "api/health/route.ts": /checkWebHealth|status/,
       "cdn/covers/[file]/route.ts": /readPublicTemplateCoverByFileName/,

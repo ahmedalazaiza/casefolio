@@ -9,14 +9,8 @@ import { GoogleIcon } from "@/components/ui/google-icon";
 import { InputField } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth/client";
+import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 import { magicLinkSchema, signInPasswordSchema } from "@/lib/auth/schemas";
-
-function sanitizeCallbackUrl(raw?: string): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
-    return "/dashboard";
-  }
-  return raw;
-}
 
 export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
   const router = useRouter();
@@ -70,6 +64,12 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
     });
 
     if (error) {
+      if (error.code === "EMAIL_NOT_VERIFIED") {
+        // The server already sent a fresh verification code; continue on /verify instead of dead-ending.
+        const params = new URLSearchParams({ email: parsed.data.email, sent: "1" });
+        router.push(`/verify?${params.toString()}`);
+        return;
+      }
       setFormError(error.message ?? "Email or password is incorrect.");
       setFieldErrors({ password: "Check your password and try again" });
       setSubmitting(false);

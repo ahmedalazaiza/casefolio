@@ -5,6 +5,7 @@ import {
   archiveProjectForUser,
   unarchiveProjectForUser,
 } from "@/lib/projects/dashboard";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 import {
   copyProjectAcrossWorkspaces,
   createSpaceForUser,
@@ -78,6 +79,25 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const data = parsed.data;
+
+  const rate = await consumeSharedRateLimit({
+    key:
+      data.action === "copy_project"
+        ? `spaces-copy:${ctx.user.id}`
+        : `spaces-mutate:${ctx.user.id}`,
+    limit: data.action === "copy_project" ? 10 : 30,
+    windowMs: 60_000,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "RATE_LIMITED",
+        error: `Too many workspace operations. Please wait ${rate.retryAfterSeconds}s.`,
+      },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
+  }
 
   if (data.action === "create") {
     const res = await createSpaceForUser({

@@ -118,6 +118,7 @@ export default async function AccountSecurityPage() {
         projectsCount={Number(projectsTotal?.total ?? 0)}
         publishedCount={Number(publishedTotal?.total ?? 0)}
         sessions={sessionViews}
+        deletionScheduledForIso={user.deletionScheduledFor?.toISOString() ?? null}
       />
     </AccountSettingsShell>
   );

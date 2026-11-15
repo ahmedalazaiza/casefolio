@@ -29,6 +29,7 @@ import {
   resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
 import { notifyTeamInviteIfExistingUser } from "@/lib/notifications/service";
+import { revalidatePublicProject } from "@/lib/projects/public-cache";
 import { releaseWorkspaceReservation } from "@/lib/usage/meter";
 import { revokeUserWorkspaceLeases } from "@/lib/workspaces/leases";
 
@@ -438,28 +439,77 @@ export async function resendTeamInvitation(args: {
     };
   }
 
+  if (inv.expiresAt.getTime() <= now.getTime()) {
+    return {
+      ok: false,
+      status: 409,
+      code: "INVITATION_EXPIRED",
+      error: "This invitation has expired. Send a new invitation to reserve a fresh seat.",
+    };
+  }
+
   const newToken = generateOpaqueInvitationToken();
   const newTokenHash = hashInvitationToken(newToken);
   const expiresAt = new Date(now.getTime() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
 
-  await db
-    .update(dbSchema.invitations)
-    .set({
-      tokenHash: newTokenHash,
-      expiresAt,
-      resentCount: inv.resentCount + 1,
-      resentAt: now,
-    })
-    .where(eq(dbSchema.invitations.id, inv.id));
+  const txRes = await db.transaction(async (tx) => {
+    const lockedRows = await tx.execute<{
+      id: string;
+      status: string;
+      revoked_at: Date | null;
+      expires_at: Date | string;
+      resent_count: number;
+    }>(sql`
+      SELECT id, status, revoked_at, expires_at, resent_count
+      FROM invitations
+      WHERE id = ${inv.id}
+      FOR UPDATE
+    `);
 
-  await db
-    .update(dbSchema.seatReservations)
-    .set({
-      expiresAt,
-      status: "active",
-      updatedAt: now,
-    })
-    .where(eq(dbSchema.seatReservations.invitationId, inv.id));
+    const locked = lockedRows.rows[0];
+    if (!locked || locked.status !== "pending" || locked.revoked_at !== null) {
+      return {
+        ok: false as const,
+        status: 409 as const,
+        code: "INVITATION_NOT_PENDING",
+        error: "Only pending invitations can be resent.",
+      };
+    }
+
+    if (new Date(locked.expires_at).getTime() <= now.getTime()) {
+      return {
+        ok: false as const,
+        status: 409 as const,
+        code: "INVITATION_EXPIRED",
+        error: "This invitation has expired. Send a new invitation to reserve a fresh seat.",
+      };
+    }
+
+    await tx
+      .update(dbSchema.invitations)
+      .set({
+        tokenHash: newTokenHash,
+        expiresAt,
+        resentCount: (locked.resent_count ?? inv.resentCount) + 1,
+        resentAt: now,
+      })
+      .where(eq(dbSchema.invitations.id, inv.id));
+
+    await tx
+      .update(dbSchema.seatReservations)
+      .set({
+        expiresAt,
+        status: "active",
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.seatReservations.invitationId, inv.id));
+
+    return { ok: true as const };
+  });
+
+  if (!txRes.ok) {
+    return txRes;
+  }
 
   const acceptUrl = `${env.NEXT_PUBLIC_APP_URL}/account/team?invitationId=${encodeURIComponent(inv.id)}&token=${encodeURIComponent(newToken)}`;
   await sendTeamInvitationEmail({
@@ -484,7 +534,7 @@ export async function revokeTeamInvitation(args: {
   now?: Date;
 }): Promise<
   | { ok: true; invitationId: string }
-  | { ok: false; status: 403 | 404; code: string; error: string }
+  | { ok: false; status: 403 | 404 | 409; code: string; error: string }
 > {
   const now = args.now ?? new Date();
   const [inv] = await db
@@ -524,15 +574,53 @@ export async function revokeTeamInvitation(args: {
     };
   }
 
-  await db
-    .update(dbSchema.invitations)
-    .set({ status: "canceled", revokedAt: now })
-    .where(eq(dbSchema.invitations.id, inv.id));
+  const txRes = await db.transaction(async (tx) => {
+    const lockedRows = await tx.execute<{
+      id: string;
+      status: string;
+      revoked_at: Date | null;
+    }>(sql`
+      SELECT id, status, revoked_at
+      FROM invitations
+      WHERE id = ${inv.id}
+      FOR UPDATE
+    `);
 
-  await db
-    .update(dbSchema.seatReservations)
-    .set({ status: "revoked", updatedAt: now })
-    .where(eq(dbSchema.seatReservations.invitationId, inv.id));
+    const locked = lockedRows.rows[0];
+    if (!locked) {
+      return {
+        ok: false as const,
+        status: 404 as const,
+        code: "NOT_FOUND",
+        error: "Invitation not found.",
+      };
+    }
+
+    if (locked.status !== "pending" || locked.revoked_at !== null) {
+      return {
+        ok: false as const,
+        status: 409 as const,
+        code: "INVITATION_NOT_PENDING",
+        error: "Only pending invitations can be revoked.",
+      };
+    }
+
+    await tx
+      .update(dbSchema.invitations)
+      .set({ status: "canceled", revokedAt: now })
+      .where(eq(dbSchema.invitations.id, inv.id));
+
+    await tx
+      .update(dbSchema.seatReservations)
+      .set({ status: "revoked", updatedAt: now })
+      .where(eq(dbSchema.seatReservations.invitationId, inv.id));
+
+    return { ok: true as const };
+  });
+
+  if (!txRes.ok) {
+    return txRes;
+  }
 
   return { ok: true, invitationId: inv.id };
 }
@@ -819,22 +907,30 @@ export async function acceptTeamInvitation(args: {
  * - Freezes `departedUserId`'s `private` spaces to `frozen_member_departed` (`>= 90 days` `recoveryUntil`),
  *   completely hidden (`404`) from the team!
  */
-export async function executeMemberDepartureSideEffects(args: {
-  organizationId: string;
-  departedUserId: string;
-  actorUserId: string;
-  now?: Date;
-}): Promise<void> {
-  const now = args.now ?? new Date();
-  const [ws] = await db
+type DbTransactionClient = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function applyMemberDepartureInsideTx(
+  tx: DbTransactionClient,
+  args: {
+    organizationId: string;
+    departedUserId: string;
+    actorUserId: string;
+    now: Date;
+  },
+): Promise<{
+  workspaceId: string | null;
+  failedExportIds: string[];
+  withdrawnSlugs: string[];
+}> {
+  const [ws] = await tx
     .select()
     .from(dbSchema.workspaces)
     .where(eq(dbSchema.workspaces.organizationId, args.organizationId))
     .limit(1);
 
-  await db
+  await tx
     .update(dbSchema.sessions)
-    .set({ activeOrganizationId: null, updatedAt: now })
+    .set({ activeOrganizationId: null, updatedAt: args.now })
     .where(
       and(
         eq(dbSchema.sessions.userId, args.departedUserId),
@@ -843,16 +939,24 @@ export async function executeMemberDepartureSideEffects(args: {
     );
 
   if (!ws) {
-    return;
+    return {
+      workspaceId: null,
+      failedExportIds: [],
+      withdrawnSlugs: [],
+    };
   }
 
-  await revokeUserWorkspaceLeases({
-    workspaceId: ws.id,
-    userId: args.departedUserId,
-  });
+  await tx
+    .delete(dbSchema.editLeases)
+    .where(
+      and(
+        eq(dbSchema.editLeases.workspaceId, ws.id),
+        eq(dbSchema.editLeases.holderUserId, args.departedUserId),
+      ),
+    );
 
   // Cancel any in-flight export jobs requested by `departedUserId` in this team workspace (`Spec §10.7 & §15`)
-  const inFlightExports = await db
+  const inFlightExports = await tx
     .select({ id: dbSchema.exportsTable.id })
     .from(dbSchema.exportsTable)
     .where(
@@ -863,22 +967,18 @@ export async function executeMemberDepartureSideEffects(args: {
       ),
     );
 
-  if (inFlightExports.length > 0) {
-    const expIds = inFlightExports.map((e) => e.id);
-    await db
+  const failedExportIds = inFlightExports.map((e) => e.id);
+  if (failedExportIds.length > 0) {
+    await tx
       .update(dbSchema.exportsTable)
       .set({
         status: "failed",
         error: "Team membership ended before export delivery.",
       })
-      .where(inArray(dbSchema.exportsTable.id, expIds));
-
-    for (const expId of expIds) {
-      await releaseWorkspaceReservation(`export:${expId}`, now);
-    }
+      .where(inArray(dbSchema.exportsTable.id, failedExportIds));
   }
 
-  const [ownerMember] = await db
+  const [ownerMember] = await tx
     .select({ userId: dbSchema.memberships.userId })
     .from(dbSchema.memberships)
     .where(
@@ -891,7 +991,7 @@ export async function executeMemberDepartureSideEffects(args: {
 
   // 1. Orphaned `shared` spaces controlled by departed member transfer to Owner (`Spec §11.1`)
   if (ownerMember) {
-    const orphanedSharedSpaces = await db
+    const orphanedSharedSpaces = await tx
       .select({ id: dbSchema.spaces.id, aclVersion: dbSchema.spaces.aclVersion })
       .from(dbSchema.spaces)
       .where(
@@ -903,16 +1003,16 @@ export async function executeMemberDepartureSideEffects(args: {
       );
 
     for (const sp of orphanedSharedSpaces) {
-      await db
+      await tx
         .update(dbSchema.spaces)
         .set({
           controllerUserId: ownerMember.userId,
           aclVersion: sp.aclVersion + 1,
-          updatedAt: now,
+          updatedAt: args.now,
         })
         .where(eq(dbSchema.spaces.id, sp.id));
 
-      await db.insert(dbSchema.auditLogs).values({
+      await tx.insert(dbSchema.auditLogs).values({
         actorId: args.actorUserId,
         action: "space.controller_transferred_on_departure",
         meta: {
@@ -920,13 +1020,13 @@ export async function executeMemberDepartureSideEffects(args: {
           spaceId: sp.id,
           newControllerUserId: ownerMember.userId,
         },
-        at: now,
+        at: args.now,
       });
     }
   }
 
   // 2. Private spaces of departed member enter `frozen_member_departed` recovery (`Spec §11.2-11.4`)
-  const departedPrivateSpaces = await db
+  const departedPrivateSpaces = await tx
     .select({ id: dbSchema.spaces.id, aclVersion: dbSchema.spaces.aclVersion })
     .from(dbSchema.spaces)
     .where(
@@ -937,46 +1037,95 @@ export async function executeMemberDepartureSideEffects(args: {
       ),
     );
 
+  const withdrawnSlugs: string[] = [];
   if (departedPrivateSpaces.length > 0) {
     const privSpaceIds = departedPrivateSpaces.map((s) => s.id);
-    const privProjects = await db
-      .select({ id: dbSchema.projects.id })
+    const privProjects = await tx
+      .select({
+        id: dbSchema.projects.id,
+        slug: dbSchema.projects.slug,
+        visibility: dbSchema.projects.visibility,
+      })
       .from(dbSchema.projects)
       .where(inArray(dbSchema.projects.spaceId, privSpaceIds));
 
     if (privProjects.length > 0) {
       const privProjectIds = privProjects.map((p) => p.id);
+      for (const proj of privProjects) {
+        if (proj.slug && proj.visibility !== "private") {
+          withdrawnSlugs.push(proj.slug);
+        }
+      }
+
       // Withdraw public snapshots originating from departed member's private spaces (`Spec §11.3`)
-      await db
+      await tx
         .update(dbSchema.projects)
         .set({
           visibility: "private",
           publishedAt: null,
-          updatedAt: now,
+          updatedAt: args.now,
         })
         .where(inArray(dbSchema.projects.id, privProjectIds));
 
-      await db
+      await tx
         .delete(dbSchema.publishedSnapshots)
         .where(inArray(dbSchema.publishedSnapshots.projectId, privProjectIds));
     }
 
     const recoveryUntil = new Date(
-      now.getTime() + RECOVERY_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+      args.now.getTime() + RECOVERY_RETENTION_DAYS * 24 * 60 * 60 * 1000,
     );
 
     for (const sp of departedPrivateSpaces) {
-      await db
+      await tx
         .update(dbSchema.spaces)
         .set({
           recoveryState: "frozen_member_departed",
-          departedAt: now,
+          departedAt: args.now,
           recoveryUntil,
           aclVersion: sp.aclVersion + 1,
-          updatedAt: now,
+          updatedAt: args.now,
         })
         .where(eq(dbSchema.spaces.id, sp.id));
     }
+  }
+
+  return {
+    workspaceId: ws.id,
+    failedExportIds,
+    withdrawnSlugs,
+  };
+}
+
+export async function executeMemberDepartureSideEffects(args: {
+  organizationId: string;
+  departedUserId: string;
+  actorUserId: string;
+  now?: Date;
+}): Promise<void> {
+  const now = args.now ?? new Date();
+  const outcome = await db.transaction(async (tx) =>
+    applyMemberDepartureInsideTx(tx, {
+      organizationId: args.organizationId,
+      departedUserId: args.departedUserId,
+      actorUserId: args.actorUserId,
+      now,
+    }),
+  );
+
+  if (outcome.workspaceId) {
+    await revokeUserWorkspaceLeases({
+      workspaceId: outcome.workspaceId,
+      userId: args.departedUserId,
+    }).catch(() => undefined);
+  }
+
+  for (const expId of outcome.failedExportIds) {
+    await releaseWorkspaceReservation(`export:${expId}`, now);
+  }
+
+  for (const slug of outcome.withdrawnSlugs) {
+    revalidatePublicProject(slug);
   }
 }
 
@@ -994,76 +1143,100 @@ export async function removeTeamMemberWithRecovery(args: {
   | { ok: false; status: 400 | 403 | 404; code: string; error: string }
 > {
   const now = args.now ?? new Date();
-  const membershipsInOrg = await db
-    .select()
-    .from(dbSchema.memberships)
-    .where(eq(dbSchema.memberships.orgId, args.organizationId));
-
-  const actorMembership = membershipsInOrg.find((m) => m.userId === args.actorUserId);
-  const targetMembership = membershipsInOrg.find((m) => m.userId === args.targetUserId);
-
-  if (!actorMembership || !targetMembership) {
-    return { ok: false, status: 404, code: "NOT_FOUND", error: "Member not found." };
-  }
-
-  const actorRole = normalizeMembershipRole(actorMembership.role);
-  const targetRole = normalizeMembershipRole(targetMembership.role);
-
-  if (targetRole === "owner") {
-    return {
-      ok: false,
-      status: 400,
-      code: "OWNER_CANNOT_LEAVE",
-      error:
-        "The workspace Owner cannot leave or be removed before transferring ownership to another accepted member.",
-    };
-  }
-
   const isSelfLeave = args.actorUserId === args.targetUserId;
-  if (!isSelfLeave) {
-    if (actorRole === "member") {
+
+  const txResult = await db.transaction(async (tx) => {
+    await tx.execute(sql`
+      SELECT id FROM organizations WHERE id = ${args.organizationId} FOR UPDATE
+    `);
+
+    const membershipsInOrg = await tx
+      .select()
+      .from(dbSchema.memberships)
+      .where(eq(dbSchema.memberships.orgId, args.organizationId));
+
+    const actorMembership = membershipsInOrg.find((m) => m.userId === args.actorUserId);
+    const targetMembership = membershipsInOrg.find((m) => m.userId === args.targetUserId);
+
+    if (!actorMembership || !targetMembership) {
+      return { ok: false as const, status: 404 as const, code: "NOT_FOUND", error: "Member not found." };
+    }
+
+    const actorRole = normalizeMembershipRole(actorMembership.role);
+    const targetRole = normalizeMembershipRole(targetMembership.role);
+
+    if (targetRole === "owner") {
       return {
-        ok: false,
-        status: 403,
-        code: "FORBIDDEN",
-        error: "Members cannot remove other teammates.",
+        ok: false as const,
+        status: 400 as const,
+        code: "OWNER_CANNOT_LEAVE",
+        error:
+          "The workspace Owner cannot leave or be removed before transferring ownership to another accepted member.",
       };
     }
-    if (actorRole === "admin" && targetRole !== "member") {
-      return {
-        ok: false,
-        status: 403,
-        code: "FORBIDDEN",
-        error: "Workspace Admins can remove Members only, not other Admins or the Owner.",
-      };
+
+    if (!isSelfLeave) {
+      if (actorRole === "member") {
+        return {
+          ok: false as const,
+          status: 403 as const,
+          code: "FORBIDDEN",
+          error: "Members cannot remove other teammates.",
+        };
+      }
+      if (actorRole === "admin" && targetRole !== "member") {
+        return {
+          ok: false as const,
+          status: 403 as const,
+          code: "FORBIDDEN",
+          error: "Workspace Admins can remove Members only, not other Admins or the Owner.",
+        };
+      }
     }
+
+    await tx
+      .delete(dbSchema.memberships)
+      .where(
+        and(
+          eq(dbSchema.memberships.orgId, args.organizationId),
+          eq(dbSchema.memberships.userId, args.targetUserId),
+        ),
+      );
+
+    const sideEffects = await applyMemberDepartureInsideTx(tx, {
+      organizationId: args.organizationId,
+      departedUserId: args.targetUserId,
+      actorUserId: args.actorUserId,
+      now,
+    });
+
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: args.actorUserId,
+      action: isSelfLeave ? "team.member.left" : "team.member.removed",
+      meta: {
+        organizationId: args.organizationId,
+        removedUserId: args.targetUserId,
+      },
+      at: now,
+    });
+
+    return {
+      ok: true as const,
+      ...sideEffects,
+    };
+  });
+
+  if (!txResult.ok) {
+    return txResult;
   }
 
-  await db
-    .delete(dbSchema.memberships)
-    .where(
-      and(
-        eq(dbSchema.memberships.orgId, args.organizationId),
-        eq(dbSchema.memberships.userId, args.targetUserId),
-      ),
-    );
+  for (const expId of txResult.failedExportIds) {
+    await releaseWorkspaceReservation(`export:${expId}`, now);
+  }
 
-  await executeMemberDepartureSideEffects({
-    organizationId: args.organizationId,
-    departedUserId: args.targetUserId,
-    actorUserId: args.actorUserId,
-    now,
-  });
-
-  await db.insert(dbSchema.auditLogs).values({
-    actorId: args.actorUserId,
-    action: isSelfLeave ? "team.member.left" : "team.member.removed",
-    meta: {
-      organizationId: args.organizationId,
-      removedUserId: args.targetUserId,
-    },
-    at: now,
-  });
+  for (const slug of txResult.withdrawnSlugs) {
+    revalidatePublicProject(slug);
+  }
 
   if (!isSelfLeave) {
     const [[targetUser], [orgRow]] = await Promise.all([
@@ -1174,8 +1347,8 @@ export async function updateTeamMemberRole(args: {
 }
 
 /**
- * Initiates an explicit Owner transfer request (`Spec §7.7 & §11.5`).
- * Requires Owner authority + reauthentication confirmation, and recipient acceptance before switching.
+ * Initiates an explicit Owner transfer request (`Spec §7.7 & §11.5`, `N8`).
+ * Serialized under a PostgreSQL `FOR UPDATE` workspace row lock.
  */
 export async function requestOwnerTransfer(args: {
   actorUserId: string;
@@ -1206,57 +1379,84 @@ export async function requestOwnerTransfer(args: {
     };
   }
 
-  const rows = await db
-    .select()
-    .from(dbSchema.memberships)
-    .where(eq(dbSchema.memberships.orgId, args.organizationId));
-
-  const actor = rows.find((r) => r.userId === args.actorUserId);
-  const target = rows.find((r) => r.userId === args.targetMemberUserId);
-
-  if (!actor || normalizeMembershipRole(actor.role) !== "owner") {
-    return {
-      ok: false,
-      status: 403,
-      code: "FORBIDDEN",
-      error: "Only the current workspace Owner can initiate an ownership transfer.",
-    };
-  }
-
-  if (!target) {
-    return {
-      ok: false,
-      status: 404,
-      code: "NOT_FOUND",
-      error: "Target user is not an active member of this workspace.",
-    };
-  }
-
   const ensured = await ensureTeamWorkspaceForOrganization(args.organizationId, args.actorUserId);
-  await db
-    .update(dbSchema.ownerTransferRequests)
-    .set({ status: "canceled" })
-    .where(
-      and(
-        eq(dbSchema.ownerTransferRequests.organizationId, args.organizationId),
-        eq(dbSchema.ownerTransferRequests.status, "pending"),
-      ),
-    );
-
   const OWNER_TRANSFER_TTL_HOURS = 48;
   const expiresAt = new Date(now.getTime() + OWNER_TRANSFER_TTL_HOURS * 60 * 60 * 1000);
-  const [reqRow] = await db
-    .insert(dbSchema.ownerTransferRequests)
-    .values({
-      organizationId: args.organizationId,
-      workspaceId: ensured.workspaceId,
-      fromOwnerUserId: args.actorUserId,
-      toMemberUserId: args.targetMemberUserId,
-      status: "pending",
-      expiresAt,
-      createdAt: now,
-    })
-    .returning();
+
+  const txOutcome = await db.transaction(async (tx) => {
+    await tx.execute(sql`
+      SELECT id FROM workspaces WHERE id = ${ensured.workspaceId} FOR UPDATE
+    `);
+
+    const rows = await tx
+      .select()
+      .from(dbSchema.memberships)
+      .where(eq(dbSchema.memberships.orgId, args.organizationId));
+
+    const actor = rows.find((r) => r.userId === args.actorUserId);
+    const target = rows.find((r) => r.userId === args.targetMemberUserId);
+
+    if (!actor || normalizeMembershipRole(actor.role) !== "owner") {
+      return {
+        ok: false as const,
+        status: 403 as const,
+        code: "FORBIDDEN",
+        error: "Only the current workspace Owner can initiate an ownership transfer.",
+      };
+    }
+
+    if (!target) {
+      return {
+        ok: false as const,
+        status: 404 as const,
+        code: "NOT_FOUND",
+        error: "Target user is not an active member of this workspace.",
+      };
+    }
+
+    await tx
+      .update(dbSchema.ownerTransferRequests)
+      .set({ status: "canceled" })
+      .where(
+        and(
+          eq(dbSchema.ownerTransferRequests.organizationId, args.organizationId),
+          eq(dbSchema.ownerTransferRequests.status, "pending"),
+        ),
+      );
+
+    const [reqRow] = await tx
+      .insert(dbSchema.ownerTransferRequests)
+      .values({
+        organizationId: args.organizationId,
+        workspaceId: ensured.workspaceId,
+        fromOwnerUserId: args.actorUserId,
+        toMemberUserId: args.targetMemberUserId,
+        status: "pending",
+        expiresAt,
+        createdAt: now,
+      })
+      .returning();
+
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: args.actorUserId,
+      action: "team.ownership.transfer_requested",
+      meta: {
+        organizationId: args.organizationId,
+        transferRequestId: reqRow!.id,
+        toMemberUserId: args.targetMemberUserId,
+      },
+      at: now,
+    });
+
+    return {
+      ok: true as const,
+      transferRequestId: reqRow!.id,
+    };
+  });
+
+  if (!txOutcome.ok) {
+    return txOutcome;
+  }
 
   const [[fromUser], [toUser], [orgRow]] = await Promise.all([
     db
@@ -1288,7 +1488,7 @@ export async function requestOwnerTransfer(args: {
 
   return {
     ok: true,
-    transferRequestId: reqRow!.id,
+    transferRequestId: txOutcome.transferRequestId,
     expiresAtIso: expiresAt.toISOString(),
   };
 }
@@ -1341,6 +1541,35 @@ export async function acceptOwnerTransfer(args: {
   }
 
   const outcome = await db.transaction(async (tx) => {
+    await tx.execute(sql`
+      SELECT id FROM workspaces WHERE id = ${reqRow.workspaceId} FOR UPDATE
+    `);
+
+    const lockedRows = await tx.execute<{
+      id: string;
+      status: string;
+      expires_at: Date | string;
+    }>(sql`
+      SELECT id, status, expires_at
+      FROM owner_transfer_requests
+      WHERE id = ${reqRow.id}
+      FOR UPDATE
+    `);
+
+    const lockedReq = lockedRows.rows[0];
+    if (
+      !lockedReq ||
+      lockedReq.status !== "pending" ||
+      new Date(lockedReq.expires_at).getTime() <= now.getTime()
+    ) {
+      return {
+        ok: false as const,
+        status: 410 as const,
+        code: "TRANSFER_EXPIRED",
+        error: "This ownership transfer request is no longer active.",
+      };
+    }
+
     const members = await tx
       .select()
       .from(dbSchema.memberships)
@@ -1450,4 +1679,92 @@ export async function acceptOwnerTransfer(args: {
     organizationId: reqRow.organizationId,
     newOwnerUserId: args.actorUserId,
   };
+}
+
+export async function cancelOrDeclineOwnerTransfer(args: {
+  actorUserId: string;
+  transferRequestId: string;
+  action: "cancel" | "decline";
+  now?: Date;
+}): Promise<
+  | { ok: true; transferRequestId: string; status: "canceled" | "declined" }
+  | { ok: false; status: 403 | 404 | 409; code: string; error: string }
+> {
+  const now = args.now ?? new Date();
+  return db.transaction(async (tx) => {
+    const lockedRows = await tx.execute<{
+      id: string;
+      organization_id: string;
+      from_owner_user_id: string;
+      to_member_user_id: string;
+      status: string;
+    }>(sql`
+      SELECT id, organization_id, from_owner_user_id, to_member_user_id, status
+      FROM owner_transfer_requests
+      WHERE id = ${args.transferRequestId}
+      FOR UPDATE
+    `);
+
+    const locked = lockedRows.rows[0];
+    if (!locked) {
+      return {
+        ok: false as const,
+        status: 404 as const,
+        code: "NOT_FOUND",
+        error: "Transfer request not found.",
+      };
+    }
+
+    if (args.action === "cancel" && locked.from_owner_user_id !== args.actorUserId) {
+      return {
+        ok: false as const,
+        status: 403 as const,
+        code: "FORBIDDEN",
+        error: "Only the requesting workspace Owner can cancel this transfer.",
+      };
+    }
+
+    if (args.action === "decline" && locked.to_member_user_id !== args.actorUserId) {
+      return {
+        ok: false as const,
+        status: 403 as const,
+        code: "FORBIDDEN",
+        error: "Only the designated recipient can decline this transfer.",
+      };
+    }
+
+    if (locked.status !== "pending") {
+      return {
+        ok: false as const,
+        status: 409 as const,
+        code: "TRANSFER_NOT_PENDING",
+        error: "This ownership transfer request is no longer pending.",
+      };
+    }
+
+    const outcomeStatus = args.action === "cancel" ? ("canceled" as const) : ("declined" as const);
+    await tx
+      .update(dbSchema.ownerTransferRequests)
+      .set({ status: "canceled" })
+      .where(eq(dbSchema.ownerTransferRequests.id, locked.id));
+
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: args.actorUserId,
+      action:
+        outcomeStatus === "canceled"
+          ? "team.ownership.transfer_canceled"
+          : "team.ownership.transfer_declined",
+      meta: {
+        organizationId: locked.organization_id,
+        transferRequestId: locked.id,
+      },
+      at: now,
+    });
+
+    return {
+      ok: true as const,
+      transferRequestId: locked.id,
+      status: outcomeStatus,
+    };
+  });
 }

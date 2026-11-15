@@ -412,6 +412,187 @@ export async function sendAccountDeletedEmail(args: {
   });
 }
 
+function formatUtcDate(iso: string): string {
+  return new Date(iso).toUTCString();
+}
+
+export function buildAccountDeletionScheduledEmail(args: {
+  name?: string | null;
+  scheduledForIso: string;
+  cancelUrl?: string;
+  appBaseUrl?: string;
+}): Omit<SendCasefolioEmailInput, "to"> {
+  const baseUrl = resolveAppBase(args.appBaseUrl);
+  const when = formatUtcDate(args.scheduledForIso);
+  return {
+    department: "security",
+    templateKey: "security.account_deletion_scheduled",
+    subject: "Your Casefolio account is scheduled for deletion",
+    appBaseUrl: baseUrl,
+    content: {
+      previewText: `Your Casefolio account will be permanently deleted on ${when}. You can cancel until then.`,
+      eyebrow: "Account Closure Scheduled",
+      heading: "Account scheduled for deletion",
+      greeting: args.name ? `Hi ${args.name.trim()},` : undefined,
+      paragraphs: [
+        "We received a request to permanently delete your Casefolio account. Nothing has been removed yet: your account stays intact during a 7-day grace period and all other devices were signed out.",
+        "If you did not request this, cancel the deletion now and change your password.",
+      ],
+      specs: [
+        { label: "Status", value: "Scheduled — not yet deleted" },
+        { label: "Permanent deletion on (UTC)", value: when },
+      ],
+      ctaLabel: "Cancel account deletion",
+      ctaUrl: args.cancelUrl ?? `${baseUrl}/account?cancelDeletion=1`,
+      footerNote:
+        "After the grace period your profile, personal case studies, uploads and exports are permanently erased and your personal subscription is canceled.",
+    },
+  };
+}
+
+export async function sendAccountDeletionScheduledEmail(args: {
+  to: string;
+  name?: string | null;
+  scheduledForIso: string;
+  cancelUrl?: string;
+  appBaseUrl?: string;
+}): Promise<SendCasefolioEmailResult> {
+  return sendCasefolioEmail({
+    to: args.to,
+    ...buildAccountDeletionScheduledEmail(args),
+  });
+}
+
+export function buildAccountDeletionCanceledEmail(args: {
+  name?: string | null;
+  canceledAtIso?: string;
+  appBaseUrl?: string;
+}): Omit<SendCasefolioEmailInput, "to"> {
+  const baseUrl = resolveAppBase(args.appBaseUrl);
+  const timestamp = formatUtcDate(args.canceledAtIso ?? new Date().toISOString());
+  return {
+    department: "security",
+    templateKey: "security.account_deletion_canceled",
+    subject: "Your Casefolio account deletion was canceled",
+    appBaseUrl: baseUrl,
+    content: {
+      previewText: "Your scheduled Casefolio account deletion was canceled. Your account is safe.",
+      eyebrow: "Account Closure Canceled",
+      heading: "Account deletion canceled",
+      greeting: args.name ? `Hi ${args.name.trim()},` : undefined,
+      paragraphs: [
+        "The scheduled deletion of your Casefolio account was canceled. Your workspace, case studies and subscription are unchanged.",
+      ],
+      specs: [
+        { label: "Status", value: "Account active" },
+        { label: "Canceled At (UTC)", value: timestamp },
+      ],
+      ctaLabel: "Open Account Settings",
+      ctaUrl: `${baseUrl}/account`,
+      footerNote:
+        "If you did not cancel this deletion yourself, review your active sessions and change your password.",
+    },
+  };
+}
+
+export async function sendAccountDeletionCanceledEmail(args: {
+  to: string;
+  name?: string | null;
+  canceledAtIso?: string;
+  appBaseUrl?: string;
+}): Promise<SendCasefolioEmailResult> {
+  return sendCasefolioEmail({
+    to: args.to,
+    ...buildAccountDeletionCanceledEmail(args),
+  });
+}
+
+export function buildAccountDeletionBlockedEmail(args: {
+  name?: string | null;
+  organizationName: string;
+  appBaseUrl?: string;
+}): Omit<SendCasefolioEmailInput, "to"> {
+  const baseUrl = resolveAppBase(args.appBaseUrl);
+  return {
+    department: "security",
+    templateKey: "security.account_deletion_blocked",
+    subject: "Transfer team ownership to finish deleting your Casefolio account",
+    appBaseUrl: baseUrl,
+    content: {
+      previewText: `Your account deletion is on hold until ownership of ${args.organizationName} is transferred.`,
+      eyebrow: "Account Closure On Hold",
+      heading: "Transfer team ownership first",
+      greeting: args.name ? `Hi ${args.name.trim()},` : undefined,
+      paragraphs: [
+        `Your grace period ended, but you are still the Owner of the team workspace "${args.organizationName}" which has other members. We cannot delete your account without leaving that team without an Owner.`,
+        "Transfer ownership to another member (or remove the other members). Your account stays scheduled and we will retry automatically.",
+      ],
+      specs: [
+        { label: "Status", value: "On hold — action required" },
+        { label: "Team workspace", value: args.organizationName },
+      ],
+      ctaLabel: "Open Team Settings",
+      ctaUrl: `${baseUrl}/account/team`,
+      footerNote: "You can also cancel the deletion from Account Settings at any time.",
+    },
+  };
+}
+
+export async function sendAccountDeletionBlockedEmail(args: {
+  to: string;
+  name?: string | null;
+  organizationName: string;
+  appBaseUrl?: string;
+}): Promise<SendCasefolioEmailResult> {
+  return sendCasefolioEmail({
+    to: args.to,
+    ...buildAccountDeletionBlockedEmail(args),
+  });
+}
+
+export function buildStepUpCodeEmail(args: {
+  otp: string;
+  purpose: "account_deletion" | "ownership_transfer";
+  appBaseUrl?: string;
+}): Omit<SendCasefolioEmailInput, "to"> {
+  const baseUrl = resolveAppBase(args.appBaseUrl);
+  const action =
+    args.purpose === "account_deletion"
+      ? "delete your Casefolio account"
+      : "change team workspace ownership";
+  return {
+    department: "security",
+    templateKey: "security.step_up_code",
+    subject: "Your Casefolio security confirmation code",
+    appBaseUrl: baseUrl,
+    content: {
+      previewText: `Your 6-digit Casefolio confirmation code is ${args.otp}`,
+      eyebrow: "Security Confirmation",
+      heading: "Confirm it's you",
+      paragraphs: [
+        `Enter the 6-digit code below to confirm that you want to ${action}.`,
+        "For your protection, never share this one-time security code with anyone.",
+      ],
+      code: args.otp,
+      codeCaption: "EXPIRES IN 10 MINUTES · SINGLE USE",
+      footerNote:
+        "If you did not request this, someone may be using your session. Sign out of other devices from Account Security.",
+    },
+  };
+}
+
+export async function sendStepUpCodeEmail(args: {
+  to: string;
+  otp: string;
+  purpose: "account_deletion" | "ownership_transfer";
+  appBaseUrl?: string;
+}): Promise<SendCasefolioEmailResult> {
+  return sendCasefolioEmail({
+    to: args.to,
+    ...buildStepUpCodeEmail(args),
+  });
+}
+
 // ============================================================================
 // 3. EXISTING USER: PROJECTS, PUBLISHING & EXPORTS (notifications@casefolio.com)
 // ============================================================================
@@ -1619,6 +1800,65 @@ export const EMAIL_TEMPLATE_CATALOG: readonly EmailCatalogEntry[] = [
       buildAccountDeletedEmail({
         name: "Tariq Mansour",
         deletedAtIso: "2026-11-14T19:00:00.000Z",
+        appBaseUrl: base,
+      }),
+  },
+  {
+    key: "security.account_deletion_scheduled",
+    title: "Account Deletion Scheduled (7-Day Grace)",
+    audience: "existing_user",
+    audienceLabel: "Existing User",
+    department: "security",
+    triggerSummary:
+      "Sent when a re-authenticated user requests account deletion; includes the cancel link for the 7-day grace window.",
+    buildSample: (base) =>
+      buildAccountDeletionScheduledEmail({
+        name: "Tariq Mansour",
+        scheduledForIso: "2026-11-21T19:00:00.000Z",
+        appBaseUrl: base,
+      }),
+  },
+  {
+    key: "security.account_deletion_canceled",
+    title: "Account Deletion Canceled",
+    audience: "existing_user",
+    audienceLabel: "Existing User",
+    department: "security",
+    triggerSummary: "Sent when a user cancels a scheduled account deletion during the grace window.",
+    buildSample: (base) =>
+      buildAccountDeletionCanceledEmail({
+        name: "Tariq Mansour",
+        canceledAtIso: "2026-11-15T09:00:00.000Z",
+        appBaseUrl: base,
+      }),
+  },
+  {
+    key: "security.account_deletion_blocked",
+    title: "Account Deletion On Hold — Transfer Team Ownership",
+    audience: "existing_user",
+    audienceLabel: "Existing User",
+    department: "security",
+    triggerSummary:
+      "Sent by the retention job when the grace period ended but the user still owns a team workspace with other members.",
+    buildSample: (base) =>
+      buildAccountDeletionBlockedEmail({
+        name: "Tariq Mansour",
+        organizationName: "Horizon Studio",
+        appBaseUrl: base,
+      }),
+  },
+  {
+    key: "security.step_up_code",
+    title: "Security Confirmation Code (Step-Up)",
+    audience: "existing_user",
+    audienceLabel: "Existing User",
+    department: "security",
+    triggerSummary:
+      "Sent to passwordless (Google / magic-link) users who must re-confirm identity before account deletion or ownership transfer.",
+    buildSample: (base) =>
+      buildStepUpCodeEmail({
+        otp: "482915",
+        purpose: "account_deletion",
         appBaseUrl: base,
       }),
   },

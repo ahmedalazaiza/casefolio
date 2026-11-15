@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/session";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 import type { PresignUploadInput } from "@/lib/storage/quotas";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
 import { createPresignedUpload, type PresignUploadErrorCode } from "@/lib/storage/service";
 
 function statusForPresignError(code: PresignUploadErrorCode): number {
@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const rateLimit = consumeUploadRateLimit(`presign:${ctx.user.id}`);
+  const rateLimit = await consumeSharedRateLimit(`presign:${ctx.user.id}`, 30, 60_000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {

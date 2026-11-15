@@ -8,9 +8,15 @@ export const metadata: Metadata = {
 export default async function VerifyEmailPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string; name?: string }>;
+  searchParams: Promise<{ email?: string; name?: string; sent?: string }>;
 }) {
-  const { email, name } = await searchParams;
-  return <VerifyEmailForm initialEmail={email} initialName={name} />;
+  const { email, name, sent } = await searchParams;
+  return (
+    <VerifyEmailForm
+      initialEmail={email}
+      initialName={name}
+      initialSent={sent === "1"}
+    />
+  );
 }
 

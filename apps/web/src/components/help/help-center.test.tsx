@@ -106,6 +106,8 @@ describe("Help Center & Support UI (C-1003 · Figma 2:9899 / 2:10019 / 2:10147)"
           ok: true,
           ticketCode: "CF-48291",
           replyToEmail: "ahmed@example.com",
+          delivery: "sent",
+          expectedResponse: "within 1 business day",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -135,5 +137,50 @@ describe("Help Center & Support UI (C-1003 · Figma 2:9899 / 2:10019 / 2:10147)"
     expect(screen.getByText(/Ticket #CF-48291/i)).toBeInTheDocument();
     expect(screen.getByText("ahmed@example.com")).toBeInTheDocument();
   });
-});
 
+  it("tells the truth when the ticket was saved but email delivery is queued", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          ticketCode: "CF-11111",
+          replyToEmail: "ahmed@example.com",
+          delivery: "queued",
+          expectedResponse: "within 1 business day",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    render(<ContactSupportClient defaultEmail="ahmed@example.com" />);
+    await user.type(screen.getByLabelText("Subject"), "Cannot publish my page");
+    await user.type(screen.getByLabelText("Message"), "Publishing fails with an unknown error.");
+    await user.click(screen.getByRole("button", { name: /Send message/i }));
+
+    expect(await screen.findByRole("heading", { name: "Request saved" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Message sent" })).not.toBeInTheDocument();
+    expect(screen.getByText(/We saved your request and will follow up/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ticket #CF-11111/)).toBeInTheDocument();
+    expect(screen.getByTestId("support-message-sent")).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByText(/within 1 business day/)).toBeInTheDocument();
+  });
+
+  it("shows the server error and keeps the form when the request is rejected", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: false, error: "Too many support requests." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    render(<ContactSupportClient defaultEmail="ahmed@example.com" />);
+    await user.type(screen.getByLabelText("Subject"), "Cannot publish my page");
+    await user.type(screen.getByLabelText("Message"), "Publishing fails with an unknown error.");
+    await user.click(screen.getByRole("button", { name: /Send message/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Too many support requests.");
+    expect(screen.getByLabelText("Subject")).toHaveValue("Cannot publish my page");
+  });
+});

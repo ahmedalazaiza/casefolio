@@ -25,7 +25,7 @@ import { resolvePublicAppBaseUrl } from "@/lib/projects/publish";
 import { slugifyProjectName } from "@/lib/projects/types";
 import { sanitizeErrorForLogging } from "@/lib/security/redact";
 import { readStoredObjectBytes, writeStoredObject } from "@/lib/storage/r2";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 import {
   commitWorkspaceReservation,
   getWorkspaceMonthlyMeterUsage,
@@ -245,7 +245,7 @@ export async function enqueueProjectExportForUser(
   },
 ): Promise<EnqueueExportResult> {
   const now = options?.now ?? new Date();
-  const rate = consumeUploadRateLimit(`export:${actor.id}`, 15, 60_000);
+  const rate = await consumeSharedRateLimit(`export:${actor.id}`, 15, 60_000);
   if (!rate.allowed) {
     return {
       ok: false,

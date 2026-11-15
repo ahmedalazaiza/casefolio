@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AdminOverviewPanel } from "@/components/admin/admin-overview-panel";
-import { getAdminOverviewMetrics } from "@/lib/admin/overview";
+import { getCachedAdminOverviewMetrics } from "@/lib/admin/overview";
 import { adminOverviewRangeSchema } from "@/lib/admin/overview-types";
 import { requireAdmin } from "@/lib/auth/guards";
 
@@ -16,7 +16,7 @@ export default async function AdminOverviewPage({
   await requireAdmin("/admin");
   const params = await searchParams;
   const range = adminOverviewRangeSchema.parse(params.range);
-  const metrics = await getAdminOverviewMetrics(range);
+  const metrics = await getCachedAdminOverviewMetrics(range);
 
   return <AdminOverviewPanel metrics={metrics} />;
 }

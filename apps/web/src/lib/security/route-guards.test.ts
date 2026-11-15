@@ -32,6 +32,7 @@ const PUBLIC_BY_DESIGN: Record<string, string> = {
   "/paddle/webhook": "HMAC-signed provider webhook",
   "/uploads/local-put": "signed upload token (dev storage driver)",
   "/cron/billing-reconcile": "CRON_SECRET bearer",
+  "/cron/maintenance": "CRON_SECRET bearer",
   "/dev/analytics-events": "dev-only, 404 in production",
   "/help/contact": "anonymous support form (rate limited)",
   "/reports": "anonymous public abuse report (rate limited)",

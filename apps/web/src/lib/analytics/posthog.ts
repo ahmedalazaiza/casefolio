@@ -114,8 +114,18 @@ export function sanitizeAnalyticsProps(
   return sanitized;
 }
 
+function isDevAnalyticsCaptureDisabled(): boolean {
+  if (process.env.VERCEL_ENV === "production") {
+    return true;
+  }
+  return (
+    process.env.NODE_ENV === "production" &&
+    process.env.ENABLE_E2E_DEV_ENDPOINTS !== "1"
+  );
+}
+
 export function appendDevAnalyticsEvent(entry: CapturedProductAnalyticsEvent): void {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevAnalyticsCaptureDisabled()) {
     return;
   }
   const buffer = getDevEventBuffer();
@@ -126,14 +136,14 @@ export function appendDevAnalyticsEvent(entry: CapturedProductAnalyticsEvent): v
 }
 
 export function getCapturedAnalyticsEventsForDev(): CapturedProductAnalyticsEvent[] {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevAnalyticsCaptureDisabled()) {
     return [];
   }
   return [...getDevEventBuffer()];
 }
 
 export function clearCapturedAnalyticsEventsForDev(): void {
-  if (process.env.NODE_ENV === "production") {
+  if (isDevAnalyticsCaptureDisabled()) {
     return;
   }
   globalAnalyticsStore.__casefolioPostHogEvents = [];

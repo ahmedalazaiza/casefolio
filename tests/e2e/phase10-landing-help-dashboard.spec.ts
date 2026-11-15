@@ -355,7 +355,9 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
       .getByLabel("Message")
       .fill("Could you confirm whether Presentation 16:9 PDF keeps vector typography?");
     await page.getByRole("button", { name: /Send message/i }).click();
-    await expect(page.getByRole("heading", { name: "Message sent" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Message sent|Request saved/ }),
+    ).toBeVisible();
     await expect(page.getByText(/Ticket #CF-/)).toBeVisible();
     await maybeSaveScreenshot(page, "help-sent-1440.png", false);
 

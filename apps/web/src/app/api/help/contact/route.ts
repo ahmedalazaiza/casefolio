@@ -1,32 +1,24 @@
 import { NextResponse } from "next/server";
-import { renderAndDeliverEmail } from "@/lib/auth/email";
 import { getServerSession } from "@/lib/auth/session";
+import { supportTicketInputSchema } from "@/lib/help/contact";
 import {
-  buildSupportTicketIntakeAlertEmail,
-  buildSupportTicketReceiptEmail,
-  resolveSupportInboxMailbox,
-} from "@/lib/email";
-import {
-  generateSupportTicketCode,
-  supportTicketInputSchema,
-} from "@/lib/help/contact";
+  attemptSupportTicketDelivery,
+  createSupportTicket,
+  sanitizeSubjectFragment,
+  summarizeDeliveryError,
+} from "@/lib/help/tickets";
 import { extractClientIp } from "@/lib/security/auth-rate-limit";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
-function sanitizeSubjectFragment(raw: string): string {
-  return raw.replace(/[\r\n<>]/g, " ").trim().slice(0, 120);
-}
+/** Shown to the user so the expectation matches what support actually commits to. */
+const EXPECTED_RESPONSE = "within 1 business day";
 
 export async function POST(request: Request) {
   const session = await getServerSession();
   const ip = extractClientIp(request.headers);
   const actorKey = session?.user.id ?? ip;
 
-  const limitCheck = consumeUploadRateLimit(
-    `help-contact:${actorKey}`,
-    8,
-    60_000,
-  );
+  const limitCheck = await consumeSharedRateLimit(`help-contact:${actorKey}`, 8, 60_000);
   if (!limitCheck.allowed) {
     return NextResponse.json(
       {
@@ -44,25 +36,16 @@ export async function POST(request: Request) {
   try {
     rawBody = await request.json();
   } catch {
-    return NextResponse.json(
-      { ok: false, error: "Invalid JSON request body." },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, error: "Invalid JSON request body." }, { status: 400 });
   }
 
   const parsed = supportTicketInputSchema.safeParse(rawBody);
   if (!parsed.success) {
-    const firstMessage =
-      parsed.error.issues[0]?.message ?? "Invalid support request.";
-    return NextResponse.json(
-      { ok: false, error: firstMessage },
-      { status: 400 },
-    );
+    const firstMessage = parsed.error.issues[0]?.message ?? "Invalid support request.";
+    return NextResponse.json({ ok: false, error: firstMessage }, { status: 400 });
   }
 
   const data = parsed.data;
-  const ticketCode = generateSupportTicketCode();
-  const safeSubject = sanitizeSubjectFragment(data.subject);
   const verifiedSessionEmail =
     session?.user?.emailVerified &&
     session.user.email.trim().toLowerCase() === data.email.trim().toLowerCase()
@@ -74,70 +57,40 @@ export async function POST(request: Request) {
       ? `${data.message}\n\n---\nDiagnostics: ${data.diagnosticSummary}`
       : data.message;
 
+  // 1. Persist FIRST so the customer's message can never be lost to an email outage.
+  let ticket;
   try {
-    // Always route the full ticket to Casefolio's support@casefolio.com inbox with Reply-To set to
-    // the requester; only send an external auto-receipt to `data.email` when it matches the caller's
-    // verified session email so anonymous callers can never abuse `/api/help/contact` as a relay.
-    const intake = buildSupportTicketIntakeAlertEmail({
-      ticketCode,
-      requesterEmail: data.email,
-      requesterUserId: session?.user?.id ?? null,
+    ticket = await createSupportTicket({
+      userId: session?.user?.id ?? null,
+      email: data.email,
       topic: data.topic,
-      subjectLine: safeSubject,
+      subject: sanitizeSubjectFragment(data.subject),
       message: fullMessage,
       projectRef: data.relatedProject || null,
     });
-
-    await renderAndDeliverEmail({
-      to: resolveSupportInboxMailbox(),
-      department: intake.department,
-      templateKey: intake.templateKey,
-      replyTo: intake.replyTo,
-      subject: intake.subject,
-      template: {
-        previewText: intake.content.previewText,
-        eyebrow: intake.content.eyebrow,
-        heading: intake.content.heading,
-        body: intake.content.paragraphs.join("\n\n"),
-        specs: intake.content.specs,
-        quoteBlock: intake.content.quoteBlock,
-        ctaLabel: intake.content.ctaLabel,
-        ctaUrl: intake.content.ctaUrl,
-        footerNote: intake.content.footerNote,
+  } catch (err) {
+    console.error("[help/contact] could not persist support ticket:", summarizeDeliveryError(err));
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "We couldn't save your request right now. Please try again in a moment.",
       },
-    });
-
-    if (verifiedSessionEmail) {
-      const receipt = buildSupportTicketReceiptEmail({
-        ticketCode,
-        topic: data.topic,
-        subjectLine: safeSubject,
-      });
-
-      await renderAndDeliverEmail({
-        to: verifiedSessionEmail,
-        department: receipt.department,
-        templateKey: receipt.templateKey,
-        subject: receipt.subject,
-        template: {
-          previewText: receipt.content.previewText,
-          eyebrow: receipt.content.eyebrow,
-          heading: receipt.content.heading,
-          body: receipt.content.paragraphs.join("\n\n"),
-          specs: receipt.content.specs,
-          ctaLabel: receipt.content.ctaLabel,
-          ctaUrl: receipt.content.ctaUrl,
-          footerNote: receipt.content.footerNote,
-        },
-      });
-    }
-  } catch {
-    // Do not fail ticket creation in dev/sandbox when external email delivery is unavailable
+      { status: 503 },
+    );
   }
+
+  // 2. Then try to notify the team. Intake always goes to the support inbox with Reply-To set to the
+  // requester; the receipt only goes to a verified session email so this endpoint can never be used
+  // as an anonymous third-party relay. Failures are recorded on the ticket, not swallowed.
+  const delivery = await attemptSupportTicketDelivery(ticket, {
+    receiptTo: verifiedSessionEmail,
+  });
 
   return NextResponse.json({
     ok: true,
-    ticketCode,
+    ticketCode: ticket.code,
     replyToEmail: data.email,
+    delivery,
+    expectedResponse: EXPECTED_RESPONSE,
   });
 }

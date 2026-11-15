@@ -36,5 +36,29 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["apps/web/src/components/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/db",
+              message:
+                "UI components must not import the database client (@/lib/db). Query via server lib modules or pass typed props.",
+              allowTypeImports: false,
+            },
+            {
+              name: "@casefolio/db",
+              message:
+                "UI components may only import TypeScript types from @casefolio/db (use `import type`).",
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
+  },
 );
 

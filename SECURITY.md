@@ -39,3 +39,12 @@ This document records the security audit and controls enforced across `@casefoli
   - `redactSensitiveText` & `sanitizeErrorForLogging` (`apps/web/src/lib/security/redact.ts`) scrub Bearer tokens, signed query tokens (`?token=`, `?exportToken=`), API keys, and email addresses before logging or telemetry capture.
   - Analytics payloads pass through `sanitizeAnalyticsProps` (`apps/web/src/lib/analytics/posthog.ts`) stripping PII keys (`email`, `password`, `token`, `secret`, `ip`, etc.).
 
+
+## Edge protection, CSP trade-off & cross-origin headers (`S1b`, `S6`, `S7`)
+
+- **CSRF / origin guard** (`apps/web/src/proxy.ts`, pure logic in `src/lib/security/edge-guard.ts`): non-`GET/HEAD/OPTIONS` requests to `/api/**` must carry an `Origin` (or `Sec-Fetch-Site: same-origin`) matching the app origin or a trusted origin. Exempt (own authentication): `/api/paddle/webhook` (HMAC signature), `/api/auth/**` (Better Auth), `/api/cron/**` (bearer secret), `/api/uploads/local-put` (signed token).
+- **Default-deny without a session cookie**: `/admin/**`, `/api/admin/**` and the authenticated app areas redirect (pages) or return `401` (APIs) when no session cookie exists at all. This is a cheap presence check only; real session/role validation stays in the handlers.
+- **Shared rate limits**: auth flood guard, uploads, exports and the Paddle invalid-signature counter use the DB-backed `consumeSharedRateLimit`, so limits hold across serverless instances.
+- **CSP trade-off**: `script-src` keeps `'unsafe-inline'`. A nonce-based CSP forces every page to render dynamically (the nonce must change per request) which would defeat ISR/static caching of marketing, `/templates` and public case studies (`/p/[slug]`). Mitigations: `'unsafe-eval'` is only present in development, `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, a strict script host allow-list, React's output escaping, and no user-supplied HTML rendered unsanitised. Revisit if hash-based CSP (SRI) becomes practical for Next inline bootstrap scripts.
+- **Cross-origin headers**: `Cross-Origin-Opener-Policy: same-origin`; `Permissions-Policy` denies camera, microphone, geolocation and (self only, for Paddle checkout) payment.
+- **Billing environment gate**: simulated billing needs `ALLOW_SIMULATED_BILLING=1` and is refused on `VERCEL_ENV=production`/`PADDLE_ENV=production`; production deployments fail to boot with sandbox/placeholder billing configuration (`assertProductionBillingEnvironment`).

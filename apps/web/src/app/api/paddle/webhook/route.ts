@@ -1,28 +1,11 @@
 import { NextResponse } from "next/server";
 import { handleSignedPaddleWebhookRequest } from "@/lib/billing/webhooks";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+import { extractClientIp } from "@/lib/security/auth-rate-limit";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
 export const runtime = "nodejs";
 
 const MAX_WEBHOOK_BODY_BYTES = 512 * 1024; // 512 KiB
-
-function resolveTrustedWebhookIp(headers: Headers): string {
-  const cfIp = headers.get("cf-connecting-ip")?.trim();
-  if (cfIp) return cfIp;
-  const realIp = headers.get("x-real-ip")?.trim();
-  if (realIp) return realIp;
-  const forwarded = headers.get("x-forwarded-for");
-  if (forwarded) {
-    const hops = forwarded
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (hops.length > 0) {
-      return hops[hops.length - 1]!;
-    }
-  }
-  return "local";
-}
 
 async function readWebhookTextWithLimit(
   request: Request,
@@ -86,8 +69,8 @@ export async function POST(request: Request) {
 
   if (!result.ok) {
     if (result.httpStatus === 401) {
-      const clientIp = resolveTrustedWebhookIp(request.headers);
-      const invalidRate = consumeUploadRateLimit(
+      const clientIp = extractClientIp(request.headers);
+      const invalidRate = await consumeSharedRateLimit(
         `paddle-webhook-invalid:${clientIp}`,
         30,
         60_000,

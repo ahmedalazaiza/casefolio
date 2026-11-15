@@ -36,9 +36,11 @@ function formatPlanLabel(plan: PlanTier): string {
 export function AdminUsersList({
   initialUsers,
   currentAdminId,
+  currentAdminRole = "admin",
 }: {
   initialUsers: AdminUserListItem[];
   currentAdminId: string;
+  currentAdminRole?: "admin" | "superadmin";
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -134,7 +136,7 @@ export function AdminUsersList({
         <div
           role="group"
           aria-label="Filter users by plan or status"
-          className="border-border/70 bg-sunken/80 inline-flex flex-wrap gap-1 rounded-full border p-1"
+          className="border-border/70 bg-sunken/80 inline-flex flex-wrap gap-1 rounded-xl border p-1"
         >
           {ADMIN_USER_PLAN_FILTERS.map((f) => {
             const active = filter === f;
@@ -146,10 +148,10 @@ export function AdminUsersList({
                 aria-pressed={active}
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "focus-visible:ring-ring/40 rounded-full px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2",
+                  "focus-visible:ring-ring/40 rounded-lg px-3.5 py-1.5 transition-all outline-none focus-visible:ring-2",
                   active
-                    ? "bg-elevated text-foreground shadow-card type-caption font-medium"
-                    : "text-muted-foreground hover:text-foreground type-caption",
+                    ? "border-border bg-elevated text-foreground type-caption border font-medium"
+                    : "text-muted-foreground hover:text-foreground type-caption border border-transparent",
                 )}
               >
                 {label}
@@ -183,6 +185,8 @@ export function AdminUsersList({
               ) : (
                 filtered.map((user) => {
                   const isSelf = user.id === currentAdminId;
+                  const canSuspend =
+                    !isSelf && (currentAdminRole === "superadmin" || user.role === "user");
                   return (
                     <tr key={user.id} className="hover:bg-surface/60 transition-colors">
                       <td className="px-5 py-4">
@@ -215,7 +219,7 @@ export function AdminUsersList({
                           <Button asChild variant="secondary" size="sm">
                             <Link href={`/admin/users/${user.id}`}>View</Link>
                           </Button>
-                          {!isSelf && (
+                          {canSuspend && (
                             <Button
                               type="button"
                               variant={user.suspended ? "secondary" : "destructive"}

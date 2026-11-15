@@ -2,7 +2,14 @@
 
 import { AlertCircle, ArrowRight, Check, Send } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { InputField } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
@@ -13,16 +20,27 @@ import { cn } from "@/lib/utils";
 export function VerifyEmailForm({
   initialEmail = "",
   initialName = "",
+  initialSent = false,
 }: {
   initialEmail?: string;
   initialName?: string;
+  initialSent?: boolean;
 }) {
   const [email, setEmail] = useState(initialEmail);
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(initialSent ? 60 : 0);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setCooldownSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldownSeconds]);
 
   const firstName = initialName.trim().split(/\s+/)[0] || "";
 
@@ -57,6 +75,7 @@ export function VerifyEmailForm({
   }
 
   async function handleResend() {
+    if (cooldownSeconds > 0) return;
     setError(null);
     if (!email.trim()) {
       setError("Enter your email address first.");
@@ -73,6 +92,7 @@ export function VerifyEmailForm({
       return;
     }
 
+    setCooldownSeconds(60);
     toast("Sent a new 6-digit verification code.");
   }
 
@@ -206,24 +226,19 @@ export function VerifyEmailForm({
           <button
             type="button"
             onClick={handleResend}
-            className="text-primary font-medium hover:underline"
+            disabled={cooldownSeconds > 0}
+            className={cn(
+              "font-medium",
+              cooldownSeconds > 0
+                ? "text-muted-foreground cursor-not-allowed"
+                : "text-primary hover:underline",
+            )}
           >
-            Resend
+            {cooldownSeconds > 0 ? `Resend in ${cooldownSeconds}s` : "Resend"}
           </button>{" "}
           ·{" "}
           <Link href="/sign-up" className="text-primary font-medium hover:underline">
             Change email
-          </Link>
-        </p>
-
-        <p className="text-tertiary type-caption">
-          Email taking a moment?{" "}
-          <Link
-            href="/onboarding"
-            data-testid="skip-verify-for-now"
-            className="text-foreground font-medium underline underline-offset-4 hover:opacity-80"
-          >
-            Continue to workspace for now
           </Link>
         </p>
       </div>

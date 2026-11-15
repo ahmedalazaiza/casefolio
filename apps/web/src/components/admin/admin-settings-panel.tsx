@@ -253,23 +253,25 @@ export function AdminSettingsPanel({
           </p>
         </div>
 
-        <Button
-          type="button"
-          onClick={() => {
-            setErrorMessage(null);
-            setAddOpen(true);
-          }}
-        >
-          <Plus className="size-4" />
-          Add admin
-        </Button>
+        {currentAdminRole === "superadmin" && (
+          <Button
+            type="button"
+            onClick={() => {
+              setErrorMessage(null);
+              setAddOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            Add admin
+          </Button>
+        )}
       </header>
 
       {/* Segmented tabs (Figma 35:8744) */}
       <div
         role="tablist"
         aria-label="Settings sections"
-        className="border-border/70 bg-sunken/80 inline-flex max-w-full items-center gap-1 self-start overflow-x-auto rounded-full border p-1 whitespace-nowrap"
+        className="border-border/70 bg-sunken/80 inline-flex max-w-full items-center gap-1 self-start overflow-x-auto rounded-xl border p-1 whitespace-nowrap"
       >
         {tabs.map((tab) => {
           const active = activeTab === tab.key;
@@ -285,10 +287,10 @@ export function AdminSettingsPanel({
                 setFeedback(null);
               }}
               className={cn(
-                "rounded-full px-3.5 py-1.5 transition-all outline-none type-caption",
+                "rounded-lg px-3.5 py-1.5 transition-all outline-none type-caption",
                 active
-                  ? "bg-elevated text-foreground shadow-card font-medium"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "border-border bg-elevated text-foreground border font-medium"
+                  : "text-muted-foreground hover:text-foreground border border-transparent",
               )}
             >
               {tab.label}
@@ -332,9 +334,7 @@ export function AdminSettingsPanel({
               <tbody className="divide-border divide-y">
                 {overview.team.map((member) => {
                   const isSelf = member.id === currentAdminId;
-                  const canModify =
-                    !isSelf &&
-                    (currentAdminRole === "superadmin" || member.role !== "superadmin");
+                  const canModify = !isSelf && currentAdminRole === "superadmin";
 
                   return (
                     <tr key={member.id} data-testid="admin-team-row">
@@ -493,14 +493,14 @@ export function AdminSettingsPanel({
                   id="flag-new-signups"
                   label="New sign-ups open"
                   checked={overview.platform.newSignupsOpen}
-                  disabled={isPending}
+                  disabled={isPending || currentAdminRole !== "superadmin"}
                   onToggle={() => handleTogglePlatformFlag("newSignupsOpen")}
                 />
                 <PlatformSwitch
                   id="flag-email-verify"
                   label="Require email verification"
                   checked={overview.platform.requireEmailVerification}
-                  disabled={isPending}
+                  disabled={isPending || currentAdminRole !== "superadmin"}
                   onToggle={() => handleTogglePlatformFlag("requireEmailVerification")}
                 />
                 <PlatformSwitch
@@ -533,17 +533,17 @@ export function AdminSettingsPanel({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="border-border/70 bg-sunken/80 inline-flex max-w-full flex-wrap items-center gap-1 rounded-full border p-1">
+              <div className="border-border/70 bg-sunken/80 inline-flex max-w-full flex-wrap items-center gap-1 rounded-xl border p-1">
                 {AUDIT_ACTION_CATEGORIES.map((cat) => (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => setAuditCategory(cat)}
                     className={cn(
-                      "rounded-full px-3 py-1 capitalize transition-all outline-none type-caption",
+                      "rounded-lg px-3 py-1 capitalize transition-all outline-none type-caption",
                       auditCategory === cat
-                        ? "bg-elevated text-foreground shadow-card font-medium"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "border-border bg-elevated text-foreground border font-medium"
+                        : "text-muted-foreground hover:text-foreground border border-transparent",
                     )}
                   >
                     {cat}

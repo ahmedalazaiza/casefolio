@@ -273,7 +273,7 @@ test.describe("Phase 12 Production Readiness & Mandatory Template Cover E2E", ()
         )
         .toBe(800);
 
-      // 6. Beta Tester Journey: Sign-up -> Skip Verify link -> Onboarding -> /new (Step 2 & Step 3 thumbnails)
+      // 6. Beta Tester Journey: Sign-up -> Verify 6-digit OTP -> Onboarding -> /new (Step 2 & Step 3 thumbnails)
       await page.goto("/sign-up");
       await page.getByLabel("Full name").fill("Yara Beta Tester");
       await page.getByLabel("Email").fill(testerEmail);
@@ -282,7 +282,17 @@ test.describe("Phase 12 Production Readiness & Mandatory Template Cover E2E", ()
       await page.getByRole("button", { name: "Create account" }).click();
       await expect(page).toHaveURL(/\/verify/);
 
-      await page.getByTestId("skip-verify-for-now").click();
+      const otpRows = await db
+        .select()
+        .from(verifications)
+        .where(like(verifications.identifier, `%${testerEmail}%`));
+      const otpCode = (otpRows[otpRows.length - 1]?.value ?? "").split(":")[0] ?? "";
+      expect(otpCode).toMatch(/^\d{6}$/);
+      for (let i = 0; i < 6; i += 1) {
+        await page.getByLabel(`Verification digit ${i + 1}`).fill(otpCode[i] ?? "");
+      }
+      await page.getByRole("button", { name: "Verify email" }).click();
+      await page.getByRole("link", { name: /Start onboarding/i }).click();
       await expect(page).toHaveURL(/\/onboarding/);
 
       await page.getByRole("button", { name: /UI\/UX designer/i }).click();

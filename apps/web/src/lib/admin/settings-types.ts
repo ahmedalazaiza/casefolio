@@ -197,10 +197,12 @@ export function formatAuditLogSummary(
       return `Synced Paddle subscription (${String(meta.source ?? "mirror")} · ${String(meta.status ?? "")})`;
     case "admin.moderation.takedown":
       return `Took down case study "${String(meta.projectName ?? meta.slug ?? "")}"`;
+    case "admin.moderation.restored":
+      return `Restored case study "${String(meta.projectName ?? meta.slug ?? "")}" (takedown lifted)`;
     case "admin.moderation.dismissed":
       return `Dismissed reports on "${String(meta.projectName ?? meta.projectId ?? "")}"`;
     case "admin.moderation.bulk_dismissed":
-      return `Bulk-dismissed ${String(meta.dismissedReportCount ?? 0)} open reports`;
+      return `Bulk-dismissed ${String(meta.dismissedReportCount ?? 0)} open reports${meta.reason ? ` (${String(meta.reason)})` : ""}`;
     case "admin.role.updated":
       return `Changed role ${String(meta.previousRole ?? "user")} → ${String(meta.nextRole ?? "admin")}`;
     case "admin.email.dispatched":

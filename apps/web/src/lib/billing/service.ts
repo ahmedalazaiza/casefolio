@@ -12,7 +12,7 @@ import {
   sql,
   type PlanTier,
 } from "@casefolio/db";
-import { env } from "@/env";
+import { env, isSimulatedBillingAllowed } from "@/env";
 import {
   BILLING_PLAN_CATALOG,
   cancelSubscriptionInputSchema,
@@ -51,10 +51,8 @@ import {
 import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
-  resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
-import { can } from "@/lib/entitlements";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
 export interface BillingActor {
   id: string;
@@ -220,7 +218,7 @@ export async function prepareCheckoutSessionForUser(
   actor: BillingActor,
   rawInput: unknown,
 ): Promise<PrepareCheckoutResult> {
-  const rate = consumeUploadRateLimit(`billing-checkout:${actor.id}`, 20, 60_000);
+  const rate = await consumeSharedRateLimit(`billing-checkout:${actor.id}`, 20, 60_000);
   if (!rate.allowed) {
     return {
       ok: false,
@@ -261,6 +259,19 @@ export async function prepareCheckoutSessionForUser(
 
   const valid = parsed.data;
   let orgId = valid.orgId ?? null;
+
+  // Without a live Paddle overlay the only fallback is the local simulator, which needs an
+  // explicit opt-in (never in production).
+  if (
+    !isPaddleOverlayLiveReady(resolveServerPaddlePriceId(valid.plan, valid.interval)) &&
+    !isSimulatedBillingAllowed(process.env)
+  ) {
+    return {
+      ok: false,
+      code: "BILLING_NOT_CONFIGURED",
+      error: "Billing is temporarily unavailable. Please contact support — you have not been charged.",
+    };
+  }
 
   if (valid.plan === "pro" && orgId) {
     return {
@@ -605,7 +616,13 @@ export async function completeSandboxCheckoutForUser(
       error: string;
     }
 > {
-  if (env.PADDLE_ENV !== "sandbox" || isRealPaddleApiKeyConfigured()) {
+  if (
+    process.env.VERCEL_ENV === "production" ||
+    process.env.ALLOW_SIMULATED_BILLING !== "1" ||
+    !isSimulatedBillingAllowed(process.env) ||
+    env.PADDLE_ENV !== "sandbox" ||
+    isRealPaddleApiKeyConfigured()
+  ) {
     return {
       ok: false,
       code: "SANDBOX_ONLY",
@@ -2576,13 +2593,11 @@ export async function cancelPendingTeamSeatDecrease(args: {
   };
 }
 
-const CUSTOM_DOMAIN_HOSTNAME_REGEX =
-  /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/;
-
 /**
- * Configures or clears a custom domain (e.g. `work.youragency.com`) on a Casefolio Plus workspace.
+ * Custom domains are NOT shipped yet (no DNS/TLS provisioning). The DB columns are kept, but every
+ * attempt to configure or clear a domain is refused with a clear message.
  */
-export async function updateTeamCustomDomain(args: {
+export async function updateTeamCustomDomain(_args: {
   actorUserId: string;
   organizationId: string;
   customDomain: string | null;
@@ -2591,83 +2606,13 @@ export async function updateTeamCustomDomain(args: {
   | { ok: true; customDomain: string | null }
   | {
       ok: false;
-      code: "FORBIDDEN" | "PLUS_UPGRADE_REQUIRED" | "INVALID_DOMAIN";
+      code: "FORBIDDEN" | "PLUS_UPGRADE_REQUIRED" | "INVALID_DOMAIN" | "NOT_AVAILABLE";
       error: string;
     }
 > {
-  const now = args.now ?? new Date();
-
-  const [membership] = await db
-    .select({ role: dbSchema.memberships.role })
-    .from(dbSchema.memberships)
-    .where(
-      and(
-        eq(dbSchema.memberships.orgId, args.organizationId),
-        eq(dbSchema.memberships.userId, args.actorUserId),
-      ),
-    )
-    .limit(1);
-
-  const normalizedRole = membership ? normalizeMembershipRole(membership.role) : null;
-  if (!normalizedRole || (normalizedRole !== "owner" && normalizedRole !== "admin")) {
-    return {
-      ok: false,
-      code: "FORBIDDEN",
-      error: "Only workspace Owners and Admins can configure a custom domain.",
-    };
-  }
-
-  const ensured = await ensureTeamWorkspaceForOrganization(
-    args.organizationId,
-    args.actorUserId,
-  );
-  const ent = await resolveWorkspaceEntitlementState(ensured.workspaceId, now);
-  if (!ent || !can(ent.plan, "custom_domain")) {
-    return {
-      ok: false,
-      code: "PLUS_UPGRADE_REQUIRED",
-      error: "Custom domains require an active Casefolio Plus subscription.",
-    };
-  }
-
-  const raw = args.customDomain?.trim().toLowerCase() ?? "";
-  if (!raw) {
-    await db
-      .update(dbSchema.workspaces)
-      .set({ customDomain: null, updatedAt: now })
-      .where(eq(dbSchema.workspaces.id, ensured.workspaceId));
-    return { ok: true, customDomain: null };
-  }
-
-  const cleaned = raw
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
-    .trim();
-
-  if (
-    cleaned.length > 253 ||
-    !CUSTOM_DOMAIN_HOSTNAME_REGEX.test(cleaned) ||
-    cleaned === "casefolio.design" ||
-    cleaned.endsWith(".casefolio.design") ||
-    cleaned === "casefolio.app" ||
-    cleaned.endsWith(".casefolio.app")
-  ) {
-    return {
-      ok: false,
-      code: "INVALID_DOMAIN",
-      error:
-        "Enter a valid custom hostname such as work.youragency.com (without paths or Casefolio subdomains).",
-    };
-  }
-
-  await db
-    .update(dbSchema.workspaces)
-    .set({
-      customDomain: cleaned,
-      customDomainEnabled: true,
-      updatedAt: now,
-    })
-    .where(eq(dbSchema.workspaces.id, ensured.workspaceId));
-
-  return { ok: true, customDomain: cleaned };
+  return {
+    ok: false,
+    code: "NOT_AVAILABLE",
+    error: "Custom domains are not available yet.",
+  };
 }

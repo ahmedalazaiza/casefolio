@@ -16,6 +16,7 @@ import {
   resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
 import { notifyProjectPublished } from "@/lib/notifications/service";
+import { revalidatePublicProject } from "@/lib/projects/public-cache";
 import { slugifyProjectName } from "@/lib/projects/types";
 import {
   puckDocumentSchema,
@@ -586,10 +587,30 @@ export async function publishProjectForUser(
 
   try {
     const txOutcome = await db.transaction(async (tx) => {
-      // Serialize simultaneous publish quota checks per workspace (`FOR UPDATE`)
+      // Serialize simultaneous publish quota checks per workspace and lock project row against concurrent takedowns (`FOR UPDATE`)
       await tx.execute(
         sql`SELECT id FROM workspaces WHERE id = ${auth.workspace.id} FOR UPDATE`,
       );
+      await tx.execute(sql`SELECT id FROM projects WHERE id = ${existing.id} FOR UPDATE`);
+
+      const [txActiveTakedown] = await tx
+        .select({ id: dbSchema.reports.id })
+        .from(dbSchema.reports)
+        .where(
+          and(
+            eq(dbSchema.reports.projectId, existing.id),
+            eq(dbSchema.reports.status, "takedown"),
+          ),
+        )
+        .limit(1);
+      if (txActiveTakedown) {
+        return {
+          ok: false as const,
+          code: "FORBIDDEN" as const,
+          error:
+            "This case study was unpublished following a moderation policy takedown and cannot be re-published until cleared by support.",
+        };
+      }
 
       if (!currentlyPublished) {
         const publishedCountRes = await tx.execute<{ total: string | number }>(sql`
@@ -678,6 +699,11 @@ export async function publishProjectForUser(
     const resolvedSlug = updated.slug ?? valid.slug;
     const resolvedPublishedAt = updated.publishedAt ?? now;
 
+    revalidatePublicProject(resolvedSlug);
+    if (existing.slug && existing.slug !== resolvedSlug) {
+      revalidatePublicProject(existing.slug);
+    }
+
     const isFirstPublish = existing.publishedAt === null;
 
     await trackServerProductEvent({
@@ -746,19 +772,24 @@ export async function unpublishProjectForUser(
   }
 
   const now = new Date();
-  const [updated] = await db
-    .update(dbSchema.projects)
-    .set({
-      visibility: "private",
-      publishedAt: null,
-      updatedAt: now,
-    })
-    .where(eq(dbSchema.projects.id, auth.project.id))
-    .returning();
+  const updated = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM projects WHERE id = ${auth.project.id} FOR UPDATE`);
+    const [row] = await tx
+      .update(dbSchema.projects)
+      .set({
+        visibility: "private",
+        publishedAt: null,
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.projects.id, auth.project.id))
+      .returning();
 
-  await db
-    .delete(dbSchema.publishedSnapshots)
-    .where(eq(dbSchema.publishedSnapshots.projectId, auth.project.id));
+    await tx
+      .delete(dbSchema.publishedSnapshots)
+      .where(eq(dbSchema.publishedSnapshots.projectId, auth.project.id));
+
+    return row ?? null;
+  });
 
   if (!updated) {
     return {
@@ -767,6 +798,8 @@ export async function unpublishProjectForUser(
       error: "Project not found.",
     };
   }
+
+  revalidatePublicProject(updated.slug);
 
   return {
     ok: true,

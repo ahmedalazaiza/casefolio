@@ -65,8 +65,19 @@ describe("Admin users & subscriptions service (C-904)", () => {
       },
     });
     createdUserIds.push(memberSignUp.user.id);
+    await db
+      .update(dbSchema.users)
+      .set({ emailVerified: true })
+      .where(eq(dbSchema.users.id, memberSignUp.user.id));
 
-    // Ensure member currently has an active session from autoSignIn
+    await auth.api.signInEmail({
+      body: {
+        email: memberEmail,
+        password,
+      },
+    });
+
+    // Ensure member currently has an active session from sign-in
     const initialSessions = await db
       .select()
       .from(dbSchema.sessions)
@@ -109,9 +120,9 @@ describe("Admin users & subscriptions service (C-904)", () => {
     expect(csv).toContain(memberEmail);
     expect(csv).toContain("pro");
 
-    // 2. Subscriptions overview includes active MRR
+    // 2. Subscriptions overview includes active MRR ($9.99/mo Pro catalog price)
     const subsOverview = await getAdminSubscriptionsOverview();
-    expect(subsOverview.mrrUsd).toBeGreaterThanOrEqual(12);
+    expect(subsOverview.mrrUsd).toBeGreaterThanOrEqual(9.99);
     expect(subsOverview.payingUsersCount).toBeGreaterThanOrEqual(1);
 
     // 3. Live Paddle API fetch & sync
@@ -164,7 +175,7 @@ describe("Admin users & subscriptions service (C-904)", () => {
       .limit(1);
     expect(updatedMember?.plan).toBe("team");
 
-    // 4. Self-suspension guard
+    // 4. Self-suspension & lateral admin-to-admin suspension guards (N5)
     const selfSuspend = await setAdminUserSuspension({
       actorId: adminSignUp.user.id,
       actorRole: "admin",
@@ -172,6 +183,26 @@ describe("Admin users & subscriptions service (C-904)", () => {
       suspended: true,
     });
     expect(selfSuspend.ok).toBe(false);
+
+    const [peerAdmin] = await db
+      .insert(dbSchema.users)
+      .values({
+        email: `c904-peer-admin-${suffix}@casefolio.test`,
+        name: "C904 Peer Admin",
+        role: "admin",
+        emailVerified: true,
+      })
+      .returning();
+    if (peerAdmin) {
+      createdUserIds.push(peerAdmin.id);
+      const lateralSuspend = await setAdminUserSuspension({
+        actorId: adminSignUp.user.id,
+        actorRole: "admin",
+        targetUserId: peerAdmin.id,
+        suspended: true,
+      });
+      expect(lateralSuspend.ok).toBe(false);
+    }
 
     // 5. Suspend member -> revokes sessions & blocks login immediately
     const suspendRes = await setAdminUserSuspension({

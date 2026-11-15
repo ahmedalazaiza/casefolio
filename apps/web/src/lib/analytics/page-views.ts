@@ -5,12 +5,13 @@ import {
   eq,
   gte,
   inArray,
+  lt,
+  sql,
   type UserRole,
 } from "@casefolio/db";
 import {
   analyticsRangeSchema,
   computePrivacySafeVisitorHash,
-  extractClientIpFromHeaders,
   extractCountryFromHeaders,
   isBotUserAgent,
   isPrefetchRequest,
@@ -23,6 +24,7 @@ import {
 import { db, dbSchema } from "@/lib/db";
 import { can } from "@/lib/entitlements";
 import { listDashboardProjectsForUser } from "@/lib/projects/dashboard";
+import { extractClientIp } from "@/lib/security/auth-rate-limit";
 import { authorizeProjectAccess } from "@/lib/workspaces/acl";
 
 export * from "@/lib/analytics/page-views-utils";
@@ -143,7 +145,7 @@ export async function recordPublishedProjectView(args: {
   }
 
   const now = args.now ?? new Date();
-  const clientIp = extractClientIpFromHeaders(args.headers);
+  const clientIp = extractClientIp(args.headers);
   const visitorHash = computePrivacySafeVisitorHash({
     projectId: project.id,
     clientIp,
@@ -472,10 +474,11 @@ export async function getWorkspaceAnalyticsOverview(
   const projectIds = visibleProjects.map((p) => p.id);
   const cutoff30d = addUtcDays(startOfUtcDay(now), -29);
 
-  const viewsRows = await db
+  const aggregatedRows = await db
     .select({
       projectId: dbSchema.pageViews.projectId,
-      visitorHash: dbSchema.pageViews.visitorHash,
+      views: sql<number>`count(*)::int`,
+      visitors: sql<number>`count(distinct ${dbSchema.pageViews.visitorHash})::int`,
     })
     .from(dbSchema.pageViews)
     .where(
@@ -483,17 +486,15 @@ export async function getWorkspaceAnalyticsOverview(
         inArray(dbSchema.pageViews.projectId, projectIds),
         gte(dbSchema.pageViews.at, cutoff30d),
       ),
-    );
+    )
+    .groupBy(dbSchema.pageViews.projectId);
 
-  const statsByProject = new Map<string, { views: number; visitors: Set<string> }>();
-  for (const v of viewsRows) {
-    let entry = statsByProject.get(v.projectId);
-    if (!entry) {
-      entry = { views: 0, visitors: new Set() };
-      statsByProject.set(v.projectId, entry);
-    }
-    entry.views += 1;
-    entry.visitors.add(v.visitorHash);
+  const statsByProject = new Map<string, { views: number; visitors: number }>();
+  for (const row of aggregatedRows) {
+    statsByProject.set(row.projectId, {
+      views: Number(row.views ?? 0),
+      visitors: Number(row.visitors ?? 0),
+    });
   }
 
   let totalViews30d = 0;
@@ -510,7 +511,7 @@ export async function getWorkspaceAnalyticsOverview(
 
     const stat = statsByProject.get(project.id);
     const views30d = stat?.views ?? 0;
-    const visitors30d = stat?.visitors.size ?? 0;
+    const visitors30d = stat?.visitors ?? 0;
     totalViews30d += views30d;
 
     return {
@@ -546,4 +547,21 @@ export async function getWorkspaceAnalyticsOverview(
       : null,
     projects: projectRows,
   };
+}
+
+/**
+ * Retention housekeeping: prunes raw page-view events older than the maximum retention horizon
+ * (default 365 days, matching the highest paid tier retention window).
+ */
+export async function pruneOldPageViews(
+  retentionDays = 365,
+  now: Date = new Date(),
+): Promise<number> {
+  const safeDays = Math.max(30, Math.trunc(retentionDays));
+  const cutoff = addUtcDays(startOfUtcDay(now), -safeDays);
+  const deleted = await db
+    .delete(dbSchema.pageViews)
+    .where(lt(dbSchema.pageViews.at, cutoff))
+    .returning({ id: dbSchema.pageViews.id });
+  return deleted.length;
 }

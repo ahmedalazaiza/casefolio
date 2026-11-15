@@ -45,6 +45,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://casefolio.app"),
   title: "Casefolio — Turn Finished Projects Into Publishable Case Studies",
   description:
     "Pick a template made by the Casefolio team, drop in your screens, tweak colors and text — then publish a page or export PNG & PDF.",

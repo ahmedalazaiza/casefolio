@@ -30,6 +30,7 @@ export interface EditorStoreState extends EditorDocumentSnapshot {
   markSaving: () => void;
   markSaved: (updatedAtIso: string, revision?: number) => void;
   markConflict: (message: string, serverUpdatedAtIso?: string, serverRevision?: number) => void;
+  acceptConflictKeepLocal: () => boolean;
   markError: (message: string) => void;
 }
 
@@ -120,6 +121,26 @@ export function createEditorStore(initial: EditorStoreInit) {
             draft.conflictServerRevision =
               typeof serverRevision === "number" ? serverRevision : null;
           });
+        },
+
+        acceptConflictKeepLocal: () => {
+          const { conflictServerUpdatedAtIso, conflictServerRevision } = get();
+          if (!conflictServerUpdatedAtIso && typeof conflictServerRevision !== "number") {
+            return false;
+          }
+          set((draft) => {
+            if (conflictServerUpdatedAtIso) {
+              draft.expectedUpdatedAtIso = conflictServerUpdatedAtIso;
+            }
+            if (typeof conflictServerRevision === "number") {
+              draft.expectedRevision = conflictServerRevision;
+            }
+            draft.saveStatus = "unsaved";
+            draft.saveError = null;
+            draft.conflictServerUpdatedAtIso = null;
+            draft.conflictServerRevision = null;
+          });
+          return true;
         },
 
         markError: (message) => {

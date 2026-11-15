@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "db:generate": "pnpm --filter @casefolio/db db:generate",
     "db:migrate": "pnpm --filter @casefolio/db db:migrate",
-    "db:seed": "pnpm --filter @casefolio/db db:seed"
+    "db:seed": "pnpm --filter @casefolio/db db:seed",
+    "db:migrate:remote": "node scripts/db-migrate-guarded.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

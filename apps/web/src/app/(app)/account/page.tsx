@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { AccountSettingsShell } from "@/components/account/account-settings-shell";
 import { ProfileSettingsPanel } from "@/components/account/profile-settings-panel";
 import { computeUserInitials, requireSession } from "@/lib/auth/session";
@@ -8,7 +9,16 @@ export const metadata: Metadata = {
   title: "Account Settings — Casefolio",
 };
 
-export default async function AccountPage() {
+interface AccountPageProps {
+  searchParams: Promise<{ cancelDeletion?: string }>;
+}
+
+export default async function AccountPage({ searchParams }: AccountPageProps) {
+  const { cancelDeletion } = await searchParams;
+  if (cancelDeletion === "1") {
+    redirect("/account/security");
+  }
+
   const { user } = await requireSession("/account");
   const effectivePlan = await resolveEffectivePlanForUser(user.id);
   const initials = computeUserInitials(user.name, user.email);

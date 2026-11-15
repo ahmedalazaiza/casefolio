@@ -8,8 +8,13 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminModerationPage() {
-  await requireAdmin("/admin/moderation");
+  const { user } = await requireAdmin("/admin/moderation");
   const overview = await listAdminModerationQueue();
 
-  return <AdminModerationPanel initialOverview={overview} />;
+  return (
+    <AdminModerationPanel
+      initialOverview={overview}
+      currentAdminRole={user.role === "superadmin" ? "superadmin" : "admin"}
+    />
+  );
 }

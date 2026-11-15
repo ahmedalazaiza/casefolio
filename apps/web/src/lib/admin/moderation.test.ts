@@ -2,12 +2,14 @@
 import { desc, eq, inArray } from "@casefolio/db";
 import { afterAll, describe, expect, it } from "vitest";
 import {
+  dismissAllOpenModerationReports,
   listAdminModerationQueue,
   resolveModerationForProject,
+  restoreModerationTakedown,
   submitPublicProjectReport,
 } from "@/lib/admin/moderation";
 import { db, dbSchema } from "@/lib/db";
-import { getPublishedProjectBySlug } from "@/lib/projects/publish";
+import { getPublishedProjectBySlug, publishProjectForUser } from "@/lib/projects/publish";
 
 const createdProjectIds: string[] = [];
 const createdUserIds: string[] = [];
@@ -156,6 +158,52 @@ describe("Admin moderation service (C-905)", () => {
       .from(dbSchema.notifications)
       .where(eq(dbSchema.notifications.userId, authorUser.id));
     expect(ownerNotifs.some((n) => n.kind === "moderation_takedown")).toBe(true);
+
+    // N7: Author cannot re-publish while takedown hold is active
+    const blockedPublish = await publishProjectForUser(
+      {
+        projectId: project.id,
+        slug,
+        visibility: "public",
+      },
+      { id: authorUser.id, role: "user" },
+    );
+    expect(blockedPublish.ok).toBe(false);
+
+    // N7: Admin lifts takedown hold -> author can re-publish
+    const restoreRes = await restoreModerationTakedown({
+      actorId: adminUser.id,
+      projectId: project.id,
+      reason: "Author removed external wallet link",
+    });
+    expect(restoreRes).toEqual({ ok: true, slug });
+
+    const allowedPublish = await publishProjectForUser(
+      {
+        projectId: project.id,
+        slug,
+        visibility: "public",
+      },
+      { id: authorUser.id, role: "user" },
+    );
+    expect(allowedPublish.ok).toBe(true);
+
+    // N6: Bulk dismiss requires superadmin + explicit confirmation + audit reason
+    const deniedBulkByAdmin = await dismissAllOpenModerationReports({
+      actorId: adminUser.id,
+      actorRole: "admin",
+      confirmed: true,
+      reason: "Unauthorized bulk attempt",
+    });
+    expect(deniedBulkByAdmin.ok).toBe(false);
+
+    const deniedBulkShortReason = await dismissAllOpenModerationReports({
+      actorId: adminUser.id,
+      actorRole: "superadmin",
+      confirmed: true,
+      reason: "no",
+    });
+    expect(deniedBulkShortReason.ok).toBe(false);
 
     // Also test dismissing a separate report on a second project
     const [secondProject] = await db

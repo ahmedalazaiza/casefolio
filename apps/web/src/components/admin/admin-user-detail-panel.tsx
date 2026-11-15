@@ -16,9 +16,11 @@ import { cn } from "@/lib/utils";
 export function AdminUserDetailPanel({
   detail: initialDetail,
   currentAdminId,
+  currentAdminRole,
 }: {
   detail: AdminUserDetail;
   currentAdminId: string;
+  currentAdminRole: "admin" | "superadmin";
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -32,6 +34,9 @@ export function AdminUserDetailPanel({
   const [noticeMessage, setNoticeMessage] = useState("");
 
   const isSelf = detail.id === currentAdminId;
+  const isSuperadmin = currentAdminRole === "superadmin";
+  // Mirrors the server rules: only a superadmin may email users or suspend another admin.
+  const canSuspend = !isSelf && (isSuperadmin || detail.role === "user");
 
   function handleSendAdminNotice(event: React.FormEvent) {
     event.preventDefault();
@@ -44,8 +49,6 @@ export function AdminUserDetailPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "send_admin_notice",
-          recipientEmail: detail.email,
-          recipientName: detail.name,
           targetUserId: detail.id,
           subject: noticeSubject,
           heading: noticeHeading,
@@ -175,16 +178,18 @@ export function AdminUserDetailPanel({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isPending}
-            onClick={() => setShowEmailComposer((prev) => !prev)}
-          >
-            <Mail className="size-4" />
-            Email from Admin
-          </Button>
-          {!isSelf && (
+          {isSuperadmin && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isPending}
+              onClick={() => setShowEmailComposer((prev) => !prev)}
+            >
+              <Mail className="size-4" />
+              Email from Admin
+            </Button>
+          )}
+          {canSuspend && (
             <Button
               type="button"
               variant={detail.suspended ? "secondary" : "destructive"}
@@ -197,7 +202,7 @@ export function AdminUserDetailPanel({
         </div>
       </header>
 
-      {showEmailComposer && (
+      {isSuperadmin && showEmailComposer && (
         <Card className="gap-4 p-5">
           <div className="flex flex-col gap-0.5">
             <span className="v3-label text-[var(--cf-royal-text)] uppercase">

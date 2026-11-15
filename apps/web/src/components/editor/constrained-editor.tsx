@@ -233,6 +233,11 @@ export function ConstrainedEditor({
   const theme = useStore(editorStore, (s) => s.theme);
   const saveStatus = useStore(editorStore, (s) => s.saveStatus);
   const saveError = useStore(editorStore, (s) => s.saveError);
+  const conflictServerUpdatedAtIso = useStore(
+    editorStore,
+    (s) => s.conflictServerUpdatedAtIso,
+  );
+  const conflictServerRevision = useStore(editorStore, (s) => s.conflictServerRevision);
   const setPuckData = useStore(editorStore, (s) => s.setPuckData);
   const setTheme = useStore(editorStore, (s) => s.setTheme);
 
@@ -353,7 +358,18 @@ export function ConstrainedEditor({
   );
   const inFlightSaveRef = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryAttemptRef = useRef(0);
   const canvasScrollRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const colorKeys = useMemo(() => Object.keys(theme.colors), [theme.colors]);
   const puckConfig = useMemo(
@@ -382,6 +398,11 @@ export function ConstrainedEditor({
       return;
     }
 
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
     const currentState = editorStore.getState();
     const snapshotToSave = serializeEditorSnapshot({
       puckData: currentState.puckData,
@@ -401,8 +422,23 @@ export function ConstrainedEditor({
     const puckValidation = puckDocumentSchema.safeParse(currentState.puckData);
     const themeValidation = templateThemeSchema.safeParse(currentState.theme);
     if (!puckValidation.success || !themeValidation.success) {
+      currentState.markError(
+        "Some section fields have invalid values — review your recent edits to save.",
+      );
       return;
     }
+
+    const scheduleTransientRetry = () => {
+      if (retryAttemptRef.current >= 3) {
+        return;
+      }
+      const delayMs = 1500 * Math.pow(2, retryAttemptRef.current);
+      retryAttemptRef.current += 1;
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        void performAutosave();
+      }, delayMs);
+    };
 
     inFlightSaveRef.current = true;
     currentState.markSaving();
@@ -420,6 +456,7 @@ export function ConstrainedEditor({
       });
 
       if (result.ok) {
+        retryAttemptRef.current = 0;
         lastSavedSnapshotRef.current = snapshotToSave;
         editorStore.getState().markSaved(result.updatedAtIso, result.revision);
 
@@ -432,22 +469,60 @@ export function ConstrainedEditor({
           editorStore.getState().markUnsaved();
         }
       } else if (result.code === "CONFLICT") {
+        retryAttemptRef.current = 0;
         editorStore
           .getState()
           .markConflict(result.error, result.serverUpdatedAtIso, result.serverRevision);
       } else if (result.code === "LEASE_HELD") {
+        retryAttemptRef.current = 0;
         setLeaseReadOnly(true);
         setLeaseBannerMessage(result.error);
         editorStore.getState().markConflict(result.error);
       } else {
         editorStore.getState().markError(result.error || "Couldn't save your last change.");
+        if (result.code === "SAVE_FAILED") {
+          scheduleTransientRetry();
+        }
       }
     } catch {
       editorStore.getState().markError("Couldn't save your last change.");
+      scheduleTransientRetry();
     } finally {
       inFlightSaveRef.current = false;
     }
   }, [editorStore, initialPayload.project.id, leaseReadOnly, onSaveProject]);
+
+  const handleKeepLocalConflictChanges = useCallback(() => {
+    const accepted = editorStore.getState().acceptConflictKeepLocal();
+    if (!accepted) {
+      return;
+    }
+    retryAttemptRef.current = 0;
+    lastSavedSnapshotRef.current = "";
+    void performAutosave();
+  }, [editorStore, performAutosave]);
+
+  const handleDownloadConflictBackup = useCallback(() => {
+    const state = editorStore.getState();
+    const backup = {
+      projectId: initialPayload.project.id,
+      projectName: state.puckData.root.props.title || initialPayload.project.name,
+      exportedAt: new Date().toISOString(),
+      puckData: state.puckData,
+      theme: state.theme,
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `casefolio-backup-${initialPayload.project.id.slice(0, 8)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [editorStore, initialPayload.project.id, initialPayload.project.name]);
 
   const currentSnapshotJson = useMemo(
     () => serializeEditorSnapshot({ puckData, theme }),
@@ -500,17 +575,22 @@ export function ConstrainedEditor({
     };
   }, [autosaveDebounceMs, currentSnapshotJson, editorStore, onSaveProject, performAutosave, saveStatus]);
 
-  // Warn before closing tab with unsaved changes
+  // Warn before closing tab with unsaved, errored, or conflicted local changes
   useEffect(() => {
     if (!onSaveProject) return;
-    if (saveStatus !== "unsaved" && saveStatus !== "saving") return;
+    const hasUnpersistedWork =
+      saveStatus === "unsaved" ||
+      saveStatus === "saving" ||
+      saveStatus === "error" ||
+      (saveStatus === "conflict" && !leaseReadOnly);
+    if (!hasUnpersistedWork) return;
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [onSaveProject, saveStatus]);
+  }, [leaseReadOnly, onSaveProject, saveStatus]);
 
   const handleUndo = useCallback(() => {
     if (editorStore.temporal.getState().pastStates.length === 0) return;
@@ -2375,13 +2455,13 @@ export function ConstrainedEditor({
         <div
           role="alert"
           data-testid="editor-save-toast"
-          className="bg-inverse text-inverse-foreground shadow-overlay fixed bottom-20 left-1/2 z-50 flex w-[min(92vw,26rem)] -translate-x-1/2 items-center justify-between gap-3 rounded-xl px-4 py-2.5 lg:bottom-6"
+          className="border-border bg-inverse text-inverse-foreground fixed bottom-20 left-1/2 z-50 flex w-[min(94vw,38rem)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 lg:bottom-6"
         >
-          <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <span className="bg-destructive text-primary-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-md">
               <AlertCircle className="size-3.5" />
             </span>
-            <span className="type-body-s truncate">
+            <span className="type-body-s min-w-0 truncate">
               {saveError ||
                 (saveStatus === "conflict"
                   ? "This project was updated in another session."
@@ -2390,13 +2470,36 @@ export function ConstrainedEditor({
           </div>
 
           {saveStatus === "conflict" ? (
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="text-primary type-body-s-strong shrink-0 cursor-pointer underline-offset-4 hover:underline"
-            >
-              Reload
-            </button>
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
+              {!leaseReadOnly &&
+                (conflictServerUpdatedAtIso !== null ||
+                  conflictServerRevision !== null) && (
+                  <button
+                    type="button"
+                    data-testid="editor-conflict-keep-mine"
+                    onClick={handleKeepLocalConflictChanges}
+                    className="text-primary type-body-s-strong shrink-0 cursor-pointer underline-offset-4 hover:underline"
+                  >
+                    Keep my changes
+                  </button>
+                )}
+              <button
+                type="button"
+                data-testid="editor-conflict-download-copy"
+                onClick={handleDownloadConflictBackup}
+                className="text-inverse-foreground type-body-s-strong shrink-0 cursor-pointer underline-offset-4 hover:underline"
+              >
+                Download a copy
+              </button>
+              <button
+                type="button"
+                data-testid="editor-conflict-reload"
+                onClick={() => window.location.reload()}
+                className="text-muted-foreground type-body-s-strong shrink-0 cursor-pointer underline-offset-4 hover:underline"
+              >
+                Reload
+              </button>
+            </div>
           ) : (
             <button
               type="button"

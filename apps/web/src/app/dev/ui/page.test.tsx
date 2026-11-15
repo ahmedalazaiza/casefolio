@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import DevUiPage from "@/app/dev/ui/page";
 import { ThemeProvider } from "@/components/theme-provider";
 import { COLOR_TOKENS, RADIUS_TOKENS, TYPE_SCALE_TOKENS } from "@/lib/design-tokens";
@@ -74,5 +74,15 @@ describe("/dev/ui design system showcase (C-102)", () => {
       container.querySelector('[data-slot="plan-card"][data-highlighted="true"]'),
     ).not.toBeNull();
   });
-});
 
+  describe("production gating", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("calls notFound() when NODE_ENV is production (staging included)", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      expect(() => DevUiPage()).toThrow(/NEXT_HTTP_ERROR_FALLBACK;404|NEXT_NOT_FOUND/);
+    });
+  });
+});

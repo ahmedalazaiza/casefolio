@@ -4,26 +4,34 @@ interface RateLimitBucket {
 }
 
 const MAX_UPLOAD_RATE_BUCKETS = 10_000;
-const uploadRateBuckets = new Map<string, RateLimitBucket>();
+let uploadRateBuckets: Record<string, RateLimitBucket | undefined> = Object.create(
+  null,
+) as Record<string, RateLimitBucket | undefined>;
+let uploadBucketOrder: string[] = [];
 
 function pruneUploadRateBuckets(nowMs: number): void {
-  if (uploadRateBuckets.size < MAX_UPLOAD_RATE_BUCKETS) {
+  if (uploadBucketOrder.length < MAX_UPLOAD_RATE_BUCKETS) {
     return;
   }
-  for (const [key, entry] of uploadRateBuckets.entries()) {
+  const nextOrder: string[] = [];
+  for (const key of uploadBucketOrder) {
+    const entry = uploadRateBuckets[key];
+    if (!entry) continue;
     const cutoff = nowMs - entry.windowMs;
     const active = entry.timestamps.filter((ts) => ts > cutoff);
     if (active.length === 0) {
-      uploadRateBuckets.delete(key);
+      delete uploadRateBuckets[key];
     } else {
       entry.timestamps = active;
+      nextOrder.push(key);
     }
   }
-  while (uploadRateBuckets.size >= MAX_UPLOAD_RATE_BUCKETS) {
-    const oldestKey = uploadRateBuckets.keys().next().value;
+  while (nextOrder.length >= MAX_UPLOAD_RATE_BUCKETS) {
+    const oldestKey = nextOrder.shift();
     if (oldestKey === undefined) break;
-    uploadRateBuckets.delete(oldestKey);
+    delete uploadRateBuckets[oldestKey];
   }
+  uploadBucketOrder = nextOrder;
 }
 
 export interface RateLimitCheckResult {
@@ -33,7 +41,9 @@ export interface RateLimitCheckResult {
 }
 
 /**
- * Sliding-window rate limiter for upload endpoints (02-RULES.md §5).
+ * Synchronous sliding-window fallback limiter (`consumeSharedRateLimit` in
+ * `@/lib/security/shared-rate-limit` is the primary Postgres-backed shared limiter across
+ * serverless instances; this local store acts only as a graceful fallback if the DB is unavailable).
  */
 export function consumeUploadRateLimit(
   actorKey: string,
@@ -43,15 +53,18 @@ export function consumeUploadRateLimit(
 ): RateLimitCheckResult {
   pruneUploadRateBuckets(nowMs);
   const cutoff = nowMs - windowMs;
-  const bucket = uploadRateBuckets.get(actorKey) ?? { timestamps: [], windowMs };
+  let bucket = uploadRateBuckets[actorKey];
+  if (!bucket) {
+    bucket = { timestamps: [], windowMs };
+    uploadRateBuckets[actorKey] = bucket;
+    uploadBucketOrder.push(actorKey);
+  }
   bucket.windowMs = windowMs;
   bucket.timestamps = bucket.timestamps.filter((ts) => ts > cutoff);
 
   if (bucket.timestamps.length >= limit) {
     const oldest = bucket.timestamps[0] ?? nowMs;
     const retryAfterSeconds = Math.max(1, Math.ceil((oldest + windowMs - nowMs) / 1000));
-    uploadRateBuckets.delete(actorKey);
-    uploadRateBuckets.set(actorKey, bucket);
     return {
       allowed: false,
       remaining: 0,
@@ -60,9 +73,6 @@ export function consumeUploadRateLimit(
   }
 
   bucket.timestamps.push(nowMs);
-  uploadRateBuckets.delete(actorKey);
-  uploadRateBuckets.set(actorKey, bucket);
-
   return {
     allowed: true,
     remaining: Math.max(0, limit - bucket.timestamps.length),
@@ -71,6 +81,6 @@ export function consumeUploadRateLimit(
 }
 
 export function resetUploadRateLimitsForTests(): void {
-  uploadRateBuckets.clear();
+  uploadRateBuckets = Object.create(null) as Record<string, RateLimitBucket | undefined>;
+  uploadBucketOrder = [];
 }
-

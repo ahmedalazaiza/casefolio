@@ -18,6 +18,7 @@ export {
   like,
   lt,
   lte,
+  max,
   ne,
   notLike,
   or,

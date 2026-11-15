@@ -48,20 +48,32 @@ async function backfillUnassignedProjectsForContext(
   userId: string,
   activeOrgId: string | null,
 ): Promise<void> {
+  const scopeWhere = and(
+    isNull(dbSchema.projects.spaceId),
+    activeOrgId
+      ? or(
+          eq(dbSchema.projects.ownerId, userId),
+          eq(dbSchema.projects.orgId, activeOrgId),
+        )
+      : eq(dbSchema.projects.ownerId, userId),
+  );
+
+  // Fast index-only existence probe: skip full row load & write work on 99.9% of reads
+  const [probe] = await db
+    .select({ id: dbSchema.projects.id })
+    .from(dbSchema.projects)
+    .where(scopeWhere)
+    .limit(1);
+
+  if (!probe) {
+    return;
+  }
+
   const missingSpaceRows = await db
     .select()
     .from(dbSchema.projects)
-    .where(
-      and(
-        isNull(dbSchema.projects.spaceId),
-        activeOrgId
-          ? or(
-              eq(dbSchema.projects.ownerId, userId),
-              eq(dbSchema.projects.orgId, activeOrgId),
-            )
-          : eq(dbSchema.projects.ownerId, userId),
-      ),
-    );
+    .where(scopeWhere)
+    .limit(50);
 
   for (const proj of missingSpaceRows) {
     await ensureProjectWorkspaceAndSpace(proj);
@@ -151,7 +163,8 @@ export async function listDashboardProjectsForUser(
             isNull(dbSchema.projects.archivedAt),
           ),
     )
-    .orderBy(desc(dbSchema.projects.updatedAt));
+    .orderBy(desc(dbSchema.projects.updatedAt))
+    .limit(250);
 
   let downgradedActiveProjectId: string | null = null;
   let hasDowngradeExtraLocks = false;

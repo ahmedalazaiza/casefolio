@@ -285,9 +285,9 @@ export const BILLING_PLAN_CATALOG: Record<PlanTier, BillingPlanDefinition> = {
     whiteLabelEnabled: true,
     features: [
       "Up to 20 team seats included at one flat rate (no per-seat math)",
-      "Connect custom domains for live links (e.g., work.youragency.com)",
       "Complete white-labeling across live pages, links & PDF metadata",
       "Unlimited shared Case Studies, Shared Brand Kit & 200 GB storage",
+      "Agency-wide 365-day portfolio analytics & 2,000 monthly exports",
       "Priority 24/7 support & dedicated onboarding",
     ],
   },

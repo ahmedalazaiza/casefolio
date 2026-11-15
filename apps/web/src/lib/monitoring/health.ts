@@ -32,6 +32,24 @@ export interface WebHealthReport {
   };
 }
 
+/** Minimal payload returned to anonymous callers (uptime monitors / load balancers). */
+export interface PublicHealthReport {
+  ok: boolean;
+  status: "healthy" | "unhealthy";
+  timestamp: string;
+  /** `true` when the database probe succeeded. */
+  database: boolean;
+}
+
+export function toPublicHealthReport(report: WebHealthReport): PublicHealthReport {
+  return {
+    ok: report.ok,
+    status: report.status,
+    timestamp: report.timestamp,
+    database: report.checks.database.status === "up",
+  };
+}
+
 export async function checkWebHealth(options?: {
   probeDatabase?: () => Promise<{ publishedTemplatesCount: number }>;
   envSource?: Record<string, string | undefined>;

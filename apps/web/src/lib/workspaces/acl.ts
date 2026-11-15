@@ -234,9 +234,13 @@ export async function authorizeSpaceAccess(
 
   const isController = space.controllerUserId === actorUserId;
 
-  // 1. Departed member recovery space: strictly invisible (`404`) to everyone except `controllerUserId`
+  // 1. Departed member recovery space: strictly invisible (`404`) to everyone except `controllerUserId`,
+  //    and strictly inaccessible (`404`) once the 90-day `recoveryUntil` window expires (`S11`).
   if (space.recoveryState === "frozen_member_departed") {
     if (!isController) {
+      return notFoundSpace();
+    }
+    if (space.recoveryUntil && space.recoveryUntil.getTime() <= now.getTime()) {
       return notFoundSpace();
     }
 

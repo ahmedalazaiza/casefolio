@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
+import { runAdminEmailAction } from "@/lib/admin/emails";
 import { adminEmailsPostSchema } from "@/lib/admin/emails-types";
 import { hasAdminRole } from "@/lib/auth/guards";
 import { getServerSession } from "@/lib/auth/session";
-import {
-  findCatalogTemplateByKey,
-  isLiveResendKey,
-  renderCatalogTemplatePreview,
-  sendAdminCustomNoticeEmail,
-  sendCasefolioEmail,
-} from "@/lib/email";
-import { recordAdminAuditLog } from "@/lib/template/service";
+import { renderCatalogTemplatePreview } from "@/lib/email";
 
 async function ensureAdminApi() {
   const session = await getServerSession();
@@ -67,86 +61,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const liveResend = isLiveResendKey();
-
-  if (parsed.data.action === "send_test") {
-    const entry = findCatalogTemplateByKey(parsed.data.templateKey);
-    if (!entry) {
-      return NextResponse.json({ error: "Template not found." }, { status: 404 });
-    }
-
-    const samplePayload = entry.buildSample();
-    try {
-      const dispatched = await sendCasefolioEmail({
-        to: parsed.data.recipientEmail,
-        ...samplePayload,
-        subject: `[Test] ${samplePayload.subject}`,
-      });
-
-      await recordAdminAuditLog(auth.user.id, "admin.email.test_sent", {
-        templateKey: entry.key,
-        department: dispatched.department,
-        from: dispatched.senderAddress,
-        deliveredViaResend: dispatched.delivered,
-      });
-
-      return NextResponse.json({
-        ok: true,
-        delivered: dispatched.delivered,
-        liveResend,
-        from: dispatched.from,
-        replyTo: dispatched.replyTo,
-        subject: dispatched.subject,
-      });
-    } catch (err) {
-      return NextResponse.json(
-        {
-          error:
-            err instanceof Error
-              ? err.message
-              : "Failed to dispatch test email through Resend.",
-        },
-        { status: 502 },
-      );
-    }
-  }
-
-  try {
-    const dispatched = await sendAdminCustomNoticeEmail({
-      to: parsed.data.recipientEmail,
-      recipientName: parsed.data.recipientName || null,
-      subject: parsed.data.subject,
-      heading: parsed.data.heading,
-      message: parsed.data.message,
-      ctaLabel: parsed.data.ctaLabel || null,
-      ctaUrl: parsed.data.ctaUrl || null,
-    });
-
-    await recordAdminAuditLog(auth.user.id, "admin.email.dispatched", {
-      targetUserId: parsed.data.targetUserId ?? null,
-      subject: parsed.data.subject,
-      from: dispatched.senderAddress,
-      deliveredViaResend: dispatched.delivered,
-    });
-
-    return NextResponse.json({
-      ok: true,
-      delivered: dispatched.delivered,
-      liveResend,
-      from: dispatched.from,
-      replyTo: dispatched.replyTo,
-      subject: dispatched.subject,
-    });
-  } catch (err) {
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to dispatch administrative email.",
-      },
-      { status: 502 },
-    );
-  }
+  const result = await runAdminEmailAction(
+    { id: auth.user.id, email: auth.user.email, role: auth.user.role },
+    parsed.data,
+  );
+  return NextResponse.json(result.body, {
+    status: result.status,
+    headers: result.retryAfterSeconds
+      ? { "Retry-After": String(result.retryAfterSeconds) }
+      : undefined,
+  });
 }
-

@@ -1,27 +1,33 @@
-import { eq } from "@casefolio/db";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth/session";
-import { db, dbSchema } from "@/lib/db";
+import { consumeStepUpToken } from "@/lib/auth/step-up";
 import {
   acceptOwnerTransfer,
+  cancelOrDeclineOwnerTransfer,
   requestOwnerTransfer,
 } from "@/lib/entitlements/team-invitations";
-import { consumeUploadRateLimit } from "@/lib/storage/rate-limit";
-
-const MAX_RECENT_SESSION_AGE_MS = 24 * 60 * 60 * 1000;
+import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
 const ownerTransferSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("request"),
     organizationId: z.string().uuid(),
     targetMemberUserId: z.string().uuid(),
-    reauthenticated: z.boolean(),
+    stepUpToken: z.string().trim().min(20),
   }),
   z.object({
     action: z.literal("accept"),
     transferRequestId: z.string().uuid(),
-    reauthenticated: z.boolean(),
+    stepUpToken: z.string().trim().min(20),
+  }),
+  z.object({
+    action: z.literal("cancel"),
+    transferRequestId: z.string().uuid(),
+  }),
+  z.object({
+    action: z.literal("decline"),
+    transferRequestId: z.string().uuid(),
   }),
 ]);
 
@@ -34,10 +40,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const rate = consumeUploadRateLimit(`owner-transfer:${ctx.user.id}`, 8, 60_000);
+  const rate = await consumeSharedRateLimit({
+    key: `owner-transfer:${ctx.user.id}`,
+    limit: 8,
+    windowMs: 60_000,
+  });
   if (!rate.allowed) {
     return NextResponse.json(
-      { ok: false, code: "RATE_LIMITED", error: "Too many ownership transfer attempts. Please wait a minute." },
+      {
+        ok: false,
+        code: "RATE_LIMITED",
+        error: "Too many ownership transfer attempts. Please wait a minute.",
+      },
       { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
@@ -64,28 +78,31 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const [sessionRow] = await db
-    .select({
-      createdAt: dbSchema.sessions.createdAt,
-      updatedAt: dbSchema.sessions.updatedAt,
-    })
-    .from(dbSchema.sessions)
-    .where(eq(dbSchema.sessions.id, ctx.session.id))
-    .limit(1);
-  const sessionStamp = sessionRow?.updatedAt ?? sessionRow?.createdAt;
-  const isSessionFresh =
-    sessionStamp instanceof Date
-      ? Date.now() - sessionStamp.getTime() <= MAX_RECENT_SESSION_AGE_MS
-      : true;
-  const verifiedReauthenticated = Boolean(parsed.data.reauthenticated && isSessionFresh);
-  if (!verifiedReauthenticated) {
+  if (parsed.data.action === "cancel" || parsed.data.action === "decline") {
+    const res = await cancelOrDeclineOwnerTransfer({
+      actorUserId: ctx.user.id,
+      transferRequestId: parsed.data.transferRequestId,
+      action: parsed.data.action,
+    });
+    if (!res.ok) {
+      return NextResponse.json(
+        { ok: false, code: res.code, error: res.error },
+        { status: res.status },
+      );
+    }
+    return NextResponse.json(res);
+  }
+
+  const stepUp = await consumeStepUpToken({
+    userId: ctx.user.id,
+    sessionId: ctx.session.id,
+    purpose: "ownership_transfer",
+    stepUpToken: parsed.data.stepUpToken,
+  });
+  if (!stepUp.ok) {
     return NextResponse.json(
-      {
-        ok: false,
-        code: "REAUTH_REQUIRED",
-        error: "Recent sign-in confirmation is required before transferring workspace ownership.",
-      },
-      { status: 400 },
+      { ok: false, code: stepUp.code, error: stepUp.error },
+      { status: stepUp.status },
     );
   }
 
@@ -94,7 +111,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       actorUserId: ctx.user.id,
       organizationId: parsed.data.organizationId,
       targetMemberUserId: parsed.data.targetMemberUserId,
-      reauthenticated: parsed.data.reauthenticated,
+      reauthenticated: true,
     });
     if (!res.ok) {
       return NextResponse.json(
@@ -108,7 +125,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   const res = await acceptOwnerTransfer({
     actorUserId: ctx.user.id,
     transferRequestId: parsed.data.transferRequestId,
-    reauthenticated: parsed.data.reauthenticated,
+    reauthenticated: true,
   });
   if (!res.ok) {
     return NextResponse.json(
@@ -118,4 +135,3 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   return NextResponse.json(res);
 }
-

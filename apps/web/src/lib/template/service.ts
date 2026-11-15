@@ -706,27 +706,33 @@ export async function publishTemplateVersion({
   }
 
   const now = new Date();
-  await db
-    .update(dbSchema.templateVersions)
-    .set({
-      publishedAt: versionRow.publishedAt ?? now,
-    })
-    .where(eq(dbSchema.templateVersions.id, versionId));
+  const tplRow = await db.transaction(async (tx) => {
+    await tx
+      .update(dbSchema.templateVersions)
+      .set({
+        publishedAt: versionRow.publishedAt ?? now,
+      })
+      .where(eq(dbSchema.templateVersions.id, versionId));
 
-  await db
-    .update(dbSchema.templates)
-    .set({
-      currentVersionId: versionId,
-      status: "published",
-      updatedAt: now,
-    })
-    .where(eq(dbSchema.templates.id, templateId));
+    const [updatedTpl] = await tx
+      .update(dbSchema.templates)
+      .set({
+        currentVersionId: versionId,
+        status: "published",
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.templates.id, templateId))
+      .returning({ name: dbSchema.templates.name });
 
-  const [tplRow] = await db
-    .select({ name: dbSchema.templates.name })
-    .from(dbSchema.templates)
-    .where(eq(dbSchema.templates.id, templateId))
-    .limit(1);
+    return updatedTpl ?? null;
+  });
+
+  try {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/templates");
+  } catch {
+    // Safe no-op outside Next.js server request runtime
+  }
 
   if (tplRow) {
     await notifyTemplateVersionPublished({

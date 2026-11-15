@@ -1,4 +1,5 @@
-import { desc, eq } from "@casefolio/db";
+import { and, count, desc, eq, gte, isNotNull, lte, ne, or, sql } from "@casefolio/db";
+import { unstable_cache } from "next/cache";
 import {
   computeSubscriptionMrrUsd,
   detectSubscriptionInterval,
@@ -73,23 +74,45 @@ export async function getAdminOverviewMetrics(
   const rangeStart = new Date(now.getTime() - windowMs);
   const prevRangeStart = new Date(rangeStart.getTime() - windowMs);
 
+  const nowIso = now.toISOString();
+  const rangeStartIso = rangeStart.toISOString();
+  const prevRangeStartIso = prevRangeStart.toISOString();
+
+  const bucketSpanMs = windowMs / BUCKET_COUNT;
+  const rangeStartMs = rangeStart.getTime();
+
+  const signupBucketIdxExpr = sql<number>`least(${BUCKET_COUNT - 1}, greatest(0, floor((extract(epoch from ${dbSchema.users.createdAt}) * 1000 - ${rangeStartMs}) / ${bucketSpanMs})::int))`;
+  const publishBucketIdxExpr = sql<number>`least(${BUCKET_COUNT - 1}, greatest(0, floor((extract(epoch from ${dbSchema.projects.publishedAt}) * 1000 - ${rangeStartMs}) / ${bucketSpanMs})::int))`;
+
   const [
-    userRows,
+    userAggRows,
     subscriptionRows,
     webhookRows,
-    projectRows,
-    exportRows,
+    projectAggRows,
+    projectCountsByVerRows,
+    exportAggRows,
     templateRows,
     versionRows,
-    reportRows,
+    openReportsAggRows,
+    signupBucketRows,
+    publishBucketRows,
   ] = await Promise.all([
     db
       .select({
-        id: dbSchema.users.id,
-        createdAt: dbSchema.users.createdAt,
+        totalUsers: count(),
+        newUsersInRange: sql<number>`count(*) filter (where ${dbSchema.users.createdAt} >= ${rangeStartIso}::timestamptz and ${dbSchema.users.createdAt} <= ${nowIso}::timestamptz)::int`,
+        newUsersPrevRange: sql<number>`count(*) filter (where ${dbSchema.users.createdAt} >= ${prevRangeStartIso}::timestamptz and ${dbSchema.users.createdAt} < ${rangeStartIso}::timestamptz)::int`,
       })
       .from(dbSchema.users),
-    db.select().from(dbSchema.subscriptions),
+    db
+      .select()
+      .from(dbSchema.subscriptions)
+      .where(
+        or(
+          ne(dbSchema.subscriptions.plan, "free"),
+          eq(dbSchema.subscriptions.status, "past_due"),
+        ),
+      ),
     db
       .select({ payload: dbSchema.webhookEvents.payload })
       .from(dbSchema.webhookEvents)
@@ -97,19 +120,26 @@ export async function getAdminOverviewMetrics(
       .limit(250),
     db
       .select({
-        id: dbSchema.projects.id,
-        templateVersionId: dbSchema.projects.templateVersionId,
-        visibility: dbSchema.projects.visibility,
-        publishedAt: dbSchema.projects.publishedAt,
+        publishedCaseStudies: sql<number>`count(*) filter (where ${dbSchema.projects.visibility} = 'public' and ${dbSchema.projects.publishedAt} is not null)::int`,
+        publishesInRange: sql<number>`count(*) filter (where ${dbSchema.projects.publishedAt} >= ${rangeStartIso}::timestamptz and ${dbSchema.projects.publishedAt} <= ${nowIso}::timestamptz)::int`,
+        publishesPrevRange: sql<number>`count(*) filter (where ${dbSchema.projects.publishedAt} >= ${prevRangeStartIso}::timestamptz and ${dbSchema.projects.publishedAt} < ${rangeStartIso}::timestamptz)::int`,
       })
       .from(dbSchema.projects),
     db
       .select({
-        id: dbSchema.exportsTable.id,
-        status: dbSchema.exportsTable.status,
-        createdAt: dbSchema.exportsTable.createdAt,
+        templateVersionId: dbSchema.projects.templateVersionId,
+        total: count(),
       })
-      .from(dbSchema.exportsTable),
+      .from(dbSchema.projects)
+      .groupBy(dbSchema.projects.templateVersionId),
+    db
+      .select({
+        completedExports: count(),
+        exportsInRange: sql<number>`count(*) filter (where ${dbSchema.exportsTable.createdAt} >= ${rangeStartIso}::timestamptz and ${dbSchema.exportsTable.createdAt} <= ${nowIso}::timestamptz)::int`,
+        exportsPrevRange: sql<number>`count(*) filter (where ${dbSchema.exportsTable.createdAt} >= ${prevRangeStartIso}::timestamptz and ${dbSchema.exportsTable.createdAt} < ${rangeStartIso}::timestamptz)::int`,
+      })
+      .from(dbSchema.exportsTable)
+      .where(eq(dbSchema.exportsTable.status, "completed")),
     db
       .select()
       .from(dbSchema.templates)
@@ -117,23 +147,37 @@ export async function getAdminOverviewMetrics(
     db.select().from(dbSchema.templateVersions),
     db
       .select({
-        id: dbSchema.reports.id,
-        projectId: dbSchema.reports.projectId,
-        status: dbSchema.reports.status,
+        openReportedCount: sql<number>`count(distinct ${dbSchema.reports.projectId})::int`,
       })
-      .from(dbSchema.reports),
+      .from(dbSchema.reports)
+      .where(eq(dbSchema.reports.status, "open")),
+    db
+      .select({
+        bucketIdx: signupBucketIdxExpr,
+        total: count(),
+      })
+      .from(dbSchema.users)
+      .where(and(gte(dbSchema.users.createdAt, rangeStart), lte(dbSchema.users.createdAt, now)))
+      .groupBy(sql`1`),
+    db
+      .select({
+        bucketIdx: publishBucketIdxExpr,
+        total: count(),
+      })
+      .from(dbSchema.projects)
+      .where(
+        and(
+          isNotNull(dbSchema.projects.publishedAt),
+          gte(dbSchema.projects.publishedAt, rangeStart),
+          lte(dbSchema.projects.publishedAt, now),
+        ),
+      )
+      .groupBy(sql`1`),
   ]);
 
-  const totalUsers = userRows.length;
-  let newUsersInRange = 0;
-  let newUsersPrevRange = 0;
-  for (const u of userRows) {
-    if (u.createdAt >= rangeStart && u.createdAt <= now) {
-      newUsersInRange += 1;
-    } else if (u.createdAt >= prevRangeStart && u.createdAt < rangeStart) {
-      newUsersPrevRange += 1;
-    }
-  }
+  const totalUsers = userAggRows[0]?.totalUsers ?? 0;
+  const newUsersInRange = userAggRows[0]?.newUsersInRange ?? 0;
+  const newUsersPrevRange = userAggRows[0]?.newUsersPrevRange ?? 0;
 
   const webhookIntervals = extractWebhookIntervalsBySubId(webhookRows);
   let activeSubscriptions = 0;
@@ -159,41 +203,18 @@ export async function getAdminOverviewMetrics(
     mrrUsd += computeSubscriptionMrrUsd(sub.plan, interval, sub.currentPaidCapacity ?? 1);
   }
 
-  let publishedCaseStudies = 0;
-  let publishesInRange = 0;
-  let publishesPrevRange = 0;
+  const publishedCaseStudies = projectAggRows[0]?.publishedCaseStudies ?? 0;
+  const publishesInRange = projectAggRows[0]?.publishesInRange ?? 0;
+  const publishesPrevRange = projectAggRows[0]?.publishesPrevRange ?? 0;
+
   const projectCountByVersionId = new Map<string, number>();
-
-  for (const p of projectRows) {
-    projectCountByVersionId.set(
-      p.templateVersionId,
-      (projectCountByVersionId.get(p.templateVersionId) ?? 0) + 1,
-    );
-
-    if (p.visibility === "public" && p.publishedAt) {
-      publishedCaseStudies += 1;
-    }
-    if (p.publishedAt) {
-      if (p.publishedAt >= rangeStart && p.publishedAt <= now) {
-        publishesInRange += 1;
-      } else if (p.publishedAt >= prevRangeStart && p.publishedAt < rangeStart) {
-        publishesPrevRange += 1;
-      }
-    }
+  for (const row of projectCountsByVerRows) {
+    projectCountByVersionId.set(row.templateVersionId, row.total);
   }
 
-  let completedExports = 0;
-  let exportsInRange = 0;
-  let exportsPrevRange = 0;
-  for (const exp of exportRows) {
-    if (exp.status !== "completed") continue;
-    completedExports += 1;
-    if (exp.createdAt >= rangeStart && exp.createdAt <= now) {
-      exportsInRange += 1;
-    } else if (exp.createdAt >= prevRangeStart && exp.createdAt < rangeStart) {
-      exportsPrevRange += 1;
-    }
-  }
+  const completedExports = exportAggRows[0]?.completedExports ?? 0;
+  const exportsInRange = exportAggRows[0]?.exportsInRange ?? 0;
+  const exportsPrevRange = exportAggRows[0]?.exportsPrevRange ?? 0;
 
   const versionById = new Map(versionRows.map((v) => [v.id, v]));
   const versionIdsByTemplateId = new Map<string, string[]>();
@@ -246,14 +267,7 @@ export async function getAdminOverviewMetrics(
     .slice(0, 8)
     .map(({ updatedAtMs: _unused, ...rest }) => rest);
 
-  // Distinct projects with open reports
-  const openReportedProjects = new Set<string>();
-  for (const rep of reportRows) {
-    if (rep.status === "open") {
-      openReportedProjects.add(rep.projectId);
-    }
-  }
-  const openReportedCount = openReportedProjects.size;
+  const openReportedCount = openReportsAggRows[0]?.openReportedCount ?? 0;
 
   const needsAttention: AdminNeedsAttentionItem[] = [
     {
@@ -300,10 +314,17 @@ export async function getAdminOverviewMetrics(
     },
   ];
 
-  // Build 12 equal time buckets over [rangeStart, now]
-  const bucketSpanMs = windowMs / BUCKET_COUNT;
+  const signupsByBucket = new Map<number, number>();
+  for (const b of signupBucketRows) {
+    signupsByBucket.set(Number(b.bucketIdx), b.total);
+  }
+  const publishesByBucket = new Map<number, number>();
+  for (const b of publishBucketRows) {
+    publishesByBucket.set(Number(b.bucketIdx), b.total);
+  }
+
   const buckets: AdminOverviewBucket[] = Array.from({ length: BUCKET_COUNT }, (_, idx) => {
-    const startMs = rangeStart.getTime() + idx * bucketSpanMs;
+    const startMs = rangeStartMs + idx * bucketSpanMs;
     const endMs = idx === BUCKET_COUNT - 1 ? now.getTime() + 1 : startMs + bucketSpanMs;
     const startDate = new Date(startMs);
     const label = startDate.toLocaleDateString("en-US", {
@@ -311,26 +332,13 @@ export async function getAdminOverviewMetrics(
       day: "numeric",
     });
 
-    let signups = 0;
-    for (const u of userRows) {
-      const t = u.createdAt.getTime();
-      if (t >= startMs && t < endMs) signups += 1;
-    }
-
-    let publishes = 0;
-    for (const p of projectRows) {
-      if (!p.publishedAt) continue;
-      const t = p.publishedAt.getTime();
-      if (t >= startMs && t < endMs) publishes += 1;
-    }
-
     return {
       index: idx,
       label,
       startIso: startDate.toISOString(),
       endIso: new Date(endMs).toISOString(),
-      signups,
-      publishes,
+      signups: signupsByBucket.get(idx) ?? 0,
+      publishes: publishesByBucket.get(idx) ?? 0,
     };
   });
 
@@ -368,90 +376,176 @@ export async function getAdminPlatformAnalytics(
       ? new Date(rangeStart.getTime() - days * 24 * 60 * 60 * 1000)
       : null;
 
-  const [userRows, projectRows, templateRows, versionRows, viewRows, exportRows] =
-    await Promise.all([
-      db
-        .select({
-          id: dbSchema.users.id,
-          name: dbSchema.users.name,
-          plan: dbSchema.users.plan,
-        })
-        .from(dbSchema.users),
-      db.select().from(dbSchema.projects),
-      db.select().from(dbSchema.templates).orderBy(desc(dbSchema.templates.updatedAt)),
-      db.select().from(dbSchema.templateVersions),
-      db
-        .select({
-          projectId: dbSchema.pageViews.projectId,
-          at: dbSchema.pageViews.at,
-        })
-        .from(dbSchema.pageViews),
-      db
-        .select({
-          projectId: dbSchema.exportsTable.projectId,
-          status: dbSchema.exportsTable.status,
-          createdAt: dbSchema.exportsTable.createdAt,
-        })
-        .from(dbSchema.exportsTable)
-        .where(eq(dbSchema.exportsTable.status, "completed")),
-    ]);
+  const nowIso = now.toISOString();
+  const rangeStartIso = rangeStart ? rangeStart.toISOString() : null;
+  const prevStartIso = prevStart ? prevStart.toISOString() : null;
 
-  const totalUsers = userRows.length;
-  const paidUsers = userRows.filter(
-    (u) => u.plan === "pro" || u.plan === "team" || u.plan === "plus",
-  ).length;
+  const chartDays = days ?? 84;
+  const chartWindowMs = chartDays * 24 * 60 * 60 * 1000;
+  const chartStartMs = now.getTime() - chartWindowMs;
+  const chartStart = new Date(chartStartMs);
+  const bucketSpanMs = chartWindowMs / BUCKET_COUNT;
+
+  const weeklyPublishBucketExpr = sql<number>`least(${BUCKET_COUNT - 1}, greatest(0, floor((extract(epoch from ${dbSchema.projects.publishedAt}) * 1000 - ${chartStartMs}) / ${bucketSpanMs})::int))`;
+
+  const viewRangeFilterSql = rangeStartIso
+    ? sql`WHERE pv.at >= ${rangeStartIso}::timestamptz AND pv.at <= ${nowIso}::timestamptz`
+    : sql``;
+  const exportRangeFilterSql = rangeStartIso
+    ? sql`AND ex.created_at >= ${rangeStartIso}::timestamptz AND ex.created_at <= ${nowIso}::timestamptz`
+    : sql``;
+
+  const [
+    userAggRows,
+    publishAggRows,
+    viewAggRows,
+    exportAggRows,
+    templateRows,
+    versionRows,
+    projectCountsByVerRows,
+    weeklyPublishBucketRows,
+    topCaseStudiesRes,
+  ] = await Promise.all([
+    db
+      .select({
+        totalUsers: count(),
+        paidUsers: sql<number>`count(*) filter (where ${dbSchema.users.plan} in ('pro', 'team', 'plus'))::int`,
+      })
+      .from(dbSchema.users),
+    rangeStartIso && prevStartIso
+      ? db
+          .select({
+            publishedCaseStudies: sql<number>`count(*) filter (where ${dbSchema.projects.visibility} = 'public' and ${dbSchema.projects.publishedAt} >= ${rangeStartIso}::timestamptz and ${dbSchema.projects.publishedAt} <= ${nowIso}::timestamptz)::int`,
+            publishesPrevPeriod: sql<number>`count(*) filter (where ${dbSchema.projects.visibility} = 'public' and ${dbSchema.projects.publishedAt} >= ${prevStartIso}::timestamptz and ${dbSchema.projects.publishedAt} < ${rangeStartIso}::timestamptz)::int`,
+          })
+          .from(dbSchema.projects)
+      : db
+          .select({
+            publishedCaseStudies: sql<number>`count(*) filter (where ${dbSchema.projects.visibility} = 'public' and ${dbSchema.projects.publishedAt} is not null)::int`,
+            publishesPrevPeriod: sql<number | null>`null::int`,
+          })
+          .from(dbSchema.projects),
+    rangeStartIso && prevStartIso
+      ? db
+          .select({
+            publicViews: sql<number>`count(*) filter (where ${dbSchema.pageViews.at} >= ${rangeStartIso}::timestamptz and ${dbSchema.pageViews.at} <= ${nowIso}::timestamptz)::int`,
+            viewsPrevPeriod: sql<number>`count(*) filter (where ${dbSchema.pageViews.at} >= ${prevStartIso}::timestamptz and ${dbSchema.pageViews.at} < ${rangeStartIso}::timestamptz)::int`,
+          })
+          .from(dbSchema.pageViews)
+      : db
+          .select({
+            publicViews: count(),
+            viewsPrevPeriod: sql<number | null>`null::int`,
+          })
+          .from(dbSchema.pageViews),
+    rangeStartIso && prevStartIso
+      ? db
+          .select({
+            completedExports: sql<number>`count(*) filter (where ${dbSchema.exportsTable.createdAt} >= ${rangeStartIso}::timestamptz and ${dbSchema.exportsTable.createdAt} <= ${nowIso}::timestamptz)::int`,
+            exportsPrevPeriod: sql<number>`count(*) filter (where ${dbSchema.exportsTable.createdAt} >= ${prevStartIso}::timestamptz and ${dbSchema.exportsTable.createdAt} < ${rangeStartIso}::timestamptz)::int`,
+          })
+          .from(dbSchema.exportsTable)
+          .where(eq(dbSchema.exportsTable.status, "completed"))
+      : db
+          .select({
+            completedExports: count(),
+            exportsPrevPeriod: sql<number | null>`null::int`,
+          })
+          .from(dbSchema.exportsTable)
+          .where(eq(dbSchema.exportsTable.status, "completed")),
+    db.select().from(dbSchema.templates).orderBy(desc(dbSchema.templates.updatedAt)),
+    db
+      .select({
+        id: dbSchema.templateVersions.id,
+        templateId: dbSchema.templateVersions.templateId,
+      })
+      .from(dbSchema.templateVersions),
+    db
+      .select({
+        templateVersionId: dbSchema.projects.templateVersionId,
+        total: count(),
+      })
+      .from(dbSchema.projects)
+      .groupBy(dbSchema.projects.templateVersionId),
+    db
+      .select({
+        bucketIdx: weeklyPublishBucketExpr,
+        total: count(),
+      })
+      .from(dbSchema.projects)
+      .where(
+        and(
+          isNotNull(dbSchema.projects.publishedAt),
+          gte(dbSchema.projects.publishedAt, chartStart),
+          lte(dbSchema.projects.publishedAt, now),
+        ),
+      )
+      .groupBy(sql`1`),
+    db.execute<{
+      id: string;
+      name: string;
+      slug: string | null;
+      author_name: string | null;
+      template_name: string | null;
+      views: number;
+      exports: number;
+    }>(sql`
+      WITH view_counts AS (
+        SELECT pv.project_id, count(*)::int AS views
+        FROM page_views pv
+        ${viewRangeFilterSql}
+        GROUP BY pv.project_id
+      ),
+      export_counts AS (
+        SELECT ex.project_id, count(*)::int AS exports
+        FROM exports ex
+        WHERE ex.status = 'completed'
+        ${exportRangeFilterSql}
+        GROUP BY ex.project_id
+      )
+      SELECT
+        p.id,
+        p.name,
+        p.slug,
+        u.name AS author_name,
+        t.name AS template_name,
+        coalesce(vc.views, 0)::int AS views,
+        coalesce(ec.exports, 0)::int AS exports
+      FROM projects p
+      LEFT JOIN users u ON u.id = p.owner_id
+      LEFT JOIN template_versions tv ON tv.id = p.template_version_id
+      LEFT JOIN templates t ON t.id = tv.template_id
+      LEFT JOIN view_counts vc ON vc.project_id = p.id
+      LEFT JOIN export_counts ec ON ec.project_id = p.id
+      WHERE p.visibility = 'public'
+      ORDER BY coalesce(vc.views, 0) DESC, coalesce(ec.exports, 0) DESC, p.updated_at DESC
+      LIMIT 10
+    `),
+  ]);
+
+  const totalUsers = userAggRows[0]?.totalUsers ?? 0;
+  const paidUsers = userAggRows[0]?.paidUsers ?? 0;
   const freeToProRatePercent =
     totalUsers > 0 ? Math.round((paidUsers / totalUsers) * 1000) / 10 : 0;
 
-  const userNameById = new Map(userRows.map((u) => [u.id, u.name]));
+  const publishedCaseStudies = publishAggRows[0]?.publishedCaseStudies ?? 0;
+  const publishesPrevPeriod =
+    prevStart !== null ? (publishAggRows[0]?.publishesPrevPeriod ?? 0) : null;
+
+  const publicViews = viewAggRows[0]?.publicViews ?? 0;
+  const viewsPrevPeriod = prevStart !== null ? (viewAggRows[0]?.viewsPrevPeriod ?? 0) : null;
+
+  const completedExports = exportAggRows[0]?.completedExports ?? 0;
+  const exportsPrevPeriod = prevStart !== null ? (exportAggRows[0]?.exportsPrevPeriod ?? 0) : null;
+
   const versionToTemplateId = new Map(versionRows.map((v) => [v.id, v.templateId]));
-  const templateById = new Map(templateRows.map((t) => [t.id, t]));
-
-  let publishedCaseStudies = 0;
-  let publishesPrevPeriod = prevStart ? 0 : null;
-
-  for (const p of projectRows) {
-    if (!p.publishedAt || p.visibility !== "public") continue;
-    if (!rangeStart || (p.publishedAt >= rangeStart && p.publishedAt <= now)) {
-      publishedCaseStudies += 1;
-    } else if (prevStart && p.publishedAt >= prevStart && p.publishedAt < rangeStart) {
-      publishesPrevPeriod = (publishesPrevPeriod ?? 0) + 1;
-    }
-  }
-
-  let publicViews = 0;
-  let viewsPrevPeriod = prevStart ? 0 : null;
-  const viewsByProject = new Map<string, number>();
-
-  for (const v of viewRows) {
-    if (!rangeStart || (v.at >= rangeStart && v.at <= now)) {
-      publicViews += 1;
-      viewsByProject.set(v.projectId, (viewsByProject.get(v.projectId) ?? 0) + 1);
-    } else if (prevStart && v.at >= prevStart && v.at < rangeStart) {
-      viewsPrevPeriod = (viewsPrevPeriod ?? 0) + 1;
-    }
-  }
-
-  let completedExports = 0;
-  let exportsPrevPeriod = prevStart ? 0 : null;
-  const exportsByProject = new Map<string, number>();
-
-  for (const exp of exportRows) {
-    if (!rangeStart || (exp.createdAt >= rangeStart && exp.createdAt <= now)) {
-      completedExports += 1;
-      exportsByProject.set(exp.projectId, (exportsByProject.get(exp.projectId) ?? 0) + 1);
-    } else if (prevStart && exp.createdAt >= prevStart && exp.createdAt < rangeStart) {
-      exportsPrevPeriod = (exportsPrevPeriod ?? 0) + 1;
-    }
-  }
-
-  // Template usage share across all projects (or projects active in range)
   const projectCountByTemplateId = new Map<string, number>();
-  for (const p of projectRows) {
-    const tplId = versionToTemplateId.get(p.templateVersionId);
+  for (const row of projectCountsByVerRows) {
+    const tplId = versionToTemplateId.get(row.templateVersionId);
     if (!tplId) continue;
-    projectCountByTemplateId.set(tplId, (projectCountByTemplateId.get(tplId) ?? 0) + 1);
+    projectCountByTemplateId.set(tplId, (projectCountByTemplateId.get(tplId) ?? 0) + row.total);
   }
+
   const totalProjectsWithTemplate = Array.from(projectCountByTemplateId.values()).reduce(
     (s, n) => s + n,
     0,
@@ -475,53 +569,36 @@ export async function getAdminPlatformAnalytics(
     .sort((a, b) => b.projectCount - a.projectCount)
     .slice(0, 6);
 
-  // Weekly publishes chart (12 buckets)
-  const chartDays = days ?? 84;
-  const chartWindowMs = chartDays * 24 * 60 * 60 * 1000;
-  const chartStartMs = now.getTime() - chartWindowMs;
-  const bucketSpanMs = chartWindowMs / BUCKET_COUNT;
+  const weeklyByBucket = new Map<number, number>();
+  for (const b of weeklyPublishBucketRows) {
+    weeklyByBucket.set(Number(b.bucketIdx), b.total);
+  }
 
   const weeklyPublishes: AdminWeeklyPublishBucket[] = Array.from(
     { length: BUCKET_COUNT },
     (_, idx) => {
       const startMs = chartStartMs + idx * bucketSpanMs;
-      const endMs = idx === BUCKET_COUNT - 1 ? now.getTime() + 1 : startMs + bucketSpanMs;
       const label = new Date(startMs).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       });
-      let publishes = 0;
-      for (const p of projectRows) {
-        if (!p.publishedAt) continue;
-        const t = p.publishedAt.getTime();
-        if (t >= startMs && t < endMs) publishes += 1;
-      }
       return {
         index: idx,
         label,
-        publishes,
+        publishes: weeklyByBucket.get(idx) ?? 0,
       };
     },
   );
 
-  // Top case studies sorted by views DESC, exports DESC (strictly public case studies only — never leak private titles)
-  const topCaseStudies: AdminTopCaseStudyRow[] = projectRows
-    .filter((p) => p.visibility === "public")
-    .map((p) => {
-      const tplId = versionToTemplateId.get(p.templateVersionId);
-      const tpl = tplId ? templateById.get(tplId) : undefined;
-      return {
-        id: p.id,
-        name: p.name,
-        slug: p.slug,
-        authorName: userNameById.get(p.ownerId) ?? "Unknown author",
-        templateName: tpl?.name ?? "Custom",
-        views: viewsByProject.get(p.id) ?? 0,
-        exports: exportsByProject.get(p.id) ?? 0,
-      };
-    })
-    .sort((a, b) => b.views - a.views || b.exports - a.exports)
-    .slice(0, 10);
+  const topCaseStudies: AdminTopCaseStudyRow[] = topCaseStudiesRes.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    authorName: row.author_name ?? "Unknown author",
+    templateName: row.template_name ?? "Custom",
+    views: Number(row.views ?? 0),
+    exports: Number(row.exports ?? 0),
+  }));
 
   return {
     range,
@@ -539,3 +616,15 @@ export async function getAdminPlatformAnalytics(
     topCaseStudies,
   };
 }
+
+export const getCachedAdminOverviewMetrics = unstable_cache(
+  async (range: AdminOverviewRange) => getAdminOverviewMetrics(range),
+  ["admin-overview-metrics-v1"],
+  { revalidate: 60 },
+);
+
+export const getCachedAdminPlatformAnalytics = unstable_cache(
+  async (range: AdminAnalyticsRange) => getAdminPlatformAnalytics(range),
+  ["admin-platform-analytics-v1"],
+  { revalidate: 60 },
+);

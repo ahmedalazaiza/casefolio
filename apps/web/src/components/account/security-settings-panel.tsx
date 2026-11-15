@@ -1,6 +1,15 @@
 "use client";
 
-import { AlertTriangle, KeyRound, Laptop, Loader2, Shield, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  KeyRound,
+  Laptop,
+  Loader2,
+  Mail,
+  Shield,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -17,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  cancelScheduledAccountDeletionAction,
   deleteUserAccountAction,
   revokeOtherUserSessionsAction,
   revokeUserSessionAction,
@@ -39,6 +49,7 @@ export interface SecuritySettingsPanelProps {
   projectsCount: number;
   publishedCount: number;
   sessions: ActiveSessionView[];
+  deletionScheduledForIso?: string | null;
 }
 
 export function SecuritySettingsPanel({
@@ -50,9 +61,18 @@ export function SecuritySettingsPanel({
   projectsCount,
   publishedCount,
   sessions,
+  deletionScheduledForIso = null,
 }: SecuritySettingsPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  // Change email modal
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailChangeStep, setEmailChangeStep] = useState<"request" | "verify">("request");
+  const [emailChangeOtp, setEmailChangeOtp] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Change password modal
   const [passwordOpen, setPasswordOpen] = useState(false);
@@ -62,12 +82,88 @@ export function SecuritySettingsPanel({
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Delete account modal
+  // Delete account modal + server-side step-up
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
+  const [stepUpMode, setStepUpMode] = useState<"password" | "otp">(
+    hasPasswordAccount ? "password" : "otp",
+  );
+  const [stepUpPassword, setStepUpPassword] = useState("");
+  const [stepUpOtp, setStepUpOtp] = useState("");
+  const [stepUpOtpSent, setStepUpOtpSent] = useState(false);
+  const [stepUpSending, setStepUpSending] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const otherSessionsCount = sessions.filter((s) => !s.isCurrent).length;
+
+  const formattedScheduledDate = deletionScheduledForIso
+    ? new Date(deletionScheduledForIso).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : null;
+
+  async function handleRequestEmailChange(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEmailError(null);
+    const cleaned = newEmail.trim().toLowerCase();
+    if (!cleaned || cleaned === email.toLowerCase()) {
+      setEmailError("Enter a different email address.");
+      return;
+    }
+
+    setEmailSaving(true);
+    try {
+      const result = await authClient.emailOtp.requestEmailChange({
+        newEmail: cleaned,
+      });
+      if (result.error) {
+        setEmailError(result.error.message || "Could not send verification code.");
+        return;
+      }
+      setEmailChangeStep("verify");
+      toast.success(`Sent a 6-digit verification code to ${cleaned}.`);
+    } catch {
+      setEmailError("Could not send verification code right now.");
+    } finally {
+      setEmailSaving(false);
+    }
+  }
+
+  async function handleConfirmEmailChange(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEmailError(null);
+    const cleaned = newEmail.trim().toLowerCase();
+    const cleanOtp = emailChangeOtp.trim();
+    if (!/^\d{6}$/.test(cleanOtp)) {
+      setEmailError("Enter the 6-digit verification code sent to your new email.");
+      return;
+    }
+
+    setEmailSaving(true);
+    try {
+      const result = await authClient.emailOtp.changeEmail({
+        newEmail: cleaned,
+        otp: cleanOtp,
+      });
+      if (result.error) {
+        setEmailError(result.error.message || "Invalid or expired verification code.");
+        return;
+      }
+      toast.success("Account email updated.");
+      setEmailModalOpen(false);
+      setNewEmail("");
+      setEmailChangeOtp("");
+      setEmailChangeStep("request");
+      router.refresh();
+    } catch {
+      setEmailError("Could not confirm email change right now.");
+    } finally {
+      setEmailSaving(false);
+    }
+  }
 
   async function handleChangePassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,26 +228,140 @@ export function SecuritySettingsPanel({
     });
   }
 
-  function handleDeleteAccount(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSendStepUpOtp() {
+    setDeleteError(null);
+    setStepUpSending(true);
+    try {
+      const response = await fetch("/api/account/step-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send_otp",
+          purpose: "account_deletion",
+        }),
+      });
+      const json = (await response.json()) as { ok: boolean; error?: string };
+      if (!response.ok || !json.ok) {
+        setDeleteError(json.error || "Could not send confirmation code.");
+        return;
+      }
+      setStepUpOtpSent(true);
+      toast.success(`Sent a 6-digit security confirmation code to ${email}.`);
+    } catch {
+      setDeleteError("Network error while sending confirmation code.");
+    } finally {
+      setStepUpSending(false);
+    }
+  }
+
+  async function handleDeleteAccount(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDeleteError(null);
+    setDeleteSubmitting(true);
 
-    startTransition(async () => {
-      const res = await deleteUserAccountAction(confirmEmail);
+    try {
+      const stepUpPayload =
+        stepUpMode === "password"
+          ? {
+              action: "verify_password" as const,
+              purpose: "account_deletion" as const,
+              password: stepUpPassword,
+            }
+          : {
+              action: "verify_otp" as const,
+              purpose: "account_deletion" as const,
+              otp: stepUpOtp.trim(),
+            };
+
+      const stepUpRes = await fetch("/api/account/step-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(stepUpPayload),
+      });
+      const stepUpJson = (await stepUpRes.json()) as
+        | { ok: true; stepUpToken: string }
+        | { ok: false; error?: string };
+
+      if (!stepUpRes.ok || !stepUpJson.ok) {
+        setDeleteError(
+          ("error" in stepUpJson && stepUpJson.error) ||
+            "Identity verification failed. Please check your credentials.",
+        );
+        return;
+      }
+
+      const res = await deleteUserAccountAction({
+        confirmEmail,
+        stepUpToken: stepUpJson.stepUpToken,
+      });
       if (!res.ok) {
         setDeleteError(res.error);
         return;
       }
-      toast.success("Your account has been permanently deleted.");
+
+      toast.success(
+        "Account deletion scheduled for 7 days from now. You can cancel anytime during the grace period.",
+      );
       setDeleteOpen(false);
-      router.push("/sign-in");
+      setStepUpPassword("");
+      setStepUpOtp("");
+      setConfirmEmail("");
+      router.refresh();
+    } catch {
+      setDeleteError("Could not schedule account deletion right now.");
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  }
+
+  function handleCancelScheduledDeletion() {
+    startTransition(async () => {
+      const res = await cancelScheduledAccountDeletionAction();
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Scheduled account deletion canceled.");
+      router.refresh();
     });
   }
 
   return (
     <div className="flex flex-col gap-6" data-testid="security-settings-panel">
+      {/* Scheduled deletion grace banner */}
+      {deletionScheduledForIso && (
+        <section
+          data-testid="scheduled-deletion-banner"
+          className="border-destructive/40 bg-destructive-soft flex flex-col justify-between gap-4 rounded-xl border p-5 sm:flex-row sm:items-center"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="text-destructive mt-0.5 size-5 shrink-0" />
+            <div className="flex flex-col gap-1">
+              <p className="text-foreground type-body-s-strong">
+                Account scheduled for permanent deletion on {formattedScheduledDate}
+              </p>
+              <p className="text-muted-foreground type-caption">
+                Your projects, published case studies, and subscription stay intact during the
+                7-day grace window. Cancel below to keep your account active.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="cancel-scheduled-deletion-btn"
+            disabled={isPending}
+            onClick={handleCancelScheduledDeletion}
+          >
+            <Undo2 className="size-3.5" />
+            Cancel deletion
+          </Button>
+        </section>
+      )}
+
       {/* Login & security card */}
-      <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6 sm:p-8">
+      <section className="border-border/80 bg-elevated flex flex-col gap-2 rounded-xl border p-6 sm:p-8">
         <h2 className="text-foreground type-heading-m pb-2">Login &amp; security</h2>
 
         <div className="divide-border flex flex-col divide-y">
@@ -163,9 +373,27 @@ export function SecuritySettingsPanel({
                 {email} · {emailVerified ? "verified" : "unverified"}
               </span>
             </div>
-            <Badge tone={emailVerified ? "published" : "draft"}>
-              {emailVerified ? "Verified" : "Unverified"}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone={emailVerified ? "published" : "draft"}>
+                {emailVerified ? "Verified" : "Unverified"}
+              </Badge>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                data-testid="security-change-email-btn"
+                onClick={() => {
+                  setEmailError(null);
+                  setNewEmail("");
+                  setEmailChangeOtp("");
+                  setEmailChangeStep("request");
+                  setEmailModalOpen(true);
+                }}
+              >
+                <Mail className="size-3.5" />
+                Change email
+              </Button>
+            </div>
           </div>
 
           {/* Password row */}
@@ -232,7 +460,7 @@ export function SecuritySettingsPanel({
       </section>
 
       {/* Active sessions card */}
-      <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-6 sm:p-8">
+      <section className="border-border/80 bg-elevated flex flex-col gap-4 rounded-xl border p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Shield className="text-primary size-4" />
@@ -289,12 +517,12 @@ export function SecuritySettingsPanel({
       </section>
 
       {/* Delete account danger card */}
-      <section className="border-destructive/30 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-6 sm:p-8">
+      <section className="border-destructive/30 bg-elevated flex flex-col gap-4 rounded-xl border p-6 sm:p-8">
         <div className="flex flex-col gap-1.5">
           <h2 className="text-foreground type-heading-m">Delete account</h2>
           <p className="text-muted-foreground type-body-s">
-            Permanently deletes your projects, published pages, and exports. Active
-            subscriptions are canceled immediately.
+            Schedules permanent deletion of your projects, published pages, and exports after a
+            7-day grace period. Active personal subscriptions are canceled before final erasure.
           </p>
         </div>
 
@@ -304,17 +532,130 @@ export function SecuritySettingsPanel({
             variant="destructive"
             size="sm"
             data-testid="open-delete-account-modal"
+            disabled={Boolean(deletionScheduledForIso)}
             onClick={() => {
               setConfirmEmail("");
+              setStepUpPassword("");
+              setStepUpOtp("");
+              setStepUpOtpSent(false);
+              setStepUpMode(hasPasswordAccount ? "password" : "otp");
               setDeleteError(null);
               setDeleteOpen(true);
             }}
           >
             <Trash2 className="size-3.5" />
-            Delete account
+            {deletionScheduledForIso ? "Deletion scheduled" : "Delete account"}
           </Button>
         </div>
       </section>
+
+      {/* Change email dialog */}
+      {emailModalOpen && (
+        <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
+          <DialogContent className="max-w-md" data-testid="change-email-dialog">
+            <DialogHeader>
+              <DialogTitle>Change account email</DialogTitle>
+              <DialogDescription>
+                {emailChangeStep === "request"
+                  ? "We will send a 6-digit verification code to your new email address before updating your primary sign-in email."
+                  : `Enter the 6-digit verification code sent to ${newEmail.trim().toLowerCase()}.`}
+              </DialogDescription>
+            </DialogHeader>
+
+            {emailChangeStep === "request" ? (
+              <form onSubmit={handleRequestEmailChange} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="sec-new-email">New email address</Label>
+                  <Input
+                    id="sec-new-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@studio.design"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {emailError && (
+                  <p
+                    role="alert"
+                    className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+                  >
+                    {emailError}
+                  </p>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setEmailModalOpen(false)}
+                    disabled={emailSaving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={emailSaving}>
+                    {emailSaving ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Sending code...
+                      </>
+                    ) : (
+                      "Send 6-digit code"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            ) : (
+              <form onSubmit={handleConfirmEmailChange} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="sec-email-change-otp">6-digit verification code</Label>
+                  <Input
+                    id="sec-email-change-otp"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={emailChangeOtp}
+                    onChange={(e) => setEmailChangeOtp(e.target.value.replace(/\D/g, ""))}
+                    required
+                  />
+                </div>
+
+                {emailError && (
+                  <p
+                    role="alert"
+                    className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+                  >
+                    {emailError}
+                  </p>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setEmailChangeStep("request")}
+                    disabled={emailSaving}
+                  >
+                    Back
+                  </Button>
+                  <Button type="submit" disabled={emailSaving || emailChangeOtp.length !== 6}>
+                    {emailSaving ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      "Confirm new email"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Change password dialog */}
       {passwordOpen && (
@@ -401,7 +742,7 @@ export function SecuritySettingsPanel({
         </Dialog>
       )}
 
-      {/* Delete account dialog (Figma 2:12819) */}
+      {/* Delete account dialog with server-verified step-up */}
       {deleteOpen && (
         <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <DialogContent className="max-w-md" data-testid="delete-account-dialog">
@@ -411,12 +752,12 @@ export function SecuritySettingsPanel({
                   <AlertTriangle className="size-5" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <DialogTitle>Delete your account?</DialogTitle>
+                  <DialogTitle>Schedule account deletion?</DialogTitle>
                   <DialogDescription>
-                    This permanently deletes {projectsCount}{" "}
+                    After a 7-day grace window, this permanently deletes {projectsCount}{" "}
                     {projectsCount === 1 ? "project" : "projects"}, {publishedCount}{" "}
-                    published {publishedCount === 1 ? "page" : "pages"} and all exports.
-                    This can&apos;t be undone.
+                    published {publishedCount === 1 ? "page" : "pages"} and all exports. You
+                    can cancel anytime within 7 days.
                   </DialogDescription>
                 </div>
               </div>
@@ -437,6 +778,70 @@ export function SecuritySettingsPanel({
                 />
               </div>
 
+              {stepUpMode === "password" ? (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="delete-stepup-password">Confirm your password</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStepUpMode("otp");
+                        setDeleteError(null);
+                      }}
+                      className="text-primary type-caption underline-offset-4 hover:underline"
+                    >
+                      Use email code instead
+                    </button>
+                  </div>
+                  <Input
+                    id="delete-stepup-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={stepUpPassword}
+                    onChange={(e) => setStepUpPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="delete-stepup-otp">6-digit security code</Label>
+                    {hasPasswordAccount && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStepUpMode("password");
+                          setDeleteError(null);
+                        }}
+                        className="text-primary type-caption underline-offset-4 hover:underline"
+                      >
+                        Use password instead
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="delete-stepup-otp"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={stepUpOtp}
+                      onChange={(e) => setStepUpOtp(e.target.value.replace(/\D/g, ""))}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={stepUpSending}
+                      onClick={handleSendStepUpOtp}
+                    >
+                      {stepUpSending ? "Sending..." : stepUpOtpSent ? "Resend" : "Send code"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {deleteError && (
                 <p
                   role="alert"
@@ -451,7 +856,7 @@ export function SecuritySettingsPanel({
                   type="button"
                   variant="secondary"
                   onClick={() => setDeleteOpen(false)}
-                  disabled={isPending}
+                  disabled={deleteSubmitting}
                 >
                   Cancel
                 </Button>
@@ -459,17 +864,20 @@ export function SecuritySettingsPanel({
                   type="submit"
                   variant="destructive"
                   disabled={
-                    isPending ||
-                    confirmEmail.trim().toLowerCase() !== email.toLowerCase()
+                    deleteSubmitting ||
+                    confirmEmail.trim().toLowerCase() !== email.toLowerCase() ||
+                    (stepUpMode === "password"
+                      ? stepUpPassword.length === 0
+                      : stepUpOtp.trim().length !== 6)
                   }
                 >
-                  {isPending ? (
+                  {deleteSubmitting ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      Deleting...
+                      Confirming...
                     </>
                   ) : (
-                    "Permanently delete"
+                    "Schedule deletion (7 days)"
                   )}
                 </Button>
               </DialogFooter>

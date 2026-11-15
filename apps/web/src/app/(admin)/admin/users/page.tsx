@@ -11,5 +11,11 @@ export default async function AdminUsersPage() {
   const { user } = await requireAdmin("/admin/users");
   const users = await listAdminUsers();
 
-  return <AdminUsersList initialUsers={users} currentAdminId={user.id} />;
+  return (
+    <AdminUsersList
+      initialUsers={users}
+      currentAdminId={user.id}
+      currentAdminRole={user.role === "superadmin" ? "superadmin" : "admin"}
+    />
+  );
 }

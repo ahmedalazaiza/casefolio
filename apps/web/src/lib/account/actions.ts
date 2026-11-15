@@ -1,18 +1,22 @@
 "use server";
 
-import { and, eq, inArray, isNull, ne, normalizeMembershipRole } from "@casefolio/db";
+import { and, eq, ne } from "@casefolio/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { env } from "@/env";
 import { isSafeAvatarUrl } from "@/lib/auth/schemas";
 import { getServerSession } from "@/lib/auth/session";
-import { cancelUserSubscription } from "@/lib/billing/service";
+import { consumeStepUpToken } from "@/lib/auth/step-up";
 import { db, dbSchema } from "@/lib/db";
 import {
-  sendAccountDeletedEmail,
+  sendAccountDeletionCanceledEmail,
+  sendAccountDeletionScheduledEmail,
   sendSessionsRevokedEmail,
 } from "@/lib/email";
-import { executeMemberDepartureSideEffects } from "@/lib/entitlements/team-invitations";
-import { deleteStoredObject } from "@/lib/storage/r2";
+import {
+  ACCOUNT_DELETION_GRACE_MS,
+  checkSoleOwnerDeletionBlock,
+} from "@/lib/retention/account";
 
 const updateProfileSchema = z.object({
   name: z
@@ -79,6 +83,7 @@ const revokeSessionSchema = z.object({
 
 const deleteAccountSchema = z.object({
   confirmEmail: z.string().trim().email("Please enter a valid email address."),
+  stepUpToken: z.string().trim().min(20, "Identity confirmation is required."),
 });
 
 export async function revokeUserSessionAction(
@@ -137,19 +142,25 @@ export async function revokeOtherUserSessionsAction(): Promise<
   return { ok: true };
 }
 
-export async function deleteUserAccountAction(
-  confirmEmail: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+/**
+ * Schedules a 7-day soft-delete grace period after verifying server-side step-up confirmation.
+ * Actual account purge (`executeAccountPurge`) runs after `deletionScheduledFor` and aborts
+ * if Paddle subscription cancellation fails (`B1` & `S9`).
+ */
+export async function deleteUserAccountAction(rawInput: {
+  confirmEmail: string;
+  stepUpToken: string;
+}): Promise<{ ok: true; scheduledForIso: string } | { ok: false; error: string }> {
   const ctx = await getServerSession();
   if (!ctx) {
     return { ok: false, error: "Authentication required." };
   }
 
-  const parsed = deleteAccountSchema.safeParse({ confirmEmail });
+  const parsed = deleteAccountSchema.safeParse(rawInput);
   if (!parsed.success) {
     return {
       ok: false,
-      error: parsed.error.issues[0]?.message ?? "Please enter your account email.",
+      error: parsed.error.issues[0]?.message ?? "Please confirm your identity and email.",
     };
   }
 
@@ -160,131 +171,110 @@ export async function deleteUserAccountAction(
     };
   }
 
-  // 1. Prevent sole Team Owners from orphaning live Team subscriptions or destroying shared workspaces
-  const userMemberships = await db
-    .select()
-    .from(dbSchema.memberships)
-    .where(eq(dbSchema.memberships.userId, ctx.user.id));
-
-  for (const membership of userMemberships) {
-    const role = normalizeMembershipRole(membership.role);
-    if (role === "owner") {
-      const orgMembers = await db
-        .select({
-          userId: dbSchema.memberships.userId,
-          role: dbSchema.memberships.role,
-        })
-        .from(dbSchema.memberships)
-        .where(eq(dbSchema.memberships.orgId, membership.orgId));
-
-      const hasOtherOwner = orgMembers.some(
-        (m) => m.userId !== ctx.user.id && normalizeMembershipRole(m.role) === "owner",
-      );
-      const hasOtherMembers = orgMembers.some((m) => m.userId !== ctx.user.id);
-
-      const [liveTeamSub] = await db
-        .select({ id: dbSchema.subscriptions.id, status: dbSchema.subscriptions.status })
-        .from(dbSchema.subscriptions)
-        .where(
-          and(
-            eq(dbSchema.subscriptions.orgId, membership.orgId),
-            inArray(dbSchema.subscriptions.status, [
-              "active",
-              "trialing",
-              "past_due",
-              "paused",
-              "cancel_at_period_end",
-            ]),
-          ),
-        )
-        .limit(1);
-
-      if (!hasOtherOwner && (hasOtherMembers || Boolean(liveTeamSub))) {
-        return {
-          ok: false,
-          error:
-            "You are the sole Owner of an active Team workspace. Transfer workspace ownership or cancel and dissolve the Team workspace before deleting your account.",
-        };
-      }
-    }
+  const stepUp = await consumeStepUpToken({
+    userId: ctx.user.id,
+    sessionId: ctx.session.id,
+    purpose: "account_deletion",
+    stepUpToken: parsed.data.stepUpToken,
+  });
+  if (!stepUp.ok) {
+    return { ok: false, error: stepUp.error };
   }
 
-  // 2. Run clean departure side effects & preserve shared team projects (`ownerId` -> org Owner)
-  for (const membership of userMemberships) {
-    const orgMembers = await db
-      .select({
-        userId: dbSchema.memberships.userId,
-        role: dbSchema.memberships.role,
+  const ownerBlock = await checkSoleOwnerDeletionBlock(ctx.user.id);
+  if (ownerBlock.blocked) {
+    return { ok: false, error: ownerBlock.error };
+  }
+
+  const now = new Date();
+  const scheduledFor = new Date(now.getTime() + ACCOUNT_DELETION_GRACE_MS);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(dbSchema.users)
+      .set({
+        deletionRequestedAt: now,
+        deletionScheduledFor: scheduledFor,
+        updatedAt: now,
       })
-      .from(dbSchema.memberships)
-      .where(eq(dbSchema.memberships.orgId, membership.orgId));
+      .where(eq(dbSchema.users.id, ctx.user.id));
 
-    const survivingOwner = orgMembers.find(
-      (m) => m.userId !== ctx.user.id && normalizeMembershipRole(m.role) === "owner",
-    );
+    await tx
+      .delete(dbSchema.sessions)
+      .where(
+        and(
+          eq(dbSchema.sessions.userId, ctx.user.id),
+          ne(dbSchema.sessions.id, ctx.session.id),
+        ),
+      );
 
-    if (survivingOwner) {
-      await executeMemberDepartureSideEffects({
-        organizationId: membership.orgId,
-        departedUserId: ctx.user.id,
-        actorUserId: ctx.user.id,
-      }).catch(() => undefined);
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: ctx.user.id,
+      action: "account.deletion_scheduled",
+      meta: {
+        scheduledForIso: scheduledFor.toISOString(),
+      },
+      at: now,
+    });
+  });
 
-      // Reassign `ownerId` on team projects so ON DELETE CASCADE on `users` never wipes shared team work
-      await db
-        .update(dbSchema.projects)
-        .set({ ownerId: survivingOwner.userId })
-        .where(
-          and(
-            eq(dbSchema.projects.orgId, membership.orgId),
-            eq(dbSchema.projects.ownerId, ctx.user.id),
-          ),
-        );
-    }
-  }
-
-  const deletedEmail = ctx.user.email;
-  const deletedName = ctx.user.name;
-
-  // 3. Cancel personal subscription immediately
-  await cancelUserSubscription(
-    { id: ctx.user.id, email: ctx.user.email, name: ctx.user.name },
-    { reason: "other", feedback: "Account deleted by user", immediate: true },
-    { suppressEmail: true },
-  ).catch(() => null);
-
-  // 4. Purge stored R2/local asset & export objects belonging to personal projects before cascading DB rows
-  const personalProjects = await db
-    .select({ id: dbSchema.projects.id })
-    .from(dbSchema.projects)
-    .where(and(eq(dbSchema.projects.ownerId, ctx.user.id), isNull(dbSchema.projects.orgId)));
-
-  if (personalProjects.length > 0) {
-    const personalIds = personalProjects.map((p) => p.id);
-    const [personalAssets, personalExports] = await Promise.all([
-      db
-        .select({ r2Key: dbSchema.assets.r2Key })
-        .from(dbSchema.assets)
-        .where(inArray(dbSchema.assets.projectId, personalIds)),
-      db
-        .select({ r2Key: dbSchema.exportsTable.r2Key })
-        .from(dbSchema.exportsTable)
-        .where(inArray(dbSchema.exportsTable.projectId, personalIds)),
-    ]);
-
-    const r2Keys = [
-      ...personalAssets.map((a) => a.r2Key),
-      ...personalExports.map((e) => e.r2Key).filter((k): k is string => Boolean(k)),
-    ];
-    await Promise.all(r2Keys.map((key) => deleteStoredObject(key).catch(() => undefined)));
-  }
-
-  await db.delete(dbSchema.users).where(eq(dbSchema.users.id, ctx.user.id));
-
-  await sendAccountDeletedEmail({
-    to: deletedEmail,
-    name: deletedName,
+  await sendAccountDeletionScheduledEmail({
+    to: ctx.user.email,
+    name: ctx.user.name,
+    scheduledForIso: scheduledFor.toISOString(),
+    cancelUrl: `${env.NEXT_PUBLIC_APP_URL}/account/security`,
   }).catch(() => undefined);
+
+  revalidatePath("/account");
+  revalidatePath("/account/security");
+
+  return {
+    ok: true,
+    scheduledForIso: scheduledFor.toISOString(),
+  };
+}
+
+export async function cancelScheduledAccountDeletionAction(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const ctx = await getServerSession();
+  if (!ctx) {
+    return { ok: false, error: "Authentication required." };
+  }
+
+  if (!ctx.user.deletionScheduledFor && !ctx.user.deletionRequestedAt) {
+    return { ok: true };
+  }
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(dbSchema.users)
+      .set({
+        deletionRequestedAt: null,
+        deletionScheduledFor: null,
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.users.id, ctx.user.id));
+
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: ctx.user.id,
+      action: "account.deletion_canceled",
+      meta: {
+        canceledAtIso: now.toISOString(),
+      },
+      at: now,
+    });
+  });
+
+  await sendAccountDeletionCanceledEmail({
+    to: ctx.user.email,
+    name: ctx.user.name,
+    canceledAtIso: now.toISOString(),
+  }).catch(() => undefined);
+
+  revalidatePath("/account");
+  revalidatePath("/account/security");
 
   return { ok: true };
 }

@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createValidatedEnv, REQUIRED_ENV_KEYS } from "./env";
+import {
+  assertProductionBillingEnvironment,
+  createValidatedEnv,
+  isSimulatedBillingAllowed,
+  REQUIRED_ENV_KEYS,
+} from "./env";
 
 const VALID_TEST_ENV: Record<string, string> = {
   DATABASE_URL: "postgresql://localhost:5433/casefolio",
@@ -82,3 +87,62 @@ describe("env validation & .env.example completeness (C-004)", () => {
   });
 });
 
+
+describe("simulated billing gate & production boot assertion (B2)", () => {
+  it("requires an explicit opt-in", () => {
+    expect(isSimulatedBillingAllowed({})).toBe(false);
+    expect(isSimulatedBillingAllowed({ ALLOW_SIMULATED_BILLING: "true" })).toBe(false);
+    expect(isSimulatedBillingAllowed({ ALLOW_SIMULATED_BILLING: "1" })).toBe(true);
+  });
+
+  it("is refused in production regardless of the flag", () => {
+    expect(
+      isSimulatedBillingAllowed({ ALLOW_SIMULATED_BILLING: "1", VERCEL_ENV: "production" }),
+    ).toBe(false);
+    expect(
+      isSimulatedBillingAllowed({ ALLOW_SIMULATED_BILLING: "1", PADDLE_ENV: "production" }),
+    ).toBe(false);
+    expect(
+      isSimulatedBillingAllowed({ ALLOW_SIMULATED_BILLING: "1", VERCEL_ENV: "preview" }),
+    ).toBe(true);
+  });
+
+  it("does not affect local/preview deployments", () => {
+    expect(() =>
+      assertProductionBillingEnvironment({
+        PADDLE_ENV: "sandbox",
+        PADDLE_PRICE_PRO_MONTHLY: "pri_pro_monthly_id",
+        ALLOW_SIMULATED_BILLING: "1",
+        VERCEL_ENV: "preview",
+      }),
+    ).not.toThrow();
+    expect(() => assertProductionBillingEnvironment({})).not.toThrow();
+  });
+
+  it("throws a clear error for an unsafe production deployment", () => {
+    expect(() =>
+      assertProductionBillingEnvironment({ VERCEL_ENV: "production", PADDLE_ENV: "sandbox" }),
+    ).toThrow(/PADDLE_ENV must be 'production'/);
+    expect(() =>
+      assertProductionBillingEnvironment({
+        VERCEL_ENV: "production",
+        PADDLE_ENV: "production",
+        PADDLE_PRICE_PRO_MONTHLY: "pri_pro_monthly_id",
+      }),
+    ).toThrow(/placeholder Paddle price ids in PADDLE_PRICE_PRO_MONTHLY/);
+    expect(() =>
+      assertProductionBillingEnvironment({
+        VERCEL_ENV: "production",
+        PADDLE_ENV: "production",
+        ALLOW_SIMULATED_BILLING: "1",
+      }),
+    ).toThrow(/ALLOW_SIMULATED_BILLING must be unset/);
+    expect(() =>
+      assertProductionBillingEnvironment({
+        VERCEL_ENV: "production",
+        PADDLE_ENV: "production",
+        PADDLE_PRICE_PRO_MONTHLY: "pri_01habc",
+      }),
+    ).not.toThrow();
+  });
+});

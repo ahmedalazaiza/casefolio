@@ -81,6 +81,7 @@ export default async function AdminEmailsPage({
       templates={templates}
       initialPreview={initialPreview}
       adminEmail={user.email}
+      isSuperadmin={user.role === "superadmin"}
       liveResendConfigured={isLiveResendKey()}
       emailDomain={resolveEmailDomain()}
     />

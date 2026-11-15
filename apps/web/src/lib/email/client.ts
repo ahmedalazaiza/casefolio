@@ -92,6 +92,10 @@ export interface SendCasefolioEmailResult {
   text: string;
 }
 
+function sanitizeHeaderLine(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").trim();
+}
+
 export async function renderCasefolioEmail(
   input: Omit<SendCasefolioEmailInput, "to">,
 ): Promise<{
@@ -104,7 +108,8 @@ export async function renderCasefolioEmail(
   text: string;
 }> {
   const sender = resolveDepartmentSender(input.department);
-  const replyTo = input.replyTo?.trim() || sender.defaultReplyTo;
+  const replyTo = sanitizeHeaderLine(input.replyTo ?? "") || sender.defaultReplyTo;
+  const safeSubject = sanitizeHeaderLine(input.subject);
   const appBaseUrl = (input.appBaseUrl ?? env.NEXT_PUBLIC_APP_URL ?? "https://casefolio.com").replace(
     /\/+$/,
     "",
@@ -125,7 +130,7 @@ export async function renderCasefolioEmail(
     from: sender.formattedFrom,
     senderAddress: sender.address,
     replyTo,
-    subject: input.subject,
+    subject: safeSubject,
     html,
     text,
   };
@@ -137,7 +142,7 @@ export async function sendCasefolioEmail(
   const rendered = await renderCasefolioEmail(input);
 
   const recipients = (Array.isArray(input.to) ? input.to : [input.to])
-    .map((addr) => addr.trim())
+    .map((addr) => sanitizeHeaderLine(addr))
     .filter(Boolean);
 
   if (recipients.length === 0) {

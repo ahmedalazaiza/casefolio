@@ -1,4 +1,4 @@
-import { desc, eq, inArray, type PlanTier } from "@casefolio/db";
+import { and, count, desc, eq, gte, inArray, max, ne, or, type PlanTier } from "@casefolio/db";
 import { env } from "@/env";
 import {
   computeSubscriptionMrrUsd,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/billing/server-config";
 import { db, dbSchema } from "@/lib/db";
 import { sendAdminAccountSuspensionEmail } from "@/lib/email";
+import { revalidatePublicProject } from "@/lib/projects/public-cache";
 import { recordAdminAuditLog } from "@/lib/template/service";
 
 export interface FetchPaddleSubscriptionOptions {
@@ -101,22 +102,48 @@ export async function fetchLivePaddleSubscription(
   }
 }
 
-export async function listAdminUsers(): Promise<AdminUserListItem[]> {
-  const [userRows, subRows, projectRows, sessionRows] = await Promise.all([
-    db.select().from(dbSchema.users).orderBy(desc(dbSchema.users.createdAt)),
+export async function listAdminUsers(options?: {
+  limit?: number;
+  offset?: number;
+}): Promise<AdminUserListItem[]> {
+  const safeLimit = Math.max(1, Math.min(2000, Math.trunc(options?.limit ?? 1000)));
+  const safeOffset = Math.max(0, Math.trunc(options?.offset ?? 0));
+
+  const userRows = await db
+    .select()
+    .from(dbSchema.users)
+    .orderBy(desc(dbSchema.users.createdAt))
+    .limit(safeLimit)
+    .offset(safeOffset);
+
+  if (userRows.length === 0) {
+    return [];
+  }
+
+  const userIds = userRows.map((u) => u.id);
+
+  const [subRows, projectCounts, sessionRows] = await Promise.all([
     db
       .select()
       .from(dbSchema.subscriptions)
+      .where(inArray(dbSchema.subscriptions.userId, userIds))
       .orderBy(desc(dbSchema.subscriptions.updatedAt)),
     db
-      .select({ ownerId: dbSchema.projects.ownerId })
-      .from(dbSchema.projects),
+      .select({
+        ownerId: dbSchema.projects.ownerId,
+        total: count(),
+      })
+      .from(dbSchema.projects)
+      .where(inArray(dbSchema.projects.ownerId, userIds))
+      .groupBy(dbSchema.projects.ownerId),
     db
       .select({
         userId: dbSchema.sessions.userId,
-        updatedAt: dbSchema.sessions.updatedAt,
+        lastUpdatedAt: max(dbSchema.sessions.updatedAt),
       })
-      .from(dbSchema.sessions),
+      .from(dbSchema.sessions)
+      .where(inArray(dbSchema.sessions.userId, userIds))
+      .groupBy(dbSchema.sessions.userId),
   ]);
 
   const latestSubByUser = new Map<string, typeof dbSchema.subscriptions.$inferSelect>();
@@ -127,15 +154,14 @@ export async function listAdminUsers(): Promise<AdminUserListItem[]> {
   }
 
   const projCountByOwner = new Map<string, number>();
-  for (const p of projectRows) {
-    projCountByOwner.set(p.ownerId, (projCountByOwner.get(p.ownerId) ?? 0) + 1);
+  for (const p of projectCounts) {
+    projCountByOwner.set(p.ownerId, p.total);
   }
 
   const latestSessionMsByUser = new Map<string, number>();
   for (const s of sessionRows) {
-    const prev = latestSessionMsByUser.get(s.userId) ?? 0;
-    if (s.updatedAt.getTime() > prev) {
-      latestSessionMsByUser.set(s.userId, s.updatedAt.getTime());
+    if (s.lastUpdatedAt) {
+      latestSessionMsByUser.set(s.userId, new Date(s.lastUpdatedAt).getTime());
     }
   }
 
@@ -186,15 +212,7 @@ export async function getAdminUserDetail(
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [
-    accountRows,
-    membershipRows,
-    subRows,
-    projectRows,
-    templateRows,
-    versionRows,
-    sessionRows,
-  ] = await Promise.all([
+  const [accountRows, membershipRows, subRows, projectRows, sessionRows] = await Promise.all([
     db
       .select({ providerId: dbSchema.accounts.providerId })
       .from(dbSchema.accounts)
@@ -215,17 +233,17 @@ export async function getAdminUserDetail(
       .orderBy(desc(dbSchema.subscriptions.updatedAt))
       .limit(1),
     db
-      .select()
+      .select({
+        id: dbSchema.projects.id,
+        name: dbSchema.projects.name,
+        slug: dbSchema.projects.slug,
+        templateVersionId: dbSchema.projects.templateVersionId,
+        visibility: dbSchema.projects.visibility,
+        updatedAt: dbSchema.projects.updatedAt,
+      })
       .from(dbSchema.projects)
       .where(eq(dbSchema.projects.ownerId, userId))
       .orderBy(desc(dbSchema.projects.updatedAt)),
-    db.select({ id: dbSchema.templates.id, name: dbSchema.templates.name }).from(dbSchema.templates),
-    db
-      .select({
-        id: dbSchema.templateVersions.id,
-        templateId: dbSchema.templateVersions.templateId,
-      })
-      .from(dbSchema.templateVersions),
     db
       .select({ updatedAt: dbSchema.sessions.updatedAt })
       .from(dbSchema.sessions)
@@ -235,38 +253,63 @@ export async function getAdminUserDetail(
   ]);
 
   const projectIds = projectRows.map((p) => p.id);
+  const topProjectsSlice = projectRows.slice(0, 12);
+  const versionIds = Array.from(new Set(topProjectsSlice.map((p) => p.templateVersionId)));
+
   let views30d = 0;
   let completedExports = 0;
   let lastExportAtIso: string | null = null;
+  const verToTplName = new Map<string, string>();
 
   if (projectIds.length > 0) {
-    const [viewRows, expRows] = await Promise.all([
+    const [viewAggRows, expAggRows, versionTplRows] = await Promise.all([
       db
-        .select({ at: dbSchema.pageViews.at })
+        .select({ total: count() })
         .from(dbSchema.pageViews)
-        .where(inArray(dbSchema.pageViews.projectId, projectIds)),
+        .where(
+          and(
+            inArray(dbSchema.pageViews.projectId, projectIds),
+            gte(dbSchema.pageViews.at, thirtyDaysAgo),
+          ),
+        ),
       db
         .select({
-          status: dbSchema.exportsTable.status,
-          createdAt: dbSchema.exportsTable.createdAt,
+          total: count(),
+          latestAt: max(dbSchema.exportsTable.createdAt),
         })
         .from(dbSchema.exportsTable)
-        .where(inArray(dbSchema.exportsTable.projectId, projectIds))
-        .orderBy(desc(dbSchema.exportsTable.createdAt)),
+        .where(
+          and(
+            inArray(dbSchema.exportsTable.projectId, projectIds),
+            eq(dbSchema.exportsTable.status, "completed"),
+          ),
+        ),
+      versionIds.length > 0
+        ? db
+            .select({
+              versionId: dbSchema.templateVersions.id,
+              templateName: dbSchema.templates.name,
+            })
+            .from(dbSchema.templateVersions)
+            .innerJoin(
+              dbSchema.templates,
+              eq(dbSchema.templateVersions.templateId, dbSchema.templates.id),
+            )
+            .where(inArray(dbSchema.templateVersions.id, versionIds))
+        : Promise.resolve([]),
     ]);
 
-    views30d = viewRows.filter((v) => v.at >= thirtyDaysAgo).length;
-    const completed = expRows.filter((e) => e.status === "completed");
-    completedExports = completed.length;
-    lastExportAtIso = completed[0]?.createdAt.toISOString() ?? null;
+    views30d = viewAggRows[0]?.total ?? 0;
+    completedExports = expAggRows[0]?.total ?? 0;
+    lastExportAtIso = expAggRows[0]?.latestAt
+      ? new Date(expAggRows[0].latestAt).toISOString()
+      : null;
+    for (const row of versionTplRows) {
+      verToTplName.set(row.versionId, row.templateName);
+    }
   }
 
-  const tplNameById = new Map(templateRows.map((t) => [t.id, t.name]));
-  const verToTplName = new Map(
-    versionRows.map((v) => [v.id, tplNameById.get(v.templateId) ?? "Template"]),
-  );
-
-  const projects: AdminUserProjectRow[] = projectRows.slice(0, 12).map((p) => ({
+  const projects: AdminUserProjectRow[] = topProjectsSlice.map((p) => ({
     id: p.id,
     name: p.name,
     slug: p.slug,
@@ -377,22 +420,42 @@ export async function setAdminUserSuspension(args: {
     return { ok: false, error: "User not found." };
   }
 
-  if (target.role === "superadmin" && args.actorRole !== "superadmin") {
-    return { ok: false, error: "Only a superadmin can modify another superadmin account." };
+  // N5: Prevent lateral admin-to-admin suspension; only superadmin can suspend/reactivate admin or superadmin
+  if ((target.role === "admin" || target.role === "superadmin") && args.actorRole !== "superadmin") {
+    return {
+      ok: false,
+      error: "Only a superadmin can suspend or reactivate an administrator account.",
+    };
   }
 
   const now = new Date();
-  await db
-    .update(dbSchema.users)
-    .set({
-      suspended: args.suspended,
-      updatedAt: now,
-    })
-    .where(eq(dbSchema.users.id, args.targetUserId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(dbSchema.users)
+      .set({
+        suspended: args.suspended,
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.users.id, args.targetUserId));
 
-  // Immediately revoke all active sessions when suspending
-  if (args.suspended) {
-    await db.delete(dbSchema.sessions).where(eq(dbSchema.sessions.userId, args.targetUserId));
+    // Immediately revoke all active sessions when suspending
+    if (args.suspended) {
+      await tx.delete(dbSchema.sessions).where(eq(dbSchema.sessions.userId, args.targetUserId));
+    }
+  });
+
+  // Purge ISR cache for any published projects owned by the suspended/unsuspended user
+  const ownedPublishedProjects = await db
+    .select({ slug: dbSchema.projects.slug })
+    .from(dbSchema.projects)
+    .where(
+      and(
+        eq(dbSchema.projects.ownerId, args.targetUserId),
+        inArray(dbSchema.projects.visibility, ["public", "unlisted"]),
+      ),
+    );
+  for (const proj of ownedPublishedProjects) {
+    revalidatePublicProject(proj.slug);
   }
 
   await recordAdminAuditLog(
@@ -484,19 +547,33 @@ export async function getAdminSubscriptionsOverview(
 ): Promise<AdminSubscriptionsOverview> {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [subRows, userRows] = await Promise.all([
-    db
-      .select()
-      .from(dbSchema.subscriptions)
-      .orderBy(desc(dbSchema.subscriptions.updatedAt)),
-    db
-      .select({
-        id: dbSchema.users.id,
-        name: dbSchema.users.name,
-        email: dbSchema.users.email,
-      })
-      .from(dbSchema.users),
-  ]);
+  const subRows = await db
+    .select()
+    .from(dbSchema.subscriptions)
+    .where(
+      or(
+        ne(dbSchema.subscriptions.plan, "free"),
+        eq(dbSchema.subscriptions.status, "canceled"),
+      ),
+    )
+    .orderBy(desc(dbSchema.subscriptions.updatedAt));
+
+  const recentSlice = subRows.slice(0, 25);
+  const recentUserIds = Array.from(
+    new Set(recentSlice.map((s) => s.userId).filter((id): id is string => Boolean(id))),
+  );
+
+  const userRows =
+    recentUserIds.length > 0
+      ? await db
+          .select({
+            id: dbSchema.users.id,
+            name: dbSchema.users.name,
+            email: dbSchema.users.email,
+          })
+          .from(dbSchema.users)
+          .where(inArray(dbSchema.users.id, recentUserIds))
+      : [];
 
   const userById = new Map(userRows.map((u) => [u.id, u]));
 

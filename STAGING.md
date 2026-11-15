@@ -10,15 +10,26 @@
 | `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` | `test_…` (sandbox client-side token) | `live_` tokens are rejected for sandbox (`/api/health` → `billingConfigured:false`). |
 | `PADDLE_API_KEY` | `pdl_sdbx_apikey_…` | Needed for portal sessions, cancel/resume, seat changes, reconciliation. |
 | `PADDLE_WEBHOOK_SECRET` | `pdl_ntfset_…` from the sandbox notification destination | |
-| `PADDLE_PRICE_PRO_MONTHLY / _YEARLY`, `PADDLE_PRICE_TEAM_MONTHLY / _YEARLY` | four **distinct** real sandbox `pri_01…` ids | Prices must match `/pricing` (Pro \$12/mo · \$120/yr, Teams per-seat). Unknown price ids are ignored by the webhook — never guessed. |
-| `DATABASE_URL` | **its own Neon branch/database** | ⚠️ `vercel.json` runs `db:migrate && db:seed` on every build. Never point staging at the production database. |
+| `PADDLE_PRICE_PRO_MONTHLY / _YEARLY`, `PADDLE_PRICE_TEAM_MONTHLY / _YEARLY` | four **distinct** real sandbox `pri_01…` ids | Prices must match `/pricing`, whose source of truth is `apps/web/src/lib/billing/plans.ts` (Pro \$9.99/mo · \$95.88/yr; Team \$6.99/seat/mo · \$67.08/seat/yr; Plus \$99/mo · \$948/yr). Unknown price ids are ignored by the webhook — never guessed. |
+| `DATABASE_URL` | **its own Neon branch/database** | ⚠️ Builds no longer migrate or seed (`vercel.json` only builds the web app). Apply schema changes explicitly with `pnpm db:migrate:remote` (see §1.1). Never point staging at the production database. |
 | `SEED_ADMIN_EMAIL` | a mailbox you control | Bootstrap superadmin created by `db:seed` (defaults to `admin@casefolio.app`). |
-| `CRON_SECRET` | 16+ random chars | Enables `/api/cron/billing-reconcile` (daily, Vercel Cron). Returns 503 until set. |
+| `CRON_SECRET` | 16+ random chars | Enables `/api/cron/billing-reconcile` (04:00 UTC) and `/api/cron/maintenance` (03:30 UTC) via Vercel Cron. Return 503 until set. |
+| `ALLOW_SIMULATED_BILLING` | `1` on Preview/staging only | Opt-in for the signed local Paddle simulator while Paddle ids are placeholders. Always refused when `VERCEL_ENV=production` or `PADDLE_ENV=production`; a production deployment that sets it (or has placeholder `pri_*_id` prices / `PADDLE_ENV=sandbox`) refuses to boot. |
 | `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` | the staging URL | Preview/branch URLs are auto-trusted via `VERCEL_URL`. |
 
 Paddle **sandbox** dashboard → Developer Tools → Notifications → destination `https://<staging-host>/api/paddle/webhook`, subscribed to:
 `subscription.created`, `subscription.activated`, `subscription.updated`, `subscription.resumed`, `subscription.trialing`, `subscription.past_due`, `subscription.paused`, `subscription.canceled`, `transaction.completed`, `transaction.payment_failed`, `transaction.past_due`.
 (Other events are safe — they are stored and ignored — but unnecessary.)
+
+### 1.1 Release procedure (migrate first, then deploy)
+
+Deploys never touch the database. For every release:
+
+1. `CONFIRM_DB_HOST=<host in DATABASE_URL> DATABASE_URL=<staging url> pnpm db:migrate:remote` — migrations are additive (expand-only), so the previous deployment keeps working.
+2. Deploy the web app (push/promote on Vercel).
+3. Seeding a remote database is never automatic: `... pnpm db:migrate:remote --seed` additionally requires `ALLOW_REMOTE_SEED=1`.
+
+The script refuses remote hosts without `CONFIRM_DB_HOST` matching the `DATABASE_URL` host exactly.
 
 ## 2. How payment integrity works (what to expect)
 
@@ -49,7 +60,7 @@ Verify after each: `/api/health` → `environment.billingConfigured:true` (once 
 
 ## 4. Local verification (no Paddle account needed)
 
-`PADDLE_ENV=sandbox` with placeholder ids runs the **signed local simulator** (same webhook pipeline, same intent flow): `pnpm test` covers the matrix in `apps/web/src/lib/billing/*.test.ts`; `pnpm test:e2e` covers the UI flows.
+`PADDLE_ENV=sandbox` with placeholder ids and `ALLOW_SIMULATED_BILLING=1` runs the **signed local simulator** (same webhook pipeline, same intent flow): `pnpm test` covers the matrix in `apps/web/src/lib/billing/*.test.ts`; `pnpm test:e2e` covers the UI flows.
 
 ## 5. Rollback
 
