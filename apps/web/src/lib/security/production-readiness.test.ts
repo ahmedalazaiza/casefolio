@@ -58,7 +58,7 @@ describe("AUDIT BLOCKERS (B1–B7)", () => {
 });
 
 describe("AUDIT SECURITY (S1–S9)", () => {
-  it.fails("S1 client IP extraction does not trust the spoofable cf-connecting-ip header on Vercel", () => {
+  it("S1 client IP extraction does not trust the spoofable cf-connecting-ip header on Vercel", () => {
     const headers = new Headers({ "cf-connecting-ip": "203.0.113.99", "x-forwarded-for": "198.51.100.5" });
     expect(extractClientIp(headers)).not.toBe("203.0.113.99");
   });
@@ -96,7 +96,7 @@ describe("AUDIT SECURITY (S1–S9)", () => {
 });
 
 describe("AUDIT PERFORMANCE (P1–P4)", () => {
-  it.fails("P1 DB pool is explicitly sized for serverless", () => {
+  it("P1 DB pool is explicitly sized for serverless", () => {
     const src = readFileSync(join(ROOT, "packages/db/src/client.ts"), "utf8");
     expect(src).toMatch(/max:\s*/);
     expect(src).toMatch(/idleTimeoutMillis/);
@@ -118,3 +118,4 @@ describe("AUDIT PERFORMANCE (P1–P4)", () => {
     expect(web("lib/admin/overview.ts")).toMatch(/count\(|groupBy\(/);
   });
 });
+

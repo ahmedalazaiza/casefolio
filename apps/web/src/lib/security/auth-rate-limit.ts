@@ -17,11 +17,31 @@ const RATE_LIMITED_AUTH_PREFIXES = [
  */
 export const DEFAULT_AUTH_RATE_LIMIT_PER_MIN = 150;
 
+/**
+ * Resolve the client IP without trusting client-controlled headers.
+ *
+ * - On Vercel the platform sets `x-vercel-forwarded-for` (not spoofable) and rewrites `x-forwarded-for`.
+ * - A self-hosted reverse proxy can opt in with `TRUSTED_PROXY_HEADER` (e.g. `cf-connecting-ip` ONLY when
+ *   the app is really behind Cloudflare and direct access is blocked).
+ * - Otherwise fall back to the right-most `x-forwarded-for` hop (the one appended by our own proxy).
+ * `cf-connecting-ip` / `x-real-ip` are never trusted by default: any visitor can send them.
+ */
 export function extractClientIp(headers: Headers): string {
-  const cfIp = headers.get("cf-connecting-ip")?.trim();
-  if (cfIp) return cfIp;
-  const realIp = headers.get("x-real-ip")?.trim();
-  if (realIp) return realIp;
+  const first = (value: string | null): string | undefined =>
+    value
+      ?.split(",")
+      .map((part) => part.trim())
+      .find(Boolean);
+
+  const vercelIp = first(headers.get("x-vercel-forwarded-for"));
+  if (vercelIp && process.env.VERCEL) return vercelIp;
+
+  const trustedHeader = process.env.TRUSTED_PROXY_HEADER?.trim().toLowerCase();
+  if (trustedHeader) {
+    const trusted = first(headers.get(trustedHeader));
+    if (trusted) return trusted;
+  }
+
   const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
     const hops = forwarded
@@ -29,7 +49,8 @@ export function extractClientIp(headers: Headers): string {
       .map((part) => part.trim())
       .filter(Boolean);
     if (hops.length > 0) {
-      return hops[hops.length - 1]!;
+      // On Vercel XFF is rewritten with the real client first; elsewhere our proxy appends last.
+      return process.env.VERCEL ? hops[0]! : hops[hops.length - 1]!;
     }
   }
   return "127.0.0.1";

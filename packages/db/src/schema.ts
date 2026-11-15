@@ -107,6 +107,9 @@ export const users = pgTable("users", {
   jobTitle: text("job_title"),
   designFocus: text("design_focus").$type<ProjectType>(),
   onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
+  /** Set when the user requests account deletion; the account is purged after `deletionScheduledFor`. */
+  deletionRequestedAt: timestamp("deletion_requested_at", { withTimezone: true }),
+  deletionScheduledFor: timestamp("deletion_scheduled_for", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -378,6 +381,7 @@ export const projects = pgTable(
     index("projects_owner_id_idx").on(table.ownerId),
     index("projects_org_id_idx").on(table.orgId),
     index("projects_workspace_space_idx").on(table.workspaceId, table.spaceId),
+    index("projects_workspace_updated_idx").on(table.workspaceId, table.updatedAt),
   ],
 );
 
@@ -433,6 +437,7 @@ export const exportsTable = pgTable(
   (table) => [
     index("exports_project_id_idx").on(table.projectId),
     index("exports_workspace_cache_idx").on(table.workspaceId, table.cacheKey),
+    index("exports_status_created_idx").on(table.status, table.createdAt),
   ],
 );
 
@@ -484,7 +489,10 @@ export const pageViews = pgTable(
     country: text("country"),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("page_views_project_at_idx").on(table.projectId, table.at)],
+  (table) => [
+    index("page_views_project_at_idx").on(table.projectId, table.at),
+    index("page_views_at_idx").on(table.at),
+  ],
 );
 
 // 12. notifications (ERD)
@@ -500,7 +508,10 @@ export const notifications = pgTable(
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("notifications_user_read_idx").on(table.userId, table.readAt)],
+  (table) => [
+    index("notifications_user_read_idx").on(table.userId, table.readAt),
+    index("notifications_user_created_idx").on(table.userId, table.createdAt),
+  ],
 );
 
 // 13. reports (ERD)
@@ -529,7 +540,10 @@ export const auditLogs = pgTable(
     meta: jsonb("meta").$type<Record<string, unknown>>().notNull(),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("audit_logs_at_idx").on(table.at)],
+  (table) => [
+    index("audit_logs_at_idx").on(table.at),
+    index("audit_logs_action_at_idx").on(table.action, table.at),
+  ],
 );
 
 // Approved webhook idempotency table (C-701 / 02-RULES.md §5)
@@ -539,7 +553,7 @@ export const webhookEvents = pgTable("webhook_events", {
   eventType: text("event_type").notNull(),
   payload: jsonb("payload").$type<Record<string, unknown>>(),
   processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("webhook_events_processed_at_idx").on(table.processedAt)]);
 
 // Published snapshots: isolates public `/p/[slug]` delivery from private unpublished draft edits
 export const publishedSnapshots = pgTable("published_snapshots", {
@@ -889,4 +903,51 @@ export const rateLimits = pgTable("rate_limits", {
   key: text("key").notNull().unique(),
   count: integer("count").notNull(),
   lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+});
+
+
+// ---------------------------------------------------------------------------------------------
+// Production-hardening tables (additive; see migrations/0005_production_hardening.sql)
+// ---------------------------------------------------------------------------------------------
+
+/** Shared fixed-window limiter for anonymous/serverless-hot endpoints (contact, reports, exports, ...). */
+export const appRateLimits = pgTable("app_rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  windowStart: bigint("window_start", { mode: "number" }).notNull(),
+});
+
+export const SUPPORT_TICKET_STATUSES = ["open", "answered", "closed"] as const;
+export type SupportTicketStatus = (typeof SUPPORT_TICKET_STATUSES)[number];
+
+/** Durable support requests: persisted BEFORE any email is attempted so no customer message is lost. */
+export const supportTickets = pgTable(
+  "support_tickets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: text("code").notNull().unique(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    email: text("email").notNull(),
+    topic: text("topic").notNull(),
+    subject: text("subject").notNull(),
+    message: text("message").notNull(),
+    projectRef: text("project_ref"),
+    status: text("status").$type<SupportTicketStatus>().notNull().default("open"),
+    intakeEmailDeliveredAt: timestamp("intake_email_delivered_at", { withTimezone: true }),
+    deliveryAttempts: integer("delivery_attempts").notNull().default(0),
+    lastDeliveryError: text("last_delivery_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("support_tickets_status_created_idx").on(table.status, table.createdAt),
+    index("support_tickets_email_idx").on(table.email),
+  ],
+);
+
+/** Real configuration store for platform-wide switches (previously derived from the audit log). */
+export const platformSettings = pgTable("platform_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<unknown>().notNull(),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
