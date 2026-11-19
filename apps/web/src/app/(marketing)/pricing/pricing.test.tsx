@@ -25,8 +25,8 @@ const MOCK_PADDLE_PRICE_MAP = {
   team_yearly: "pri_team_yearly_cfg",
 };
 
-describe("PricingPageClient (2 Paid Cards: Pro & Teams + Free Onboarding + 3-Tier Matrix)", () => {
-  it("loads Pro and Teams paid cards, Free onboarding callout, 3-column matrix, and 4 Paddle price IDs", async () => {
+describe("PricingPageClient (3 Cards: Free Left · Pro Most Popular · Teams Dynamic Seats + 3-Tier Matrix)", () => {
+  it("renders Free, Pro (Most popular), and Teams in a 3-card row with dynamic seat pricing and Annual total headline prices", async () => {
     const user = userEvent.setup();
 
     render(
@@ -40,18 +40,44 @@ describe("PricingPageClient (2 Paid Cards: Pro & Teams + Free Onboarding + 3-Tie
 
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
 
-    const paidGrid = screen.getByTestId("paid-plan-cards-grid");
-    expect(within(paidGrid).getByTestId("plan-card-pro")).toBeInTheDocument();
-    expect(within(paidGrid).getByTestId("plan-card-team")).toBeInTheDocument();
-    expect(within(paidGrid).queryByTestId("plan-card-plus")).not.toBeInTheDocument();
-    expect(screen.getByTestId("free-onboarding-callout")).toHaveTextContent(/Free/i);
+    const cardsGrid = screen.getByTestId("paid-plan-cards-grid");
+    const freeCard = within(cardsGrid).getByTestId("plan-card-free");
+    const proCard = within(cardsGrid).getByTestId("plan-card-pro");
+    const teamCard = within(cardsGrid).getByTestId("plan-card-team");
 
+    // Wide Free bottom strip is removed; Free sits first on the left of the 3-card grid
+    expect(screen.queryByTestId("free-onboarding-callout")).not.toBeInTheDocument();
+    expect(within(cardsGrid).queryByTestId("plan-card-plus")).not.toBeInTheDocument();
     expect(
-      screen.getAllByText(formatUsdFromCents(BILLING_PLAN_CATALOG.pro.monthlyPriceCents)).length,
-    ).toBeGreaterThanOrEqual(1);
+      freeCard.compareDocumentPosition(proCard) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(
-      screen.getAllByText(formatUsdFromCents(BILLING_PLAN_CATALOG.team.monthlyPriceCents)).length,
-    ).toBeGreaterThanOrEqual(1);
+      proCard.compareDocumentPosition(teamCard) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // Pro is Most popular (highlighted); Teams & Free are not
+    expect(proCard).toHaveAttribute("data-highlighted", "true");
+    expect(within(proCard).getByText(/Most popular/i)).toBeInTheDocument();
+    expect(teamCard).toHaveAttribute("data-highlighted", "false");
+    expect(within(teamCard).queryByText(/Most popular/i)).not.toBeInTheDocument();
+
+    // Monthly big headline prices ($0 Free, $7.99 Pro, $17.97 Teams for default 3 seats)
+    expect(within(freeCard).getByTestId("plan-card-price")).toHaveTextContent("$0");
+    expect(within(proCard).getByTestId("plan-card-price")).toHaveTextContent(
+      formatUsdFromCents(BILLING_PLAN_CATALOG.pro.monthlyPriceCents),
+    );
+    expect(within(teamCard).getByTestId("plan-card-price")).toHaveTextContent("$17.97");
+    expect(within(teamCard).getByTestId("plan-card-period")).toHaveTextContent("/mo");
+
+    // Incrementing & decrementing Teams card seats updates the big headline price live
+    await user.click(within(teamCard).getByTestId("team-card-seats-increment"));
+    expect(within(teamCard).getByTestId("team-card-seats-value")).toHaveTextContent("4");
+    expect(within(teamCard).getByTestId("plan-card-price")).toHaveTextContent("$23.96");
+
+    await user.click(within(teamCard).getByTestId("team-card-seats-decrement"));
+    await user.click(within(teamCard).getByTestId("team-card-seats-decrement"));
+    expect(within(teamCard).getByTestId("team-card-seats-value")).toHaveTextContent("2");
+    expect(within(teamCard).getByTestId("plan-card-price")).toHaveTextContent("$11.98");
 
     expect(
       screen.getByText(`${FREE_LIFETIME_PROJECT_LIMIT} lifetime Case Study credit`),
@@ -68,17 +94,19 @@ describe("PricingPageClient (2 Paid Cards: Pro & Teams + Free Onboarding + 3-Tie
     const proUpgradeLink = screen.getByRole("link", { name: "Upgrade to Pro" });
     expect(proUpgradeLink).toHaveAttribute("href", "/sign-up?plan=pro&interval=monthly");
 
+    // Switching to Annual displays the annual subscription total right in the big headline prices
     await user.click(screen.getAllByRole("button", { name: /^Annual/i })[0]!);
-    expect(
-      screen.getAllByText(
-        formatUsdFromCents(BILLING_PLAN_CATALOG.pro.yearlyMonthlyEquivalentCents),
-      ).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByText(
-        formatUsdFromCents(BILLING_PLAN_CATALOG.team.yearlyMonthlyEquivalentCents),
-      ).length,
-    ).toBeGreaterThanOrEqual(1);
+    expect(within(proCard).getByTestId("plan-card-price")).toHaveTextContent(
+      formatUsdFromCents(BILLING_PLAN_CATALOG.pro.yearlyTotalCents),
+    );
+    expect(within(proCard).getByTestId("plan-card-period")).toHaveTextContent("/yr");
+    expect(within(teamCard).getByTestId("plan-card-price")).toHaveTextContent("$119.80");
+    expect(within(teamCard).getByTestId("plan-card-period")).toHaveTextContent("/yr");
+
+    // Changing Teams seats while Annual is selected updates the annual big headline price ($179.70 for 3 seats)
+    await user.click(within(teamCard).getByTestId("team-card-seats-increment"));
+    expect(within(teamCard).getByTestId("plan-card-price")).toHaveTextContent("$179.70");
+
     expect(screen.getByRole("link", { name: "Upgrade to Pro" })).toHaveAttribute(
       "href",
       "/sign-up?plan=pro&interval=yearly",
@@ -121,9 +149,13 @@ describe("PricingPageClient (2 Paid Cards: Pro & Teams + Free Onboarding + 3-Tie
     expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$29.95");
     expect(screen.getByTestId("teams-calc-billing-detail")).toHaveTextContent("$299.50/yr");
 
+    // Switching calculator interval to Annual puts the annual total ($299.50 / year) in the big headline price
+    await user.click(screen.getAllByRole("button", { name: /^Annual/i })[0]!);
+    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$299.50");
+
     await user.click(screen.getByTestId("teams-calc-preset-15"));
     expect(screen.getByTestId("teams-calc-seat-count")).toHaveTextContent("15");
-    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$89.85");
+    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$898.50");
 
     await user.click(screen.getByTestId("teams-calc-preset-26"));
     expect(screen.getByTestId("teams-calc-capacity-review")).toHaveTextContent(

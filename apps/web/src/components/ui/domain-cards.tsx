@@ -265,6 +265,7 @@ export interface PlanCardProps extends ComponentProps<"section"> {
   description: string;
   ctaLabel?: string;
   ctaHref?: string;
+  ctaDisabled?: boolean;
   featuresHeading?: string;
   features: readonly string[];
   excludedFeatures?: readonly string[];
@@ -285,6 +286,7 @@ export function PlanCard({
   description,
   ctaLabel = "Choose plan",
   ctaHref,
+  ctaDisabled = false,
   featuresHeading,
   features,
   excludedFeatures,
@@ -301,7 +303,7 @@ export function PlanCard({
       data-slot="plan-card"
       data-highlighted={highlighted ? "true" : "false"}
       className={cn(
-        "relative flex h-full min-w-0 flex-col justify-between gap-6 rounded-[1.75rem] border p-6 transition-all duration-300 sm:p-8",
+        "relative flex h-full min-w-0 flex-col justify-between gap-6 rounded-[1.75rem] border p-6 transition-all duration-300 lg:p-6 xl:p-7",
         highlighted
           ? "v3-pattern-dots-dark border-[var(--cf-royal)] hover:-translate-y-1 hover:shadow-[var(--cf-shadow-hover)]"
           : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
@@ -312,7 +314,7 @@ export function PlanCard({
       <div className="flex flex-col gap-5">
         {/* Top identity + price header */}
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
             <div className="flex min-w-0 items-center gap-2.5">
               {icon && (
                 <span
@@ -337,7 +339,7 @@ export function PlanCard({
               </h3>
             </div>
             {highlighted ? (
-              <span className="v3-label inline-flex items-center gap-1.5 rounded-full bg-[var(--cf-bg-accent)] px-3 py-1 text-[var(--cf-text-on-accent)] uppercase">
+              <span className="v3-label inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--cf-bg-accent)] px-3 py-1 text-[var(--cf-text-on-accent)] uppercase">
                 <span
                   aria-hidden="true"
                   className="size-1.5 rounded-full bg-[var(--cf-text-on-accent)]"
@@ -345,7 +347,7 @@ export function PlanCard({
                 <span>{resolvedBadge}</span>
               </span>
             ) : (
-              <span className="v3-label inline-flex items-center rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3 py-1 text-[var(--cf-text-primary)] uppercase">
+              <span className="v3-label inline-flex shrink-0 items-center rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3 py-1 text-[var(--cf-text-primary)] uppercase">
                 {resolvedBadge}
               </span>
             )}
@@ -367,8 +369,9 @@ export function PlanCard({
           <div className="flex flex-col gap-1 pt-1">
             <div className="flex flex-wrap items-baseline gap-1.5">
               <span
+                data-testid="plan-card-price"
                 className={cn(
-                  "font-display text-4xl leading-none font-bold tracking-tight sm:text-5xl",
+                  "font-display text-3xl leading-none font-bold tracking-tight tabular-nums sm:text-4xl xl:text-5xl",
                   highlighted ? "text-[var(--cf-text-inverse)]" : "text-[var(--cf-text-primary)]",
                 )}
               >
@@ -376,6 +379,7 @@ export function PlanCard({
               </span>
               {period && (
                 <span
+                  data-testid="plan-card-period"
                   className={cn(
                     "v3-body-s",
                     highlighted
@@ -414,7 +418,7 @@ export function PlanCard({
           {description}
         </p>
 
-        {ctaHref && !onSelectPlan ? (
+        {ctaHref && !onSelectPlan && !ctaDisabled ? (
           <Button
             variant={highlighted ? "lime" : "default"}
             size="lg"
@@ -432,10 +436,11 @@ export function PlanCard({
             variant={highlighted ? "lime" : "default"}
             size="lg"
             className="w-full"
+            disabled={ctaDisabled}
             onClick={onSelectPlan}
           >
             <span>{ctaLabel}</span>
-            <ArrowRight className="size-4" />
+            {!ctaDisabled && <ArrowRight className="size-4" />}
           </Button>
         )}
 

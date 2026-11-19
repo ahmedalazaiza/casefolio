@@ -192,7 +192,6 @@ const TEAMS_CATALOG_DEFINITION: BillingPlanDefinition = {
   customDomainEnabled: false,
   watermarkEnabled: false,
   whiteLabelEnabled: false,
-  highlighted: true,
   features: [
     `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats ($5.99/seat/mo · 2 months free on annual)`,
     "Unlimited shared Case Studies across your studio",
@@ -256,6 +255,7 @@ export const BILLING_PLAN_CATALOG: Record<PlanTier, BillingPlanDefinition> = {
     customDomainEnabled: false,
     watermarkEnabled: false,
     whiteLabelEnabled: false,
+    highlighted: true,
     features: [
       "1 seat (Personal workspace)",
       `Up to ${PRO_MAX_PROJECTS} active Case Studies (delete & replace anytime)`,

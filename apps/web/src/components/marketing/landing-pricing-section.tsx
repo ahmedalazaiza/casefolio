@@ -13,28 +13,31 @@ import {
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { ScrollRise } from "@/components/marketing/motion";
-import { Badge } from "@/components/ui/badge";
 import { PlanCard, type PlanSpecItem } from "@/components/ui/domain-cards";
 import {
   BILLING_PLAN_CATALOG,
+  clampTeamsSeats,
   computeTeamsPrice,
   formatUsdFromCents,
   PRO_MAX_PROJECTS,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
+  type ActivePlanTier,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
 import {
+  FREE_MONTHLY_EXPORT_LIMIT,
   PRO_MONTHLY_EXPORT_LIMIT,
   TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT,
 } from "@/lib/exports/types";
 import { cn } from "@/lib/utils";
 
-const PAID_PLAN_ORDER: readonly PaidPlanTier[] = ["pro", "team"];
+const DISPLAY_PLAN_ORDER: readonly ActivePlanTier[] = ["free", "pro", "team"];
 
-const PAID_PLAN_ICONS: Record<PaidPlanTier, ReactNode> = {
+const PLAN_ICONS: Record<ActivePlanTier, ReactNode> = {
+  free: <Sparkles />,
   pro: <Crown />,
   team: <Users />,
 };
@@ -43,6 +46,8 @@ export interface LandingPricingSectionProps {
   defaultInterval?: BillingInterval;
   interval?: BillingInterval;
   onIntervalChange?: (interval: BillingInterval) => void;
+  teamSeats?: number;
+  onTeamSeatsChange?: (seats: number) => void;
   onSelectPaidPlan?: (
     plan: PaidPlanTier,
     interval: BillingInterval,
@@ -56,14 +61,20 @@ export function LandingPricingSection({
   defaultInterval = "monthly",
   interval: controlledInterval,
   onIntervalChange,
+  teamSeats: controlledTeamSeats,
+  onTeamSeatsChange,
   onSelectPaidPlan,
   currentTier = null,
   showComparisonLink = false,
 }: LandingPricingSectionProps) {
   const [uncontrolledInterval, setUncontrolledInterval] =
     useState<BillingInterval>(defaultInterval);
-  const [teamSeats, setTeamSeats] = useState<number>(TEAMS_CALCULATOR_DEFAULT_SEATS);
+  const [uncontrolledSeats, setUncontrolledSeats] = useState<number>(
+    TEAMS_CALCULATOR_DEFAULT_SEATS,
+  );
+
   const interval = controlledInterval ?? uncontrolledInterval;
+  const teamSeats = clampTeamsSeats(controlledTeamSeats ?? uncontrolledSeats);
 
   function setInterval(next: BillingInterval) {
     setUncontrolledInterval(next);
@@ -71,17 +82,15 @@ export function LandingPricingSection({
   }
 
   function adjustTeamSeats(delta: number) {
-    setTeamSeats((prev) =>
-      Math.max(
-        TEAMS_MIN_SEATS,
-        Math.min(TEAMS_MAX_SELF_SERVE_SEATS, prev + delta),
-      ),
+    const next = Math.max(
+      TEAMS_MIN_SEATS,
+      Math.min(TEAMS_MAX_SELF_SERVE_SEATS, teamSeats + delta),
     );
+    setUncontrolledSeats(next);
+    onTeamSeatsChange?.(next);
   }
 
   const teamCalc = computeTeamsPrice(teamSeats, interval);
-  const freePlan = BILLING_PLAN_CATALOG.free;
-  const isCurrentFree = currentTier === "free";
 
   return (
     <div className="flex w-full flex-col items-center gap-8">
@@ -122,45 +131,75 @@ export function LandingPricingSection({
         </button>
       </div>
 
-      {/* 2 Sculpted Paid Plan Cards (Pro & Electric Royal Blue Teams Stage) */}
+      {/* 3 Plan Cards: Free (Left) · Pro Most Popular (Center Royal Blue) · Teams Dynamic Seats (Right) */}
       <ScrollRise
         data-testid="paid-plan-cards-grid"
         stagger
         y={20}
-        className="grid w-full grid-cols-1 items-stretch gap-6 lg:grid-cols-2"
+        className="grid w-full grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6"
       >
-        {PAID_PLAN_ORDER.map((tier) => {
+        {DISPLAY_PLAN_ORDER.map((tier) => {
           const plan = BILLING_PLAN_CATALOG[tier];
+          const isFree = tier === "free";
           const isTeams = tier === "team";
           const isHighlighted = Boolean(plan.highlighted);
-          const displayedMonthlyCents =
-            interval === "monthly"
-              ? plan.monthlyPriceCents
-              : plan.yearlyMonthlyEquivalentCents;
-          const priceLabel = formatUsdFromCents(displayedMonthlyCents);
-          const periodLabel = isTeams ? "/seat/mo" : "/mo";
 
-          const billingNote = isTeams
-            ? interval === "yearly"
-              ? `Billed ${formatUsdFromCents(plan.yearlyTotalCents)}/seat/year — 2 months free`
-              : `Billed monthly · ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/seat/mo on annual (2 months free)`
-            : interval === "yearly"
-              ? `Billed ${formatUsdFromCents(plan.yearlyTotalCents)}/year — 2 months free`
-              : `Billed monthly · ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/mo on annual (2 months free)`;
+          let priceLabel: string;
+          let periodLabel: string;
+          let billingNote: string;
 
-          const scopeLabel = isTeams
-            ? `Product design teams & studios · ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`
-            : `Freelancers & solo designers · Up to ${PRO_MAX_PROJECTS} active projects`;
+          if (isFree) {
+            priceLabel = "$0";
+            periodLabel = "/forever";
+            billingNote = "No credit card required · Upgrade anytime";
+          } else if (isTeams && teamCalc.ok) {
+            const headlineCents =
+              interval === "yearly"
+                ? teamCalc.yearlyTotalCents
+                : teamCalc.monthlyTotalCents;
+            priceLabel = formatUsdFromCents(headlineCents);
+            periodLabel = interval === "yearly" ? "/yr" : "/mo";
+            billingNote =
+              interval === "yearly"
+                ? `${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/seat/mo · ${teamSeats} seats (2 months free)`
+                : `${formatUsdFromCents(plan.monthlyPriceCents)}/seat/mo · ${formatUsdFromCents(teamCalc.yearlyTotalCents)}/yr on annual (2 months free)`;
+          } else {
+            const headlineCents =
+              interval === "yearly" ? plan.yearlyTotalCents : plan.monthlyPriceCents;
+            priceLabel = formatUsdFromCents(headlineCents);
+            periodLabel = interval === "yearly" ? "/yr" : "/mo";
+            billingNote =
+              interval === "yearly"
+                ? `Equals ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/mo · 2 months free (save ${formatUsdFromCents(plan.yearlySavingsCents)}/yr)`
+                : `Billed monthly · ${formatUsdFromCents(plan.yearlyTotalCents)}/yr on annual (2 months free)`;
+          }
 
-          const badgeLabel = isHighlighted ? "Most popular" : "Solo creator";
+          const scopeLabel = isFree
+            ? "Personal workspace · 1 lifetime Case Study"
+            : isTeams
+              ? `Product design teams & studios · ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`
+              : `Freelancers & solo designers · Up to ${PRO_MAX_PROJECTS} active projects`;
 
-          const featuresHeading =
-            tier === "pro"
+          const badgeLabel = isHighlighted
+            ? "Most popular"
+            : isFree
+              ? "Free starter"
+              : `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`;
+
+          const featuresHeading = isFree
+            ? "Included in Free"
+            : tier === "pro"
               ? "Includes everything in Free, plus"
               : "Includes everything in Pro, plus";
 
-          const specs: readonly PlanSpecItem[] =
-            tier === "pro"
+          const specs: readonly PlanSpecItem[] = isFree
+            ? [
+                { label: "Case studies", value: "1 lifetime" },
+                { label: "Share link", value: "Auto URL" },
+                { label: "Exports / mo", value: `${FREE_MONTHLY_EXPORT_LIMIT}/mo (1×)` },
+                { label: "Cloud storage", value: "250 MB" },
+              ]
+            : tier === "pro"
               ? [
                   { label: "Case studies", value: `Up to ${PRO_MAX_PROJECTS} active` },
                   { label: "Custom URL", value: "/p/your-slug" },
@@ -181,53 +220,41 @@ export function LandingPricingSection({
             currentTier === tier || (isTeams && currentTier === "plus");
           const ctaLabel = isCurrent
             ? "Current plan"
-            : tier === "pro"
-              ? "Upgrade to Pro"
-              : `Start Teams (${teamSeats} seats)`;
+            : isFree
+              ? currentTier
+                ? "Go to Dashboard"
+                : "Start free"
+              : tier === "pro"
+                ? "Upgrade to Pro"
+                : `Start Teams (${teamSeats} seats)`;
 
-          const ctaHref = isTeams
-            ? `/sign-up?plan=team&interval=${interval}&seats=${teamSeats}`
-            : `/sign-up?plan=${tier}&interval=${interval}`;
+          const ctaHref = isFree
+            ? currentTier
+              ? "/dashboard"
+              : "/sign-up"
+            : isTeams
+              ? `/sign-up?plan=team&interval=${interval}&seats=${teamSeats}`
+              : `/sign-up?plan=${tier}&interval=${interval}`;
+
+          const canTriggerPaidModal = Boolean(!isFree && !isCurrent && onSelectPaidPlan);
 
           const teamPriceExtra =
             isTeams && teamCalc.ok ? (
               <div
                 data-testid="team-card-seat-stepper"
-                className={cn(
-                  "mt-3 flex items-center justify-between gap-2 rounded-2xl border px-3.5 py-2.5",
-                  isHighlighted
-                    ? "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)]/80"
-                    : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]",
-                )}
+                className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 py-2.5"
               >
                 <div className="flex flex-col">
-                  <span
-                    className={cn(
-                      "type-caption font-bold tabular-nums",
-                      isHighlighted
-                        ? "text-[var(--cf-text-on-royal)]"
-                        : "text-[var(--cf-text-primary)]",
-                    )}
-                  >
+                  <span className="type-caption font-bold text-[var(--cf-text-primary)] tabular-nums">
                     {teamSeats} seats ·{" "}
-                    {formatUsdFromCents(
-                      interval === "yearly"
-                        ? teamCalc.yearlyMonthlyEquivalentCents
-                        : teamCalc.monthlyTotalCents,
-                    )}
-                    /mo
-                  </span>
-                  <span
-                    className={cn(
-                      "type-caption tabular-nums",
-                      isHighlighted
-                        ? "text-[var(--cf-text-on-royal-muted)]"
-                        : "text-[var(--cf-text-secondary)]",
-                    )}
-                  >
                     {interval === "yearly"
-                      ? `${formatUsdFromCents(teamCalc.yearlyTotalCents)}/yr total`
-                      : "Dynamic per-seat total"}
+                      ? `${formatUsdFromCents(plan.yearlyTotalCents)}/seat/yr`
+                      : `${formatUsdFromCents(plan.monthlyPriceCents)}/seat/mo`}
+                  </span>
+                  <span className="type-caption text-[var(--cf-text-secondary)] tabular-nums">
+                    {interval === "yearly"
+                      ? `${formatUsdFromCents(teamCalc.yearlyMonthlyEquivalentCents)}/mo equiv. (2 months free)`
+                      : `${formatUsdFromCents(teamCalc.monthlyTotalCents)}/mo total`}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -237,23 +264,13 @@ export function LandingPricingSection({
                     data-testid="team-card-seats-decrement"
                     disabled={teamSeats <= TEAMS_MIN_SEATS}
                     onClick={() => adjustTeamSeats(-1)}
-                    className={cn(
-                      "inline-flex size-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40",
-                      isHighlighted
-                        ? "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-elevated)]/15 text-[var(--cf-text-on-royal)] hover:bg-[var(--cf-bg-elevated)]/25"
-                        : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)]",
-                    )}
+                    className="inline-flex size-7 items-center justify-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] disabled:opacity-40"
                   >
                     <Minus className="size-3.5" aria-hidden="true" />
                   </button>
                   <span
                     data-testid="team-card-seats-value"
-                    className={cn(
-                      "type-caption min-w-5 text-center font-bold tabular-nums",
-                      isHighlighted
-                        ? "text-[var(--cf-bg-accent)]"
-                        : "text-[var(--cf-text-primary)]",
-                    )}
+                    className="type-caption min-w-5 text-center font-bold text-[var(--cf-text-primary)] tabular-nums"
                   >
                     {teamSeats}
                   </span>
@@ -263,12 +280,7 @@ export function LandingPricingSection({
                     data-testid="team-card-seats-increment"
                     disabled={teamSeats >= TEAMS_MAX_SELF_SERVE_SEATS}
                     onClick={() => adjustTeamSeats(1)}
-                    className={cn(
-                      "inline-flex size-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40",
-                      isHighlighted
-                        ? "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-elevated)]/15 text-[var(--cf-text-on-royal)] hover:bg-[var(--cf-bg-elevated)]/25"
-                        : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)]",
-                    )}
+                    className="inline-flex size-7 items-center justify-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] disabled:opacity-40"
                   >
                     <Plus className="size-3.5" aria-hidden="true" />
                   </button>
@@ -290,67 +302,26 @@ export function LandingPricingSection({
               specs={specs}
               description={plan.tagline}
               ctaLabel={ctaLabel}
-              ctaHref={onSelectPaidPlan ? undefined : ctaHref}
+              ctaHref={canTriggerPaidModal ? undefined : ctaHref}
+              ctaDisabled={isCurrent}
               onSelectPlan={
-                onSelectPaidPlan
+                canTriggerPaidModal && onSelectPaidPlan
                   ? () =>
-                      onSelectPaidPlan(tier, interval, isTeams ? teamSeats : 1)
+                      onSelectPaidPlan(
+                        tier as PaidPlanTier,
+                        interval,
+                        isTeams ? teamSeats : 1,
+                      )
                   : undefined
               }
               featuresHeading={featuresHeading}
               features={plan.features}
-              icon={PAID_PLAN_ICONS[tier]}
+              icon={PLAN_ICONS[tier]}
               highlighted={isHighlighted}
             />
           );
         })}
       </ScrollRise>
-
-      {/* Studio 00 · Free Forever Admission Card */}
-      <div
-        data-testid="free-onboarding-callout"
-        className="v3-pattern-dots-light flex w-full flex-col items-start justify-between gap-5 rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:flex-row sm:items-center sm:px-8 sm:py-7"
-      >
-        <div className="flex flex-wrap items-center gap-4">
-          <span
-            aria-hidden="true"
-            className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
-          >
-            <Sparkles className="size-5" />
-          </span>
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center rounded-md bg-[var(--cf-bg-accent)] px-2 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-                00 · Free Starter
-              </span>
-              <span className="v3-heading-s text-[var(--cf-text-primary)]">
-                {freePlan.name} — $0 / forever
-              </span>
-              <Badge tone="neutral">Included at signup</Badge>
-            </div>
-            <p className="v3-body-s text-[var(--cf-text-secondary)]">
-              1 personal seat · 1 lifetime Case Study credit · Full A-to-Z builder · 5 exports/mo
-              (1440px PNG &amp; PDF with subtle watermark) · 250 MB storage · Auto-generated
-              shareable link.
-            </p>
-          </div>
-        </div>
-        <div className="flex w-full shrink-0 items-center gap-2.5 sm:w-auto">
-          {isCurrentFree ? (
-            <Badge tone="neutral">Current plan</Badge>
-          ) : (
-            <Link
-              href="/sign-up"
-              className="v3-btn-primary w-full py-2.5 pr-3 pl-5 text-sm sm:w-auto"
-            >
-              <span>Start free</span>
-              <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                <ArrowRight className="size-3.5" />
-              </span>
-            </Link>
-          )}
-        </div>
-      </div>
 
       {showComparisonLink && (
         <div className="flex w-full flex-col items-center justify-between gap-4 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 sm:flex-row sm:px-6">

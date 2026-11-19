@@ -306,10 +306,18 @@ export function PaddleCheckoutModal({
               {(["pro", "team"] as const).map((tier) => {
                 const def = BILLING_PLAN_CATALOG[tier];
                 const active = selectedPlan === tier;
-                const unitCents =
+                const displayedCents =
                   selectedInterval === "yearly"
-                    ? def.yearlyMonthlyEquivalentCents
+                    ? def.yearlyTotalCents
                     : def.monthlyPriceCents;
+                const periodSuffix =
+                  selectedInterval === "yearly"
+                    ? tier === "team"
+                      ? "/seat/yr"
+                      : "/yr"
+                    : tier === "team"
+                      ? "/seat/mo"
+                      : "/mo";
                 return (
                   <button
                     key={tier}
@@ -322,10 +330,17 @@ export function PaddleCheckoutModal({
                         : "border-border bg-surface text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <span className="text-foreground type-body-s-strong">{def.name}</span>
-                    <span className="type-caption">
-                      {formatUsdFromCents(unitCents)}
-                      {tier === "team" ? "/seat/mo" : "/mo"}
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <span className="text-foreground type-body-s-strong">{def.name}</span>
+                      {def.highlighted && (
+                        <Badge tone="accent" withDot={false}>
+                          Most popular
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="type-caption font-mono tabular-nums">
+                      {formatUsdFromCents(displayedCents)}
+                      {periodSuffix}
                     </span>
                   </button>
                 );

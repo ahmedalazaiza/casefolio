@@ -22,6 +22,8 @@ export interface TeamsSeatCalculatorProps {
   onIntervalChange?: (interval: BillingInterval) => void;
   onStartTeamsCheckout?: (seats: number, interval: BillingInterval) => void;
   defaultSeats?: number;
+  seats?: number;
+  onSeatsChange?: (seats: number) => void;
 }
 
 export function TeamsSeatCalculator({
@@ -29,8 +31,13 @@ export function TeamsSeatCalculator({
   onIntervalChange,
   onStartTeamsCheckout,
   defaultSeats = TEAMS_CALCULATOR_DEFAULT_SEATS,
+  seats: controlledSeats,
+  onSeatsChange,
 }: TeamsSeatCalculatorProps) {
-  const [seats, setSeats] = useState<number>(Math.max(TEAMS_MIN_SEATS, defaultSeats));
+  const [uncontrolledSeats, setUncontrolledSeats] = useState<number>(
+    Math.max(TEAMS_MIN_SEATS, defaultSeats),
+  );
+  const seats = controlledSeats ?? uncontrolledSeats;
   const sliderId = useId();
 
   const priceResult = computeTeamsPrice(seats, interval);
@@ -45,7 +52,8 @@ export function TeamsSeatCalculator({
       TEAMS_MIN_SEATS,
       Math.min(TEAMS_MAX_SELF_SERVE_SEATS + 1, Math.round(next)),
     );
-    setSeats(bounded);
+    setUncontrolledSeats(bounded);
+    onSeatsChange?.(bounded);
   }
 
   return (
@@ -244,11 +252,13 @@ export function TeamsSeatCalculator({
                   >
                     {formatUsdFromCents(
                       interval === "yearly"
-                        ? priceResult.yearlyMonthlyEquivalentCents
+                        ? priceResult.yearlyTotalCents
                         : priceResult.monthlyTotalCents,
                     )}
                   </span>
-                  <span className="type-body-s text-[var(--cf-text-on-royal-muted)]">/ month</span>
+                  <span className="type-body-s text-[var(--cf-text-on-royal-muted)]">
+                    {interval === "yearly" ? "/ year" : "/ month"}
+                  </span>
                 </div>
 
                 {interval === "yearly" ? (
@@ -256,11 +266,11 @@ export function TeamsSeatCalculator({
                     data-testid="teams-calc-billing-detail"
                     className="type-body-s text-[var(--cf-text-on-royal-muted)]"
                   >
-                    Billed{" "}
+                    Equals{" "}
                     <strong className="text-[var(--cf-text-on-royal)]">
-                      {formatUsdFromCents(priceResult.yearlyTotalCents)}/year
+                      {formatUsdFromCents(priceResult.yearlyMonthlyEquivalentCents)}/mo
                     </strong>{" "}
-                    (saves{" "}
+                    ($4.99/seat/mo · saves{" "}
                     <strong className="text-[var(--cf-bg-accent)]">
                       {formatUsdFromCents(priceResult.annualSavingsCents)}/yr
                     </strong>{" "}
@@ -273,10 +283,10 @@ export function TeamsSeatCalculator({
                   >
                     Or switch to annual for{" "}
                     <strong className="text-[var(--cf-text-on-royal)]">
-                      {formatUsdFromCents(priceResult.yearlyMonthlyEquivalentCents)}/mo
+                      {formatUsdFromCents(priceResult.yearlyTotalCents)}/yr
                     </strong>{" "}
-                    ({formatUsdFromCents(priceResult.yearlyTotalCents)}/yr — 2 months free, save{" "}
-                    {formatUsdFromCents(priceResult.annualSavingsCents)}/yr).
+                    ({formatUsdFromCents(priceResult.yearlyMonthlyEquivalentCents)}/mo — 2 months
+                    free, save {formatUsdFromCents(priceResult.annualSavingsCents)}/yr).
                   </p>
                 )}
               </div>

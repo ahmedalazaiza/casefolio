@@ -102,14 +102,15 @@ describe("AccountSettingsShell & BillingSettingsPanel (C-703)", () => {
     await user.click(screen.getByTestId("open-change-plan-modal"));
     expect(screen.getByTestId("change-plan-dialog")).toBeInTheDocument();
     expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("$7.99");
+    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("Most popular");
     expect(screen.getByTestId("plan-card-team")).toHaveTextContent("$5.99");
     expect(screen.queryByTestId("plan-card-plus")).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId("picker-interval-yearly"));
-    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("$6.66");
-    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("($79.90/yr");
-    expect(screen.getByTestId("plan-card-team")).toHaveTextContent("$4.99");
-    expect(screen.getByTestId("plan-card-team")).toHaveTextContent("($59.90/seat/yr");
+    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("$79.90");
+    expect(screen.getByTestId("plan-card-pro")).toHaveTextContent("($6.66/mo");
+    expect(screen.getByTestId("plan-card-team")).toHaveTextContent("$59.90");
+    expect(screen.getByTestId("plan-card-team")).toHaveTextContent("($4.99/seat/mo");
   });
 
   it("walks through the 2-step subscription cancellation flow and calls DELETE /api/paddle/portal", async () => {

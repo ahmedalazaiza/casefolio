@@ -1140,11 +1140,11 @@ export function BillingSettingsPanel({
                 {(["free", "pro", "team"] as const).map((tier) => {
                   const def = BILLING_PLAN_CATALOG[tier];
                   const selected = pickerTier === tier;
-                  const unitCents =
+                  const displayedPriceCents =
                     tier === "free"
                       ? 0
                       : pickerInterval === "yearly"
-                        ? def.yearlyMonthlyEquivalentCents
+                        ? def.yearlyTotalCents
                         : def.monthlyPriceCents;
 
                   return (
@@ -1172,21 +1172,25 @@ export function BillingSettingsPanel({
                           <span className="text-foreground type-heading-s">
                             {def.name}
                           </span>
-                          {def.highlighted && <ProBadge />}
+                          {def.highlighted && <Badge tone="accent">Most popular</Badge>}
                         </div>
 
                         <div className="flex flex-wrap items-baseline gap-1">
                           <span className="text-foreground type-heading-l font-mono tabular-nums">
-                            {formatUsdFromCents(unitCents)}
+                            {formatUsdFromCents(displayedPriceCents)}
                           </span>
                           <span className="text-muted-foreground type-caption">
                             {tier === "free"
                               ? "/forever"
-                              : tier === "team"
-                                ? "/seat/mo"
-                                : "/mo"}
+                              : pickerInterval === "yearly"
+                                ? tier === "team"
+                                  ? "/seat/yr"
+                                  : "/yr"
+                                : tier === "team"
+                                  ? "/seat/mo"
+                                  : "/mo"}
                             {tier !== "free" && pickerInterval === "yearly"
-                              ? ` (${formatUsdFromCents(def.yearlyTotalCents)}${tier === "team" ? "/seat/yr" : "/yr"})`
+                              ? ` (${formatUsdFromCents(def.yearlyMonthlyEquivalentCents)}${tier === "team" ? "/seat/mo" : "/mo"} · 2 months free)`
                               : ""}
                           </span>
                         </div>

@@ -334,7 +334,7 @@ export function PricingPageClient({
     setSelectedPlan(plan);
     setSelectedInterval(interval);
     setSelectedSeats(
-      plan === "team" ? (seats ?? TEAMS_CALCULATOR_DEFAULT_SEATS) : 1,
+      plan === "team" ? (seats ?? TEAMS_CALCULATOR_DEFAULT_SEATS) : selectedSeats,
     );
     setCheckoutOpen(true);
   }
@@ -348,12 +348,12 @@ export function PricingPageClient({
 
   const proDisplayedLabel = formatUsdFromCents(
     selectedInterval === "yearly"
-      ? BILLING_PLAN_CATALOG.pro.yearlyMonthlyEquivalentCents
+      ? BILLING_PLAN_CATALOG.pro.yearlyTotalCents
       : BILLING_PLAN_CATALOG.pro.monthlyPriceCents,
   );
   const teamDisplayedLabel = formatUsdFromCents(
     selectedInterval === "yearly"
-      ? BILLING_PLAN_CATALOG.team.yearlyMonthlyEquivalentCents
+      ? BILLING_PLAN_CATALOG.team.yearlyTotalCents
       : BILLING_PLAN_CATALOG.team.monthlyPriceCents,
   );
 
@@ -431,6 +431,8 @@ export function PricingPageClient({
               <LandingPricingSection
                 interval={selectedInterval}
                 onIntervalChange={setSelectedInterval}
+                teamSeats={selectedSeats}
+                onTeamSeatsChange={setSelectedSeats}
                 currentTier={currentTier}
                 onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
               />
@@ -502,7 +504,7 @@ export function PricingPageClient({
             </div>
 
             {/* Desktop aligned 3-tier plan summary strip */}
-            <div className="hidden overflow-hidden rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] md:grid md:grid-cols-[37%_20%_20%_23%]">
+            <div className="hidden overflow-hidden rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] md:grid md:grid-cols-[37%_20%_21%_22%]">
               <div className="flex flex-col justify-center py-4 pr-5 pl-6">
                 <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
                   Capability &amp; quota breakdown
@@ -520,24 +522,28 @@ export function PricingPageClient({
                 </p>
                 <p className="type-caption text-[var(--cf-text-secondary)]">$0 / forever</p>
               </div>
-              <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)]/70 px-5 py-4">
-                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
-                  {BILLING_PLAN_CATALOG.pro.name}
-                </p>
-                <p className="type-caption text-[var(--cf-text-secondary)]">{proDisplayedLabel}/mo</p>
-              </div>
-              <div className="flex items-center border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 p-2.5 pr-4 pl-4">
+              <div className="flex items-center border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 p-2.5 px-3">
                 <div className="flex w-full flex-col gap-0.5 rounded-xl bg-[var(--cf-royal)] px-3.5 py-2.5 text-[var(--cf-text-on-royal)]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold">{BILLING_PLAN_CATALOG.team.name}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-sm font-bold">{BILLING_PLAN_CATALOG.pro.name}</span>
                     <span className="rounded-md bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-                      Popular
+                      Most popular
                     </span>
                   </div>
-                  <p className="type-caption text-[var(--cf-text-on-royal-muted)]">
-                    {teamDisplayedLabel}/seat/mo
+                  <p className="type-caption text-[var(--cf-text-on-royal-muted)] tabular-nums">
+                    {proDisplayedLabel}
+                    {selectedInterval === "yearly" ? "/yr" : "/mo"}
                   </p>
                 </div>
+              </div>
+              <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)]/70 py-4 pr-6 pl-5">
+                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
+                  {BILLING_PLAN_CATALOG.team.name}
+                </p>
+                <p className="type-caption text-[var(--cf-text-secondary)] tabular-nums">
+                  {teamDisplayedLabel}
+                  {selectedInterval === "yearly" ? "/seat/yr" : "/seat/mo"}
+                </p>
               </div>
             </div>
 
@@ -590,8 +596,8 @@ export function PricingPageClient({
                       <colgroup className="hidden md:table-column-group">
                         <col className="w-[37%]" />
                         <col className="w-[20%]" />
-                        <col className="w-[20%]" />
-                        <col className="w-[23%]" />
+                        <col className="w-[21%]" />
+                        <col className="w-[22%]" />
                       </colgroup>
                       <thead className="hidden border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]/80 md:table-header-group">
                         <tr>
@@ -609,13 +615,13 @@ export function PricingPageClient({
                           </th>
                           <th
                             scope="col"
-                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 px-5 py-3 text-left text-[var(--cf-text-tertiary)]"
+                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 px-5 py-3 text-left text-[var(--cf-royal-text)]"
                           >
                             {BILLING_PLAN_CATALOG.pro.name}
                           </th>
                           <th
                             scope="col"
-                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 py-3 pr-6 pl-5 text-left text-[var(--cf-royal-text)]"
+                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 py-3 pr-6 pl-5 text-left text-[var(--cf-text-tertiary)]"
                           >
                             {BILLING_PLAN_CATALOG.team.name}
                           </th>
@@ -645,13 +651,13 @@ export function PricingPageClient({
                             </td>
                             <td
                               data-label={BILLING_PLAN_CATALOG.pro.name}
-                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
+                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-royal-text)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:bg-[var(--cf-bg-surface)]/75 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
                             >
                               {renderCellValue(row.pro)}
                             </td>
                             <td
                               data-label={BILLING_PLAN_CATALOG.team.name}
-                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-royal-text)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:bg-[var(--cf-bg-surface)]/75 md:py-4.5 md:pr-6 md:pl-5 md:align-middle md:before:content-none"
+                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:py-4.5 md:pr-6 md:pl-5 md:align-middle md:before:content-none"
                             >
                               {renderCellValue(row.team)}
                             </td>
@@ -679,6 +685,8 @@ export function PricingPageClient({
               <TeamsSeatCalculator
                 interval={selectedInterval}
                 onIntervalChange={setSelectedInterval}
+                seats={selectedSeats}
+                onSeatsChange={setSelectedSeats}
                 onStartTeamsCheckout={
                   isAuthenticated ? handleStartCalculatorCheckout : undefined
                 }
