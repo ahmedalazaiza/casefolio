@@ -290,7 +290,7 @@ function renderCellValue(val: PlanCellValue) {
 
   if (typeof val === "object") {
     return (
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-end gap-1.5 md:justify-start">
         <span
           className={cn(
             "type-caption inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium",
@@ -311,7 +311,7 @@ function renderCellValue(val: PlanCellValue) {
     );
   }
 
-  return <span className="text-foreground type-body-s">{val}</span>;
+  return <span className="text-foreground type-body-s text-right md:text-left">{val}</span>;
 }
 
 export function PricingPageClient({
@@ -502,8 +502,8 @@ export function PricingPageClient({
             </div>
 
             {/* Desktop aligned 3-tier plan summary strip */}
-            <div className="hidden items-center rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-4 md:grid md:grid-cols-[37%_21%_21%_21%]">
-              <div className="pr-4">
+            <div className="hidden overflow-hidden rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] md:grid md:grid-cols-[37%_20%_20%_23%]">
+              <div className="flex flex-col justify-center py-4 pr-5 pl-6">
                 <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
                   Capability &amp; quota breakdown
                 </p>
@@ -514,123 +514,153 @@ export function PricingPageClient({
                     : "monthly billing rates"}
                 </p>
               </div>
-              <div className="px-2">
+              <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)]/70 px-5 py-4">
                 <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
                   {BILLING_PLAN_CATALOG.free.name}
                 </p>
                 <p className="type-caption text-[var(--cf-text-secondary)]">$0 / forever</p>
               </div>
-              <div className="px-2">
+              <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)]/70 px-5 py-4">
                 <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
                   {BILLING_PLAN_CATALOG.pro.name}
                 </p>
                 <p className="type-caption text-[var(--cf-text-secondary)]">{proDisplayedLabel}/mo</p>
               </div>
-              <div className="flex flex-col gap-0.5 rounded-xl bg-[var(--cf-royal)] px-3 py-2 text-[var(--cf-text-on-royal)]">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold">{BILLING_PLAN_CATALOG.team.name}</span>
-                  <span className="rounded-md bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-                    Popular
-                  </span>
+              <div className="flex items-center border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 p-2.5 pr-4 pl-4">
+                <div className="flex w-full flex-col gap-0.5 rounded-xl bg-[var(--cf-royal)] px-3.5 py-2.5 text-[var(--cf-text-on-royal)]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-bold">{BILLING_PLAN_CATALOG.team.name}</span>
+                    <span className="rounded-md bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+                      Popular
+                    </span>
+                  </div>
+                  <p className="type-caption text-[var(--cf-text-on-royal-muted)]">
+                    {teamDisplayedLabel}/seat/mo
+                  </p>
                 </div>
-                <p className="type-caption text-[var(--cf-text-on-royal-muted)]">
-                  {teamDisplayedLabel}/seat/mo
-                </p>
               </div>
             </div>
 
-            {/* Categorized Comparison Cards */}
-            <ScrollRise stagger y={18} className="flex flex-col gap-5">
+            {/* Categorized Comparison Tables (Title outside card + aligned columns) */}
+            <ScrollRise stagger y={18} className="flex flex-col gap-10">
               {COMPARISON_GROUPS.map((group, groupIdx) => (
-                <div
+                <section
                   key={group.id}
-                  className="overflow-hidden rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
+                  aria-labelledby={`comparison-group-${group.id}`}
+                  className="flex flex-col gap-3.5"
                 >
-                  {/* Category header */}
-                  <div className="border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-5 py-4 sm:px-6 md:grid md:grid-cols-[37%_21%_21%_21%] md:items-center">
-                    <div className="flex items-center gap-3 pr-4">
+                  {/* Group heading outside the table card */}
+                  <div className="flex flex-col gap-2.5 px-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex items-start gap-3.5">
                       <span
                         aria-hidden="true"
-                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
+                        className="mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
                       >
                         {group.icon}
                       </span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="v3-label text-[var(--cf-royal-text)]">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <span className="v3-label inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-0.5 text-[var(--cf-royal-text)]">
                             0{groupIdx + 1}
                           </span>
-                          <h3 className="v3-heading-s text-[var(--cf-text-primary)]">
+                          <h3
+                            id={`comparison-group-${group.id}`}
+                            className="v3-heading-m text-[var(--cf-text-primary)]"
+                          >
                             {group.title}
                           </h3>
                         </div>
-                        <p className="type-caption text-[var(--cf-text-secondary)]">
+                        <p className="v3-body-s max-w-2xl text-[var(--cf-text-secondary)]">
                           {group.description}
                         </p>
                       </div>
                     </div>
-                    <span className="type-overline hidden px-2 text-[var(--cf-text-tertiary)] md:block">
-                      {BILLING_PLAN_CATALOG.free.name}
-                    </span>
-                    <span className="type-overline hidden px-2 text-[var(--cf-text-tertiary)] md:block">
-                      {BILLING_PLAN_CATALOG.pro.name}
-                    </span>
-                    <span className="type-overline hidden px-2 text-[var(--cf-royal-text)] md:block">
-                      {BILLING_PLAN_CATALOG.team.name}
+                    <span className="type-caption hidden shrink-0 font-mono text-[var(--cf-text-tertiary)] sm:inline-block">
+                      {group.rows.length}{" "}
+                      {group.rows.length === 1 ? "capability" : "capabilities"}
                     </span>
                   </div>
 
-                  <table
-                    aria-label={`${group.title} comparison`}
-                    className="block w-full border-collapse text-left md:table md:table-fixed"
-                  >
-                    <thead className="sr-only">
-                      <tr>
-                        <th scope="col">Capability</th>
-                        <th scope="col">{BILLING_PLAN_CATALOG.free.name}</th>
-                        <th scope="col">{BILLING_PLAN_CATALOG.pro.name}</th>
-                        <th scope="col">{BILLING_PLAN_CATALOG.team.name}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="flex flex-col divide-y divide-[var(--cf-border-subtle)] md:table-row-group">
-                      {group.rows.map((row) => (
-                        <tr
-                          key={row.feature}
-                          className="flex flex-col gap-2.5 p-4 transition-colors sm:p-5 md:table-row md:p-0 md:hover:bg-[var(--cf-bg-canvas)]/60"
-                        >
-                          <td className="md:w-[37%] md:py-4 md:pr-4 md:pl-6">
-                            <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
-                              {row.feature}
-                            </p>
-                            {row.hint && (
-                              <p className="type-caption mt-0.5 text-[var(--cf-text-secondary)]">
-                                {row.hint}
-                              </p>
-                            )}
-                          </td>
-                          <td
-                            data-label={BILLING_PLAN_CATALOG.free.name}
-                            className="flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:w-[21%] md:px-2 md:py-4 md:before:content-none"
+                  {/* Standalone 4-column comparison table card */}
+                  <div className="overflow-hidden rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
+                    <table
+                      aria-label={`${group.title} comparison`}
+                      className="block w-full border-collapse text-left md:table md:table-fixed"
+                    >
+                      <colgroup className="hidden md:table-column-group">
+                        <col className="w-[37%]" />
+                        <col className="w-[20%]" />
+                        <col className="w-[20%]" />
+                        <col className="w-[23%]" />
+                      </colgroup>
+                      <thead className="hidden border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]/80 md:table-header-group">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="type-overline py-3 pr-5 pl-6 text-left text-[var(--cf-text-tertiary)]"
                           >
-                            {renderCellValue(row.free)}
-                          </td>
-                          <td
-                            data-label={BILLING_PLAN_CATALOG.pro.name}
-                            className="flex items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:w-[21%] md:px-2 md:py-4 md:before:content-none"
+                            Capability
+                          </th>
+                          <th
+                            scope="col"
+                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 px-5 py-3 text-left text-[var(--cf-text-tertiary)]"
                           >
-                            {renderCellValue(row.pro)}
-                          </td>
-                          <td
-                            data-label={BILLING_PLAN_CATALOG.team.name}
-                            className="flex items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-royal-text)] before:content-[attr(data-label)] md:table-cell md:w-[21%] md:bg-[var(--cf-bg-surface)]/75 md:px-2 md:py-4 md:pr-6 md:before:content-none"
+                            {BILLING_PLAN_CATALOG.free.name}
+                          </th>
+                          <th
+                            scope="col"
+                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 px-5 py-3 text-left text-[var(--cf-text-tertiary)]"
                           >
-                            {renderCellValue(row.team)}
-                          </td>
+                            {BILLING_PLAN_CATALOG.pro.name}
+                          </th>
+                          <th
+                            scope="col"
+                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 py-3 pr-6 pl-5 text-left text-[var(--cf-royal-text)]"
+                          >
+                            {BILLING_PLAN_CATALOG.team.name}
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="flex flex-col divide-y divide-[var(--cf-border-subtle)] md:table-row-group">
+                        {group.rows.map((row) => (
+                          <tr
+                            key={row.feature}
+                            className="flex flex-col gap-3 p-4 transition-colors sm:p-5 md:table-row md:p-0 md:hover:bg-[var(--cf-bg-canvas)]/55"
+                          >
+                            <td className="min-w-0 md:py-4.5 md:pr-5 md:pl-6 md:align-top">
+                              <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
+                                {row.feature}
+                              </p>
+                              {row.hint && (
+                                <p className="type-caption mt-1 text-[var(--cf-text-secondary)]">
+                                  {row.hint}
+                                </p>
+                              )}
+                            </td>
+                            <td
+                              data-label={BILLING_PLAN_CATALOG.free.name}
+                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
+                            >
+                              {renderCellValue(row.free)}
+                            </td>
+                            <td
+                              data-label={BILLING_PLAN_CATALOG.pro.name}
+                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
+                            >
+                              {renderCellValue(row.pro)}
+                            </td>
+                            <td
+                              data-label={BILLING_PLAN_CATALOG.team.name}
+                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-royal-text)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:bg-[var(--cf-bg-surface)]/75 md:py-4.5 md:pr-6 md:pl-5 md:align-middle md:before:content-none"
+                            >
+                              {renderCellValue(row.team)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
               ))}
             </ScrollRise>
           </div>
