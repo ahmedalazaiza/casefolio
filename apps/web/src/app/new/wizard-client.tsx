@@ -30,3 +30,4 @@ export type WizardClientProps = ComponentProps<typeof CreateProjectWizard>;
 export function WizardClient(props: WizardClientProps) {
   return <DynamicCreateProjectWizard {...props} />;
 }
+

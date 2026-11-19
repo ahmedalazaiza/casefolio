@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getServerSession } from "@/lib/auth/session";
 import {
   acceptTeamInvitation,
+  declineTeamInvitation,
   resendTeamInvitation,
   revokeTeamInvitation,
 } from "@/lib/entitlements/team-invitations";
@@ -18,6 +19,10 @@ const invitationPostSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("accept"),
+    token: z.string().min(8).optional(),
+  }),
+  z.object({
+    action: z.literal("decline"),
     token: z.string().min(8).optional(),
   }),
 ]);
@@ -74,12 +79,28 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         { status: res.status },
       );
     }
-    // Never expose raw invitation tokens in HTTP responses or logs (`Spec §7.6`)
     return NextResponse.json({
       ok: true,
       invitationId: res.invitationId,
       expiresAtIso: res.expiresAtIso,
+      inviteUrl: res.inviteUrl,
+      emailDelivered: res.emailDelivered,
     });
+  }
+
+  if (parsed.data.action === "decline") {
+    const res = await declineTeamInvitation({
+      actorUserId: ctx.user.id,
+      invitationId: id,
+      token: parsed.data.token,
+    });
+    if (!res.ok) {
+      return NextResponse.json(
+        { ok: false, code: res.code, error: res.error },
+        { status: res.status },
+      );
+    }
+    return NextResponse.json(res);
   }
 
   const res = await acceptTeamInvitation({

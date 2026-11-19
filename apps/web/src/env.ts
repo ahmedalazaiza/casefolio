@@ -78,7 +78,12 @@ export function assertProductionBillingEnvironment(
   const problems: string[] = [];
   if (source.PADDLE_ENV !== "production") problems.push("PADDLE_ENV must be 'production'");
   const placeholders = Object.entries(source)
-    .filter(([key, value]) => key.startsWith("PADDLE_PRICE_") && /^pri_.*_id$/.test(value ?? ""))
+    .filter(
+      ([key, value]) =>
+        key.startsWith("PADDLE_PRICE_") &&
+        !key.startsWith("PADDLE_PRICE_PLUS_") &&
+        /^pri_.*_id$/.test(value ?? ""),
+    )
     .map(([key]) => key);
   if (placeholders.length > 0) {
     problems.push(`placeholder Paddle price ids in ${placeholders.join(", ")}`);

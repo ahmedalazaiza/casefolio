@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { can } from "@/lib/entitlements";
-import { runBrowserAssistedExport } from "@/lib/exports/client-renderer";
+import {
+  runBrowserAssistedExportDetailed,
+  triggerExportFileDownload,
+} from "@/lib/exports/client-renderer";
 import {
   EXPORT_PRESETS,
   type EnqueueExportResult,
@@ -70,14 +73,31 @@ export function ExportCaseStudyDialog({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
+  const sessionRequestedIdsRef = useRef<Set<string>>(new Set());
+  const autoDownloadedIdsRef = useRef<Set<string>>(new Set());
+  const attemptedClientRenderIdsRef = useRef<Set<string>>(new Set());
+
   const isFreePlan = !can(ownerPlan, "remove_watermark");
-  const selectedPreset = EXPORT_PRESETS.find((p) => p.format === selectedFormat) ?? EXPORT_PRESETS[0]!;
+  const selectedPreset =
+    EXPORT_PRESETS.find((p) => p.format === selectedFormat) ?? EXPORT_PRESETS[0]!;
   const isSelectedLocked =
     selectedPreset.format === "pdf"
       ? !can(ownerPlan, "export_pdf")
       : selectedPreset.format === "behance"
         ? !can(ownerPlan, "export_behance")
         : false;
+
+  const autoDownloadOnce = useCallback((job: ExportHistoryItem) => {
+    if (
+      job.status === "completed" &&
+      job.downloadUrl &&
+      sessionRequestedIdsRef.current.has(job.id) &&
+      !autoDownloadedIdsRef.current.has(job.id)
+    ) {
+      autoDownloadedIdsRef.current.add(job.id);
+      triggerExportFileDownload(job.downloadUrl);
+    }
+  }, []);
 
   useEffect(() => {
     if (!activeJob) return;
@@ -98,6 +118,12 @@ export function ExportCaseStudyDialog({
         if (json.ok && json.exportJob) {
           setActiveJob(json.exportJob);
           if (json.exportJob.status === "completed") {
+            autoDownloadOnce(json.exportJob);
+            onExportCompleted?.(json.exportJob);
+          } else if (json.exportJob.status === "failed") {
+            setErrorMessage(
+              json.exportJob.error ?? "Export rendering could not complete. Please try again.",
+            );
             onExportCompleted?.(json.exportJob);
           }
         }
@@ -107,25 +133,44 @@ export function ExportCaseStudyDialog({
     }, 800);
 
     return () => clearInterval(interval);
-  }, [activeJob, onExportCompleted]);
+  }, [activeJob, autoDownloadOnce, onExportCompleted]);
 
   useEffect(() => {
     if (!activeJob || activeJob.status !== "queued" || !activeJob.renderUrl) {
       return;
     }
+    if (attemptedClientRenderIdsRef.current.has(activeJob.id)) {
+      return;
+    }
 
     const fallbackTimer = setTimeout(async () => {
-      const completed = await runBrowserAssistedExport(activeJob);
-      if (completed) {
-        setActiveJob(completed);
-        if (completed.status === "completed") {
-          onExportCompleted?.(completed);
-        }
+      if (attemptedClientRenderIdsRef.current.has(activeJob.id)) {
+        return;
       }
-    }, 2200);
+      attemptedClientRenderIdsRef.current.add(activeJob.id);
+
+      const outcome = await runBrowserAssistedExportDetailed(activeJob);
+      if (outcome.status === "completed") {
+        setActiveJob(outcome.exportJob);
+        autoDownloadOnce(outcome.exportJob);
+        onExportCompleted?.(outcome.exportJob);
+        return;
+      }
+
+      if (outcome.status === "failed") {
+        const failedJob: ExportHistoryItem = outcome.exportJob ?? {
+          ...activeJob,
+          status: "failed",
+          error: outcome.error,
+        };
+        setActiveJob(failedJob);
+        setErrorMessage(outcome.error);
+        onExportCompleted?.(failedJob);
+      }
+    }, 250);
 
     return () => clearTimeout(fallbackTimer);
-  }, [activeJob, onExportCompleted]);
+  }, [activeJob, autoDownloadOnce, onExportCompleted]);
 
   const handleStartExport = useCallback(async () => {
     setErrorMessage(null);
@@ -142,20 +187,33 @@ export function ExportCaseStudyDialog({
         }),
       });
 
-      const payload = (await response.json()) as EnqueueExportResult;
+      const payload = (await response.json().catch(() => null)) as EnqueueExportResult | null;
+      if (!payload) {
+        setErrorMessage(
+          `Could not start export job (HTTP ${response.status}). Please try again.`,
+        );
+        return;
+      }
+
       if (!payload.ok) {
         setErrorMessage(payload.error);
         return;
       }
 
+      sessionRequestedIdsRef.current.add(payload.exportJob.id);
       setActiveJob(payload.exportJob);
       onExportQueued?.(payload.exportJob);
+
+      if (payload.exportJob.status === "completed") {
+        autoDownloadOnce(payload.exportJob);
+        onExportCompleted?.(payload.exportJob);
+      }
     } catch {
       setErrorMessage("Could not start export job. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [projectId, selectedFormat, onExportQueued]);
+  }, [autoDownloadOnce, onExportCompleted, onExportQueued, projectId, selectedFormat]);
 
   return (
     <Dialog
@@ -180,7 +238,7 @@ export function ExportCaseStudyDialog({
         <DialogHeader>
           <DialogTitle>Export &ldquo;{projectName}&rdquo;</DialogTitle>
           <DialogDescription>
-            Choose an export preset. Chromium renders your live typography, theme tokens, and
+            Choose an export preset. Casefolio renders your live typography, theme tokens, and
             cropped slot images at full resolution.
           </DialogDescription>
         </DialogHeader>
@@ -239,7 +297,7 @@ export function ExportCaseStudyDialog({
                   {locked && (
                     <span className="text-warning type-caption inline-flex items-center gap-1.5 pt-0.5">
                       <Lock className="size-3" />
-                      <span>Requires Pro, Team, or Plus plan</span>
+                      <span>Requires Pro or Teams plan</span>
                     </span>
                   )}
                 </button>
@@ -262,16 +320,6 @@ export function ExportCaseStudyDialog({
             </div>
           )}
 
-          {ownerPlan === "plus" && (
-            <div className="border-border bg-sunken flex items-center gap-2 rounded-xl border px-4 py-3">
-              <Sparkles className="text-primary size-3.5 shrink-0" />
-              <span className="text-muted-foreground type-caption">
-                White-Label exports active (Casefolio Plus) — zero Casefolio branding in rendered
-                files or PDF metadata.
-              </span>
-            </div>
-          )}
-
           {activeJob && (
             <div
               data-testid="export-dialog-live-status"
@@ -285,11 +333,11 @@ export function ExportCaseStudyDialog({
                     <div className="flex flex-col">
                       <span className="text-foreground type-body-s-strong">
                         {activeJob.status === "queued"
-                          ? "Queued in export worker..."
-                          : "Rendering case study via Chromium..."}
+                          ? "Preparing case study render..."
+                          : "Rendering case study at high resolution..."}
                       </span>
                       <span className="text-tertiary type-caption">
-                        Loading Google Fonts and high-DPI assets
+                        Loading fonts and high-DPI slot assets
                       </span>
                     </div>
                   </>
@@ -371,9 +419,8 @@ export function ExportCaseStudyDialog({
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         featureTitle={`Unlock ${selectedPreset.label}`}
-        featureDescription="Upgrade to Casefolio Pro for high-resolution PDF case studies, Behance 1400px slices, and watermark-free exports."
+        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual, up to 10 projects) or Teams ($5.99/seat/mo · 2 months free on annual) for watermark-free PDF & 2× PNG exports and Behance 1,400px image packs."
       />
     </Dialog>
   );
 }
-

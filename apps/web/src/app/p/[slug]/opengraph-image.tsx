@@ -196,7 +196,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps): P
               ? published.project.customDomain
                 ? `${published.project.customDomain}/p/${published.project.slug}`
                 : `/p/${published.project.slug}`
-              : `casefolio.design/p/${published.project.slug}`}
+              : `casefolio.app/p/${published.project.slug}`}
           </span>
         </div>
       </div>

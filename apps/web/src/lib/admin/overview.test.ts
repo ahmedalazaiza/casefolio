@@ -64,14 +64,14 @@ describe("admin overview & analytics metrics (C-901)", () => {
     expect(adminAnalyticsRangeSchema.parse("bad")).toBe("30d");
 
     expect(computeSubscriptionMrrUsd("free", "monthly")).toBe(0);
-    expect(computeSubscriptionMrrUsd("pro", "monthly")).toBe(9.99);
-    expect(computeSubscriptionMrrUsd("pro", "yearly")).toBe(7.99);
-    expect(computeSubscriptionMrrUsd("team", "monthly")).toBe(6.99);
-    expect(computeSubscriptionMrrUsd("team", "monthly", 3)).toBe(20.97);
-    expect(computeSubscriptionMrrUsd("team", "yearly")).toBe(5.59);
-    expect(computeSubscriptionMrrUsd("team", "yearly", 3)).toBe(16.77);
-    expect(computeSubscriptionMrrUsd("plus", "monthly", 20)).toBe(99);
-    expect(computeSubscriptionMrrUsd("plus", "yearly", 20)).toBe(79);
+    expect(computeSubscriptionMrrUsd("pro", "monthly")).toBe(7.99);
+    expect(computeSubscriptionMrrUsd("pro", "yearly")).toBe(6.66);
+    expect(computeSubscriptionMrrUsd("team", "monthly")).toBe(5.99);
+    expect(computeSubscriptionMrrUsd("team", "monthly", 3)).toBe(17.97);
+    expect(computeSubscriptionMrrUsd("team", "yearly")).toBe(4.99);
+    expect(computeSubscriptionMrrUsd("team", "yearly", 3)).toBe(14.97);
+    expect(computeSubscriptionMrrUsd("plus", "monthly", 5)).toBe(29.95);
+    expect(computeSubscriptionMrrUsd("plus", "yearly", 5)).toBe(24.95);
 
     const created = new Date("2026-01-01T00:00:00Z");
     expect(

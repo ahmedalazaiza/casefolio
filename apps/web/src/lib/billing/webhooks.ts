@@ -4,8 +4,9 @@ import { env } from "@/env";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import {
   evaluateSubscriptionLifecycle,
+  FREE_LIFETIME_PROJECT_LIMIT,
   PLAN_CATALOG_VERSION,
-  PLUS_INCLUDED_SEATS,
+  PRO_MAX_PROJECTS,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
   UNLIMITED_CASE_STUDIES,
@@ -567,8 +568,12 @@ async function loadCheckoutIntent(
 
   const meta = asRecord(op.meta);
   const orgId = asNonEmptyString(meta?.orgId);
-  const plan =
-    meta?.plan === "pro" || meta?.plan === "team" || meta?.plan === "plus" ? meta.plan : null;
+  const plan: PaidPlanTier | null =
+    meta?.plan === "pro"
+      ? "pro"
+      : meta?.plan === "team" || meta?.plan === "plus"
+        ? "team"
+        : null;
 
   return {
     operationId: op.id,
@@ -799,11 +804,11 @@ async function processValidatedPaddleWebhookOnce(
       }
     }
 
-    // 2c. Scope/plan consistency: Pro belongs to a personal workspace; Team and Plus belong to an organization.
+    // 2c. Scope/plan consistency: Pro belongs to a personal workspace; Teams belongs to an organization.
     const scopeIsOrg = existingSub ? Boolean(existingSub.orgId) : Boolean(intent?.orgId);
     const scopeMatches = details.plan
       ? scopeIsOrg
-        ? details.plan === "team" || details.plan === "plus"
+        ? details.plan === "team"
         : details.plan === "pro"
       : true;
     if (!scopeMatches) {
@@ -828,8 +833,7 @@ async function processValidatedPaddleWebhookOnce(
     }
 
     // 2d. One live subscription per scope. A second purchase must never overwrite (and thereby
-    // orphan) the first, EXCEPT an explicit organization upgrade from Team -> Plus.
-    let replacedPaddleSubToCancel: string | null = null;
+    // orphan) the first.
     if (!existingSub && intent) {
       const [scopeRow] = intent.orgId
         ? await tx
@@ -850,17 +854,11 @@ async function processValidatedPaddleWebhookOnce(
             .orderBy(desc(dbSchema.subscriptions.updatedAt))
             .limit(1);
 
-      const isOrgTierUpgrade =
-        Boolean(intent.orgId) &&
-        scopeRow?.plan === "team" &&
-        (details.plan === "plus" || intent.plan === "plus");
-
       if (
         scopeRow &&
         scopeRow.paddleSubscriptionId &&
         scopeRow.paddleSubscriptionId !== details.paddleSubscriptionId &&
-        LIVE_SUBSCRIPTION_STATUSES.has(scopeRow.status) &&
-        !isOrgTierUpgrade
+        LIVE_SUBSCRIPTION_STATUSES.has(scopeRow.status)
       ) {
         await tx
           .update(dbSchema.billingOperations)
@@ -894,16 +892,7 @@ async function processValidatedPaddleWebhookOnce(
         };
       }
 
-      if (
-        isOrgTierUpgrade &&
-        scopeRow?.paddleSubscriptionId &&
-        scopeRow.paddleSubscriptionId !== details.paddleSubscriptionId &&
-        LIVE_SUBSCRIPTION_STATUSES.has(scopeRow.status)
-      ) {
-        replacedPaddleSubToCancel = scopeRow.paddleSubscriptionId;
-      }
-
-      // Ended / never-paid / upgraded rows are safely reused for the new subscription.
+      // Ended / never-paid rows are safely reused for the new subscription.
       existingSub = scopeRow;
     }
 
@@ -995,14 +984,7 @@ async function processValidatedPaddleWebhookOnce(
       };
     }
 
-    const storedPlan: PlanTier = resolvedOrgId
-      ? details.plan === "plus" || details.plan === "team"
-        ? details.plan
-        : existingSub?.plan === "plus"
-          ? "plus"
-          : "team"
-      : (details.plan ??
-          (existingSub?.plan && existingSub.plan !== "free" ? existingSub.plan : "pro"));
+    const storedPlan: PlanTier = resolvedOrgId ? "team" : "pro";
 
     const nextInterval: BillingInterval = details.interval ?? existingSub?.interval ?? "monthly";
     const nextPeriodEnd = details.currentPeriodEnd ?? existingSub?.currentPeriodEnd ?? null;
@@ -1027,16 +1009,7 @@ async function processValidatedPaddleWebhookOnce(
     let nextRenewalQuantity: number | null = null;
     let nextPendingOpId: string | null = existingSub?.pendingOperationId ?? null;
 
-    if (storedPlan === "plus") {
-      const isFailedPayment =
-        details.lifecycleStatus === "past_due" ||
-        envelope.event_type === "transaction.payment_failed";
-      nextPaidCapacity = isFailedPayment
-        ? (existingSub?.currentPaidCapacity ?? PLUS_INCLUDED_SEATS)
-        : PLUS_INCLUDED_SEATS;
-      nextRenewalQuantity = null;
-      nextPendingOpId = null;
-    } else if (storedPlan === "team") {
+    if (storedPlan === "team") {
       const requestedSeats = details.seats !== null ? clampTeamSeats(details.seats) : null;
       const isFailedPayment =
         details.lifecycleStatus === "past_due" ||
@@ -1044,7 +1017,7 @@ async function processValidatedPaddleWebhookOnce(
 
       if (isFailedPayment) {
         // Failed payment on a seat increase or renewal NEVER grants additional seats
-        nextPaidCapacity = existingSub?.currentPaidCapacity ?? 1;
+        nextPaidCapacity = existingSub ? clampTeamSeats(existingSub.currentPaidCapacity) : 1;
         nextRenewalQuantity = existingSub?.renewalQuantity ?? null;
         if (details.customOperationId) {
           await tx
@@ -1057,6 +1030,7 @@ async function processValidatedPaddleWebhookOnce(
         nextRenewalQuantity = null;
         nextPendingOpId = null;
       } else {
+        const currentSeats = clampTeamSeats(existingSub.currentPaidCapacity);
         const periodAdvanced = Boolean(
           nextPeriodEnd &&
             existingSub.currentPeriodEnd &&
@@ -1072,22 +1046,25 @@ async function processValidatedPaddleWebhookOnce(
               occurredAt.getTime() >= existingSub.currentPeriodEnd.getTime() - 60_000));
 
         if (details.prorationBillingMode === "do_not_bill" && requestedSeats !== null) {
-          if (requestedSeats < existingSub.currentPaidCapacity) {
-            nextPaidCapacity = existingSub.currentPaidCapacity;
+          if (requestedSeats < currentSeats) {
+            nextPaidCapacity = currentSeats;
             nextRenewalQuantity = requestedSeats;
             nextPendingOpId = details.customOperationId ?? existingSub.pendingOperationId;
-          } else if (requestedSeats === existingSub.currentPaidCapacity) {
+          } else if (requestedSeats === currentSeats) {
             // Canceled pending decrease
-            nextPaidCapacity = existingSub.currentPaidCapacity;
+            nextPaidCapacity = currentSeats;
             nextRenewalQuantity = null;
             nextPendingOpId = null;
           } else {
-            nextPaidCapacity = existingSub.currentPaidCapacity;
+            nextPaidCapacity = currentSeats;
             nextRenewalQuantity = existingSub.renewalQuantity;
           }
         } else if (isGenuineRenewal) {
           nextPaidCapacity =
-            requestedSeats ?? existingSub.renewalQuantity ?? existingSub.currentPaidCapacity;
+            requestedSeats ??
+            (existingSub.renewalQuantity !== null
+              ? clampTeamSeats(existingSub.renewalQuantity)
+              : currentSeats);
           nextRenewalQuantity = null;
           if (existingSub.pendingOperationId) {
             await tx
@@ -1096,16 +1073,13 @@ async function processValidatedPaddleWebhookOnce(
               .where(eq(dbSchema.billingOperations.id, existingSub.pendingOperationId));
           }
           nextPendingOpId = null;
-        } else if (
-          requestedSeats !== null &&
-          requestedSeats < existingSub.currentPaidCapacity
-        ) {
+        } else if (requestedSeats !== null && requestedSeats < currentSeats) {
           // Never shrink `currentPaidCapacity` mid-period based on webhook item quantity (`Spec §8 line 270`)
-          nextPaidCapacity = existingSub.currentPaidCapacity;
+          nextPaidCapacity = currentSeats;
           nextRenewalQuantity = requestedSeats;
         } else if (
           requestedSeats !== null &&
-          requestedSeats > existingSub.currentPaidCapacity &&
+          requestedSeats > currentSeats &&
           details.lifecycleStatus === "active"
         ) {
           // Funded prorated seat increase expands capacity immediately without resetting usage
@@ -1119,7 +1093,7 @@ async function processValidatedPaddleWebhookOnce(
           }
           nextPendingOpId = null;
         } else {
-          nextPaidCapacity = existingSub.currentPaidCapacity;
+          nextPaidCapacity = currentSeats;
           nextRenewalQuantity = existingSub.renewalQuantity;
         }
       }
@@ -1152,12 +1126,9 @@ async function processValidatedPaddleWebhookOnce(
           ? null
           : (details.scheduledChangeAction ?? null);
 
-    const subMaxSeats =
-      storedPlan === "plus"
-        ? PLUS_INCLUDED_SEATS
-        : storedPlan === "team"
-          ? nextPaidCapacity
-          : 1;
+    const subMaxSeats = storedPlan === "team" ? nextPaidCapacity : 1;
+    const subMaxCaseStudies =
+      storedPlan === "team" ? UNLIMITED_CASE_STUDIES : PRO_MAX_PROJECTS;
 
     let savedSubscriptionId: string;
 
@@ -1176,8 +1147,8 @@ async function processValidatedPaddleWebhookOnce(
           status: details.lifecycleStatus,
           currentPaidCapacity: nextPaidCapacity,
           maxSeats: subMaxSeats,
-          maxCaseStudies: UNLIMITED_CASE_STUDIES,
-          customDomainEnabled: storedPlan === "plus",
+          maxCaseStudies: subMaxCaseStudies,
+          customDomainEnabled: false,
           watermarkEnabled: false,
           renewalQuantity: nextRenewalQuantity,
           pastDueSince: nextPastDueSince,
@@ -1205,8 +1176,8 @@ async function processValidatedPaddleWebhookOnce(
           status: details.lifecycleStatus,
           currentPaidCapacity: nextPaidCapacity,
           maxSeats: subMaxSeats,
-          maxCaseStudies: UNLIMITED_CASE_STUDIES,
-          customDomainEnabled: storedPlan === "plus",
+          maxCaseStudies: subMaxCaseStudies,
+          customDomainEnabled: false,
           watermarkEnabled: false,
           renewalQuantity: nextRenewalQuantity,
           pastDueSince: nextPastDueSince,
@@ -1258,22 +1229,21 @@ async function processValidatedPaddleWebhookOnce(
         .where(eq(dbSchema.users.id, resolvedUserId));
     }
 
-    const wsMaxSeats =
-      effectivePlan === "plus"
-        ? PLUS_INCLUDED_SEATS
-        : effectivePlan === "team"
-          ? nextPaidCapacity
-          : 1;
-    const wsMaxCaseStudies = effectivePlan === "free" ? 1 : UNLIMITED_CASE_STUDIES;
-    const wsCustomDomainEnabled = effectivePlan === "plus";
+    const wsMaxSeats = effectivePlan === "team" ? nextPaidCapacity : 1;
+    const wsMaxCaseStudies =
+      effectivePlan === "team"
+        ? UNLIMITED_CASE_STUDIES
+        : effectivePlan === "pro"
+          ? PRO_MAX_PROJECTS
+          : FREE_LIFETIME_PROJECT_LIMIT;
+    const wsCustomDomainEnabled = false;
     const wsWatermarkEnabled = effectivePlan === "free";
 
     if (resolvedOrgId) {
       await tx
         .update(dbSchema.organizations)
         .set({
-          seats:
-            effectivePlan === "team" || effectivePlan === "plus" ? nextPaidCapacity : 0,
+          seats: effectivePlan === "team" ? nextPaidCapacity : 0,
         })
         .where(eq(dbSchema.organizations.id, resolvedOrgId));
 
@@ -1348,9 +1318,13 @@ async function processValidatedPaddleWebhookOnce(
         .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
     }
 
-    const previousEffectivePlan: PlanTier = existingSub ? existingSub.plan : previousUserPlan;
+    const previousEffectivePlan: PlanTier = existingSub
+      ? existingSub.plan === "plus"
+        ? "team"
+        : existingSub.plan
+      : previousUserPlan;
     const isUpgradeEvent =
-      (effectivePlan === "pro" || effectivePlan === "team" || effectivePlan === "plus") &&
+      (effectivePlan === "pro" || effectivePlan === "team") &&
       (envelope.event_type === "subscription.activated" ||
         envelope.event_type === "subscription.created" ||
         previousEffectivePlan !== effectivePlan);
@@ -1388,7 +1362,7 @@ async function processValidatedPaddleWebhookOnce(
       resolvedOrgId,
       resolvedUserId,
       hasWorkspaceId: Boolean(targetWorkspaceId),
-      duplicateSubscriptionToCancel: replacedPaddleSubToCancel,
+      duplicateSubscriptionToCancel: null,
       postDowngradePersonalWorkspaceId:
         !resolvedOrgId && (!lifecycle.grantsPaidAccess || lifecycle.isPastDueReadOnly)
           ? targetWorkspaceId

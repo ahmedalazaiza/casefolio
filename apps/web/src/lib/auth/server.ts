@@ -15,6 +15,7 @@ import {
   sendVerificationOtpEmail,
 } from "@/lib/auth/email";
 import { organizationAccessControl, organizationRoles } from "@/lib/auth/permissions";
+import { TEAMS_MAX_SELF_SERVE_SEATS } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import {
   sendPasswordChangedEmail,
@@ -59,6 +60,10 @@ export const auth = betterAuth({
       members: dbSchema.memberships,
     },
   }),
+  session: {
+    expiresIn: 5 * 24 * 60 * 60,
+    updateAge: 15 * 60,
+  },
   advanced: {
     ipAddress: {
       ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"],
@@ -394,15 +399,9 @@ export const auth = betterAuth({
 
           const ensured = await ensureTeamWorkspaceForOrganization(org.id, inviter.id);
           const ent = await resolveWorkspaceEntitlementState(ensured.workspaceId);
-          if (
-            !ent ||
-            (ent.plan !== "team" && ent.plan !== "plus") ||
-            ent.isFrozen ||
-            ent.lifecycle.isPastDueInGrace
-          ) {
+          if (!ent || ent.plan !== "team" || ent.isFrozen || ent.lifecycle.isPastDueInGrace) {
             throw new APIError("FORBIDDEN", {
-              message:
-                "An active Casefolio Team or Plus subscription is required to invite members.",
+              message: "An active Casefolio Teams subscription is required to invite members.",
             });
           }
 
@@ -410,8 +409,8 @@ export const auth = betterAuth({
           if (occupancy.occupiedSeats >= occupancy.admissionCeiling) {
             throw new APIError("FORBIDDEN", {
               message:
-                ent.plan === "team" && occupancy.admissionCeiling >= 10
-                  ? "Team plans support up to 10 seats. Upgrade to Casefolio Plus for up to 20 seats."
+                occupancy.admissionCeiling >= TEAMS_MAX_SELF_SERVE_SEATS
+                  ? `Self-serve Teams supports up to ${TEAMS_MAX_SELF_SERVE_SEATS} seats. Contact support for 26+ enterprise seats.`
                   : "All paid team seats are currently occupied or reserved.",
             });
           }
@@ -473,7 +472,7 @@ export const auth = betterAuth({
 
           const ensured = await ensureTeamWorkspaceForOrganization(org.id);
           const ent = await resolveWorkspaceEntitlementState(ensured.workspaceId);
-          if (!ent || (ent.plan !== "team" && ent.plan !== "plus") || ent.isFrozen) {
+          if (!ent || ent.plan !== "team" || ent.isFrozen) {
             throw new APIError("FORBIDDEN", {
               message: "Team workspace subscription is not active.",
             });

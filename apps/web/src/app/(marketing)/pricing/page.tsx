@@ -9,7 +9,7 @@ import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 export const metadata: Metadata = {
   title: "Pricing & Plans — Casefolio",
   description:
-    "Start free forever with 1 active UI/UX case study, or upgrade to Pro, Team, or Plus for unlimited projects, Behance and PDF exports, team seats, and custom domains. Save 20% annually.",
+    "Start free with 1 lifetime UI/UX Case Study credit, or upgrade to Casefolio Pro ($7.99/mo · up to 10 active projects) or Teams ($5.99/seat/mo · 2–25 seats, unlimited shared projects). Get 2 months free on annual billing.",
   alternates: {
     canonical: "/pricing",
   },
@@ -35,8 +35,6 @@ export default async function PricingPage({
     pro_yearly: resolveServerPaddlePriceId("pro", "yearly"),
     team_monthly: resolveServerPaddlePriceId("team", "monthly"),
     team_yearly: resolveServerPaddlePriceId("team", "yearly"),
-    plus_monthly: resolveServerPaddlePriceId("plus", "monthly"),
-    plus_yearly: resolveServerPaddlePriceId("plus", "yearly"),
   };
 
   return (

@@ -15,6 +15,7 @@ import { magicLinkSchema, signInPasswordSchema } from "@/lib/auth/schemas";
 export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
   const router = useRouter();
   const safeCallback = sanitizeCallbackUrl(callbackUrl);
+  const hasCustomCallback = Boolean(callbackUrl && safeCallback !== "/dashboard");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,6 +68,9 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
       if (error.code === "EMAIL_NOT_VERIFIED") {
         // The server already sent a fresh verification code; continue on /verify instead of dead-ending.
         const params = new URLSearchParams({ email: parsed.data.email, sent: "1" });
+        if (hasCustomCallback) {
+          params.set("callbackUrl", safeCallback);
+        }
         router.push(`/verify?${params.toString()}`);
         return;
       }
@@ -251,7 +255,14 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
 
       <p className="text-muted-foreground type-caption">
         New to Casefolio?{" "}
-        <Link href="/sign-up" className="text-primary font-medium underline underline-offset-4">
+        <Link
+          href={
+            hasCustomCallback
+              ? `/sign-up?callbackUrl=${encodeURIComponent(safeCallback)}`
+              : "/sign-up"
+          }
+          className="text-primary font-medium underline underline-offset-4"
+        >
           Create an account
         </Link>
       </p>

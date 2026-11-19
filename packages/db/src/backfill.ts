@@ -262,7 +262,7 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
     }
   }
 
-  // 5. Backfill workspaceId on assets & exports from their project
+  // 5. Backfill workspaceId on assets & exports from their project, and ensure lifetimeProjectsCreated >= retained count
   const allProjectsWithWs = await db
     .select({
       id: projects.id,
@@ -279,9 +279,16 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
     })
     .from(projects);
 
+  const projectCountByWorkspace = new Map<string, number>();
+
   for (const p of allProjectsWithWs) {
     try {
       if (p.workspaceId) {
+        projectCountByWorkspace.set(
+          p.workspaceId,
+          (projectCountByWorkspace.get(p.workspaceId) ?? 0) + 1,
+        );
+
         await db
           .update(assets)
           .set({ workspaceId: p.workspaceId })
@@ -332,7 +339,39 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
     }
   }
 
+  for (const [wsId, retainedCount] of projectCountByWorkspace.entries()) {
+    const [wsRow] = await db
+      .select({ lifetimeProjectsCreated: workspaces.lifetimeProjectsCreated })
+      .from(workspaces)
+      .where(eq(workspaces.id, wsId))
+      .limit(1);
+    if (wsRow && wsRow.lifetimeProjectsCreated < retainedCount) {
+      await db
+        .update(workspaces)
+        .set({ lifetimeProjectsCreated: retainedCount })
+        .where(eq(workspaces.id, wsId));
+    }
+  }
+
   // 7. Link unlinked subscriptions to their exact workspace (no personal/team cross-pollution)
+  //    and normalize any legacy `"plus"` tier to `"team"` (2–25 seats) and `"pro"` maxCaseStudies to 10.
+  await db
+    .update(subscriptions)
+    .set({
+      plan: "team",
+      customDomainEnabled: false,
+      maxCaseStudies: -1,
+    })
+    .where(eq(subscriptions.plan, "plus"));
+
+  await db
+    .update(subscriptions)
+    .set({
+      maxCaseStudies: 10,
+      customDomainEnabled: false,
+    })
+    .where(and(eq(subscriptions.plan, "pro"), isNull(subscriptions.orgId)));
+
   const unlinkedSubs = await db
     .select()
     .from(subscriptions)
@@ -347,20 +386,21 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
         .where(eq(organizations.id, sub.orgId))
         .limit(1);
       if (wsId) {
-        const capacity =
-          sub.plan === "plus"
-            ? 20
-            : Math.max(2, Math.min(10, orgRow?.seats ?? 2));
+        const capacity = Math.max(
+          2,
+          Math.min(25, sub.plan === "plus" ? 25 : (orgRow?.seats ?? 2)),
+        );
         await db
           .update(subscriptions)
           .set({
             workspaceId: wsId,
+            plan: "team",
             currentPaidCapacity: capacity,
             maxSeats: capacity,
             maxCaseStudies: -1,
-            customDomainEnabled: sub.plan === "plus",
+            customDomainEnabled: false,
             watermarkEnabled: false,
-            ...(sub.plan === "team" || sub.plan === "plus" ? { userId: null } : {}),
+            userId: null,
           })
           .where(eq(subscriptions.id, sub.id));
         subscriptionsLinked += 1;
@@ -373,9 +413,10 @@ export async function backfillBusinessTenancy(db: Database): Promise<BackfillRes
           .update(subscriptions)
           .set({
             workspaceId: wsId,
+            plan: isPaid ? "pro" : "free",
             currentPaidCapacity: 1,
             maxSeats: 1,
-            maxCaseStudies: isPaid ? -1 : 1,
+            maxCaseStudies: isPaid ? 10 : 1,
             customDomainEnabled: false,
             watermarkEnabled: !isPaid,
           })

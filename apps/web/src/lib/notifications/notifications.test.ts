@@ -115,7 +115,7 @@ describe("notifications service — in-app + Resend email triggers (C-803)", () 
           type: "mobile",
           category: "Fintech",
           tier: "free",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-notifications-cover.png",
           coverRatio: "4:3",
         },
       });

@@ -1,9 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/guards";
-import { isSafeTemplateCoverUrl } from "@/lib/template/cover-url";
+import {
+  isLegacyPlaceholderCoverUrl,
+  isSafeTemplateCoverUrl,
+} from "@/lib/template/cover-url";
 import { semverSchema } from "@/lib/template/schema";
 import {
   archiveTemplate,
@@ -46,6 +49,10 @@ const createVersionActionPayloadSchema = z.object({
       (val) => val.length === 0 || isSafeTemplateCoverUrl(val),
       "Cover image URL must be an uploaded /cdn/covers path or https:// URL.",
     )
+    .refine(
+      (val) => val.length === 0 || !isLegacyPlaceholderCoverUrl(val),
+      "Upload a real cover image instead of a legacy placeholder URL (cdn.casefolio.app).",
+    )
     .optional(),
   coverRatio: z.string().trim().optional(),
   publishImmediately: z.boolean().default(false),
@@ -74,19 +81,26 @@ const updateTemplateCoverPayloadSchema = z.object({
     .refine(
       isSafeTemplateCoverUrl,
       "Cover image URL must be an uploaded /cdn/covers path or https:// URL.",
+    )
+    .refine(
+      (val) => !isLegacyPlaceholderCoverUrl(val),
+      "Upload a real cover image instead of a legacy placeholder URL (cdn.casefolio.app).",
     ),
   coverRatio: z.string().trim().default("4:3"),
 });
 
-function revalidateTemplatePaths(templateId: string) {
-  revalidatePath("/");
-  revalidatePath("/templates");
+function revalidateTemplatePaths(templateId?: string) {
+  revalidateTag("templates", "max");
+  revalidatePath("/", "page");
+  revalidatePath("/templates", "page");
   revalidatePath("/new");
   revalidatePath("/dashboard");
   revalidatePath("/published");
   revalidatePath("/admin");
   revalidatePath("/admin/templates");
-  revalidatePath(`/admin/templates/${templateId}`);
+  if (templateId) {
+    revalidatePath(`/admin/templates/${templateId}`);
+  }
 }
 
 export async function createTemplateDraftAction(
@@ -238,13 +252,7 @@ export async function deleteTemplateAction(
   });
 
   if (result.ok) {
-    revalidatePath("/");
-    revalidatePath("/templates");
-    revalidatePath("/new");
-    revalidatePath("/dashboard");
-    revalidatePath("/published");
-    revalidatePath("/admin");
-    revalidatePath("/admin/templates");
+    revalidateTemplatePaths();
   }
 
   return result;

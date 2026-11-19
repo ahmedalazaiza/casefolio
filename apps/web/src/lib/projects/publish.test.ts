@@ -77,7 +77,7 @@ describe("publish & public share page service (C-601)", () => {
           type: "mobile",
           category: "Fintech",
           tier: "free",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-publish-cover.png",
           coverRatio: "4:3",
         },
       });
@@ -120,7 +120,39 @@ describe("publish & public share page service (C-601)", () => {
       const privateOg = await OpenGraphImage({ params: Promise.resolve({ slug: customSlug }) });
       expect(privateOg.status).toBe(404);
 
-      // Reserved slug rejected
+      // Free owner cannot set a custom Case Study URL (`CUSTOM_SLUG_LOCKED`)
+      const customLockedOnFree = await publishProjectForUser(
+        {
+          projectId: firstProject.projectId,
+          slug: customSlug,
+          visibility: "public",
+        },
+        { id: owner!.id, role: "user" },
+      );
+      expect(customLockedOnFree).toMatchObject({
+        ok: false,
+        code: "CUSTOM_SLUG_LOCKED",
+      });
+
+      // Free owner CAN publish using the auto-generated shareable slug (omitting custom `slug`)
+      const autoFreePub = await publishProjectForUser(
+        {
+          projectId: firstProject.projectId,
+          visibility: "public",
+        },
+        { id: owner!.id, role: "user" },
+      );
+      expect(autoFreePub.ok).toBe(true);
+      if (!autoFreePub.ok) return;
+      expect(autoFreePub.slug).toMatch(/^orbit-banking-redesign-[a-f0-9]{6}$/);
+
+      // Upgrade owner to Pro -> unlocks custom Case Study URL (`customSlug`)
+      await db
+        .update(dbSchema.users)
+        .set({ plan: "pro" })
+        .where(eq(dbSchema.users.id, owner!.id));
+
+      // Reserved slug rejected on Pro
       const reservedRes = await publishProjectForUser(
         {
           projectId: firstProject.projectId,
@@ -148,7 +180,7 @@ describe("publish & public share page service (C-601)", () => {
         expect(forbiddenRes.code).toBe("NOT_FOUND");
       }
 
-      // Owner publishes as public
+      // Upgraded Pro owner publishes as public with custom Case Study URL
       const pubRes = await publishProjectForUser(
         {
           projectId: firstProject.projectId,
@@ -169,7 +201,7 @@ describe("publish & public share page service (C-601)", () => {
       expect(elapsedMs).toBeLessThan(2000);
       expect(livePayload).not.toBeNull();
       expect(livePayload?.project.visibility).toBe("public");
-      expect(livePayload?.owner.plan).toBe("free");
+      expect(livePayload?.owner.plan).toBe("pro");
 
       // Public metadata allows indexing
       const publicMeta = await generateMetadata({

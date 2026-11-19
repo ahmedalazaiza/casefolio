@@ -62,7 +62,7 @@ describe("Template versions, project pinning & archive lifecycle (C-304)", () =>
           type: "mobile",
           category: "Fintech",
           tier: "free",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-cover.png",
           coverRatio: "4:3",
         },
       });

@@ -24,6 +24,7 @@ import {
   completeOnboardingAction,
   skipOnboardingAction,
 } from "@/lib/auth/onboarding-actions";
+import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 import type { DesignerRoleId } from "@/lib/auth/schemas";
 import { cn } from "@/lib/utils";
 
@@ -104,6 +105,7 @@ export interface OnboardingWizardProps {
   initialJobTitle?: string | null;
   initialDesignFocus?: "mobile" | "web" | "both" | null;
   initialImage?: string | null;
+  callbackUrl?: string;
 }
 
 export function OnboardingWizard({
@@ -112,8 +114,10 @@ export function OnboardingWizard({
   initialJobTitle,
   initialDesignFocus,
   initialImage,
+  callbackUrl,
 }: OnboardingWizardProps) {
   const router = useRouter();
+  const redirectTarget = sanitizeCallbackUrl(callbackUrl, "/dashboard");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -204,7 +208,7 @@ export function OnboardingWizard({
       return;
     }
 
-    router.push("/dashboard");
+    router.push(redirectTarget);
     router.refresh();
   }
 
@@ -227,7 +231,7 @@ export function OnboardingWizard({
       return;
     }
 
-    router.push("/dashboard");
+    router.push(redirectTarget);
     router.refresh();
   }
 

@@ -31,3 +31,4 @@ export type EditorClientProps = ComponentProps<typeof ConstrainedEditor>;
 export function EditorClient(props: EditorClientProps) {
   return <DynamicConstrainedEditor {...props} />;
 }
+

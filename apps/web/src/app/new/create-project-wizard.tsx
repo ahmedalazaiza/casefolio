@@ -68,6 +68,7 @@ export interface CreateProjectWizardProps {
   templates: PublishedTemplateItem[];
   userPlan: PlanTier;
   existingProjectCount: number;
+  lifetimeProjectsCreated?: number;
   activeProjectsLimit?: number;
   spaces?: SpaceSummaryItem[];
   workspaceName?: string;
@@ -83,6 +84,7 @@ export function CreateProjectWizard({
   templates,
   userPlan,
   existingProjectCount,
+  lifetimeProjectsCreated,
   activeProjectsLimit,
   spaces = [],
   workspaceName,
@@ -98,17 +100,20 @@ export function CreateProjectWizard({
   const [upgradePrompt, setUpgradePrompt] = useState<{
     title: string;
     description: string;
+    requiredPlan?: "pro" | "team";
   } | null>(null);
 
   const canUseProTemplates = can(userPlan, "pro_templates");
   const isUnlimitedQuota =
     typeof activeProjectsLimit === "number"
       ? isUnlimitedProjectsLimit(activeProjectsLimit)
-      : userPlan !== "free";
-  const effectiveActiveLimit = activeProjectsLimit ?? FREE_PROJECT_LIMIT;
+      : userPlan !== "free" && userPlan !== "pro";
+  const effectiveActiveLimit = activeProjectsLimit ?? (userPlan === "pro" ? 10 : FREE_PROJECT_LIMIT);
+  const effectiveLifetimeUsed = Math.max(lifetimeProjectsCreated ?? 0, existingProjectCount);
   const isFreeQuotaReached =
     !can(userPlan, "create_project", {
       projectsCount: existingProjectCount,
+      lifetimeProjectsCreated: effectiveLifetimeUsed,
     }) ||
     (!isUnlimitedQuota && existingProjectCount >= effectiveActiveLimit);
 
@@ -381,18 +386,22 @@ export function CreateProjectWizard({
               <AlertCircle className="text-warning mt-0.5 size-5 shrink-0" />
               <div className="flex flex-col gap-0.5">
                 <p className="type-body-s-strong">
-                  You&apos;ve reached your {userPlan === "free" ? "Free plan" : "active"} Case Study
-                  limit ({existingProjectCount} of {effectiveActiveLimit} active{" "}
-                  {effectiveActiveLimit === 1 ? "Case Study" : "Case Studies"}).
+                  {userPlan === "free"
+                    ? existingProjectCount === 0 && effectiveLifetimeUsed >= 1
+                      ? "You’ve used your 1 of 1 lifetime Free Case Study credit."
+                      : `You’ve reached your Free plan Case Study limit (${Math.max(1, effectiveLifetimeUsed)} of ${FREE_PROJECT_LIMIT} lifetime credit used).`
+                    : `You’ve reached your Pro plan active limit (${existingProjectCount} of ${effectiveActiveLimit} rotatable Case Studies).`}
                 </p>
                 <p className="text-muted-foreground type-body-s">
                   {userPlan === "free"
-                    ? "Free includes 1 active Case Study. Upgrade to Casefolio Pro ($9.99/mo or $7.99/mo billed annually) for Unlimited Case Studies, all Pro & Premium templates, and watermark-free exports."
-                    : "Archive a finished draft to free an active project slot."}
+                    ? existingProjectCount === 0 && effectiveLifetimeUsed >= 1
+                      ? "Deleting a project on the Free plan does not restore your lifetime credit. Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) for up to 10 rotatable Case Studies, custom URLs, and watermark-free exports."
+                      : "Free includes 1 lifetime Case Study credit. Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) for up to 10 rotatable Case Studies, custom URLs, all Pro templates, and watermark-free exports."
+                    : "Archive or delete a finished draft to free one of your 10 Pro slots, or upgrade to Casefolio Teams ($5.99/seat/mo · 2 months free on annual) for unlimited shared Case Studies."}
                 </p>
               </div>
             </div>
-            {userPlan === "free" && (
+            {userPlan === "free" ? (
               <Button
                 type="button"
                 size="sm"
@@ -400,14 +409,32 @@ export function CreateProjectWizard({
                 data-testid="plan-limit-upgrade-btn"
                 onClick={() =>
                   setUpgradePrompt({
-                    title: "Unlock Unlimited Case Studies",
-                    description: `Free includes ${FREE_PROJECT_LIMIT} active Case Study. Upgrade to Casefolio Pro for Unlimited Case Studies, all Pro & Premium templates, and watermark-free high-res PNG, PDF & Behance exports.`,
+                    requiredPlan: "pro",
+                    title: "Upgrade to Casefolio Pro",
+                    description: `Free includes ${FREE_PROJECT_LIMIT} lifetime Case Study credit. Upgrade to Casefolio Pro ($7.99/mo · $79.90/yr with 2 months free) for up to 10 rotatable Case Studies, custom Case Study URLs, all Pro templates, and watermark-free high-res PNG, PDF & Behance exports.`,
                   })
                 }
               >
                 Upgrade to Pro
               </Button>
-            )}
+            ) : userPlan === "pro" ? (
+              <Button
+                type="button"
+                size="sm"
+                className="w-fit shrink-0"
+                data-testid="plan-limit-upgrade-btn"
+                onClick={() =>
+                  setUpgradePrompt({
+                    requiredPlan: "team",
+                    title: "Upgrade to Casefolio Teams",
+                    description:
+                      "Pro includes up to 10 rotatable Case Studies. Upgrade to Casefolio Teams ($5.99/seat/mo · 2–25 seats, 2 months free on annual) for unlimited shared Case Studies and collaborative spaces.",
+                  })
+                }
+              >
+                Upgrade to Teams
+              </Button>
+            ) : null}
           </div>
         )}
 
@@ -709,9 +736,10 @@ export function CreateProjectWizard({
                               className="v3-btn-lime flex-1 py-2 text-xs font-bold"
                               onClick={() =>
                                 setUpgradePrompt({
+                                  requiredPlan: "pro",
                                   title: `Unlock the ${item.name} Pro template`,
                                   description:
-                                    "Pro templates require Casefolio Pro or Team. Upgrade now to unlock every layout immediately.",
+                                    "Pro templates require Casefolio Pro ($7.99/mo) or Teams ($5.99/seat/mo). Upgrade now to unlock every layout, custom Case Study URLs, and watermark-free exports.",
                                 })
                               }
                             >
@@ -954,7 +982,7 @@ export function CreateProjectWizard({
                         slug={selectedTemplate.slug}
                         name={selectedTemplate.name}
                         hideFallbackLabel
-                        className="aspect-[4/3] w-13 shrink-0 rounded-lg border border-[var(--cf-border-subtle)] p-1.5"
+                        className="aspect-[4/3] w-13 shrink-0 rounded-lg border border-[var(--cf-border-subtle)]"
                       />
                     )}
                     <span>
@@ -1129,9 +1157,10 @@ export function CreateProjectWizard({
                       const tplName = previewItem.name;
                       setPreviewItem(null);
                       setUpgradePrompt({
+                        requiredPlan: "pro",
                         title: `Unlock the ${tplName} Pro template`,
                         description:
-                          "Pro templates require Casefolio Pro or Team. Upgrade now to unlock every layout immediately.",
+                          "Pro templates require Casefolio Pro ($7.99/mo) or Teams ($5.99/seat/mo). Upgrade now to unlock every layout, custom Case Study URLs, and watermark-free exports.",
                       });
                     }}
                   >
@@ -1150,6 +1179,7 @@ export function CreateProjectWizard({
         onOpenChange={(open) => {
           if (!open) setUpgradePrompt(null);
         }}
+        requiredPlan={upgradePrompt?.requiredPlan ?? "pro"}
         featureTitle={upgradePrompt?.title}
         featureDescription={upgradePrompt?.description}
       />

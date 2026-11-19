@@ -1,43 +1,34 @@
-import { and, desc, eq, isNotNull } from "@casefolio/db";
 import { ArrowRight, BarChart3, ExternalLink, Globe, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge } from "@/components/ui/badge";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { requireSession } from "@/lib/auth/session";
-import { db, dbSchema } from "@/lib/db";
-import { resolveProjectOrTemplateThumbnailUrl } from "@/lib/template/cover-url";
+import { listDashboardProjectsForUser } from "@/lib/projects/dashboard";
 
 export const dynamic = "force-dynamic";
 
 export default async function WorkspacePublishedPagesList() {
-  const { user } = await requireSession("/published");
+  const { user, session } = await requireSession("/published");
 
-  const rows = await db
-    .select({
-      project: dbSchema.projects,
-      templateName: dbSchema.templates.name,
-      templateSlug: dbSchema.templates.slug,
-      templateCoverUrl: dbSchema.templates.coverUrl,
-    })
-    .from(dbSchema.projects)
-    .innerJoin(
-      dbSchema.templateVersions,
-      eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
-    )
-    .innerJoin(dbSchema.templates, eq(dbSchema.templateVersions.templateId, dbSchema.templates.id))
-    .where(
-      and(
-        eq(dbSchema.projects.ownerId, user.id),
-        isNotNull(dbSchema.projects.publishedAt),
-      ),
-    )
-    .orderBy(desc(dbSchema.projects.publishedAt))
-    .limit(50);
-
-  const liveProjects = rows.filter(
-    (r) => (r.project.visibility === "public" || r.project.visibility === "unlisted") && Boolean(r.project.slug),
+  const workspaceProjects = await listDashboardProjectsForUser(
+    user.id,
+    session.activeOrganizationId ?? null,
+    { includeArchived: false },
   );
+
+  const liveProjects = workspaceProjects
+    .filter(
+      (project) =>
+        (project.visibility === "public" || project.visibility === "unlisted") &&
+        Boolean(project.publishedAtIso) &&
+        Boolean(project.slug),
+    )
+    .sort((a, b) => {
+      const aTime = a.publishedAtIso ? new Date(a.publishedAtIso).getTime() : 0;
+      const bTime = b.publishedAtIso ? new Date(b.publishedAtIso).getTime() : 0;
+      return bTime - aTime;
+    });
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 sm:gap-8">
@@ -50,7 +41,7 @@ export default async function WorkspacePublishedPagesList() {
             Published case studies
           </h1>
           <p className="max-w-xl text-sm text-[var(--cf-text-secondary)] sm:text-base">
-            Manage live share links and discovery settings across your portfolio.
+            Manage live share links and discovery settings across your active workspace.
           </p>
         </div>
         <Link href="/dashboard" className="v3-btn-secondary">
@@ -68,8 +59,8 @@ export default async function WorkspacePublishedPagesList() {
               No published case studies yet
             </p>
             <p className="max-w-md text-sm leading-relaxed text-[var(--cf-text-secondary)]">
-              Open any project and click Publish to claim a custom /p/slug URL with OpenGraph social
-              previews.
+              Open any project and click Publish to go live with a shareable /p/ link and OpenGraph
+              social previews — or unlock custom /p/your-slug URLs on Pro &amp; Teams.
             </p>
           </div>
           <Link href="/dashboard" className="v3-btn-primary mt-1">
@@ -79,12 +70,7 @@ export default async function WorkspacePublishedPagesList() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {liveProjects.map(({ project, templateName, templateSlug, templateCoverUrl }, index) => {
-            const thumb = resolveProjectOrTemplateThumbnailUrl(
-              project.puckData,
-              templateCoverUrl,
-              templateSlug,
-            );
+          {liveProjects.map((project, index) => {
             const stepNum = String(index + 1).padStart(2, "0");
             return (
               <article
@@ -105,11 +91,11 @@ export default async function WorkspacePublishedPagesList() {
                 <div className="flex flex-1 flex-col gap-4 p-5 sm:p-6">
                   <div className="flex items-center gap-4">
                     <TemplateThumbnail
-                      coverUrl={thumb ?? templateCoverUrl}
-                      slug={templateSlug}
+                      coverUrl={project.thumbnailUrl ?? project.templateCoverUrl ?? undefined}
+                      slug={project.templateSlug}
                       name={project.name}
                       hideFallbackLabel
-                      className="aspect-[16/10] w-28 shrink-0 rounded-xl border border-[var(--cf-border-subtle)] p-2"
+                      className="aspect-[16/10] w-28 shrink-0 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)]"
                     />
                     <div className="flex min-w-0 flex-col gap-1.5">
                       <div className="flex flex-wrap items-center gap-2">
@@ -121,7 +107,7 @@ export default async function WorkspacePublishedPagesList() {
                         </Badge>
                       </div>
                       <span className="font-mono text-xs text-[var(--cf-text-secondary)]">
-                        {templateName}
+                        {project.templateName}
                       </span>
                     </div>
                   </div>

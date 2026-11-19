@@ -212,7 +212,7 @@ export function MarketingShell({
 
           <div className="hidden items-center gap-3 md:flex">
             <Link
-              href="/login"
+              href="/sign-in"
               className="v3-btn-secondary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
             >
               Log in
@@ -317,7 +317,7 @@ export function MarketingShell({
               <ArrowRight className="size-4" />
             </Link>
             <Link
-              href="/login"
+              href="/sign-in"
               onClick={() => setMobileMenuOpen(false)}
               className="v3-btn-secondary w-full py-3.5"
             >

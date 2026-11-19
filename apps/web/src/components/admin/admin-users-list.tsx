@@ -27,8 +27,7 @@ function planBadgeTone(plan: PlanTier): "neutral" | "pro" | "accent" {
 }
 
 function formatPlanLabel(plan: PlanTier): string {
-  if (plan === "plus") return "Plus";
-  if (plan === "team") return "Team";
+  if (plan === "team" || plan === "plus") return "Teams";
   if (plan === "pro") return "Pro";
   return "Free";
 }
@@ -140,7 +139,12 @@ export function AdminUsersList({
         >
           {ADMIN_USER_PLAN_FILTERS.map((f) => {
             const active = filter === f;
-            const label = f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1);
+            const label =
+              f === "all"
+                ? "All"
+                : f === "team"
+                  ? "Teams"
+                  : f.charAt(0).toUpperCase() + f.slice(1);
             return (
               <button
                 key={f}

@@ -26,6 +26,24 @@ export interface LandingTemplateShowcaseItem {
   summary: string;
 }
 
+export interface LandingPublishedTemplateItem {
+  id: string;
+  name: string;
+  slug: string;
+  tier: "free" | "pro";
+  categoryName: string | null;
+  coverUrl: string;
+  version: string;
+  type: "mobile" | "web" | "both";
+  sectionCount: number;
+  slotCount: number;
+  theme?: {
+    bg?: string;
+    fg?: string;
+    accent?: string;
+  };
+}
+
 export interface LandingPlatformSnapshot {
   publishedTemplatesCount: number;
   mobileTemplatesCount: number;
@@ -44,6 +62,7 @@ export interface LandingPlatformSnapshot {
   livePageViewsCount: number;
   liveExportsCount: number;
   templates: LandingTemplateShowcaseItem[];
+  publishedTemplates: LandingPublishedTemplateItem[];
 }
 
 export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] = [
@@ -179,6 +198,7 @@ export function buildLandingSnapshot(
     pageViewsCount?: number;
     exportsCount?: number;
   },
+  publishedTemplates: readonly LandingPublishedTemplateItem[] = [],
 ): LandingPlatformSnapshot {
   const mobileOnly = templates.filter((t) => t.type === "mobile").length;
   const webOnly = templates.filter((t) => t.type === "web").length;
@@ -211,6 +231,7 @@ export function buildLandingSnapshot(
     livePageViewsCount: liveCounts?.pageViewsCount ?? 0,
     liveExportsCount: liveCounts?.exportsCount ?? 0,
     templates: [...templates],
+    publishedTemplates: [...publishedTemplates],
   };
 }
 
@@ -242,11 +263,33 @@ export async function getLandingPlatformSnapshot(): Promise<LandingPlatformSnaps
         ? published.map(mapPublishedItemToShowcase)
         : DEFAULT_LANDING_TEMPLATES;
 
-    return buildLandingSnapshot(mappedTemplates, {
-      projectsCount: Number(projectRow[0]?.value ?? 0),
-      pageViewsCount: Number(viewRow[0]?.value ?? 0),
-      exportsCount: Number(exportRow[0]?.value ?? 0),
-    });
+    const publishedTemplates: LandingPublishedTemplateItem[] = published.map((item) => ({
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      tier: item.tier,
+      categoryName: item.categoryName,
+      coverUrl: resolveTemplateCoverUrl(item.coverUrl, item.slug) ?? item.coverUrl ?? "",
+      version: item.version,
+      type: item.type,
+      sectionCount: item.sectionCount,
+      slotCount: item.slotCount,
+      theme: {
+        bg: item.document.template.theme.colors.background,
+        fg: item.document.template.theme.colors.text,
+        accent: item.document.template.theme.colors.primary,
+      },
+    }));
+
+    return buildLandingSnapshot(
+      mappedTemplates,
+      {
+        projectsCount: Number(projectRow[0]?.value ?? 0),
+        pageViewsCount: Number(viewRow[0]?.value ?? 0),
+        exportsCount: Number(exportRow[0]?.value ?? 0),
+      },
+      publishedTemplates,
+    );
   } catch {
     return buildLandingSnapshot(DEFAULT_LANDING_TEMPLATES);
   }

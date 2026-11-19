@@ -23,5 +23,27 @@ describe("security headers (S6)", () => {
     const csp = buildContentSecurityPolicy({ isDev: false });
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
+    expect(header(false, "X-Frame-Options")).toBe("DENY");
+  });
+
+  it("allows same-origin framing on /export/:path* and permits font/image fetches in connect-src", () => {
+    const exportHeaders = buildSecurityHeaders({
+      isDev: false,
+      allowSameOriginFraming: true,
+    });
+    const map = Object.fromEntries(exportHeaders.map((h) => [h.key, h.value]));
+
+    expect(map["X-Frame-Options"]).toBe("SAMEORIGIN");
+    expect(map["Content-Security-Policy"]).toContain("frame-ancestors 'self'");
+    expect(map["Content-Security-Policy"]).not.toContain("frame-ancestors 'none'");
+
+    for (const allowedOrigin of [
+      "https://fonts.googleapis.com",
+      "https://fonts.gstatic.com",
+      "https://rsms.me",
+      "https://imagedelivery.net",
+    ]) {
+      expect(map["Content-Security-Policy"]).toContain(allowedOrigin);
+    }
   });
 });

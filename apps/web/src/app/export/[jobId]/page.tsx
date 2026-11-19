@@ -58,7 +58,7 @@ export async function generateMetadata({
 
   const ensured = await ensureProjectWorkspaceAndSpace(row.project);
   const ent = await resolveWorkspaceEntitlementState(ensured.workspace.id);
-  const whiteLabel = ent?.plan === "plus";
+  const whiteLabel = Boolean(ent?.whiteLabelEnabled);
 
   return {
     title: whiteLabel ? row.project.name : `${row.project.name} · Casefolio`,
@@ -118,7 +118,7 @@ export default async function ExportRenderPage({
   const ensured = await ensureProjectWorkspaceAndSpace(row.project);
   const workspaceEntitlement = await resolveWorkspaceEntitlementState(ensured.workspace.id);
   const effectivePlan = workspaceEntitlement?.plan ?? "free";
-  const whiteLabel = effectivePlan === "plus";
+  const whiteLabel = Boolean(workspaceEntitlement?.whiteLabelEnabled);
   const showWatermark = !whiteLabel && (row.exportJob.hasWatermark ?? effectivePlan === "free");
 
   return (

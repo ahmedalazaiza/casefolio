@@ -29,3 +29,4 @@ export function PublicViewTracker({ projectId }: { projectId: string }) {
 
   return null;
 }
+

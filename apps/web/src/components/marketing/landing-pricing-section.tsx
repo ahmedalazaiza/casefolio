@@ -3,7 +3,6 @@
 import type { PlanTier } from "@casefolio/db";
 import {
   ArrowRight,
-  Building2,
   Crown,
   Minus,
   Plus,
@@ -20,7 +19,8 @@ import {
   BILLING_PLAN_CATALOG,
   computeTeamsPrice,
   formatUsdFromCents,
-  PLUS_INCLUDED_SEATS,
+  PRO_MAX_PROJECTS,
+  TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
   type BillingInterval,
@@ -32,12 +32,11 @@ import {
 } from "@/lib/exports/types";
 import { cn } from "@/lib/utils";
 
-const PAID_PLAN_ORDER: readonly PaidPlanTier[] = ["pro", "team", "plus"];
+const PAID_PLAN_ORDER: readonly PaidPlanTier[] = ["pro", "team"];
 
 const PAID_PLAN_ICONS: Record<PaidPlanTier, ReactNode> = {
   pro: <Crown />,
   team: <Users />,
-  plus: <Building2 />,
 };
 
 export interface LandingPricingSectionProps {
@@ -63,7 +62,7 @@ export function LandingPricingSection({
 }: LandingPricingSectionProps) {
   const [uncontrolledInterval, setUncontrolledInterval] =
     useState<BillingInterval>(defaultInterval);
-  const [teamSeats, setTeamSeats] = useState<number>(TEAMS_MIN_SEATS);
+  const [teamSeats, setTeamSeats] = useState<number>(TEAMS_CALCULATOR_DEFAULT_SEATS);
   const interval = controlledInterval ?? uncontrolledInterval;
 
   function setInterval(next: BillingInterval) {
@@ -80,9 +79,6 @@ export function LandingPricingSection({
     );
   }
 
-  const roundedSavingsPercent = Math.round(
-    BILLING_PLAN_CATALOG.pro.yearlySavingsPercent,
-  );
   const teamCalc = computeTeamsPrice(teamSeats, interval);
   const freePlan = BILLING_PLAN_CATALOG.free;
   const isCurrentFree = currentTier === "free";
@@ -121,23 +117,21 @@ export function LandingPricingSection({
         >
           <span>Annual</span>
           <span className="rounded-lg bg-[var(--cf-bg-accent)] px-2.5 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-            Save {roundedSavingsPercent}%
-            <span className="hidden sm:inline"> · 2 months free</span>
+            2 months free
           </span>
         </button>
       </div>
 
-      {/* 3 Sculpted Paid Plan Cards (Pro, Electric Royal Blue Team Stage, Plus) */}
+      {/* 2 Sculpted Paid Plan Cards (Pro & Electric Royal Blue Teams Stage) */}
       <ScrollRise
         data-testid="paid-plan-cards-grid"
         stagger
         y={20}
-        className="grid w-full grid-cols-1 items-stretch gap-6 lg:grid-cols-3"
+        className="grid w-full grid-cols-1 items-stretch gap-6 lg:grid-cols-2"
       >
         {PAID_PLAN_ORDER.map((tier) => {
           const plan = BILLING_PLAN_CATALOG[tier];
           const isTeams = tier === "team";
-          const isPlus = tier === "plus";
           const isHighlighted = Boolean(plan.highlighted);
           const displayedMonthlyCents =
             interval === "monthly"
@@ -148,64 +142,48 @@ export function LandingPricingSection({
 
           const billingNote = isTeams
             ? interval === "yearly"
-              ? `Billed ${formatUsdFromCents(plan.yearlyTotalCents)}/seat/year — Save 20%`
-              : `Billed monthly · ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/seat/mo on annual`
+              ? `Billed ${formatUsdFromCents(plan.yearlyTotalCents)}/seat/year — 2 months free`
+              : `Billed monthly · ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/seat/mo on annual (2 months free)`
             : interval === "yearly"
-              ? `Billed ${formatUsdFromCents(plan.yearlyTotalCents)}/year — Save 20%`
-              : `Billed monthly · ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/mo on annual`;
+              ? `Billed ${formatUsdFromCents(plan.yearlyTotalCents)}/year — 2 months free`
+              : `Billed monthly · ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/mo on annual (2 months free)`;
 
           const scopeLabel = isTeams
-            ? `Small & mid-sized studios · ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`
-            : isPlus
-              ? `Agencies & enterprises · Up to ${PLUS_INCLUDED_SEATS} seats flat`
-              : "Freelancers & solo designers · 1 personal seat";
+            ? `Product design teams & studios · ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`
+            : `Freelancers & solo designers · Up to ${PRO_MAX_PROJECTS} active projects`;
 
-          const badgeLabel = isHighlighted
-            ? "Most popular"
-            : tier === "pro"
-              ? "Solo creator"
-              : `Up to ${PLUS_INCLUDED_SEATS} seats`;
+          const badgeLabel = isHighlighted ? "Most popular" : "Solo creator";
 
           const featuresHeading =
             tier === "pro"
               ? "Includes everything in Free, plus"
-              : tier === "team"
-                ? "Includes everything in Pro, plus"
-                : "Includes everything in Team, plus";
+              : "Includes everything in Pro, plus";
 
           const specs: readonly PlanSpecItem[] =
             tier === "pro"
               ? [
-                  { label: "Case studies", value: "Unlimited" },
+                  { label: "Case studies", value: `Up to ${PRO_MAX_PROJECTS} active` },
+                  { label: "Custom URL", value: "/p/your-slug" },
                   { label: "Exports / mo", value: `${PRO_MONTHLY_EXPORT_LIMIT}/mo` },
                   { label: "Cloud storage", value: "5 GB" },
-                  { label: "Watermarks", value: "None" },
                 ]
-              : tier === "team"
-                ? [
-                    { label: "Team seats", value: `${teamSeats} seats` },
-                    {
-                      label: "Pooled exports",
-                      value: `${teamSeats * TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT}/mo`,
-                    },
-                    { label: "Pooled storage", value: `${teamSeats * 10} GB` },
-                    { label: "Collaboration", value: "Brand Kit + Roles" },
-                  ]
-                : [
-                    { label: "Flat seats", value: `Up to ${PLUS_INCLUDED_SEATS}` },
-                    { label: "Exports / mo", value: "2,000/mo" },
-                    { label: "Pooled storage", value: "200 GB" },
-                    { label: "Branding", value: "100% White-label" },
-                  ];
+              : [
+                  { label: "Team seats", value: `${teamSeats} seats` },
+                  { label: "Case studies", value: "Unlimited" },
+                  {
+                    label: "Pooled exports",
+                    value: `${teamSeats * TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT}/mo`,
+                  },
+                  { label: "Pooled storage", value: `${teamSeats * 10} GB` },
+                ];
 
-          const isCurrent = currentTier === tier;
+          const isCurrent =
+            currentTier === tier || (isTeams && currentTier === "plus");
           const ctaLabel = isCurrent
             ? "Current plan"
             : tier === "pro"
               ? "Upgrade to Pro"
-              : tier === "team"
-                ? `Start Team (${teamSeats} seats)`
-                : "Upgrade to Plus";
+              : `Start Teams (${teamSeats} seats)`;
 
           const ctaHref = isTeams
             ? `/sign-up?plan=team&interval=${interval}&seats=${teamSeats}`
@@ -343,7 +321,7 @@ export function LandingPricingSection({
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="inline-flex items-center rounded-md bg-[var(--cf-bg-accent)] px-2 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-                00 · Free Forever
+                00 · Free Starter
               </span>
               <span className="v3-heading-s text-[var(--cf-text-primary)]">
                 {freePlan.name} — $0 / forever
@@ -351,8 +329,9 @@ export function LandingPricingSection({
               <Badge tone="neutral">Included at signup</Badge>
             </div>
             <p className="v3-body-s text-[var(--cf-text-secondary)]">
-              1 personal seat · 1 active Case Study · Standard templates · 5 exports/mo (1440px PNG
-              &amp; PDF) · 250 MB storage · Live shareable link.
+              1 personal seat · 1 lifetime Case Study credit · Full A-to-Z builder · 5 exports/mo
+              (1440px PNG &amp; PDF with subtle watermark) · 250 MB storage · Auto-generated
+              shareable link.
             </p>
           </div>
         </div>
@@ -381,7 +360,7 @@ export function LandingPricingSection({
               <span>Need a side-by-side breakdown of all plans?</span>
             </span>
             <span className="type-caption text-[var(--cf-text-secondary)]">
-              Compare Free, Pro, Team, and Plus features, limits, and the interactive per-seat
+              Compare Free, Pro, and Teams features, limits, and the interactive per-seat
               calculator.
             </span>
           </div>

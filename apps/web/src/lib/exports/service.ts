@@ -1,11 +1,20 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gt, isNotNull, type PlanTier, type UserRole } from "@casefolio/db";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  type PlanTier,
+  type UserRole,
+} from "@casefolio/db";
 import {
   enqueueExportJobToPgBoss,
-  startPgBossExportConsumer,
   type ExportQueueJobPayload,
-  type ExportWorkerConsumerHandle,
-} from "@casefolio/worker";
+} from "@casefolio/worker/queue-publisher";
 import { signExportRenderToken } from "@casefolio/worker/token";
 import { PgBoss } from "pg-boss";
 import { env } from "@/env";
@@ -13,6 +22,10 @@ import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { formatResetDateIstanbul } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import { can, type EntitlementFeature } from "@/lib/entitlements";
+import {
+  ensurePersonalWorkspaceForUser,
+  ensureTeamWorkspaceForOrganization,
+} from "@/lib/entitlements/server";
 import {
   createExportInputSchema,
   type EnqueueExportResult,
@@ -23,16 +36,32 @@ import {
 import { notifyExportFinished } from "@/lib/notifications/service";
 import { resolvePublicAppBaseUrl } from "@/lib/projects/publish";
 import { slugifyProjectName } from "@/lib/projects/types";
-import { sanitizeErrorForLogging } from "@/lib/security/redact";
-import { readStoredObjectBytes, writeStoredObject } from "@/lib/storage/r2";
+import {
+  redactSensitiveText,
+  sanitizeErrorForLogging,
+  sanitizeHeaderFilename,
+} from "@/lib/security/redact";
 import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
+import {
+  createPresignedDownloadUrl,
+  createPresignedExportPutUrl,
+  deleteStoredObject,
+  headStoredObject,
+  isRealR2Configured,
+  readStoredObjectBytes,
+  writeStoredObject,
+} from "@/lib/storage/r2";
 import {
   commitWorkspaceReservation,
   getWorkspaceMonthlyMeterUsage,
   releaseWorkspaceReservation,
   reserveWorkspaceMeter,
 } from "@/lib/usage/meter";
-import { authorizeProjectAccess } from "@/lib/workspaces/acl";
+import {
+  authorizeProjectAccess,
+  ensureProjectWorkspaceAndSpace,
+} from "@/lib/workspaces/acl";
+import { listVisibleSpacesForWorkspace } from "@/lib/workspaces/service";
 
 export interface ExportActor {
   id: string;
@@ -40,13 +69,34 @@ export interface ExportActor {
   plan?: PlanTier;
 }
 
+interface EmbeddedExportConsumerHandle {
+  boss: {
+    notifyWorker: (workerId: string) => void;
+  };
+  workerId: string;
+  stop: () => Promise<void>;
+}
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EXPORT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const globalForExportQueue = globalThis as unknown as {
   casefolioBossPublisherPromise?: Promise<PgBoss> | null;
-  casefolioEmbeddedExportConsumerV2Promise?: Promise<ExportWorkerConsumerHandle> | null;
+  casefolioEmbeddedExportConsumerV2Promise?: Promise<EmbeddedExportConsumerHandle> | null;
 };
+
+function isVercelServerlessRuntime(): boolean {
+  return Boolean(process.env.VERCEL);
+}
+
+function isLoopbackWorkerUrl(rawUrl: string): boolean {
+  try {
+    const host = new URL(rawUrl).hostname.toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+  } catch {
+    return true;
+  }
+}
 
 async function getPgBossPublisher(): Promise<PgBoss> {
   if (!globalForExportQueue.casefolioBossPublisherPromise) {
@@ -65,24 +115,14 @@ async function getPgBossPublisher(): Promise<PgBoss> {
   return globalForExportQueue.casefolioBossPublisherPromise;
 }
 
-function isDedicatedProductionWorkerConfigured(): boolean {
-  if (process.env.NODE_ENV !== "production") {
-    return false;
-  }
-  if (process.env.CASEFOLIO_ENABLE_EMBEDDED_WORKER === "1") {
-    return false;
-  }
-  const workerUrl = (env.EXPORT_WORKER_URL || "").trim().toLowerCase();
-  return (
-    workerUrl.length > 0 &&
-    !workerUrl.includes("localhost") &&
-    !workerUrl.includes("127.0.0.1") &&
-    !workerUrl.includes("[::1]")
-  );
-}
-
 async function tryWakeExternalWorker(workerBaseUrl: string): Promise<boolean> {
-  const cleanUrl = workerBaseUrl.replace(/\/+$/, "");
+  const cleanUrl = (workerBaseUrl || "").trim().replace(/\/+$/, "");
+  if (!cleanUrl) {
+    return false;
+  }
+  if (isVercelServerlessRuntime() && isLoopbackWorkerUrl(cleanUrl)) {
+    return false;
+  }
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 350);
@@ -104,6 +144,15 @@ async function tryWakeExternalWorker(workerBaseUrl: string): Promise<boolean> {
 }
 
 async function ensureExportQueueConsumerActive(appUrl: string): Promise<void> {
+  // Never import Playwright or spawn an embedded consumer inside Vercel Serverless Functions
+  if (isVercelServerlessRuntime()) {
+    return;
+  }
+
+  if (process.env.CASEFOLIO_DISABLE_EMBEDDED_WORKER === "1") {
+    return;
+  }
+
   const externalWoken = await tryWakeExternalWorker(env.EXPORT_WORKER_URL);
   if (externalWoken) {
     return;
@@ -112,25 +161,23 @@ async function ensureExportQueueConsumerActive(appUrl: string): Promise<void> {
   if (
     process.env.NODE_ENV === "production" &&
     process.env.CASEFOLIO_ENABLE_EMBEDDED_WORKER !== "1" &&
-    !env.EXPORT_WORKER_URL.includes("localhost") &&
-    !env.EXPORT_WORKER_URL.includes("127.0.0.1")
+    !isLoopbackWorkerUrl(env.EXPORT_WORKER_URL)
   ) {
     return;
   }
 
-  if (process.env.CASEFOLIO_DISABLE_EMBEDDED_WORKER === "1") {
-    return;
-  }
-
   if (!globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise) {
-    globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise = startPgBossExportConsumer({
-      databaseUrl: env.DATABASE_URL,
-      appUrl,
-      db,
-      signingSecret: env.EXPORT_SIGNING_SECRET,
-      onExportFinished: notifyExportFinished,
-      pollingIntervalSeconds: 0.5,
-    }).catch((err) => {
+    globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise = (async () => {
+      const { startPgBossExportConsumer } = await import("@casefolio/worker");
+      return startPgBossExportConsumer({
+        databaseUrl: env.DATABASE_URL,
+        appUrl,
+        db,
+        signingSecret: env.EXPORT_SIGNING_SECRET,
+        onExportFinished: notifyExportFinished,
+        pollingIntervalSeconds: 0.5,
+      });
+    })().catch((err) => {
       globalForExportQueue.casefolioEmbeddedExportConsumerV2Promise = null;
       throw err;
     });
@@ -165,7 +212,7 @@ function serializeExportRow(
   now: Date = new Date(),
 ): ExportHistoryItem {
   let renderUrl: string | null = null;
-  if (row.status === "queued" && !isDedicatedProductionWorkerConfigured()) {
+  if (row.status === "queued") {
     const token = signExportRenderToken(
       {
         exportId: row.id,
@@ -203,6 +250,32 @@ function exportFormatToEntitlementFeature(format: ExportFormatOption): Entitleme
   if (format === "pdf") return "export_pdf";
   if (format === "behance") return "export_behance";
   return "export_png";
+}
+
+function resolveExportArtifactMeta(format: ExportFormatOption): {
+  ext: "png" | "pdf" | "zip";
+  contentType: "image/png" | "application/pdf" | "application/zip";
+  suffix: string;
+} {
+  if (format === "pdf") {
+    return {
+      ext: "pdf",
+      contentType: "application/pdf",
+      suffix: "case-study",
+    };
+  }
+  if (format === "behance") {
+    return {
+      ext: "zip",
+      contentType: "application/zip",
+      suffix: "behance-slices",
+    };
+  }
+  return {
+    ext: "png",
+    contentType: "image/png",
+    suffix: "png-long",
+  };
 }
 
 export function isExportFormatAllowedOnPlan(plan: PlanTier, format: ExportFormatOption): boolean {
@@ -304,7 +377,7 @@ export async function enqueueProjectExportForUser(
     return {
       ok: false,
       code: "PLAN_UPGRADE_REQUIRED",
-      error: `${formatLabel} export requires a Pro, Team, or Plus plan. Free plan supports watermarked PNG and PDF exports.`,
+      error: `${formatLabel} export requires Casefolio Pro ($7.99/mo) or Teams ($5.99/seat/mo). Free plan supports watermarked PNG and PDF exports.`,
     };
   }
 
@@ -313,7 +386,7 @@ export async function enqueueProjectExportForUser(
       ok: false,
       code: "PLAN_UPGRADE_REQUIRED",
       error:
-        "High-res 2× PNG exports (2,880px) require a Pro, Team, or Plus plan. Free plan supports 1× PNG and PDF exports with Casefolio branding.",
+        "High-res 2× PNG exports (2,880px) require Casefolio Pro ($7.99/mo) or Teams ($5.99/seat/mo). Free plan supports 1× PNG and PDF exports with Casefolio branding.",
     };
   }
 
@@ -354,8 +427,8 @@ export async function enqueueProjectExportForUser(
     .limit(1);
 
   if (cachedRow?.r2Key) {
-    const existingBytes = await readStoredObjectBytes(cachedRow.r2Key);
-    if (existingBytes) {
+    const existingHead = await headStoredObject(cachedRow.r2Key);
+    if (existingHead.exists && existingHead.bytes > 0) {
       const meter = await getWorkspaceMonthlyMeterUsage(auth.workspace.id, "exports", now);
       return {
         ok: true,
@@ -435,28 +508,50 @@ export async function enqueueProjectExportForUser(
     reservationJobId,
   };
 
-  try {
-    if (options?.enqueueJobFn) {
+  if (options?.enqueueJobFn) {
+    try {
       await options.enqueueJobFn(jobPayload);
-    } else {
-      const boss = await getPgBossPublisher();
-      await enqueueExportJobToPgBoss(boss, jobPayload);
-      await ensureExportQueueConsumerActive(appUrl).catch((err) => {
-        const safeErr = sanitizeErrorForLogging(err);
-        console.error("[exports] embedded worker wakeup warning:", safeErr.message);
-      });
+    } catch (err) {
+      await db
+        .update(dbSchema.exportsTable)
+        .set({
+          status: "failed",
+          error: "Failed to enqueue export job.",
+        })
+        .where(eq(dbSchema.exportsTable.id, created.id))
+        .catch(() => undefined);
+      await releaseWorkspaceReservation(reservationJobId, now).catch(() => undefined);
+      throw err;
     }
-  } catch (err) {
-    await db
-      .update(dbSchema.exportsTable)
-      .set({
-        status: "failed",
-        error: "Failed to enqueue export job.",
-      })
-      .where(eq(dbSchema.exportsTable.id, created.id))
-      .catch(() => undefined);
-    await releaseWorkspaceReservation(reservationJobId, now).catch(() => undefined);
-    throw err;
+  } else {
+    const isVercel = isVercelServerlessRuntime();
+    const externalWoken = await tryWakeExternalWorker(env.EXPORT_WORKER_URL);
+
+    if (!isVercel || externalWoken) {
+      try {
+        const boss = await getPgBossPublisher();
+        await enqueueExportJobToPgBoss(boss, jobPayload);
+        if (!isVercel && !externalWoken) {
+          await ensureExportQueueConsumerActive(appUrl).catch((err) => {
+            const safeErr = sanitizeErrorForLogging(err);
+            console.warn("[exports] embedded worker wakeup warning:", safeErr.message);
+          });
+        }
+      } catch (err) {
+        const safeErr = sanitizeErrorForLogging(err);
+        if (isVercel) {
+          console.warn(
+            "[exports] pg-boss enqueue warning on serverless (browser renderer will complete job):",
+            safeErr.message,
+          );
+        } else {
+          console.warn(
+            "[exports] local pg-boss enqueue warning (browser renderer will complete job):",
+            safeErr.message,
+          );
+        }
+      }
+    }
   }
 
   // Privacy rule (`Spec §10.8`): never send project titles or tokens to PostHog
@@ -479,6 +574,89 @@ export async function enqueueProjectExportForUser(
     monthlyExportsUsed: reservation.usedAfterReserve,
     monthlyExportsLimit: quotas.monthlyExportsLimit,
   };
+}
+
+export interface WorkspaceExportArchiveItem {
+  exportJob: typeof dbSchema.exportsTable.$inferSelect;
+  projectName: string;
+  projectId: string;
+}
+
+export async function listWorkspaceExportsHistoryForUser(
+  userId: string,
+  activeOrgId: string | null = null,
+): Promise<WorkspaceExportArchiveItem[]> {
+  const scopeWhere = and(
+    isNull(dbSchema.projects.spaceId),
+    activeOrgId
+      ? or(eq(dbSchema.projects.ownerId, userId), eq(dbSchema.projects.orgId, activeOrgId))
+      : eq(dbSchema.projects.ownerId, userId),
+  );
+
+  const [probe] = await db
+    .select({ id: dbSchema.projects.id })
+    .from(dbSchema.projects)
+    .where(scopeWhere)
+    .limit(1);
+
+  if (probe) {
+    const missingRows = await db
+      .select()
+      .from(dbSchema.projects)
+      .where(scopeWhere)
+      .limit(50);
+    for (const proj of missingRows) {
+      await ensureProjectWorkspaceAndSpace(proj);
+    }
+  }
+
+  let targetWorkspaceId: string;
+  if (activeOrgId) {
+    const [membership] = await db
+      .select({ id: dbSchema.memberships.id })
+      .from(dbSchema.memberships)
+      .where(
+        and(
+          eq(dbSchema.memberships.orgId, activeOrgId),
+          eq(dbSchema.memberships.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    if (membership) {
+      const teamWs = await ensureTeamWorkspaceForOrganization(activeOrgId, userId);
+      targetWorkspaceId = teamWs.workspaceId;
+    } else {
+      const personalWs = await ensurePersonalWorkspaceForUser(userId);
+      targetWorkspaceId = personalWs.workspaceId;
+    }
+  } else {
+    const personalWs = await ensurePersonalWorkspaceForUser(userId);
+    targetWorkspaceId = personalWs.workspaceId;
+  }
+
+  const visibleSpaces = await listVisibleSpacesForWorkspace(targetWorkspaceId, userId);
+  if (visibleSpaces.length === 0) {
+    return [];
+  }
+
+  const visibleSpaceIds = visibleSpaces.map((space) => space.id);
+  return db
+    .select({
+      exportJob: dbSchema.exportsTable,
+      projectName: dbSchema.projects.name,
+      projectId: dbSchema.projects.id,
+    })
+    .from(dbSchema.exportsTable)
+    .innerJoin(dbSchema.projects, eq(dbSchema.exportsTable.projectId, dbSchema.projects.id))
+    .where(
+      and(
+        eq(dbSchema.projects.workspaceId, targetWorkspaceId),
+        inArray(dbSchema.projects.spaceId, visibleSpaceIds),
+      ),
+    )
+    .orderBy(desc(dbSchema.exportsTable.createdAt))
+    .limit(50);
 }
 
 export async function getProjectExportsOverviewForUser(
@@ -632,18 +810,88 @@ export async function authorizeAndReadExportFile(
   }
 
   const safeProjectSlug = slugifyProjectName(auth.project.name);
-  const format = exportJob.format;
-  const contentType =
-    format === "pdf" ? "application/pdf" : format === "behance" ? "application/zip" : "image/png";
-  const ext = format === "pdf" ? "pdf" : format === "behance" ? "zip" : "png";
-  const suffix =
-    format === "behance" ? "behance-slices" : format === "pdf" ? "case-study" : "png-long";
+  const { contentType, ext, suffix } = resolveExportArtifactMeta(exportJob.format);
 
   return {
     status: "ok",
     bytes,
     contentType,
     fileName: `${safeProjectSlug}-${suffix}.${ext}`,
+  };
+}
+
+export async function authorizeExportDownloadForUser(
+  exportId: string,
+  actor: ExportActor,
+): Promise<
+  | { status: "not_found" }
+  | { status: "forbidden" }
+  | { status: "not_ready"; jobStatus: string }
+  | { status: "redirect"; redirectUrl: string; contentType: string; fileName: string }
+  | { status: "ok"; bytes: Uint8Array; contentType: string; fileName: string }
+> {
+  if (!isRealR2Configured()) {
+    return authorizeAndReadExportFile(exportId, actor);
+  }
+
+  if (!UUID_REGEX.test(exportId)) {
+    return { status: "not_found" };
+  }
+
+  const [exportJob] = await db
+    .select()
+    .from(dbSchema.exportsTable)
+    .where(eq(dbSchema.exportsTable.id, exportId))
+    .limit(1);
+
+  if (!exportJob) {
+    return { status: "not_found" };
+  }
+
+  const auth = await authorizeProjectAccess(exportJob.projectId, actor.id, "read");
+  if (!auth.ok) {
+    return { status: auth.status === 404 ? "not_found" : "forbidden" };
+  }
+
+  if (exportJob.expiresAt && exportJob.expiresAt.getTime() <= Date.now()) {
+    return { status: "not_found" };
+  }
+
+  if (exportJob.status !== "completed" || !exportJob.r2Key) {
+    return {
+      status: "not_ready",
+      jobStatus: exportJob.status,
+    };
+  }
+
+  const head = await headStoredObject(exportJob.r2Key);
+  if (!head.exists || head.bytes <= 0) {
+    return { status: "not_found" };
+  }
+
+  const safeProjectSlug = slugifyProjectName(auth.project.name);
+  const { contentType, ext, suffix } = resolveExportArtifactMeta(exportJob.format);
+  const safeFileName = sanitizeHeaderFilename(
+    `${safeProjectSlug}-${suffix}.${ext}`,
+    "casefolio-export",
+  );
+
+  const presignedUrl = await createPresignedDownloadUrl(
+    exportJob.r2Key,
+    safeFileName,
+    contentType,
+    300,
+  );
+
+  if (!presignedUrl) {
+    return authorizeAndReadExportFile(exportId, actor);
+  }
+
+  return {
+    status: "redirect",
+    redirectUrl: presignedUrl,
+    contentType,
+    fileName: safeFileName,
   };
 }
 
@@ -709,6 +957,324 @@ function hasValidExportBinaryStructure(format: ExportFormatOption, bytes: Uint8A
   return false;
 }
 
+export async function presignQueuedExportFromClient(
+  exportId: string,
+  input: { contentType: string; byteLength: number },
+  actor: ExportActor,
+): Promise<
+  | { status: "not_found" }
+  | { status: "forbidden" }
+  | { status: "invalid_payload"; error: string }
+  | { status: "already_completed"; exportJob: ExportHistoryItem }
+  | { status: "conflict"; jobStatus: string }
+  | {
+      status: "ok";
+      mode: "r2";
+      uploadUrl: string;
+      r2Key: string;
+      uploadHeaders: Record<string, string>;
+    }
+  | {
+      status: "ok";
+      mode: "direct";
+      r2Key: string;
+    }
+> {
+  if (!UUID_REGEX.test(exportId)) {
+    return { status: "not_found" };
+  }
+
+  if (input.byteLength <= 0 || input.byteLength > MAX_CLIENT_EXPORT_BYTES) {
+    return {
+      status: "invalid_payload",
+      error: "Rendered export payload size exceeds allowed limits.",
+    };
+  }
+
+  const [exportJob] = await db
+    .select()
+    .from(dbSchema.exportsTable)
+    .where(eq(dbSchema.exportsTable.id, exportId))
+    .limit(1);
+
+  if (!exportJob) {
+    return { status: "not_found" };
+  }
+
+  const auth = await authorizeProjectAccess(exportJob.projectId, actor.id, "export_aesthetic");
+  if (!auth.ok) {
+    return { status: auth.status === 404 ? "not_found" : "forbidden" };
+  }
+
+  if (exportJob.status === "completed" && exportJob.r2Key) {
+    return {
+      status: "already_completed",
+      exportJob: serializeExportRow(exportJob),
+    };
+  }
+
+  if (exportJob.status === "processing") {
+    return {
+      status: "conflict",
+      jobStatus: exportJob.status,
+    };
+  }
+
+  if (exportJob.status !== "queued") {
+    return {
+      status: "invalid_payload",
+      error: `Export job cannot be uploaded from status '${exportJob.status}'.`,
+    };
+  }
+
+  const { ext, contentType: expectedContentType } = resolveExportArtifactMeta(exportJob.format);
+  if (input.contentType !== expectedContentType) {
+    return {
+      status: "invalid_payload",
+      error: `Expected content type '${expectedContentType}' for ${exportJob.format} export.`,
+    };
+  }
+
+  const r2Key = `exports/${auth.project.id}/${exportJob.id}.${ext}`;
+  const presignedUrl = await createPresignedExportPutUrl({
+    r2Key,
+    contentType: expectedContentType,
+    byteLength: input.byteLength,
+    cacheControl: "private, no-store, max-age=0",
+    expiresInSeconds: 300,
+  });
+
+  if (presignedUrl) {
+    return {
+      status: "ok",
+      mode: "r2",
+      uploadUrl: presignedUrl,
+      r2Key,
+      uploadHeaders: {
+        "Content-Type": expectedContentType,
+      },
+    };
+  }
+
+  return {
+    status: "ok",
+    mode: "direct",
+    r2Key,
+  };
+}
+
+export async function finalizePresignedExportFromClient(
+  exportId: string,
+  input: { r2Key: string; contentType: string; byteLength: number },
+  actor: ExportActor,
+): Promise<
+  | { status: "not_found" }
+  | { status: "forbidden" }
+  | { status: "invalid_payload"; error: string }
+  | { status: "ok"; exportJob: ExportHistoryItem }
+> {
+  if (!UUID_REGEX.test(exportId)) {
+    return { status: "not_found" };
+  }
+
+  if (input.byteLength <= 0 || input.byteLength > MAX_CLIENT_EXPORT_BYTES) {
+    return {
+      status: "invalid_payload",
+      error: "Rendered export payload size is invalid.",
+    };
+  }
+
+  const [exportJob] = await db
+    .select()
+    .from(dbSchema.exportsTable)
+    .where(eq(dbSchema.exportsTable.id, exportId))
+    .limit(1);
+
+  if (!exportJob) {
+    return { status: "not_found" };
+  }
+
+  const auth = await authorizeProjectAccess(exportJob.projectId, actor.id, "export_aesthetic");
+  if (!auth.ok) {
+    return { status: auth.status === 404 ? "not_found" : "forbidden" };
+  }
+
+  if (exportJob.status === "completed" && exportJob.r2Key) {
+    return {
+      status: "ok",
+      exportJob: serializeExportRow(exportJob),
+    };
+  }
+
+  if (exportJob.status !== "queued") {
+    return {
+      status: "invalid_payload",
+      error: `Export job cannot be finalized from status '${exportJob.status}'.`,
+    };
+  }
+
+  const { ext, contentType: expectedContentType } = resolveExportArtifactMeta(exportJob.format);
+  const expectedR2Key = `exports/${auth.project.id}/${exportJob.id}.${ext}`;
+  if (input.r2Key !== expectedR2Key || input.contentType !== expectedContentType) {
+    return {
+      status: "invalid_payload",
+      error: "Export storage key or content type mismatch.",
+    };
+  }
+
+  const storedBytes = await readStoredObjectBytes(expectedR2Key);
+  if (
+    !storedBytes ||
+    storedBytes.byteLength === 0 ||
+    storedBytes.byteLength > MAX_CLIENT_EXPORT_BYTES
+  ) {
+    return {
+      status: "invalid_payload",
+      error: "Uploaded export artifact was not found in storage.",
+    };
+  }
+
+  if (!hasValidExportBinaryStructure(exportJob.format, storedBytes)) {
+    await deleteStoredObject(expectedR2Key).catch(() => undefined);
+    return {
+      status: "invalid_payload",
+      error: `Uploaded binary payload does not match expected ${exportJob.format} format.`,
+    };
+  }
+
+  const now = new Date();
+  const expiresAt = exportJob.expiresAt ?? new Date(now.getTime() + EXPORT_RETENTION_MS);
+
+  const [updated] = await db
+    .update(dbSchema.exportsTable)
+    .set({
+      status: "completed",
+      r2Key: expectedR2Key,
+      bytes: storedBytes.byteLength,
+      cacheKey: null,
+      expiresAt,
+      error: null,
+    })
+    .where(
+      and(
+        eq(dbSchema.exportsTable.id, exportId),
+        eq(dbSchema.exportsTable.status, "queued"),
+      ),
+    )
+    .returning();
+
+  if (!updated) {
+    const [latest] = await db
+      .select()
+      .from(dbSchema.exportsTable)
+      .where(eq(dbSchema.exportsTable.id, exportId))
+      .limit(1);
+    if (latest?.status === "completed" && latest.r2Key) {
+      return {
+        status: "ok",
+        exportJob: serializeExportRow(latest, now),
+      };
+    }
+    return {
+      status: "invalid_payload",
+      error: "Export job state changed concurrently and could not be finalized.",
+    };
+  }
+
+  await commitWorkspaceReservation(`export:${exportId}`, now).catch(() => undefined);
+
+  await notifyExportFinished({
+    exportId: updated.id,
+    projectId: updated.projectId,
+    format: updated.format,
+    status: "completed",
+  }).catch(() => undefined);
+
+  return {
+    status: "ok",
+    exportJob: serializeExportRow(updated, now),
+  };
+}
+
+export async function failQueuedExportFromClient(
+  exportId: string,
+  rawErrorMessage: string,
+  actor: ExportActor,
+): Promise<
+  | { status: "not_found" }
+  | { status: "forbidden" }
+  | { status: "ok"; exportJob: ExportHistoryItem }
+> {
+  if (!UUID_REGEX.test(exportId)) {
+    return { status: "not_found" };
+  }
+
+  const [exportJob] = await db
+    .select()
+    .from(dbSchema.exportsTable)
+    .where(eq(dbSchema.exportsTable.id, exportId))
+    .limit(1);
+
+  if (!exportJob) {
+    return { status: "not_found" };
+  }
+
+  const auth = await authorizeProjectAccess(exportJob.projectId, actor.id, "export_aesthetic");
+  if (!auth.ok) {
+    return { status: auth.status === 404 ? "not_found" : "forbidden" };
+  }
+
+  if (exportJob.requestedByUserId && exportJob.requestedByUserId !== actor.id) {
+    return { status: "forbidden" };
+  }
+
+  const now = new Date();
+  if (exportJob.status !== "queued") {
+    return {
+      status: "ok",
+      exportJob: serializeExportRow(exportJob, now),
+    };
+  }
+
+  const safeError =
+    redactSensitiveText(rawErrorMessage).trim().slice(0, 280) ||
+    "Browser export renderer could not complete.";
+
+  const [updated] = await db
+    .update(dbSchema.exportsTable)
+    .set({
+      status: "failed",
+      r2Key: null,
+      error: safeError,
+    })
+    .where(
+      and(
+        eq(dbSchema.exportsTable.id, exportId),
+        eq(dbSchema.exportsTable.status, "queued"),
+      ),
+    )
+    .returning();
+
+  if (!updated) {
+    const [latest] = await db
+      .select()
+      .from(dbSchema.exportsTable)
+      .where(eq(dbSchema.exportsTable.id, exportId))
+      .limit(1);
+    return {
+      status: "ok",
+      exportJob: serializeExportRow(latest ?? exportJob, now),
+    };
+  }
+
+  await releaseWorkspaceReservation(`export:${exportId}`, now).catch(() => undefined);
+
+  return {
+    status: "ok",
+    exportJob: serializeExportRow(updated, now),
+  };
+}
+
 export async function completeQueuedExportFromClient(
   exportId: string,
   bytes: Uint8Array,
@@ -721,12 +1287,6 @@ export async function completeQueuedExportFromClient(
 > {
   if (!UUID_REGEX.test(exportId)) {
     return { status: "not_found" };
-  }
-
-  // When a dedicated external Playwright worker is configured in production, strictly disable
-  // browser-uploaded completion so watermarks, resolution limits, and server rendering cannot be bypassed.
-  if (isDedicatedProductionWorkerConfigured()) {
-    return { status: "forbidden" };
   }
 
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_CLIENT_EXPORT_BYTES) {
@@ -773,9 +1333,7 @@ export async function completeQueuedExportFromClient(
     };
   }
 
-  const ext = format === "pdf" ? "pdf" : format === "behance" ? "zip" : "png";
-  const contentType =
-    format === "pdf" ? "application/pdf" : format === "behance" ? "application/zip" : "image/png";
+  const { ext, contentType } = resolveExportArtifactMeta(format);
   const r2Key = `exports/${auth.project.id}/${exportJob.id}.${ext}`;
   const now = new Date();
   const expiresAt = exportJob.expiresAt ?? new Date(now.getTime() + EXPORT_RETENTION_MS);

@@ -88,9 +88,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           ? 403
           : res.code === "QUANTITY_LOCKED" || res.code === "PENDING_DECREASE_CONFLICT"
             ? 409
-            : res.code === "PLUS_UPGRADE_REQUIRED"
-              ? 402
-              : 400;
+            : 400;
       return NextResponse.json(res, { status });
     }
     return NextResponse.json(res);
@@ -158,12 +156,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       customDomain: data.customDomain,
     });
     if (!res.ok) {
-      const status =
-        res.code === "FORBIDDEN"
-          ? 403
-          : res.code === "PLUS_UPGRADE_REQUIRED"
-            ? 402
-            : 400;
+      const status = res.code === "FORBIDDEN" ? 403 : 400;
       return NextResponse.json(res, { status });
     }
     return NextResponse.json(res);

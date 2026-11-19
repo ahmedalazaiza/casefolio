@@ -8,6 +8,7 @@ import { startPgBossExportConsumer, type ExportWorkerConsumerHandle } from "./qu
 import { resolveExportSigningSecret } from "./token";
 
 export * from "./token";
+export * from "./queue-publisher";
 export * from "./zip";
 export * from "./storage";
 export * from "./renderer";

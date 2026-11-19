@@ -68,9 +68,16 @@ describe("UploadTemplateWizard UI (C-303)", () => {
       />,
     );
 
-    // Step 1: Enter valid Orbit JSON
+    // Step 1: Enter valid Orbit JSON with a real HTTPS cover URL
+    const orbitWithRealCover = JSON.parse(loadOrbitJson()) as {
+      template: { cover: { src: string; ratio: string } };
+    };
+    orbitWithRealCover.template.cover = {
+      src: "https://images.unsplash.com/photo-1551288049-bebda4e38f71",
+      ratio: "4:3",
+    };
     fireEvent.change(screen.getByLabelText("Template JSON"), {
-      target: { value: loadOrbitJson() },
+      target: { value: JSON.stringify(orbitWithRealCover) },
     });
     fireEvent.click(screen.getByRole("button", { name: /Validate JSON/i }));
 

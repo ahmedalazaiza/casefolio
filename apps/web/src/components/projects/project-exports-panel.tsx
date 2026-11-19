@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { ExportCaseStudyDialog } from "@/components/projects/export-dialog";
@@ -24,7 +24,10 @@ import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { can } from "@/lib/entitlements";
-import { runBrowserAssistedExport } from "@/lib/exports/client-renderer";
+import {
+  runBrowserAssistedExportDetailed,
+  triggerExportFileDownload,
+} from "@/lib/exports/client-renderer";
 import {
   EXPORT_PRESETS,
   type EnqueueExportResult,
@@ -54,7 +57,15 @@ async function defaultRequestExport(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  return (await response.json()) as EnqueueExportResult;
+  const parsed = (await response.json().catch(() => null)) as EnqueueExportResult | null;
+  if (!parsed) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      error: `Unable to start export right now (HTTP ${response.status}). Please try again.`,
+    };
+  }
+  return parsed;
 }
 
 async function defaultPollOverview(
@@ -64,11 +75,11 @@ async function defaultPollOverview(
     cache: "no-store",
   });
   if (!response.ok) return null;
-  const payload = (await response.json()) as {
+  const payload = (await response.json().catch(() => null)) as {
     ok: boolean;
     overview?: ProjectExportsOverviewPayload;
-  };
-  return payload.ok && payload.overview ? payload.overview : null;
+  } | null;
+  return payload?.ok && payload.overview ? payload.overview : null;
 }
 
 function formatExportLabel(format: ExportFormatOption): string {
@@ -112,6 +123,10 @@ export function ProjectExportsPanel({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
+  const sessionRequestedIdsRef = useRef<Set<string>>(new Set());
+  const autoDownloadedIdsRef = useRef<Set<string>>(new Set());
+  const attemptedClientRenderIdsRef = useRef<Set<string>>(new Set());
+
   const isFreePlan = !can(overview.ownerPlan, "remove_watermark");
   const selectedPreset =
     EXPORT_PRESETS.find((item) => item.format === selectedFormat) ?? EXPORT_PRESETS[0]!;
@@ -121,6 +136,18 @@ export function ProjectExportsPanel({
       : selectedPreset.format === "behance"
         ? !can(overview.ownerPlan, "export_behance")
         : false;
+
+  const autoDownloadIfRequestedInSession = useCallback((job: ExportHistoryItem) => {
+    if (
+      job.status === "completed" &&
+      job.downloadUrl &&
+      sessionRequestedIdsRef.current.has(job.id) &&
+      !autoDownloadedIdsRef.current.has(job.id)
+    ) {
+      autoDownloadedIdsRef.current.add(job.id);
+      triggerExportFileDownload(job.downloadUrl);
+    }
+  }, []);
 
   const hasActiveJobs = useMemo(
     () => overview.exports.some((item) => item.status === "queued" || item.status === "processing"),
@@ -135,6 +162,15 @@ export function ProjectExportsPanel({
         const next = await pollOverview(overview.projectId);
         if (next) {
           setOverview(next);
+          for (const item of next.exports) {
+            if (sessionRequestedIdsRef.current.has(item.id)) {
+              if (item.status === "completed") {
+                autoDownloadIfRequestedInSession(item);
+              } else if (item.status === "failed" && item.error) {
+                setErrorMessage((prev) => prev ?? item.error);
+              }
+            }
+          }
         }
       } catch {
         // Retry next interval
@@ -142,11 +178,16 @@ export function ProjectExportsPanel({
     }, 900);
 
     return () => clearInterval(timer);
-  }, [hasActiveJobs, overview.projectId, pollOverview]);
+  }, [autoDownloadIfRequestedInSession, hasActiveJobs, overview.projectId, pollOverview]);
 
   const newestQueuedWithRenderUrl = useMemo(
     () =>
-      overview.exports.find((item) => item.status === "queued" && Boolean(item.renderUrl)) ?? null,
+      overview.exports.find(
+        (item) =>
+          item.status === "queued" &&
+          Boolean(item.renderUrl) &&
+          !attemptedClientRenderIdsRef.current.has(item.id),
+      ) ?? null,
     [overview.exports],
   );
 
@@ -154,17 +195,40 @@ export function ProjectExportsPanel({
     if (!newestQueuedWithRenderUrl) return;
 
     const fallbackTimer = setTimeout(async () => {
-      const completed = await runBrowserAssistedExport(newestQueuedWithRenderUrl);
-      if (completed) {
+      if (attemptedClientRenderIdsRef.current.has(newestQueuedWithRenderUrl.id)) {
+        return;
+      }
+      attemptedClientRenderIdsRef.current.add(newestQueuedWithRenderUrl.id);
+
+      const outcome = await runBrowserAssistedExportDetailed(newestQueuedWithRenderUrl);
+      if (outcome.status === "completed") {
         setOverview((prev) => ({
           ...prev,
-          exports: prev.exports.map((item) => (item.id === completed.id ? completed : item)),
+          exports: prev.exports.map((item) =>
+            item.id === outcome.exportJob.id ? outcome.exportJob : item,
+          ),
         }));
+        autoDownloadIfRequestedInSession(outcome.exportJob);
+        toast.success("Export ready to download");
+        return;
       }
-    }, 2200);
+
+      if (outcome.status === "failed") {
+        const failedJob: ExportHistoryItem = outcome.exportJob ?? {
+          ...newestQueuedWithRenderUrl,
+          status: "failed",
+          error: outcome.error,
+        };
+        setOverview((prev) => ({
+          ...prev,
+          exports: prev.exports.map((item) => (item.id === failedJob.id ? failedJob : item)),
+        }));
+        setErrorMessage(outcome.error);
+      }
+    }, 250);
 
     return () => clearTimeout(fallbackTimer);
-  }, [newestQueuedWithRenderUrl]);
+  }, [autoDownloadIfRequestedInSession, newestQueuedWithRenderUrl]);
 
   const handleQuickExport = useCallback(async () => {
     setErrorMessage(null);
@@ -174,7 +238,7 @@ export function ProjectExportsPanel({
       const result = await requestExport({
         projectId: overview.projectId,
         format: selectedFormat,
-        ...(selectedFormat === "png_long" && pngScale === 2 ? { scale: 2 as const } : {}),
+        ...(selectedFormat === "png_long" ? { scale: pngScale } : {}),
       });
 
       if (!result.ok) {
@@ -182,12 +246,19 @@ export function ProjectExportsPanel({
         return;
       }
 
+      sessionRequestedIdsRef.current.add(result.exportJob.id);
+
       setOverview((prev) => ({
         ...prev,
         monthlyExportsUsed: result.monthlyExportsUsed,
         monthlyExportsLimit: result.monthlyExportsLimit,
         exports: [result.exportJob, ...prev.exports.filter((e) => e.id !== result.exportJob.id)],
       }));
+
+      if (result.exportJob.status === "completed") {
+        autoDownloadIfRequestedInSession(result.exportJob);
+      }
+
       toast.success(
         result.reusedCachedArtifact
           ? "Ready immediately from cached revision export"
@@ -198,7 +269,13 @@ export function ProjectExportsPanel({
     } finally {
       setIsStartingExport(false);
     }
-  }, [overview.projectId, pngScale, requestExport, selectedFormat]);
+  }, [
+    autoDownloadIfRequestedInSession,
+    overview.projectId,
+    pngScale,
+    requestExport,
+    selectedFormat,
+  ]);
 
   const upsertExportItem = useCallback((job: ExportHistoryItem) => {
     setOverview((prev) => {
@@ -241,8 +318,8 @@ export function ProjectExportsPanel({
                 )}
               </div>
               <p className="text-muted-foreground type-body-s">
-                Template: {overview.templateName} · High-resolution Chromium exports · Retained 7
-                days per export
+                Template: {overview.templateName} · High-resolution exports · Retained 7 days per
+                export
               </p>
             </div>
           </div>
@@ -285,7 +362,7 @@ export function ProjectExportsPanel({
           <Link
             href={`/projects/${overview.projectId}/exports`}
             aria-current="page"
-            className="bg-elevated text-foreground shadow-card type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2"
+            className="border-border/70 bg-elevated text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full border px-4 py-2"
           >
             <Download className="text-primary size-3.5" />
             <span>Exports (PNG / PDF / Behance)</span>
@@ -312,7 +389,7 @@ export function ProjectExportsPanel({
       )}
 
       {/* Preset Cards + Plan Quota Banner */}
-      <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8">
+      <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
             <h2 className="text-foreground type-heading-m">Export Presets</h2>
@@ -360,7 +437,7 @@ export function ProjectExportsPanel({
                 className={cn(
                   "flex flex-col justify-between gap-4 rounded-2xl border p-5 text-left transition-all",
                   isSelected
-                    ? "border-primary bg-accent/40 ring-primary/15 shadow-card -translate-y-0.5 ring-2"
+                    ? "border-primary bg-accent/40 ring-primary/15 -translate-y-0.5 ring-2"
                     : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
                 )}
               >
@@ -386,7 +463,7 @@ export function ProjectExportsPanel({
                 {locked ? (
                   <span className="text-muted-foreground type-caption inline-flex items-center gap-1.5">
                     <Lock className="text-warning size-3.5" />
-                    <span>Pro, Team, or Plus plan required</span>
+                    <span>Pro or Teams plan required</span>
                   </span>
                 ) : (
                   <span className="text-tertiary type-caption font-mono">
@@ -404,8 +481,7 @@ export function ProjectExportsPanel({
             <div className="flex flex-col gap-0.5">
               <span className="text-foreground type-body-s-strong">PNG Output Resolution</span>
               <span className="text-muted-foreground type-caption">
-                1× renders up to 1,440 px wide; 2× renders retina 2,880 px wide on Pro, Team &amp;
-                Plus.
+                1× renders up to 1,440 px wide; 2× renders retina 2,880 px wide on Pro &amp; Teams.
               </span>
             </div>
 
@@ -459,9 +535,7 @@ export function ProjectExportsPanel({
             <span className="text-muted-foreground type-caption">
               {overview.hasWatermark
                 ? "Free PNG & PDF exports include a subtle 'Made with Casefolio' watermark."
-                : overview.ownerPlan === "plus"
-                  ? "White-Label exports enabled (Casefolio Plus — zero branding in files or PDF metadata)."
-                  : "Watermark-free high-res exports enabled."}
+                : "Watermark-free high-res exports enabled on Pro & Teams."}
             </span>
           </div>
 
@@ -501,7 +575,7 @@ export function ProjectExportsPanel({
       {/* Download History */}
       <section
         aria-label="Export download history"
-        className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
+        className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col gap-0.5">
@@ -604,7 +678,7 @@ export function ProjectExportsPanel({
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         featureTitle={`Unlock ${selectedFormat === "png_long" ? "2× Retina PNG Exports" : selectedPreset.label}`}
-        featureDescription="Upgrade to Casefolio Pro ($9.99/mo or $7.99/mo billed annually) for watermark-free PDF & 2× 2,880px PNG exports, Behance 1,400px image packs, and Unlimited Case Studies."
+        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual, up to 10 projects) or Teams ($5.99/seat/mo · 2 months free on annual) for watermark-free PDF & 2× 2,880px PNG exports and Behance 1,400px image packs."
       />
     </div>
   );

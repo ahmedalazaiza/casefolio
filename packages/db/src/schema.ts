@@ -163,6 +163,7 @@ export const workspaces = pgTable(
     keepPublicProjectId: uuid("keep_public_project_id"),
     maxSeats: integer("max_seats").notNull().default(1),
     maxCaseStudies: integer("max_case_studies").notNull().default(1),
+    lifetimeProjectsCreated: integer("lifetime_projects_created").notNull().default(0),
     customDomain: text("custom_domain"),
     customDomainEnabled: boolean("custom_domain_enabled").notNull().default(false),
     watermarkEnabled: boolean("watermark_enabled").notNull().default(true),

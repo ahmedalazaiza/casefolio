@@ -172,11 +172,13 @@ function resolveProjectStatusBadge(project: DashboardProjectItem): {
 export interface DashboardProjectsClientProps {
   initialProjects: DashboardProjectItem[];
   workspaceContext?: WorkspaceSwitcherState;
+  lifetimeProjectsCreated?: number;
 }
 
 export function DashboardProjectsClient({
   initialProjects,
   workspaceContext,
+  lifetimeProjectsCreated,
 }: DashboardProjectsClientProps) {
   const router = useRouter();
   const [projects, setProjects] = useState<DashboardProjectItem[]>(initialProjects);
@@ -227,6 +229,7 @@ export function DashboardProjectsClient({
   // Busy action ID & downgrade upgrade modal
   const [busyProjectId, setBusyProjectId] = useState<string | null>(null);
   const [downgradeUpgradeOpen, setDowngradeUpgradeOpen] = useState(false);
+  const [deletedInSessionCount, setDeletedInSessionCount] = useState(0);
 
   const lockedByDowngradeCount = useMemo(
     () => projects.filter((p) => p.isLockedByDowngrade && !p.archivedAtIso).length,
@@ -504,10 +507,13 @@ export function DashboardProjectsClient({
             : item,
         ),
       );
+      const isFreeWorkspace = (activeWorkspace?.plan ?? "free") === "free";
       toast.success(
         isArchived
           ? `Restored “${project.name}” to active drafts`
-          : `Archived “${project.name}” (frees an active project slot)`,
+          : isFreeWorkspace
+            ? `Archived “${project.name}” (archiving on Free does not grant an extra lifetime Case Study credit)`
+            : `Archived “${project.name}” (frees an active project slot)`,
       );
       router.refresh();
     } catch {
@@ -628,6 +634,7 @@ export function DashboardProjectsClient({
 
       const removedName = deleteTarget.name;
       setProjects((prev) => prev.filter((item) => item.id !== res.deletedProjectId));
+      setDeletedInSessionCount((prev) => prev + 1);
       toast.success(`Deleted “${removedName}”`);
       setDeleteTarget(null);
       router.refresh();
@@ -718,7 +725,9 @@ export function DashboardProjectsClient({
                   <option key={ws.workspaceId} value={ws.organizationId ?? "personal"}>
                     {ws.kind === "personal"
                       ? `Personal Workspace (${ws.plan.toUpperCase()})`
-                      : `${ws.name} · ${ws.plan === "plus" ? "Plus" : "Team"} (${ws.paidSeats} ${ws.paidSeats === 1 ? "seat" : "seats"})`}
+                      : ws.plan === "team" || ws.plan === "plus"
+                        ? `${ws.name} · Teams (${ws.paidSeats} ${ws.paidSeats === 1 ? "seat" : "seats"})`
+                        : `${ws.name} · Team (Unfunded)`}
                   </option>
                 ))}
               </select>
@@ -1061,11 +1070,49 @@ export function DashboardProjectsClient({
     </>
   );
 
+  const effectiveLifetimeProjectsCreated = Math.max(
+    lifetimeProjectsCreated ?? activeWorkspace?.usage.lifetimeProjectsCreated ?? 0,
+    projects.length + deletedInSessionCount,
+  );
+  const isFreeLifetimeCreditExhausted =
+    (activeWorkspace?.plan ?? "free") === "free" && effectiveLifetimeProjectsCreated >= 1;
+
   // Empty state — Studio Stage + Numbered Bento Steps
   if (projects.length === 0) {
     return (
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         {workspaceBar}
+
+        {isFreeLifetimeCreditExhausted && (
+          <div
+            role="status"
+            data-testid="dashboard-free-lifetime-used-banner"
+            className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center"
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+              <div className="flex flex-col gap-0.5">
+                <span className="type-body-s-strong">
+                  1 of 1 lifetime Free Case Study credit used
+                </span>
+                <span className="text-muted-foreground type-caption">
+                  Deleting a project on Free does not restore your lifetime credit. Upgrade to
+                  Casefolio Pro ($7.99/mo · 2 months free on annual) for up to 10 rotatable Case
+                  Studies, custom URLs, and watermark-free exports.
+                </span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="empty-lifetime-upgrade-btn"
+              onClick={() => setDowngradeUpgradeOpen(true)}
+            >
+              <Sparkles className="size-3.5" />
+              Upgrade to Pro — $7.99/mo
+            </Button>
+          </div>
+        )}
 
         <header className="v3-pattern-grid relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
           <div className="flex flex-col gap-2.5">
@@ -1161,6 +1208,13 @@ export function DashboardProjectsClient({
         </section>
 
         {spaceDialogs}
+
+        <UpgradePromptDialog
+          open={downgradeUpgradeOpen}
+          onOpenChange={setDowngradeUpgradeOpen}
+          featureTitle="Upgrade to Casefolio Pro"
+          featureDescription="Upgrade to Casefolio Pro ($7.99/mo · $79.90/yr with 2 months free) for up to 10 rotatable Case Studies, custom Case Study URLs (/p/your-custom-slug), all Pro templates, and watermark-free exports."
+        />
       </div>
     );
   }
@@ -1437,7 +1491,7 @@ export function DashboardProjectsClient({
                         />
                         <div
                           aria-hidden="true"
-                          className="bg-elevated shadow-card border-border/60 absolute right-4 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
+                          className="bg-elevated border-border/60 absolute right-4 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
                         />
                       </div>
                     )}
@@ -1670,6 +1724,26 @@ export function DashboardProjectsClient({
             </div>
           </DialogHeader>
 
+          {(activeWorkspace?.plan ?? "free") === "free" && (
+            <div
+              role="note"
+              data-testid="free-delete-lifetime-warning"
+              className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-xl border p-3.5"
+            >
+              <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+              <div className="type-body-s flex flex-col gap-0.5">
+                <span className="font-semibold">
+                  Deleting this project on the Free plan will not restore your 1 lifetime free Case
+                  Study credit.
+                </span>
+                <span className="text-muted-foreground type-caption">
+                  To create another Case Study after deleting this one, you will need to upgrade to
+                  Pro ($7.99/mo · 2 months free on annual).
+                </span>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleDeleteSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="delete-confirm-input">Type the project name to confirm</Label>
@@ -1734,7 +1808,7 @@ export function DashboardProjectsClient({
         open={downgradeUpgradeOpen}
         onOpenChange={setDowngradeUpgradeOpen}
         featureTitle="Unlock all your Case Studies"
-        featureDescription="Upgrade to Casefolio Pro ($9.99/mo or $7.99/mo billed annually) to unlock Unlimited Case Studies, edit & publish every project, and export without watermarks."
+        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · $79.90/yr with 2 months free) for up to 10 rotatable Case Studies, custom Case Study URLs (/p/your-custom-slug), all Pro templates, and watermark-free exports."
       />
     </div>
   );

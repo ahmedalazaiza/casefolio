@@ -15,3 +15,4 @@ export function revalidatePublicProject(slug: string | null | undefined): void {
     // Outside Next.js server runtime (e.g. Vitest), revalidatePath is a safe no-op
   }
 }
+

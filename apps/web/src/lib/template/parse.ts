@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { isSafeTemplateCoverUrl } from "@/lib/template/cover-url";
+import {
+  isLegacyPlaceholderCoverUrl,
+  isSafeTemplateCoverUrl,
+} from "@/lib/template/cover-url";
 import {
   aspectRatioSchema,
   TEMPLATE_PROJECT_TYPES,
@@ -25,7 +28,14 @@ export const wizardMetadataInputSchema = z.object({
     .string()
     .trim()
     .min(1, "Cover image URL is required.")
-    .refine(isSafeTemplateCoverUrl, "Cover image URL must be an uploaded /cdn/covers path or https:// URL."),
+    .refine(
+      isSafeTemplateCoverUrl,
+      "Cover image URL must be an uploaded /cdn/covers path or https:// URL.",
+    )
+    .refine(
+      (val) => !isLegacyPlaceholderCoverUrl(val),
+      "Upload a real cover image instead of a legacy placeholder URL (cdn.casefolio.app).",
+    ),
   coverRatio: aspectRatioSchema,
   changelog: z.string().trim().max(500).optional(),
 });
@@ -159,7 +169,7 @@ export function normalizeRawTemplateJsonCoverIfMissing(
     const existingCover = tpl.cover as { src?: unknown; ratio?: unknown } | undefined;
     const existingSrc =
       typeof existingCover?.src === "string" ? existingCover.src.trim() : "";
-    if (existingSrc.length > 0) {
+    if (existingSrc.length > 0 && !isLegacyPlaceholderCoverUrl(existingSrc)) {
       return { normalizedJson: rawJsonText, coverWasMissing: false };
     }
 

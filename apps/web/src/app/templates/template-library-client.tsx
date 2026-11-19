@@ -662,12 +662,13 @@ export function TemplateLibraryClient({
             ? `Unlock the ${upgradeTemplateName} Pro template`
             : "Unlock Pro templates"
         }
-        featureDescription="Upgrade to Casefolio Pro to unlock all Pro and Premium templates, build unlimited Case Studies, and export high-resolution PNG, Behance, and PDF files without watermarks."
+        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) to unlock all Pro templates, build up to 10 rotatable Case Studies with custom URLs, and export high-resolution PNG, Behance, and PDF files without watermarks."
       />
     </>
   );
 
   if (isAuthenticated) {
+    const isTeamsPlan = userPlan === "team" || userPlan === "plus";
     return (
       <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-7">
         <header className="v3-pattern-grid flex flex-col justify-between gap-5 rounded-2xl border border-[var(--cf-border-subtle)] p-6 sm:flex-row sm:items-end sm:p-8">
@@ -686,8 +687,15 @@ export function TemplateLibraryClient({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={canUseProTemplates ? "pro" : "accent"} className="w-fit">
-              {canUseProTemplates ? `${userPlan.toUpperCase()} plan` : "Free plan"}
+            <Badge
+              tone={isTeamsPlan ? "teams" : canUseProTemplates ? "pro" : "accent"}
+              className="w-fit"
+            >
+              {isTeamsPlan
+                ? "Teams plan"
+                : canUseProTemplates
+                  ? "PRO plan"
+                  : "Free plan"}
             </Badge>
             <span className="rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3 py-1 font-mono text-xs font-semibold text-[var(--cf-text-secondary)]">
               {templates.length} layouts
@@ -773,7 +781,7 @@ export function TemplateLibraryClient({
               <span className="v3-sticker-lime">next story</span> today
             </h2>
             <p className="v3-body-l mt-4 max-w-xl text-[var(--cf-text-inverse-muted)]">
-              Start free with 1 active Case Study—no credit card required. Drop in your
+              Start free with 1 lifetime Case Study credit—no credit card required. Drop in your
               screens and publish a shareable link in minutes.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

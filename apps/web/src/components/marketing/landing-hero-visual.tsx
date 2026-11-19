@@ -2,6 +2,8 @@
 
 import { AlertTriangle, ArrowLeft, Cloud, Redo2, Undo2, Upload } from "lucide-react";
 import { useState } from "react";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
+import type { LandingPublishedTemplateItem } from "@/lib/marketing/landing-stats";
 import {
   V3_ALT_TOKENS,
   V3_DEFAULT_TOKENS,
@@ -203,10 +205,16 @@ export function V3TemplateArtwork({
 }
 
 /** Hero 3-card stage (Figma 85:7741 Desktop / 87:9625 Mobile) */
-export function LandingHeroVisual() {
+export function LandingHeroVisual({
+  publishedTemplates = [],
+}: {
+  publishedTemplates?: readonly LandingPublishedTemplateItem[];
+} = {}) {
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">(
     "desktop",
   );
+  const leftTemplate = publishedTemplates[0] ?? null;
+  const rightTemplate = publishedTemplates[1] ?? publishedTemplates[0] ?? null;
 
   return (
     <figure
@@ -214,7 +222,7 @@ export function LandingHeroVisual() {
       className="relative mx-auto w-full max-w-[75rem] pt-2 select-none"
     >
       <div className="relative flex items-end justify-center">
-        {/* Left Tilted Template Card — Frame (Fans outward left on scroll) */}
+        {/* Left Tilted Template Card — Published Cover or Frame (Fans outward left on scroll) */}
         <div
           aria-hidden="true"
           data-hero-card-left=""
@@ -222,12 +230,22 @@ export function LandingHeroVisual() {
         >
           <div className="-translate-x-6 -rotate-6 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2.5 sm:translate-x-2 sm:p-3.5">
             <div className="h-44 sm:h-64 lg:h-72">
-              <V3TemplateArtwork variant="frame" compact />
+              {leftTemplate ? (
+                <TemplateThumbnail
+                  coverUrl={leftTemplate.coverUrl}
+                  slug={leftTemplate.slug}
+                  name={leftTemplate.name}
+                  theme={leftTemplate.theme ?? null}
+                  className="size-full rounded-xl border border-[var(--cf-border-subtle)]"
+                />
+              ) : (
+                <V3TemplateArtwork variant="frame" compact />
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right Tilted Template Card — Orbit (Fans outward right on scroll) */}
+        {/* Right Tilted Template Card — Published Cover or Orbit (Fans outward right on scroll) */}
         <div
           aria-hidden="true"
           data-hero-card-right=""
@@ -235,7 +253,17 @@ export function LandingHeroVisual() {
         >
           <div className="translate-x-6 rotate-6 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2.5 sm:-translate-x-2 sm:p-3.5">
             <div className="h-44 sm:h-64 lg:h-72">
-              <V3TemplateArtwork variant="orbit" compact />
+              {rightTemplate ? (
+                <TemplateThumbnail
+                  coverUrl={rightTemplate.coverUrl}
+                  slug={rightTemplate.slug}
+                  name={rightTemplate.name}
+                  theme={rightTemplate.theme ?? null}
+                  className="size-full rounded-xl border border-[var(--cf-border-subtle)]"
+                />
+              ) : (
+                <V3TemplateArtwork variant="orbit" compact />
+              )}
             </div>
           </div>
         </div>

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { InputField } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth/client";
+import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 import { verifyEmailOtpSchema } from "@/lib/auth/schemas";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +22,15 @@ export function VerifyEmailForm({
   initialEmail = "",
   initialName = "",
   initialSent = false,
+  callbackUrl,
 }: {
   initialEmail?: string;
   initialName?: string;
   initialSent?: boolean;
+  callbackUrl?: string;
 }) {
+  const safeCallback = callbackUrl ? sanitizeCallbackUrl(callbackUrl) : null;
+  const hasCustomCallback = Boolean(safeCallback && safeCallback !== "/dashboard");
   const [email, setEmail] = useState(initialEmail);
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [verified, setVerified] = useState(false);
@@ -135,13 +140,20 @@ export function VerifyEmailForm({
         <div className="flex flex-col gap-1.5">
           <h1 className="type-heading-l text-foreground">Email verified</h1>
           <p className="text-muted-foreground type-body-m">
-            Thanks{firstName ? `, ${firstName}` : ""}. Let&apos;s set up your workspace.
+            Thanks{firstName ? `, ${firstName}` : ""}.{" "}
+            {hasCustomCallback
+              ? "Your account is ready — continue to your destination."
+              : "Let's set up your workspace."}
           </p>
         </div>
 
         <Button asChild size="lg" className="w-full">
-          <Link href="/onboarding">
-            Start onboarding
+          <Link href={hasCustomCallback && safeCallback ? safeCallback : "/onboarding"}>
+            {hasCustomCallback && safeCallback?.startsWith("/account/team")
+              ? "Continue to team invitation"
+              : hasCustomCallback
+                ? "Continue"
+                : "Start onboarding"}
             <ArrowRight className="size-4" />
           </Link>
         </Button>
@@ -237,7 +249,14 @@ export function VerifyEmailForm({
             {cooldownSeconds > 0 ? `Resend in ${cooldownSeconds}s` : "Resend"}
           </button>{" "}
           ·{" "}
-          <Link href="/sign-up" className="text-primary font-medium hover:underline">
+          <Link
+            href={
+              hasCustomCallback && safeCallback
+                ? `/sign-up?callbackUrl=${encodeURIComponent(safeCallback)}`
+                : "/sign-up"
+            }
+            className="text-primary font-medium hover:underline"
+          >
             Change email
           </Link>
         </p>

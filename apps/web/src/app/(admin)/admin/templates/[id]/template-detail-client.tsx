@@ -70,6 +70,8 @@ export interface TemplateDetailClientProps {
     version: string;
     changelog: string;
     rawJson: string;
+    coverUrl?: string;
+    coverRatio?: string;
     publishImmediately: boolean;
   }) => Promise<CreateTemplateVersionResult>;
   deleteAction?: (payload: {
@@ -106,6 +108,10 @@ export function TemplateDetailClient({
   const [nextSemver, setNextSemver] = useState(() => suggestNextMinorSemver(highestVersion));
   const [nextChangelog, setNextChangelog] = useState("");
   const [nextRawJson, setNextRawJson] = useState(() => detail.versions[0]?.rawJson ?? "");
+  const [nextCoverUrl, setNextCoverUrl] = useState(detail.coverUrl ?? "");
+  const [nextCoverRatio, setNextCoverRatio] = useState(
+    detail.versions[0]?.document?.template.cover.ratio ?? "4:3",
+  );
   const [publishImmediately, setPublishImmediately] = useState(false);
   const [versionModalError, setVersionModalError] = useState<string | null>(null);
 
@@ -177,11 +183,15 @@ export function TemplateDetailClient({
     setVersionModalError(null);
 
     startTransition(async () => {
+      const trimmedNextCover = nextCoverUrl.trim();
       const res = await createVersionAction({
         templateId: detail.id,
         version: nextSemver,
         changelog: nextChangelog,
         rawJson: nextRawJson,
+        ...(trimmedNextCover && trimmedNextCover !== (detail.coverUrl ?? "").trim()
+          ? { coverUrl: trimmedNextCover, coverRatio: nextCoverRatio }
+          : {}),
         publishImmediately,
       });
 
@@ -305,7 +315,19 @@ export function TemplateDetailClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Dialog open={newVersionDialogOpen} onOpenChange={setNewVersionDialogOpen}>
+          <Dialog
+            open={newVersionDialogOpen}
+            onOpenChange={(open) => {
+              setNewVersionDialogOpen(open);
+              if (open) {
+                setNextCoverUrl(detail.coverUrl ?? "");
+                setNextCoverRatio(
+                  detail.versions[0]?.document?.template.cover.ratio ?? "4:3",
+                );
+                setVersionModalError(null);
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button type="button" variant="secondary">
                 <GitBranchPlus className="size-4" />
@@ -366,6 +388,17 @@ export function TemplateDetailClient({
                   className="border-input bg-background text-foreground type-mono-s focus-visible:ring-ring/40 w-full rounded-lg border p-3 outline-none focus-visible:ring-2"
                 />
               </div>
+
+              <TemplateCoverUploader
+                coverUrl={nextCoverUrl}
+                onCoverUrlChange={setNextCoverUrl}
+                coverRatio={nextCoverRatio}
+                onCoverRatioChange={setNextCoverRatio}
+                templateName={detail.name}
+                templateSlug={detail.slug}
+                required={false}
+                compact
+              />
 
               <label className="flex cursor-pointer items-center gap-2.5">
                 <input

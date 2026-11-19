@@ -75,7 +75,7 @@ describe("exports service, plan gating & worker job lifecycle (C-602)", () => {
           type: "mobile",
           category: "Fintech",
           tier: "free",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-export-cover.png",
           coverRatio: "4:3",
         },
       });

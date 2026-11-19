@@ -57,7 +57,7 @@ describe("Admin template JSON validation & draft persistence (C-303)", () => {
           type: "mobile",
           category: "Fintech",
           tier: "pro",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-cover.png",
           coverRatio: "4:3",
           changelog: "Initial C-303 test draft",
         },

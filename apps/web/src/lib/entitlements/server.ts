@@ -4,7 +4,6 @@ import {
   evaluateSubscriptionLifecycle,
   getWorkspaceQuotas,
   isSubscriptionGrantingAccess,
-  PLUS_INCLUDED_SEATS,
   type SubscriptionLifecycleEvaluation,
   type WorkspacePlanQuotas,
 } from "@/lib/billing/plans";
@@ -283,20 +282,15 @@ export async function resolveWorkspaceEntitlementState(
     if (lifecycle.grantsPaidAccess) {
       effectivePlan =
         ws.kind === "team"
-          ? subRow.plan === "plus"
-            ? "plus"
-            : subRow.plan === "team"
-              ? "team"
-              : "free"
+          ? subRow.plan === "team" || subRow.plan === "plus"
+            ? "team"
+            : "free"
           : subRow.plan === "pro"
             ? "pro"
             : "free";
     }
 
-    if (effectivePlan === "plus") {
-      paidSeats = PLUS_INCLUDED_SEATS;
-      renewalQuantity = null;
-    } else if (effectivePlan === "team") {
+    if (effectivePlan === "team") {
       paidSeats = clampTeamsSeats(subRow.currentPaidCapacity);
       renewalQuantity =
         typeof subRow.renewalQuantity === "number"
@@ -331,13 +325,11 @@ export async function resolveWorkspaceEntitlementState(
         : null);
 
   const admissionCeiling =
-    effectivePlan === "plus"
-      ? PLUS_INCLUDED_SEATS
-      : effectivePlan === "team"
-        ? renewalQuantity !== null
-          ? Math.min(paidSeats, renewalQuantity)
-          : paidSeats
-        : 1;
+    effectivePlan === "team"
+      ? renewalQuantity !== null
+        ? Math.min(paidSeats, renewalQuantity)
+        : paidSeats
+      : 1;
 
   const quotas = getWorkspaceQuotas(effectivePlan, paidSeats);
 
@@ -449,7 +441,7 @@ export async function resolveEffectivePlanForOrganization(
       orgSub.pastDueSince,
     )
   ) {
-    return orgSub.plan;
+    return "team";
   }
 
   return "free";

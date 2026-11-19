@@ -11,6 +11,7 @@ import {
 import { z } from "zod";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import { db, dbSchema } from "@/lib/db";
+import { can } from "@/lib/entitlements";
 import {
   resolveEffectivePlanForUser,
   resolveWorkspaceEntitlementState,
@@ -97,7 +98,7 @@ export const projectSlugSchema = z
 
 export const publishProjectInputSchema = z.object({
   projectId: z.string().uuid("Invalid project ID."),
-  slug: projectSlugSchema,
+  slug: projectSlugSchema.optional(),
   visibility: z.enum(["public", "unlisted"]),
   acknowledgePublicExposure: z.boolean().optional(),
   brandingRemoved: z.boolean().optional(),
@@ -116,6 +117,7 @@ export type PublishProjectErrorCode =
   | "VALIDATION_ERROR"
   | "SLUG_RESERVED"
   | "SLUG_TAKEN"
+  | "CUSTOM_SLUG_LOCKED"
   | "PUBLISH_LIMIT_REACHED"
   | "PUBLIC_ACK_REQUIRED";
 
@@ -174,6 +176,7 @@ export interface ProjectShareSettingsPayload {
   requiresTeamPrivatePublicAck: boolean;
   publicAcknowledged: boolean;
   canPublish: boolean;
+  canCustomizeSlug?: boolean;
   brandingRemoved: boolean;
   canRemoveBranding: boolean;
   whiteLabelEnabled: boolean;
@@ -249,6 +252,35 @@ export function buildSuggestedProjectSlug(projectName: string, projectId: string
     candidate = `${candidate}-${shortSuffix}`;
   }
   return candidate.slice(0, 80).replace(/-+$/g, "");
+}
+
+export function buildAutoFreeProjectSlug(projectName: string, projectId: string): string {
+  const base = slugifyProjectName(projectName).slice(0, 48).replace(/-+$/g, "") || "case-study";
+  const shortSuffix = projectId.replace(/-/g, "").slice(0, 6).toLowerCase();
+  let candidate = normalizeProjectSlug(`${base}-${shortSuffix}`);
+  if (RESERVED_PROJECT_SLUGS.has(candidate)) {
+    const extraSuffix = projectId.replace(/-/g, "").slice(6, 10).toLowerCase();
+    candidate = normalizeProjectSlug(`${candidate}-${extraSuffix}`);
+  }
+  return candidate.slice(0, 80).replace(/-+$/g, "");
+}
+
+async function resolveAutoFreeProjectSlug(project: {
+  id: string;
+  name: string;
+  slug: string | null;
+}): Promise<string> {
+  if (project.slug) {
+    return project.slug;
+  }
+  const primary = buildAutoFreeProjectSlug(project.name, project.id);
+  const primaryCheck = await checkProjectSlugAvailability(primary, project.id);
+  if (primaryCheck.available) {
+    return primaryCheck.normalizedSlug;
+  }
+  const base = slugifyProjectName(project.name).slice(0, 42).replace(/-+$/g, "") || "case-study";
+  const extendedSuffix = project.id.replace(/-/g, "").slice(0, 12).toLowerCase();
+  return normalizeProjectSlug(`${base}-${extendedSuffix}`).slice(0, 80).replace(/-+$/g, "");
 }
 
 function collectReferencedAssetIds(puckData: unknown): string[] {
@@ -400,20 +432,26 @@ export async function getProjectShareSettingsForUser(
   const resolvedPuck = puckCheck.success ? puckCheck.data : tplDocCheck.data.puck;
   const resolvedTheme = themeCheck.success ? themeCheck.data : tplDocCheck.data.template.theme;
 
-  let suggestedSlug =
-    readAuth.project.slug ??
-    buildSuggestedProjectSlug(readAuth.project.name, readAuth.project.id);
-  if (!readAuth.project.slug) {
-    const availability = await checkProjectSlugAvailability(suggestedSlug, readAuth.project.id);
-    if (!availability.available) {
-      const suffix = readAuth.project.id.replace(/-/g, "").slice(0, 6).toLowerCase();
-      suggestedSlug = `${suggestedSlug.slice(0, 70)}-${suffix}`;
+  const canCustomizeSlug = can(readAuth.entitlement.plan, "custom_slug");
+  let suggestedSlug: string;
+  if (!canCustomizeSlug) {
+    suggestedSlug = await resolveAutoFreeProjectSlug(readAuth.project);
+  } else {
+    suggestedSlug =
+      readAuth.project.slug ??
+      buildSuggestedProjectSlug(readAuth.project.name, readAuth.project.id);
+    if (!readAuth.project.slug) {
+      const availability = await checkProjectSlugAvailability(suggestedSlug, readAuth.project.id);
+      if (!availability.available) {
+        const suffix = readAuth.project.id.replace(/-/g, "").slice(0, 6).toLowerCase();
+        suggestedSlug = `${suggestedSlug.slice(0, 70)}-${suffix}`;
+      }
     }
   }
 
   const publishAuth = await authorizeProjectAccess(projectId, user.id, "publish");
   const counts = await getWorkspaceProjectCounts(readAuth.workspace.id);
-  const whiteLabelShare = readAuth.entitlement.plan === "plus";
+  const whiteLabelShare = false;
   const meta = extractCaseStudyMetaFromPuck(readAuth.project.name, resolvedPuck, whiteLabelShare);
   const isPublished =
     (readAuth.project.visibility === "public" || readAuth.project.visibility === "unlisted") &&
@@ -444,18 +482,15 @@ export async function getProjectShareSettingsForUser(
       requiresTeamPrivatePublicAck,
       publicAcknowledged: Boolean(readAuth.project.publicAcknowledgedAt),
       canPublish: publishAuth.ok,
+      canCustomizeSlug,
       brandingRemoved:
-        whiteLabelShare ||
-        (readAuth.project.brandingRemoved && readAuth.entitlement.quotas.brandingRemovable),
+        readAuth.project.brandingRemoved && readAuth.entitlement.quotas.brandingRemovable,
       canRemoveBranding: readAuth.entitlement.quotas.brandingRemovable,
-      whiteLabelEnabled: whiteLabelShare,
-      customDomain: whiteLabelShare ? (readAuth.workspace.customDomain ?? null) : null,
+      whiteLabelEnabled: false,
+      customDomain: null,
       publishedCount: counts.publishedProjects,
       maxPublishedProjects: readAuth.entitlement.quotas.publishedProjectsLimit,
-      appBaseUrl:
-        whiteLabelShare && readAuth.workspace.customDomain
-          ? `https://${readAuth.workspace.customDomain}`
-          : resolvePublicAppBaseUrl(),
+      appBaseUrl: resolvePublicAppBaseUrl(),
       preview: {
         eyebrow: meta.eyebrow,
         title: meta.title,
@@ -557,7 +592,46 @@ export async function publishProjectForUser(
     (existing.visibility === "public" || existing.visibility === "unlisted") &&
     existing.publishedAt !== null;
 
-  const availability = await checkProjectSlugAvailability(valid.slug, existing.id);
+  const canCustomizeSlug = can(auth.entitlement.plan, "custom_slug");
+  let candidateSlug: string;
+
+  if (!canCustomizeSlug) {
+    const autoFreeSlug = await resolveAutoFreeProjectSlug(existing);
+    const deterministicBaseSlug = buildAutoFreeProjectSlug(existing.name, existing.id);
+
+    if (
+      valid.slug !== undefined &&
+      valid.slug !== existing.slug &&
+      valid.slug !== autoFreeSlug &&
+      valid.slug !== deterministicBaseSlug
+    ) {
+      return {
+        ok: false,
+        code: "CUSTOM_SLUG_LOCKED",
+        error: "Custom Case Study URLs (/p/your-custom-slug) require Casefolio Pro or Teams.",
+        fieldErrors: {
+          slug: "Custom Case Study URLs (/p/your-custom-slug) require Casefolio Pro or Teams.",
+        },
+      };
+    }
+
+    candidateSlug = existing.slug ?? autoFreeSlug;
+  } else if (valid.slug !== undefined) {
+    candidateSlug = valid.slug;
+  } else {
+    let fallbackSlug =
+      existing.slug ?? buildSuggestedProjectSlug(existing.name, existing.id);
+    if (!existing.slug) {
+      const suggestedAvail = await checkProjectSlugAvailability(fallbackSlug, existing.id);
+      if (!suggestedAvail.available) {
+        const suffix = existing.id.replace(/-/g, "").slice(0, 6).toLowerCase();
+        fallbackSlug = `${fallbackSlug.slice(0, 70)}-${suffix}`;
+      }
+    }
+    candidateSlug = fallbackSlug;
+  }
+
+  const availability = await checkProjectSlugAvailability(candidateSlug, existing.id);
   if (!availability.available) {
     return {
       ok: false,
@@ -696,7 +770,7 @@ export async function publishProjectForUser(
     }
 
     const updated = txOutcome.updated;
-    const resolvedSlug = updated.slug ?? valid.slug;
+    const resolvedSlug = updated.slug ?? availability.normalizedSlug;
     const resolvedPublishedAt = updated.publishedAt ?? now;
 
     revalidatePublicProject(resolvedSlug);
@@ -907,14 +981,12 @@ export async function getPublishedProjectBySlug(
   }
 
   const effectivePlan = ent ? ent.plan : await resolveEffectivePlanForUser(row.owner.id);
-  const whiteLabelEnabled = effectivePlan === "plus";
+  const whiteLabelEnabled = false;
   const meta = extractCaseStudyMetaFromPuck(row.project.name, resolvedPuck, whiteLabelEnabled);
-  const brandingRemoved =
-    whiteLabelEnabled ||
-    Boolean(
-      (snapshot ? snapshot.brandingRemoved : row.project.brandingRemoved) &&
-        ent?.quotas.brandingRemovable,
-    );
+  const brandingRemoved = Boolean(
+    (snapshot ? snapshot.brandingRemoved : row.project.brandingRemoved) &&
+      ent?.quotas.brandingRemovable,
+  );
 
   return {
     project: {
@@ -925,7 +997,7 @@ export async function getPublishedProjectBySlug(
       visibility: row.project.visibility,
       brandingRemoved,
       whiteLabelEnabled,
-      customDomain: whiteLabelEnabled ? (ensured.workspace.customDomain ?? null) : null,
+      customDomain: null,
       publishedAtIso: (snapshot?.publishedAt ?? row.project.publishedAt).toISOString(),
       updatedAtIso: (snapshot?.updatedAt ?? row.project.updatedAt).toISOString(),
     },

@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { existsSync } from "node:fs";
+import { accessSync, constants, existsSync } from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve, sep } from "node:path";
+import { tmpdir } from "node:os";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -114,16 +115,35 @@ export function getR2S3Client(config: StorageEnvConfig = readStorageEnvConfig())
   return client;
 }
 
+function isServerlessOrReadOnlyDirectory(dirPath: string): boolean {
+  if (
+    Boolean(process.env.VERCEL) ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+    dirPath.startsWith("/var/task")
+  ) {
+    return true;
+  }
+  try {
+    accessSync(dirPath, constants.W_OK);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export function resolveLocalUploadRoot(): string {
   if (process.env.CASEFOLIO_LOCAL_UPLOAD_DIR) {
     return resolve(process.env.CASEFOLIO_LOCAL_UPLOAD_DIR);
   }
   const cwd = process.cwd();
+  if (isServerlessOrReadOnlyDirectory(cwd)) {
+    return join(tmpdir(), "casefolio-uploads");
+  }
   if (existsSync(resolve(cwd, "pnpm-workspace.yaml"))) {
     return resolve(cwd, ".data/uploads");
   }
   const monorepoUp = resolve(cwd, "../../pnpm-workspace.yaml");
-  if (existsSync(monorepoUp)) {
+  if (existsSync(monorepoUp) && !isServerlessOrReadOnlyDirectory(resolve(cwd, "../.."))) {
     return resolve(cwd, "../../.data/uploads");
   }
   return resolve(cwd, ".data/uploads");
@@ -286,6 +306,52 @@ export async function createPresignedPutTarget(params: {
     },
     expiresInSeconds,
   };
+}
+
+export async function createPresignedExportPutUrl(params: {
+  r2Key: string;
+  contentType: string;
+  byteLength: number;
+  cacheControl?: string;
+  expiresInSeconds?: number;
+  config?: StorageEnvConfig;
+}): Promise<string | null> {
+  const config = params.config ?? readStorageEnvConfig();
+  if (!isRealR2Configured(config)) {
+    return null;
+  }
+  const expiresInSeconds = params.expiresInSeconds ?? 300;
+  const s3 = getR2S3Client(config);
+  const command = new PutObjectCommand({
+    Bucket: config.bucket,
+    Key: params.r2Key,
+    ContentType: params.contentType,
+    ContentLength: params.byteLength,
+    CacheControl: params.cacheControl ?? "private, no-store, max-age=0",
+  });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+}
+
+export async function createPresignedDownloadUrl(
+  r2Key: string,
+  filename: string,
+  contentType: string,
+  expiresInSeconds = 300,
+  config: StorageEnvConfig = readStorageEnvConfig(),
+): Promise<string | null> {
+  if (!isRealR2Configured(config)) {
+    return null;
+  }
+  const safeFilename = filename.replace(/["\\\r\n]/g, "_").trim() || "casefolio-export";
+  const s3 = getR2S3Client(config);
+  const command = new GetObjectCommand({
+    Bucket: config.bucket,
+    Key: r2Key,
+    ResponseContentDisposition: `attachment; filename="${safeFilename}"`,
+    ResponseContentType: contentType,
+    ResponseCacheControl: "private, no-store, max-age=0",
+  });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
 }
 
 export async function writeLocalStoredObject(r2Key: string, bytes: Uint8Array): Promise<void> {

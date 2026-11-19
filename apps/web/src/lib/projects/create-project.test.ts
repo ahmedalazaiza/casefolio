@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { eq } from "@casefolio/db";
 import { describe, expect, it } from "vitest";
 import { db, dbSchema } from "@/lib/db";
+import { deleteProjectForUser } from "@/lib/projects/dashboard";
 import {
   createProjectFromTemplate,
   getProjectEditorAccess,
@@ -60,7 +61,7 @@ describe("createProjectFromTemplate (C-401)", () => {
           type: "mobile",
           category: "Fintech",
           tier: "free",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-cover.png",
           coverRatio: "4:3",
         },
       });
@@ -84,7 +85,7 @@ describe("createProjectFromTemplate (C-401)", () => {
           type: "mobile",
           category: "Fintech",
           tier: "pro",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-pro-cover.png",
           coverRatio: "4:3",
         },
       });
@@ -165,7 +166,7 @@ describe("createProjectFromTemplate (C-401)", () => {
         .where(eq(dbSchema.projects.id, created1.projectId));
       expect(recheckedProject1?.templateVersionId).toBe(freeDraft.versionId);
 
-      // 3. Free user blocked on Case Study #2 (FREE_PROJECT_LIMIT = 1)
+      // 3. Free user blocked on Case Study #2 (1 lifetime credit)
       const limitBlocked = await createProjectFromTemplate({
         userId: createdUserId,
         userPlan: "free",
@@ -180,45 +181,112 @@ describe("createProjectFromTemplate (C-401)", () => {
         code: "PLAN_LIMIT_REACHED",
       });
 
-      // 4. Upgrading to Pro unlocks unlimited Case Studies (pinned to latest v1.1.0) and Pro templates
+      // 3b. Deleting the Free project does NOT restore the 1 lifetime credit!
+      const deletedFree = await deleteProjectForUser(
+        {
+          projectId: created1.projectId,
+          confirmName: "Mosaed — Smart debt management",
+          deleteExports: true,
+        },
+        { id: createdUserId, role: "user" },
+      );
+      expect(deletedFree.ok).toBe(true);
+
+      const postDeleteBlocked = await createProjectFromTemplate({
+        userId: createdUserId,
+        userPlan: "free",
+        input: {
+          type: "mobile",
+          templateId: freeDraft.templateId,
+          name: "After Delete Free Retry",
+        },
+      });
+      expect(postDeleteBlocked).toMatchObject({
+        ok: false,
+        code: "PLAN_LIMIT_REACHED",
+      });
+
+      // 4. Upgrading to Pro unlocks up to 10 rotatable active Case Studies & Pro templates
       await db
         .update(dbSchema.users)
         .set({ plan: "pro" })
         .where(eq(dbSchema.users.id, createdUserId));
 
-      const created2OnPro = await createProjectFromTemplate({
+      const createdOnPro1 = await createProjectFromTemplate({
         userId: createdUserId,
         userPlan: "pro",
         input: {
           type: "mobile",
           templateId: freeDraft.templateId,
-          name: "Second Case Study On Pro",
+          name: "Mosaed — Smart debt management",
         },
       });
-      expect(created2OnPro.ok).toBe(true);
-      if (created2OnPro.ok && v11.ok) {
-        expect(created2OnPro.templateVersionId).toBe(v11.versionId);
+      expect(createdOnPro1.ok).toBe(true);
+      if (!createdOnPro1.ok) return;
+      if (v11.ok) {
+        expect(createdOnPro1.templateVersionId).toBe(v11.versionId);
       }
 
-      const proSuccess = await createProjectFromTemplate({
+      const proProjectIds: string[] = [createdOnPro1.projectId];
+      for (let idx = 2; idx <= 10; idx++) {
+        const res = await createProjectFromTemplate({
+          userId: createdUserId,
+          userPlan: "pro",
+          input: {
+            type: "mobile",
+            templateId: idx === 2 ? proDraft.templateId : freeDraft.templateId,
+            name: `Pro Slot ${idx}`,
+          },
+        });
+        expect(res.ok).toBe(true);
+        if (res.ok) proProjectIds.push(res.projectId);
+      }
+
+      // 11th active project on Pro is blocked (PRO_PROJECT_LIMIT = 10)
+      const eleventhProBlocked = await createProjectFromTemplate({
+        userId: createdUserId,
+        userPlan: "pro",
+        input: {
+          type: "mobile",
+          templateId: freeDraft.templateId,
+          name: "Pro Slot 11 Blocked",
+        },
+      });
+      expect(eleventhProBlocked).toMatchObject({
+        ok: false,
+        code: "PLAN_LIMIT_REACHED",
+      });
+
+      // Deleting 1 Pro project frees up a slot so a new 10th project succeeds (rotatable!)
+      const deletedSlot10 = await deleteProjectForUser(
+        {
+          projectId: proProjectIds[9]!,
+          confirmName: "Pro Slot 10",
+          deleteExports: true,
+        },
+        { id: createdUserId, role: "user" },
+      );
+      expect(deletedSlot10.ok).toBe(true);
+
+      const rotatedTenth = await createProjectFromTemplate({
         userId: createdUserId,
         userPlan: "pro",
         input: {
           type: "mobile",
           templateId: proDraft.templateId,
-          name: "Pro Case Study Unlocked",
+          name: "Pro Rotated Slot 10",
         },
       });
-      expect(proSuccess.ok).toBe(true);
+      expect(rotatedTenth.ok).toBe(true);
 
       // 6. Editor authorization check: owner gets ok, cross-tenant stranger gets 404 (not_found per Spec §10.2 & §15), unknown ID gets not_found
-      const ownerAccess = await getProjectEditorAccess(created1.projectId, {
+      const ownerAccess = await getProjectEditorAccess(createdOnPro1.projectId, {
         id: createdUserId,
         role: "user",
       });
       expect(ownerAccess.status).toBe("ok");
 
-      const strangerAccess = await getProjectEditorAccess(created1.projectId, {
+      const strangerAccess = await getProjectEditorAccess(createdOnPro1.projectId, {
         id: "00000000-0000-4000-8000-000000000001",
         role: "user",
       });
@@ -240,7 +308,7 @@ describe("createProjectFromTemplate (C-401)", () => {
 
         const saved1 = await saveProjectEditorState(
           {
-            projectId: created1.projectId,
+            projectId: createdOnPro1.projectId,
             expectedUpdatedAtIso: initialUpdatedAtIso,
             puckData: editedPuck,
             theme: editedTheme,
@@ -254,7 +322,7 @@ describe("createProjectFromTemplate (C-401)", () => {
         // Stale save using old expectedUpdatedAtIso returns CONFLICT without overwriting
         const staleConflict = await saveProjectEditorState(
           {
-            projectId: created1.projectId,
+            projectId: createdOnPro1.projectId,
             expectedUpdatedAtIso: initialUpdatedAtIso,
             puckData: ownerAccess.payload.project.puckData,
             theme: ownerAccess.payload.project.theme,
@@ -268,7 +336,7 @@ describe("createProjectFromTemplate (C-401)", () => {
         });
 
         // Reload check confirms saved v2 data persisted intact
-        const reloaded = await getProjectEditorAccess(created1.projectId, {
+        const reloaded = await getProjectEditorAccess(createdOnPro1.projectId, {
           id: createdUserId,
           role: "user",
         });

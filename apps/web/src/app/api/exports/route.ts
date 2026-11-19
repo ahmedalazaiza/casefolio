@@ -5,6 +5,7 @@ import {
   getProjectExportsOverviewForUser,
 } from "@/lib/exports/service";
 import { resolvePublicAppBaseUrl } from "@/lib/projects/publish";
+import { sanitizeErrorForLogging } from "@/lib/security/redact";
 
 function resolveSafeExportAppOrigin(requestUrl: string): string {
   const configured = resolvePublicAppBaseUrl();
@@ -34,98 +35,123 @@ function resolveSafeExportAppOrigin(requestUrl: string): string {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const ctx = await getServerSession();
-  if (!ctx) {
-    return NextResponse.json(
-      { ok: false, code: "UNAUTHORIZED", error: "Please sign in to view exports." },
-      { status: 401 },
-    );
-  }
-
-  const reqUrl = new URL(request.url);
-  const projectId = reqUrl.searchParams.get("projectId") ?? "";
-  if (!projectId) {
-    return NextResponse.json(
-      { ok: false, code: "VALIDATION_ERROR", error: "projectId query parameter is required." },
-      { status: 400 },
-    );
-  }
-
-  const access = await getProjectExportsOverviewForUser(projectId, {
-    id: ctx.user.id,
-    role: ctx.user.role,
-    plan: ctx.user.plan,
-  });
-
-  if (access.status === "not_found") {
-    return NextResponse.json(
-      { ok: false, code: "NOT_FOUND", error: "Project not found." },
-      { status: 404 },
-    );
-  }
-
-  if (access.status === "forbidden") {
-    return NextResponse.json(
-      { ok: false, code: "FORBIDDEN", error: "You do not have access to this project." },
-      { status: 403 },
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    overview: access.overview,
-  });
-}
-
-export async function POST(request: Request): Promise<Response> {
-  const ctx = await getServerSession();
-  if (!ctx) {
-    return NextResponse.json(
-      { ok: false, code: "UNAUTHORIZED", error: "Please sign in to export your case study." },
-      { status: 401 },
-    );
-  }
-
-  let body: unknown;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { ok: false, code: "VALIDATION_ERROR", error: "Invalid JSON request body." },
-      { status: 400 },
-    );
-  }
+    const ctx = await getServerSession();
+    if (!ctx) {
+      return NextResponse.json(
+        { ok: false, code: "UNAUTHORIZED", error: "Please sign in to view exports." },
+        { status: 401 },
+      );
+    }
 
-  const safeOrigin = resolveSafeExportAppOrigin(request.url);
-  const result = await enqueueProjectExportForUser(
-    body,
-    {
+    const reqUrl = new URL(request.url);
+    const projectId = reqUrl.searchParams.get("projectId") ?? "";
+    if (!projectId) {
+      return NextResponse.json(
+        { ok: false, code: "VALIDATION_ERROR", error: "projectId query parameter is required." },
+        { status: 400 },
+      );
+    }
+
+    const access = await getProjectExportsOverviewForUser(projectId, {
       id: ctx.user.id,
       role: ctx.user.role,
       plan: ctx.user.plan,
-    },
-    {
-      appUrl: safeOrigin,
-    },
-  );
-
-  if (!result.ok) {
-    const statusMap = {
-      UNAUTHORIZED: 401,
-      FORBIDDEN: 403,
-      NOT_FOUND: 404,
-      VALIDATION_ERROR: 400,
-      PLAN_UPGRADE_REQUIRED: 403,
-      EXPORT_LIMIT_REACHED: 403,
-      PAST_DUE_READ_ONLY: 403,
-      RATE_LIMITED: 429,
-    } as const;
-
-    return NextResponse.json(result, {
-      status: statusMap[result.code] ?? 400,
     });
-  }
 
-  return NextResponse.json(result, { status: 202 });
+    if (access.status === "not_found") {
+      return NextResponse.json(
+        { ok: false, code: "NOT_FOUND", error: "Project not found." },
+        { status: 404 },
+      );
+    }
+
+    if (access.status === "forbidden") {
+      return NextResponse.json(
+        { ok: false, code: "FORBIDDEN", error: "You do not have access to this project." },
+        { status: 403 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      overview: access.overview,
+    });
+  } catch (err) {
+    const safeErr = sanitizeErrorForLogging(err);
+    console.error("[api/exports] unexpected GET error:", safeErr.message);
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        error: "Unable to load exports right now. Please refresh and try again.",
+      },
+      { status: 500 },
+    );
+  }
 }
 
+export async function POST(request: Request): Promise<Response> {
+  try {
+    const ctx = await getServerSession();
+    if (!ctx) {
+      return NextResponse.json(
+        { ok: false, code: "UNAUTHORIZED", error: "Please sign in to export your case study." },
+        { status: 401 },
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { ok: false, code: "VALIDATION_ERROR", error: "Invalid JSON request body." },
+        { status: 400 },
+      );
+    }
+
+    const safeOrigin = resolveSafeExportAppOrigin(request.url);
+    const result = await enqueueProjectExportForUser(
+      body,
+      {
+        id: ctx.user.id,
+        role: ctx.user.role,
+        plan: ctx.user.plan,
+      },
+      {
+        appUrl: safeOrigin,
+      },
+    );
+
+    if (!result.ok) {
+      const statusMap = {
+        UNAUTHORIZED: 401,
+        FORBIDDEN: 403,
+        NOT_FOUND: 404,
+        VALIDATION_ERROR: 400,
+        PLAN_UPGRADE_REQUIRED: 403,
+        EXPORT_LIMIT_REACHED: 403,
+        PAST_DUE_READ_ONLY: 403,
+        RATE_LIMITED: 429,
+      } as const;
+
+      return NextResponse.json(result, {
+        status: statusMap[result.code] ?? 400,
+      });
+    }
+
+    return NextResponse.json(result, { status: 202 });
+  } catch (err) {
+    const safeErr = sanitizeErrorForLogging(err);
+    console.error("[api/exports] unexpected POST error:", safeErr.message);
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        error: "Unable to start export right now. Please try again.",
+      },
+      { status: 500 },
+    );
+  }
+}

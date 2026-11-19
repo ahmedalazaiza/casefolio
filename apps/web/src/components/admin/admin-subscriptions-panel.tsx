@@ -20,7 +20,7 @@ function statusTone(status: string): "published" | "draft" | "danger" | "neutral
   return "neutral";
 }
 
-const PLAN_ORDER: readonly PlanTier[] = ["free", "pro", "team", "plus"];
+const PLAN_ORDER: readonly PlanTier[] = ["free", "pro", "team"];
 
 export function AdminSubscriptionsPanel({
   overview,
@@ -57,7 +57,7 @@ export function AdminSubscriptionsPanel({
           <span className="text-foreground type-display-s">
             {overview.payingUsersCount.toLocaleString("en-US")}
           </span>
-          <span className="text-muted-foreground type-caption">Pro, Team &amp; Plus subscribers</span>
+          <span className="text-muted-foreground type-caption">Pro &amp; Teams subscribers</span>
         </Card>
 
         <Card className="min-w-0 justify-between gap-2 p-5">
@@ -78,7 +78,7 @@ export function AdminSubscriptionsPanel({
       </div>
 
       {/* Plan cards (Figma 34:8582) */}
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 md:grid-cols-3">
         {PLAN_ORDER.map((tier) => {
           const plan = BILLING_PLAN_CATALOG[tier];
           return (
@@ -86,7 +86,7 @@ export function AdminSubscriptionsPanel({
               key={tier}
               className={cn(
                 "min-w-0 justify-between gap-5 p-6",
-                plan.highlighted && "bg-wash-panel border-primary/25 shadow-float",
+                plan.highlighted && "bg-wash-panel border-primary/25",
               )}
             >
               <div className="flex flex-col gap-4">
@@ -163,8 +163,13 @@ export function AdminSubscriptionsPanel({
                         </span>
                       </div>
                     </td>
-                    <td className="text-foreground type-body-s px-4 py-3.5 capitalize">
-                      {sub.plan} ({sub.interval})
+                    <td className="text-foreground type-body-s px-4 py-3.5">
+                      {sub.plan === "team" || sub.plan === "plus"
+                        ? "Teams"
+                        : sub.plan === "pro"
+                          ? "Pro"
+                          : "Free"}{" "}
+                      ({sub.interval})
                     </td>
                     <td className="text-foreground type-mono-s px-4 py-3.5">
                       ${sub.amountUsd.toFixed(2)}

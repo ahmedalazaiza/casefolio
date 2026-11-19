@@ -1,7 +1,8 @@
 import { chromium, type Browser } from "playwright";
+import type { ExportFormat } from "./queue-publisher";
 import { buildZipArchive } from "./zip";
 
-export type ExportFormat = "png_long" | "pdf" | "behance";
+export type { ExportFormat } from "./queue-publisher";
 
 export const EXPORT_DESKTOP_WIDTH = 1440;
 export const BEHANCE_SLICE_WIDTH = 1400;
@@ -73,11 +74,19 @@ function isPrivateOrMetadataHost(hostname: string): boolean {
   return false;
 }
 
+const ALLOWED_HTTPS_ASSET_HOSTS = new Set([
+  "cdn.casefolio.app",
+  "fonts.googleapis.com",
+  "fonts.gstatic.com",
+  "rsms.me",
+  "imagedelivery.net",
+]);
+
 /**
  * SSRF & arbitrary URL fetch defense for Playwright export rendering (`Spec §5.6 & §10.7`).
  * Allows ONLY:
  * 1. Exact `allowedOrigin` (`http(s)://host:port` of the Casefolio web app)
- * 2. First-party static asset CDN (`https://cdn.casefolio.app`)
+ * 2. Trusted HTTPS static asset, font, and image CDN hosts (`cdn.casefolio.app`, Google Fonts, `rsms.me`, Cloudflare Images)
  * 3. Non-SVG raster `data:image/(png|jpeg|webp);...` URIs
  * Blocks all arbitrary external hosts, `data:image/svg+xml`, `data:text/html`, `file:`, and internal/metadata IPs.
  */
@@ -122,11 +131,12 @@ export function isAllowedExportWorkerRequestUrl(
     return true;
   }
 
-  // First-party static template asset host
+  // Trusted HTTPS static asset, Google Fonts, Inter (`rsms.me`), and Cloudflare Images delivery hosts
+  const reqHostname = parsedRequest.hostname.toLowerCase();
   if (
     parsedRequest.protocol === "https:" &&
-    parsedRequest.hostname.toLowerCase() === "cdn.casefolio.app" &&
-    !isPrivateOrMetadataHost(parsedRequest.hostname)
+    ALLOWED_HTTPS_ASSET_HOSTS.has(reqHostname) &&
+    !isPrivateOrMetadataHost(reqHostname)
   ) {
     return true;
   }

@@ -2,11 +2,15 @@
 
 import type { PlanTier } from "@casefolio/db";
 import {
+  AlertTriangle,
   ArrowRightLeft,
   Check,
+  Copy,
+  Loader2,
   Lock,
   LogOut,
   MailPlus,
+  Minus,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -17,9 +21,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { toast } from "sonner";
+import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
-import { Badge, ProBadge } from "@/components/ui/badge";
+import { Badge, ProBadge, TeamsBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -35,14 +41,27 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 import { createOrganizationSchema, inviteTeamMemberSchema } from "@/lib/auth/schemas";
 import {
-  PLUS_INCLUDED_SEATS,
+  clampTeamsSeats,
+  formatUsdFromCents,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
-  type PaidPlanTier,
 } from "@/lib/billing/plans";
 import { can, evaluateEntitlement } from "@/lib/entitlements";
 
 export type CanonicalOrLegacyRole = "owner" | "admin" | "member" | "editor" | "viewer";
+
+export interface TeamInvitationHistoryItem {
+  id: string;
+  email: string;
+  role: string;
+  status: "pending" | "accepted" | "expired" | "canceled";
+  createdAtIso?: string;
+  expiresAtIso?: string;
+  acceptedAtIso?: string | null;
+  revokedAtIso?: string | null;
+  resentAtIso?: string | null;
+  resentCount?: number;
+}
 
 export interface TeamOrganizationSummary {
   id: string;
@@ -53,6 +72,11 @@ export interface TeamOrganizationSummary {
   paidSeats?: number;
   renewalSeats?: number | null;
   hasActiveTeamPlan?: boolean;
+  billingInterval?: "monthly" | "yearly";
+  subscriptionStatus?: string;
+  currentPeriodEndIso?: string | null;
+  isLockedForQuantityChange?: boolean;
+  lockReason?: string | null;
   myRole: CanonicalOrLegacyRole;
   pendingTransfer?: {
     id: string;
@@ -67,13 +91,7 @@ export interface TeamOrganizationSummary {
     email: string;
     role: string;
   }>;
-  invitations: Array<{
-    id: string;
-    email: string;
-    role: string;
-    status: string;
-    expiresAtIso?: string;
-  }>;
+  invitations: TeamInvitationHistoryItem[];
 }
 
 export interface IncomingTeamInvitation {
@@ -91,15 +109,55 @@ export interface IncomingOwnerTransferSummary {
   expiresAtIso: string;
 }
 
+export type InspectedInvitationNotice =
+  | { state: "not_found" }
+  | {
+      state: "email_mismatch";
+      organizationName: string;
+      inviterName: string;
+      invitedEmail: string;
+      role: string;
+    }
+  | {
+      state: "accepted";
+      organizationId: string;
+      organizationName: string;
+      invitedEmail: string;
+    }
+  | {
+      state: "expired";
+      organizationName: string;
+      inviterName: string;
+      invitedEmail: string;
+      expiresAtIso: string;
+    }
+  | {
+      state: "canceled";
+      organizationName: string;
+      invitedEmail: string;
+    };
+
 export interface TeamWorkspaceClientProps {
   currentUserId?: string;
+  currentUserEmail?: string;
   userPlan?: PlanTier;
   activeOrganizationId: string | null;
   organizations: TeamOrganizationSummary[];
   incomingInvitations: IncomingTeamInvitation[];
   incomingTransfers?: IncomingOwnerTransferSummary[];
+  inspectedInvitation?: InspectedInvitationNotice | null;
   highlightedInvitationId?: string;
   invitationToken?: string;
+}
+
+interface SeatIncreasePreviewState {
+  operationId: string;
+  currentSeats: number;
+  targetSeats: number;
+  addedSeats: number;
+  immediateChargeCents: number;
+  renewalChargeCents: number;
+  interval: "monthly" | "yearly";
 }
 
 function toCanonicalRole(role: string): "owner" | "admin" | "member" {
@@ -115,6 +173,17 @@ function formatRoleLabel(role: string): string {
   return "Member";
 }
 
+function formatShortTimestamp(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function slugifyName(value: string): string {
   return value
     .trim()
@@ -124,13 +193,23 @@ function slugifyName(value: string): string {
     .slice(0, 48);
 }
 
+async function switchActiveWorkspaceSession(organizationId: string | null): Promise<void> {
+  await fetch("/api/workspaces", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ organizationId }),
+  }).catch(() => undefined);
+}
+
 export function TeamWorkspaceClient({
   currentUserId,
-  userPlan = "free",
+  currentUserEmail,
+  userPlan: _userPlan = "free",
   activeOrganizationId,
   organizations,
   incomingInvitations,
   incomingTransfers = [],
+  inspectedInvitation = null,
   highlightedInvitationId,
   invitationToken,
 }: TeamWorkspaceClientProps) {
@@ -149,10 +228,32 @@ export function TeamWorkspaceClient({
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [latestInviteUrl, setLatestInviteUrl] = useState<string | null>(null);
+  const [recentInviteUrls, setRecentInviteUrls] = useState<Record<string, string>>({});
+  const [copiedInvitationId, setCopiedInvitationId] = useState<string | null>(null);
+  const [inviteFilter, setInviteFilter] = useState<"all" | "pending" | "accepted" | "inactive">(
+    "all",
+  );
   const [busyInvitationId, setBusyInvitationId] = useState<string | null>(null);
+  const [switchingAccount, setSwitchingAccount] = useState(false);
+
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
   const [memberMessage, setMemberMessage] = useState<string | null>(null);
   const [memberError, setMemberError] = useState<string | null>(null);
+  const [confirmDepartureTarget, setConfirmDepartureTarget] = useState<{
+    targetUserId: string;
+    memberName: string;
+    isSelf: boolean;
+  } | null>(null);
+
+  // Inline seat management state
+  const [targetSeatCount, setTargetSeatCount] = useState<number>(TEAMS_MIN_SEATS);
+  const [seatActionBusy, setSeatActionBusy] = useState(false);
+  const [seatActionMessage, setSeatActionMessage] = useState<string | null>(null);
+  const [seatActionError, setSeatActionError] = useState<string | null>(null);
+  const [seatIncreasePreview, setSeatIncreasePreview] =
+    useState<SeatIncreasePreviewState | null>(null);
+  const [teamCheckoutOpen, setTeamCheckoutOpen] = useState(false);
 
   const [transferTargetUserId, setTransferTargetUserId] = useState<string>("");
   const [transferBusy, setTransferBusy] = useState(false);
@@ -173,7 +274,6 @@ export function TeamWorkspaceClient({
   const [transferModalError, setTransferModalError] = useState<string | null>(null);
 
   const [teamUpgradeOpen, setTeamUpgradeOpen] = useState(false);
-  const [upgradeTargetPlan, setUpgradeTargetPlan] = useState<PaidPlanTier>("team");
 
   const currentOrg =
     organizations.find((org) => org.id === selectedOrgId) ?? organizations[0] ?? null;
@@ -190,25 +290,43 @@ export function TeamWorkspaceClient({
 
   const paidSeats = currentOrg?.paidSeats ?? currentOrg?.seats ?? 1;
   const renewalSeats = currentOrg?.renewalSeats ?? null;
+
+  useEffect(() => {
+    if (currentOrg) {
+      setTargetSeatCount(
+        clampTeamsSeats(currentOrg.renewalSeats ?? currentOrg.paidSeats ?? TEAMS_MIN_SEATS),
+      );
+      setSeatActionError(null);
+      setSeatActionMessage(null);
+    }
+  }, [currentOrg?.id, currentOrg?.paidSeats, currentOrg?.renewalSeats]);
+
   const admissionCeiling =
     renewalSeats !== null ? Math.min(paidSeats, renewalSeats) : paidSeats;
   const activeMembersCount = currentOrg ? currentOrg.members.length : 1;
-  const reservedInvitesCount = currentOrg ? currentOrg.invitations.length : 0;
-  const seatsUsed = activeMembersCount + reservedInvitesCount;
+
+  const pendingInvitationsCount = useMemo(() => {
+    if (!currentOrg) return 0;
+    const distinctPending = new Set(
+      currentOrg.invitations
+        .filter((inv) => inv.status === "pending")
+        .map((inv) => inv.email.trim().toLowerCase()),
+    );
+    return distinctPending.size;
+  }, [currentOrg]);
+
+  const seatsUsed = activeMembersCount + pendingInvitationsCount;
   const availableSeats = Math.max(0, admissionCeiling - seatsUsed);
 
   const effectiveOrgPlan: PlanTier =
-    currentOrg?.plan === "plus" || userPlan === "plus"
-      ? "plus"
-      : currentOrg?.hasActiveTeamPlan ||
-          currentOrg?.plan === "team" ||
-          userPlan === "team"
-        ? "team"
-        : userPlan;
+    currentOrg?.hasActiveTeamPlan ||
+    currentOrg?.plan === "team" ||
+    currentOrg?.plan === "plus"
+      ? "team"
+      : "free";
 
-  const isTeamAtTenSeatCap =
-    effectiveOrgPlan === "team" &&
-    seatsUsed >= TEAMS_MAX_SELF_SERVE_SEATS;
+  const isTeamAtMaxCap =
+    effectiveOrgPlan === "team" && seatsUsed >= TEAMS_MAX_SELF_SERVE_SEATS;
 
   const seatDecision = evaluateEntitlement(effectiveOrgPlan, "team_seats", {
     seatsUsed,
@@ -218,6 +336,51 @@ export function TeamWorkspaceClient({
     seatsUsed,
     seatsLimit: admissionCeiling,
   });
+
+  const filteredInvitations = useMemo(() => {
+    if (!currentOrg) return [];
+    return currentOrg.invitations.filter((inv) => {
+      if (inviteFilter === "pending") return inv.status === "pending";
+      if (inviteFilter === "accepted") return inv.status === "accepted";
+      if (inviteFilter === "inactive") {
+        return inv.status === "expired" || inv.status === "canceled";
+      }
+      return true;
+    });
+  }, [currentOrg, inviteFilter]);
+
+  async function handleSwitchAccountForInvitation() {
+    setSwitchingAccount(true);
+    const params = new URLSearchParams();
+    if (highlightedInvitationId) params.set("invitationId", highlightedInvitationId);
+    if (invitationToken) params.set("token", invitationToken);
+    const callbackPath =
+      params.size > 0 ? `/account/team?${params.toString()}` : "/account/team";
+    try {
+      await authClient.signOut();
+    } catch {
+      // Proceed to sign-in even if session cleanup had a transient hiccup
+    }
+    router.push(`/sign-in?callbackUrl=${encodeURIComponent(callbackPath)}`);
+    router.refresh();
+  }
+
+  async function handleCopyInvitationLink(invitationId: string, explicitUrl?: string) {
+    const resolvedUrl =
+      explicitUrl ??
+      recentInviteUrls[invitationId] ??
+      `${window.location.origin}/account/team?invitationId=${encodeURIComponent(invitationId)}`;
+    try {
+      await navigator.clipboard.writeText(resolvedUrl);
+      setCopiedInvitationId(invitationId);
+      toast.success("Copied invitation link to clipboard.");
+      window.setTimeout(() => {
+        setCopiedInvitationId((prev) => (prev === invitationId ? null : prev));
+      }, 2500);
+    } catch {
+      toast.error("Could not access clipboard.");
+    }
+  }
 
   async function handleCreateOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -238,19 +401,25 @@ export function TeamWorkspaceClient({
       name: parsed.data.name,
       slug: parsed.data.slug,
     });
-    setCreating(false);
 
     if (error) {
+      setCreating(false);
       setCreateError(error.message ?? "Could not create team workspace.");
       return;
     }
 
     if (data?.id) {
+      await authClient.organization
+        .setActive({ organizationId: data.id })
+        .catch(() => undefined);
+      await switchActiveWorkspaceSession(data.id);
       setSelectedOrgId(data.id);
     }
+    setCreating(false);
     setOrgName("");
     setOrgSlug("");
     setSlugTouched(false);
+    toast.success(`Created team workspace “${parsed.data.name}”.`);
     router.refresh();
   }
 
@@ -260,6 +429,7 @@ export function TeamWorkspaceClient({
 
     setInviteError(null);
     setInviteStatus(null);
+    setLatestInviteUrl(null);
 
     const parsed = inviteTeamMemberSchema.safeParse({
       organizationId: currentOrg.id,
@@ -274,10 +444,9 @@ export function TeamWorkspaceClient({
 
     if (!canUseTeamSeats) {
       setInviteError(seatDecision.message);
-      setUpgradeTargetPlan(
-        seatDecision.requiredPlan === "plus" || isTeamAtTenSeatCap ? "plus" : "team",
-      );
-      setTeamUpgradeOpen(true);
+      if (effectiveOrgPlan !== "team") {
+        setTeamUpgradeOpen(true);
+      }
       return;
     }
 
@@ -293,37 +462,43 @@ export function TeamWorkspaceClient({
         }),
       });
       const json = (await response.json()) as
-        | { ok: true }
+        | {
+            ok: true;
+            invitation: { id: string; email: string; role: string };
+            inviteUrl?: string;
+            emailDelivered?: boolean;
+          }
         | { ok: false; code?: string; error?: string };
 
       if (!response.ok || !json.ok) {
         const message = ("error" in json && json.error) || "Could not send invitation.";
         setInviteError(message);
-        if (
-          "code" in json &&
-          (json.code === "TEAM_PLAN_REQUIRED" ||
-            json.code === "PLUS_PLAN_REQUIRED" ||
-            json.code === "TEAM_SEAT_LIMIT_REACHED")
-        ) {
-          setUpgradeTargetPlan(
-            json.code === "PLUS_PLAN_REQUIRED" || isTeamAtTenSeatCap ? "plus" : "team",
-          );
+        if ("code" in json && json.code === "TEAM_PLAN_REQUIRED") {
           setTeamUpgradeOpen(true);
         }
         return;
       }
+
+      if (json.inviteUrl) {
+        setLatestInviteUrl(json.inviteUrl);
+        setRecentInviteUrls((prev) => ({
+          ...prev,
+          [json.invitation.id]: json.inviteUrl!,
+        }));
+      }
+
+      setInviteEmail("");
+      setInviteStatus(
+        json.emailDelivered === false
+          ? `Invitation created for ${parsed.data.email} (seat reserved for 7 days). Email delivery isn't configured in this environment — copy the invite link below to share directly.`
+          : `Invitation email sent to ${parsed.data.email} (seat reserved for 7 days until accepted or revoked).`,
+      );
+      router.refresh();
     } catch {
       setInviteError("Network error while sending invitation.");
-      return;
     } finally {
       setInviting(false);
     }
-
-    setInviteEmail("");
-    setInviteStatus(
-      `Invitation sent to ${parsed.data.email} (seat reserved for 7 days until accepted or revoked).`,
-    );
-    router.refresh();
   }
 
   async function handleAcceptInvitation(invitationId: string) {
@@ -338,14 +513,49 @@ export function TeamWorkspaceClient({
           token: invitationId === highlightedInvitationId ? invitationToken : undefined,
         }),
       });
-      const json = (await response.json()) as { ok: boolean; error?: string };
+      const json = (await response.json()) as {
+        ok: boolean;
+        organizationId?: string;
+        error?: string;
+      };
       if (!response.ok || !json.ok) {
         setInviteError(json.error ?? "Could not accept invitation.");
         return;
       }
+      if (json.organizationId) {
+        await switchActiveWorkspaceSession(json.organizationId);
+        setSelectedOrgId(json.organizationId);
+      }
+      toast.success("Joined team workspace!");
       router.refresh();
     } catch {
       setInviteError("Network error while accepting invitation.");
+    } finally {
+      setBusyInvitationId(null);
+    }
+  }
+
+  async function handleDeclineInvitation(invitationId: string) {
+    setBusyInvitationId(invitationId);
+    setInviteError(null);
+    try {
+      const response = await fetch(`/api/team/invitations/${invitationId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "decline",
+          token: invitationId === highlightedInvitationId ? invitationToken : undefined,
+        }),
+      });
+      const json = (await response.json()) as { ok: boolean; error?: string };
+      if (!response.ok || !json.ok) {
+        setInviteError(json.error ?? "Could not decline invitation.");
+        return;
+      }
+      toast.message("Invitation declined.");
+      router.refresh();
+    } catch {
+      setInviteError("Network error while declining invitation.");
     } finally {
       setBusyInvitationId(null);
     }
@@ -361,12 +571,28 @@ export function TeamWorkspaceClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "resend" }),
       });
-      const json = (await response.json()) as { ok: boolean; error?: string };
+      const json = (await response.json()) as {
+        ok: boolean;
+        inviteUrl?: string;
+        emailDelivered?: boolean;
+        error?: string;
+      };
       if (!response.ok || !json.ok) {
         setInviteError(json.error ?? "Could not resend invitation.");
         return;
       }
-      setInviteStatus("Invitation email resent with a fresh 7-day link.");
+      if (json.inviteUrl) {
+        setLatestInviteUrl(json.inviteUrl);
+        setRecentInviteUrls((prev) => ({
+          ...prev,
+          [invitationId]: json.inviteUrl!,
+        }));
+      }
+      setInviteStatus(
+        json.emailDelivered === false
+          ? "Generated a fresh 7-day invite link — copy the link to share directly."
+          : "Invitation email resent with a fresh 7-day link.",
+      );
       router.refresh();
     } catch {
       setInviteError("Network error while resending invitation.");
@@ -394,6 +620,132 @@ export function TeamWorkspaceClient({
       setInviteError("Network error while revoking invitation.");
     } finally {
       setBusyInvitationId(null);
+    }
+  }
+
+  async function handlePreviewOrUpdateSeats() {
+    if (!currentOrg || !isOwner) return;
+    setSeatActionError(null);
+    setSeatActionMessage(null);
+
+    if (targetSeatCount === paidSeats) return;
+
+    setSeatActionBusy(true);
+    try {
+      if (targetSeatCount > paidSeats) {
+        const res = await fetch("/api/paddle/seats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "preview_increase",
+            organizationId: currentOrg.id,
+            targetSeats: targetSeatCount,
+          }),
+        });
+        const json = (await res.json()) as
+          | ({ ok: true } & SeatIncreasePreviewState)
+          | { ok: false; error?: string };
+        if (!res.ok || !json.ok) {
+          setSeatActionError(
+            ("error" in json && json.error) || "Could not preview seat increase.",
+          );
+          return;
+        }
+        setSeatIncreasePreview({
+          operationId: json.operationId,
+          currentSeats: json.currentSeats,
+          targetSeats: json.targetSeats,
+          addedSeats: json.addedSeats,
+          immediateChargeCents: json.immediateChargeCents,
+          renewalChargeCents: json.renewalChargeCents,
+          interval: json.interval,
+        });
+        return;
+      }
+
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "schedule_decrease",
+          organizationId: currentOrg.id,
+          targetSeats: targetSeatCount,
+        }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setSeatActionError(json.error ?? "Could not schedule seat decrease.");
+        return;
+      }
+      setSeatActionMessage(
+        `Scheduled renewal seat count to ${targetSeatCount} seats starting next billing period.`,
+      );
+      router.refresh();
+    } catch {
+      setSeatActionError("Network error while updating team seats.");
+    } finally {
+      setSeatActionBusy(false);
+    }
+  }
+
+  async function handleConfirmSeatIncrease() {
+    if (!currentOrg || !seatIncreasePreview) return;
+    setSeatActionBusy(true);
+    setSeatActionError(null);
+    try {
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "confirm_increase",
+          organizationId: currentOrg.id,
+          operationId: seatIncreasePreview.operationId,
+        }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setSeatActionError(json.error ?? "Could not confirm seat increase.");
+        return;
+      }
+      toast.success(`Updated workspace to ${seatIncreasePreview.targetSeats} paid seats!`);
+      setSeatActionMessage(
+        `Workspace expanded to ${seatIncreasePreview.targetSeats} paid seats.`,
+      );
+      setSeatIncreasePreview(null);
+      router.refresh();
+    } catch {
+      setSeatActionError("Network error while confirming seat increase.");
+    } finally {
+      setSeatActionBusy(false);
+    }
+  }
+
+  async function handleCancelScheduledDecrease() {
+    if (!currentOrg) return;
+    setSeatActionBusy(true);
+    setSeatActionError(null);
+    setSeatActionMessage(null);
+    try {
+      const res = await fetch("/api/paddle/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "cancel_decrease",
+          organizationId: currentOrg.id,
+        }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setSeatActionError(json.error ?? "Could not cancel scheduled seat decrease.");
+        return;
+      }
+      setTargetSeatCount(paidSeats);
+      setSeatActionMessage(`Kept all ${paidSeats} paid seats active for upcoming renewals.`);
+      router.refresh();
+    } catch {
+      setSeatActionError("Network error while canceling scheduled decrease.");
+    } finally {
+      setSeatActionBusy(false);
     }
   }
 
@@ -426,7 +778,7 @@ export function TeamWorkspaceClient({
     }
   }
 
-  async function handleRemoveOrLeaveMember(targetUserId: string, isSelf: boolean) {
+  async function executeRemoveOrLeaveMember(targetUserId: string, isSelf: boolean) {
     if (!currentOrg) return;
     setBusyMemberId(targetUserId);
     setMemberError(null);
@@ -447,6 +799,7 @@ export function TeamWorkspaceClient({
         );
         return;
       }
+      setConfirmDepartureTarget(null);
       setMemberMessage(
         isSelf
           ? "You left the team workspace. Any private space drafts remain accessible for 90 days in your Recovery Portal."
@@ -643,9 +996,135 @@ export function TeamWorkspaceClient({
 
   const eligibleTransferCandidates =
     currentOrg?.members.filter((m) => toCanonicalRole(m.role) !== "owner") ?? [];
+  const minAllowedTargetSeats = Math.max(TEAMS_MIN_SEATS, seatsUsed);
 
   return (
     <div className="flex flex-col gap-6">
+      {inspectedInvitation && (
+        <Card
+          role="alert"
+          data-testid="team-invitation-status-banner"
+          className="border-warning/40 bg-warning-soft flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="text-warning mt-0.5 size-5 shrink-0" />
+            <div className="flex flex-col gap-1">
+              {inspectedInvitation.state === "email_mismatch" && (
+                <>
+                  <p className="text-foreground type-body-m-strong">
+                    Invitation sent to a different email address
+                  </p>
+                  <p className="text-muted-foreground type-body-s">
+                    This invitation to join{" "}
+                    <strong className="text-foreground">
+                      {inspectedInvitation.organizationName}
+                    </strong>{" "}
+                    ({formatRoleLabel(inspectedInvitation.role)}) was sent to{" "}
+                    <strong className="text-foreground font-mono">
+                      {inspectedInvitation.invitedEmail}
+                    </strong>
+                    , while you are currently signed in as{" "}
+                    <strong className="text-foreground font-mono">
+                      {currentUserEmail ?? "another account"}
+                    </strong>
+                    .
+                  </p>
+                </>
+              )}
+              {inspectedInvitation.state === "accepted" && (
+                <>
+                  <p className="text-foreground type-body-m-strong">
+                    Invitation already accepted
+                  </p>
+                  <p className="text-muted-foreground type-body-s">
+                    The invitation to{" "}
+                    <strong className="text-foreground">
+                      {inspectedInvitation.organizationName}
+                    </strong>{" "}
+                    for <span className="font-mono">{inspectedInvitation.invitedEmail}</span> has
+                    already been accepted.
+                  </p>
+                </>
+              )}
+              {inspectedInvitation.state === "expired" && (
+                <>
+                  <p className="text-foreground type-body-m-strong">Invitation expired</p>
+                  <p className="text-muted-foreground type-body-s">
+                    This invitation to{" "}
+                    <strong className="text-foreground">
+                      {inspectedInvitation.organizationName}
+                    </strong>{" "}
+                    expired on {formatShortTimestamp(inspectedInvitation.expiresAtIso)}. Ask{" "}
+                    {inspectedInvitation.inviterName} to send a fresh invite.
+                  </p>
+                </>
+              )}
+              {inspectedInvitation.state === "canceled" && (
+                <>
+                  <p className="text-foreground type-body-m-strong">
+                    Invitation no longer active
+                  </p>
+                  <p className="text-muted-foreground type-body-s">
+                    This invitation to{" "}
+                    <strong className="text-foreground">
+                      {inspectedInvitation.organizationName}
+                    </strong>{" "}
+                    was revoked or declined.
+                  </p>
+                </>
+              )}
+              {inspectedInvitation.state === "not_found" && (
+                <>
+                  <p className="text-foreground type-body-m-strong">Invitation not found</p>
+                  <p className="text-muted-foreground type-body-s">
+                    We couldn&apos;t find this team invitation link. Check with your workspace
+                    Owner for an updated invite.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {inspectedInvitation.state === "email_mismatch" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              data-testid="switch-account-for-invite-btn"
+              disabled={switchingAccount}
+              onClick={() => void handleSwitchAccountForInvitation()}
+            >
+              {switchingAccount ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Switching...
+                </>
+              ) : (
+                <>
+                  <LogOut className="size-4" />
+                  Switch account
+                </>
+              )}
+            </Button>
+          )}
+
+          {inspectedInvitation.state === "accepted" &&
+            organizations.some((o) => o.id === inspectedInvitation.organizationId) && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={async () => {
+                  await switchActiveWorkspaceSession(inspectedInvitation.organizationId);
+                  router.push("/dashboard");
+                  router.refresh();
+                }}
+              >
+                Open workspace
+              </Button>
+            )}
+        </Card>
+      )}
+
       {incomingTransfers.length > 0 && (
         <Card className="border-primary/30 bg-accent/40 flex flex-col gap-4 p-5">
           <div className="flex items-center gap-2">
@@ -708,9 +1187,11 @@ export function TeamWorkspaceClient({
           <div className="flex flex-col gap-3">
             {incomingInvitations.map((invite) => {
               const highlighted = invite.id === highlightedInvitationId;
+              const isBusy = busyInvitationId === invite.id;
               return (
                 <div
                   key={invite.id}
+                  data-testid={`incoming-invite-card-${invite.id}`}
                   className="border-border bg-elevated flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex flex-col gap-0.5">
@@ -726,15 +1207,29 @@ export function TeamWorkspaceClient({
                       · Includes a private draft space invisible to Owners &amp; Admins
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={busyInvitationId === invite.id}
-                    onClick={() => handleAcceptInvitation(invite.id)}
-                  >
-                    <Check className="size-4" />
-                    Accept invitation
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      data-testid={`decline-invite-btn-${invite.id}`}
+                      disabled={isBusy}
+                      onClick={() => void handleDeclineInvitation(invite.id)}
+                    >
+                      <X className="size-4" />
+                      Decline invitation
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      data-testid={`accept-invite-btn-${invite.id}`}
+                      disabled={isBusy}
+                      onClick={() => void handleAcceptInvitation(invite.id)}
+                    >
+                      <Check className="size-4" />
+                      Accept invitation
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -750,14 +1245,25 @@ export function TeamWorkspaceClient({
                 <Users className="text-primary size-4" />
                 <h2 className="text-foreground type-heading-m">{currentOrg.name}</h2>
                 <Badge tone="accent">{formatRoleLabel(currentOrg.myRole)}</Badge>
+                {currentOrg.hasActiveTeamPlan ? (
+                  <TeamsBadge />
+                ) : (
+                  <Badge tone="draft">Unfunded</Badge>
+                )}
               </div>
               <p className="text-muted-foreground type-caption">
                 Workspace slug: <span className="font-mono">{currentOrg.slug}</span> ·{" "}
-                {activeMembersCount} active + {reservedInvitesCount} pending of {paidSeats} paid{" "}
-                {paidSeats === 1 ? "seat" : "seats"}
-                {renewalSeats !== null && renewalSeats < paidSeats
-                  ? ` (renews at ${renewalSeats})`
-                  : ""}
+                {currentOrg.hasActiveTeamPlan ? (
+                  <>
+                    {activeMembersCount} active + {pendingInvitationsCount} pending of {paidSeats}{" "}
+                    paid {paidSeats === 1 ? "seat" : "seats"} · Unlimited Case Studies
+                    {renewalSeats !== null && renewalSeats < paidSeats
+                      ? ` (renews at ${renewalSeats} seats)`
+                      : ""}
+                  </>
+                ) : (
+                  "Activate Casefolio Teams ($5.99/seat/mo · 2–25 seats) to invite collaborators"
+                )}
               </p>
             </div>
 
@@ -770,7 +1276,10 @@ export function TeamWorkspaceClient({
                   onChange={async (e) => {
                     const nextId = e.target.value;
                     setSelectedOrgId(nextId);
-                    await authClient.organization.setActive({ organizationId: nextId });
+                    await authClient.organization
+                      .setActive({ organizationId: nextId })
+                      .catch(() => undefined);
+                    await switchActiveWorkspaceSession(nextId);
                     router.refresh();
                   }}
                   className="border-border bg-elevated text-foreground type-body-s h-9 rounded-md border px-3"
@@ -789,7 +1298,9 @@ export function TeamWorkspaceClient({
           <div className="border-border/80 bg-surface/50 grid grid-cols-2 gap-3 rounded-2xl border p-4 sm:grid-cols-4">
             <div className="flex flex-col gap-0.5">
               <span className="text-tertiary type-caption">Paid seats (S)</span>
-              <span className="text-foreground type-body-m-strong">{paidSeats}</span>
+              <span className="text-foreground type-body-m-strong">
+                {currentOrg.hasActiveTeamPlan ? paidSeats : "0 (Unfunded)"}
+              </span>
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-tertiary type-caption">Active members</span>
@@ -797,23 +1308,174 @@ export function TeamWorkspaceClient({
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-tertiary type-caption">Reserved invites</span>
-              <span className="text-foreground type-body-m-strong">{reservedInvitesCount}</span>
+              <span className="text-foreground type-body-m-strong">{pendingInvitationsCount}</span>
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-tertiary type-caption">Available seats</span>
               <div className="flex items-center gap-2">
-                <span className="text-foreground type-body-m-strong">{availableSeats}</span>
+                <span className="text-foreground type-body-m-strong">
+                  {currentOrg.hasActiveTeamPlan ? availableSeats : 0}
+                </span>
                 {isOwner && (
                   <Link
                     href="/account/billing"
                     className="text-primary type-caption underline-offset-4 hover:underline"
                   >
-                    Manage seats
+                    Invoices &amp; billing
                   </Link>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Inline Owner Seat Management (`+ / -` seats or Upgrade to Teams) */}
+          {isOwner && (
+            <div
+              data-testid="team-inline-seat-controls"
+              className="border-border/80 bg-surface/40 flex flex-col gap-3 rounded-2xl border p-4"
+            >
+              {currentOrg.hasActiveTeamPlan ? (
+                <>
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-foreground type-body-s-strong">
+                        Seat capacity ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats)
+                      </span>
+                      <span className="text-muted-foreground type-caption">
+                        {currentOrg.billingInterval === "yearly"
+                          ? "$4.99/seat/mo billed annually ($59.90/seat/yr · 2 months free)"
+                          : "$5.99/seat/mo · Switch to annual in Billing for 2 months free ($4.99/seat/mo)"}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label="Decrease team seats"
+                          data-testid="team-seats-decrement"
+                          disabled={
+                            seatActionBusy ||
+                            Boolean(currentOrg.isLockedForQuantityChange) ||
+                            targetSeatCount <= minAllowedTargetSeats
+                          }
+                          onClick={() =>
+                            setTargetSeatCount((prev) =>
+                              Math.max(minAllowedTargetSeats, prev - 1),
+                            )
+                          }
+                          className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
+                        >
+                          <Minus className="size-3.5" />
+                        </button>
+                        <span
+                          data-testid="team-seats-target-value"
+                          className="text-foreground type-body-s-strong min-w-8 text-center font-mono tabular-nums"
+                        >
+                          {targetSeatCount}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Increase team seats"
+                          data-testid="team-seats-increment"
+                          disabled={
+                            seatActionBusy ||
+                            Boolean(currentOrg.isLockedForQuantityChange) ||
+                            targetSeatCount >= TEAMS_MAX_SELF_SERVE_SEATS
+                          }
+                          onClick={() =>
+                            setTargetSeatCount((prev) =>
+                              Math.min(TEAMS_MAX_SELF_SERVE_SEATS, prev + 1),
+                            )
+                          }
+                          className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
+                        >
+                          <Plus className="size-3.5" />
+                        </button>
+                      </div>
+
+                      {targetSeatCount !== paidSeats && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          data-testid="team-seats-apply-btn"
+                          disabled={seatActionBusy || Boolean(currentOrg.isLockedForQuantityChange)}
+                          onClick={() => void handlePreviewOrUpdateSeats()}
+                        >
+                          {seatActionBusy ? (
+                            <>
+                              <Loader2 className="size-3.5 animate-spin" />
+                              Updating...
+                            </>
+                          ) : targetSeatCount > paidSeats ? (
+                            `Add +${targetSeatCount - paidSeats} ${targetSeatCount - paidSeats === 1 ? "seat" : "seats"}`
+                          ) : (
+                            `Reduce to ${targetSeatCount} at renewal`
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {renewalSeats !== null && renewalSeats < paidSeats && (
+                    <div className="border-border bg-elevated flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5">
+                      <span className="text-muted-foreground type-caption">
+                        Scheduled to decrease from <strong className="text-foreground">{paidSeats}</strong> to{" "}
+                        <strong className="text-foreground">{renewalSeats}</strong> seats on{" "}
+                        {formatShortTimestamp(currentOrg.currentPeriodEndIso)}.
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={seatActionBusy}
+                        onClick={() => void handleCancelScheduledDecrease()}
+                      >
+                        Cancel decrease
+                      </Button>
+                    </div>
+                  )}
+
+                  {currentOrg.isLockedForQuantityChange && currentOrg.lockReason && (
+                    <p className="text-muted-foreground type-caption">{currentOrg.lockReason}</p>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-foreground type-body-s-strong">
+                      Activate Casefolio Teams for {currentOrg.name}
+                    </span>
+                    <span className="text-muted-foreground type-caption">
+                      $5.99/seat/mo or $4.99/seat/mo on annual (2 months free) · {TEAMS_MIN_SEATS}–
+                      {TEAMS_MAX_SELF_SERVE_SEATS} seats · Unlimited shared Case Studies &amp;
+                      custom URLs.
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    data-testid="activate-teams-checkout-btn"
+                    onClick={() => setTeamCheckoutOpen(true)}
+                  >
+                    <Sparkles className="size-3.5" />
+                    Upgrade to Teams
+                  </Button>
+                </div>
+              )}
+
+              {seatActionError && (
+                <p role="alert" className="text-destructive type-caption">
+                  {seatActionError}
+                </p>
+              )}
+              {seatActionMessage && (
+                <p role="status" className="text-success type-caption">
+                  {seatActionMessage}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="border-border/70 bg-surface/30 flex items-start gap-2.5 rounded-xl border p-3.5">
             <ShieldCheck className="text-primary mt-0.5 size-4 shrink-0" />
@@ -836,8 +1498,15 @@ export function TeamWorkspaceClient({
                   type="button"
                   variant="ghost"
                   size="sm"
+                  data-testid="leave-workspace-btn"
                   disabled={busyMemberId === currentUserId}
-                  onClick={() => handleRemoveOrLeaveMember(currentUserId, true)}
+                  onClick={() =>
+                    setConfirmDepartureTarget({
+                      targetUserId: currentUserId,
+                      memberName: "yourself",
+                      isSelf: true,
+                    })
+                  }
                 >
                   <LogOut className="size-3.5" />
                   Leave workspace
@@ -897,8 +1566,15 @@ export function TeamWorkspaceClient({
                           type="button"
                           variant="ghost"
                           size="sm"
+                          data-testid={`remove-member-btn-${member.userId}`}
                           disabled={busyMemberId === member.userId}
-                          onClick={() => handleRemoveOrLeaveMember(member.userId, false)}
+                          onClick={() =>
+                            setConfirmDepartureTarget({
+                              targetUserId: member.userId,
+                              memberName: member.name || member.email,
+                              isSelf: false,
+                            })
+                          }
                         >
                           <UserMinus className="size-3.5" />
                           Remove
@@ -932,49 +1608,43 @@ export function TeamWorkspaceClient({
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-foreground type-body-s-strong">
-                      {isTeamAtTenSeatCap
-                        ? `Team maximum reached (${TEAMS_MAX_SELF_SERVE_SEATS} seats)`
-                        : effectiveOrgPlan === "team" || effectiveOrgPlan === "plus"
+                      {isTeamAtMaxCap
+                        ? `Self-serve maximum reached (${TEAMS_MAX_SELF_SERVE_SEATS} seats)`
+                        : effectiveOrgPlan === "team"
                           ? "All paid seats are currently assigned or reserved"
-                          : "Collaborative seats require Casefolio Team"}
+                          : "Collaborative seats require Casefolio Teams"}
                     </span>
                     <ProBadge />
                   </div>
                   <p className="text-muted-foreground type-caption">{seatDecision.message}</p>
                 </div>
               </div>
-              {isTeamAtTenSeatCap ? (
+              {isTeamAtMaxCap ? (
+                <Button asChild variant="secondary" size="sm">
+                  <Link href="/help">Contact enterprise support</Link>
+                </Button>
+              ) : effectiveOrgPlan === "team" && isOwner ? (
                 <Button
                   type="button"
                   size="sm"
-                  data-testid="upgrade-to-plus-button"
-                  onClick={() => {
-                    setUpgradeTargetPlan("plus");
-                    setTeamUpgradeOpen(true);
-                  }}
+                  data-testid="upgrade-to-team-button"
+                  onClick={() =>
+                    setTargetSeatCount((prev) =>
+                      Math.min(TEAMS_MAX_SELF_SERVE_SEATS, Math.max(paidSeats + 1, prev + 1)),
+                    )
+                  }
                 >
-                  <Sparkles className="size-3.5" />
-                  Upgrade to Plus ({PLUS_INCLUDED_SEATS} seats)
-                </Button>
-              ) : effectiveOrgPlan === "team" && isOwner ? (
-                <Button asChild size="sm" data-testid="upgrade-to-team-button">
-                  <Link href="/account/billing">Add paid seats</Link>
+                  <Plus className="size-3.5" />
+                  Add paid seat
                 </Button>
               ) : (
                 <Button
                   type="button"
                   size="sm"
                   data-testid="upgrade-to-team-button"
-                  onClick={() => {
-                    setUpgradeTargetPlan(
-                      seatDecision.requiredPlan === "plus" ? "plus" : "team",
-                    );
-                    setTeamUpgradeOpen(true);
-                  }}
+                  onClick={() => setTeamUpgradeOpen(true)}
                 >
-                  {seatDecision.requiredPlan === "plus"
-                    ? "Upgrade to Plus"
-                    : "Upgrade to Team"}
+                  Upgrade to Teams
                 </Button>
               )}
             </div>
@@ -1031,56 +1701,171 @@ export function TeamWorkspaceClient({
                 </p>
               )}
               {inviteStatus && (
-                <p role="status" className="text-success type-caption">
-                  {inviteStatus}
-                </p>
+                <div
+                  role="status"
+                  className="border-success/30 bg-success-soft flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5"
+                >
+                  <span className="text-foreground type-caption">{inviteStatus}</span>
+                  {latestInviteUrl && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      data-testid="copy-latest-invite-link-btn"
+                      onClick={() => void handleCopyInvitationLink("latest", latestInviteUrl)}
+                    >
+                      {copiedInvitationId === "latest" ? (
+                        <>
+                          <Check className="size-3.5" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3.5" />
+                          Copy invite link
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               )}
             </form>
           )}
 
+          {/* Full Workspace Invitations Lifecycle Table (Pending, Accepted, Expired, Canceled) */}
           {currentOrg.invitations.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <h3 className="text-tertiary type-overline">
-                Pending invitations ({currentOrg.invitations.length})
-              </h3>
-              <div className="divide-border border-border divide-y rounded-lg border">
-                {currentOrg.invitations.map((inv) => (
-                  <div
-                    key={inv.id}
-                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-foreground type-body-s">{inv.email}</span>
-                      <Badge tone="draft">{formatRoleLabel(inv.role)}</Badge>
-                      <span className="text-muted-foreground type-caption">Seat reserved</span>
-                    </div>
-                    {(isOwner || isAdmin) && (
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={busyInvitationId === inv.id}
-                          onClick={() => handleResendInvitation(inv.id)}
-                        >
-                          <RefreshCw className="size-3.5" />
-                          Resend
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={busyInvitationId === inv.id}
-                          onClick={() => handleCancelInvitation(inv.id)}
-                        >
-                          <X className="size-3.5" />
-                          Revoke
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            <div className="flex flex-col gap-3" data-testid="team-invitations-history">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-tertiary type-overline">
+                  Workspace invitations ({currentOrg.invitations.length})
+                </h3>
+                <div
+                  role="group"
+                  aria-label="Filter invitations by status"
+                  className="border-border bg-surface inline-flex items-center gap-1 rounded-lg border p-0.5"
+                >
+                  {(
+                    [
+                      { id: "all", label: "All" },
+                      { id: "pending", label: "Pending" },
+                      { id: "accepted", label: "Accepted" },
+                      { id: "inactive", label: "Expired / Canceled" },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setInviteFilter(tab.id)}
+                      className={`type-caption rounded-md px-2.5 py-1 transition-colors ${
+                        inviteFilter === tab.id
+                          ? "bg-elevated text-foreground font-semibold"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {filteredInvitations.length === 0 ? (
+                <p className="text-muted-foreground type-caption py-2">
+                  No invitations match this filter.
+                </p>
+              ) : (
+                <div className="divide-border border-border divide-y rounded-xl border">
+                  {filteredInvitations.map((inv) => {
+                    const statusBadge =
+                      inv.status === "pending"
+                        ? { tone: "draft" as const, label: "Pending · Seat reserved" }
+                        : inv.status === "accepted"
+                          ? { tone: "published" as const, label: "Accepted" }
+                          : inv.status === "expired"
+                            ? { tone: "neutral" as const, label: "Expired" }
+                            : { tone: "danger" as const, label: "Canceled" };
+
+                    const timestampNote =
+                      inv.status === "accepted" && inv.acceptedAtIso
+                        ? `Joined ${formatShortTimestamp(inv.acceptedAtIso)}`
+                        : inv.status === "canceled" && inv.revokedAtIso
+                          ? `Canceled ${formatShortTimestamp(inv.revokedAtIso)}`
+                          : inv.status === "expired"
+                            ? `Expired ${formatShortTimestamp(inv.expiresAtIso)}`
+                            : `Expires ${formatShortTimestamp(inv.expiresAtIso)}`;
+
+                    return (
+                      <div
+                        key={inv.id}
+                        data-testid={`org-invitation-row-${inv.id}`}
+                        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-foreground type-body-s-strong">{inv.email}</span>
+                            <Badge tone="neutral" withDot={false}>
+                              {formatRoleLabel(inv.role)}
+                            </Badge>
+                            <Badge tone={statusBadge.tone}>{statusBadge.label}</Badge>
+                          </div>
+                          <span className="text-muted-foreground type-caption">
+                            Sent {formatShortTimestamp(inv.createdAtIso)} · {timestampNote}
+                            {(inv.resentCount ?? 0) > 0
+                              ? ` · Resent ${inv.resentCount}×`
+                              : ""}
+                          </span>
+                        </div>
+
+                        {(isOwner || isAdmin) && inv.status === "pending" && (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              data-testid={`copy-invite-link-${inv.id}`}
+                              disabled={busyInvitationId === inv.id}
+                              onClick={() => void handleCopyInvitationLink(inv.id)}
+                            >
+                              {copiedInvitationId === inv.id ? (
+                                <>
+                                  <Check className="size-3.5" />
+                                  Copied
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="size-3.5" />
+                                  Copy invite link
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              data-testid={`resend-invite-${inv.id}`}
+                              disabled={busyInvitationId === inv.id}
+                              onClick={() => void handleResendInvitation(inv.id)}
+                            >
+                              <RefreshCw className="size-3.5" />
+                              Resend email
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              data-testid={`revoke-invite-${inv.id}`}
+                              disabled={busyInvitationId === inv.id}
+                              onClick={() => void handleCancelInvitation(inv.id)}
+                            >
+                              <X className="size-3.5" />
+                              Revoke
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -1178,8 +1963,8 @@ export function TeamWorkspaceClient({
           </h2>
           <p className="text-muted-foreground type-body-s">
             Collaborate in Shared Spaces while keeping every designer&apos;s Private Spaces isolated
-            by default ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats on Team, or up to{" "}
-            {PLUS_INCLUDED_SEATS} seats on Plus).
+            by default ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats on Casefolio Teams ·
+            $5.99/seat/mo or $4.99/seat/mo on annual with 2 months free).
           </p>
         </div>
 
@@ -1227,19 +2012,149 @@ export function TeamWorkspaceClient({
       <UpgradePromptDialog
         open={teamUpgradeOpen}
         onOpenChange={setTeamUpgradeOpen}
-        requiredPlan={upgradeTargetPlan}
+        requiredPlan="team"
         orgId={currentOrg?.id ?? null}
-        featureTitle={
-          upgradeTargetPlan === "plus"
-            ? `Upgrade to Casefolio Plus for up to ${PLUS_INCLUDED_SEATS} seats`
-            : "Unlock Casefolio Team seats"
-        }
-        featureDescription={
-          upgradeTargetPlan === "plus"
-            ? `Casefolio Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) for up to ${PLUS_INCLUDED_SEATS} team seats and White-Labeling.`
-            : `Subscribe to Casefolio Team ($6.99/seat/mo or $5.59/seat/mo billed annually, ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats) to collaborate in Shared Spaces with role-based permissions and Shared Brand Kit.`
-        }
+        featureTitle="Unlock Casefolio Teams seats"
+        featureDescription={`Subscribe to Casefolio Teams ($5.99/seat/mo or $4.99/seat/mo billed annually with 2 months free, ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats) for unlimited shared Case Studies, custom URLs, and role-based collaboration.`}
       />
+
+      {teamCheckoutOpen && (
+        <PaddleCheckoutModal
+          open={teamCheckoutOpen}
+          onOpenChange={setTeamCheckoutOpen}
+          initialPlan="team"
+          orgId={currentOrg?.id ?? null}
+        />
+      )}
+
+      {/* Confirm Prorated Seat Increase Dialog */}
+      <Dialog
+        open={seatIncreasePreview !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !seatActionBusy) {
+            setSeatIncreasePreview(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md" data-testid="confirm-seat-increase-dialog">
+          <DialogHeader>
+            <DialogTitle>Confirm seat increase</DialogTitle>
+            <DialogDescription>
+              Adding {seatIncreasePreview?.addedSeats}{" "}
+              {seatIncreasePreview?.addedSeats === 1 ? "seat" : "seats"} ({seatIncreasePreview?.currentSeats} &rarr;{" "}
+              {seatIncreasePreview?.targetSeats} total paid seats).
+            </DialogDescription>
+          </DialogHeader>
+
+          {seatIncreasePreview && (
+            <div className="border-border bg-surface flex flex-col gap-2 rounded-xl border p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground type-caption">Prorated due today</span>
+                <span className="text-foreground type-body-m-strong font-mono tabular-nums">
+                  {formatUsdFromCents(seatIncreasePreview.immediateChargeCents)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground type-caption">
+                  Next {seatIncreasePreview.interval === "yearly" ? "annual" : "monthly"} renewal
+                </span>
+                <span className="text-foreground type-body-s font-mono tabular-nums">
+                  {formatUsdFromCents(seatIncreasePreview.renewalChargeCents)}/
+                  {seatIncreasePreview.interval === "yearly" ? "yr" : "mo"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {seatActionError && (
+            <p role="alert" className="text-destructive type-caption">
+              {seatActionError}
+            </p>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={seatActionBusy}
+              onClick={() => setSeatIncreasePreview(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              data-testid="confirm-seat-increase-submit"
+              disabled={seatActionBusy}
+              onClick={() => void handleConfirmSeatIncrease()}
+            >
+              {seatActionBusy ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Confirming...
+                </>
+              ) : (
+                "Confirm & add seats"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Remove Member / Leave Workspace Dialog */}
+      <Dialog
+        open={confirmDepartureTarget !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !busyMemberId) {
+            setConfirmDepartureTarget(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md" data-testid="confirm-member-departure-dialog">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmDepartureTarget?.isSelf
+                ? `Leave ${currentOrg?.name ?? "workspace"}?`
+                : `Remove ${confirmDepartureTarget?.memberName ?? "member"}?`}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmDepartureTarget?.isSelf
+                ? "You will lose access to Shared Spaces immediately. Your Private Spaces remain completely hidden from the team and stay recoverable for 90 days in your personal Recovery Portal."
+                : "They will lose access to Shared Spaces immediately, freeing their occupied seat. Their Private Spaces remain private and move to their personal 90-day Recovery Portal."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={Boolean(busyMemberId)}
+              onClick={() => setConfirmDepartureTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              data-testid="confirm-member-departure-submit"
+              disabled={Boolean(busyMemberId)}
+              onClick={() => {
+                if (confirmDepartureTarget) {
+                  void executeRemoveOrLeaveMember(
+                    confirmDepartureTarget.targetUserId,
+                    confirmDepartureTarget.isSelf,
+                  );
+                }
+              }}
+            >
+              {busyMemberId
+                ? "Processing..."
+                : confirmDepartureTarget?.isSelf
+                  ? "Leave workspace"
+                  : "Remove member"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {transferStepUpTarget && (
         <Dialog

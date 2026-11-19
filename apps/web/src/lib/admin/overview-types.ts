@@ -36,8 +36,9 @@ export function computeSubscriptionMrrUsd(
   interval: BillingInterval,
   seats = 1,
 ): number {
-  const def = BILLING_PLAN_CATALOG[plan];
-  if (!def || plan === "free") return 0;
+  const normalizedPlan: PlanTier = plan === "plus" ? "team" : plan;
+  const def = BILLING_PLAN_CATALOG[normalizedPlan];
+  if (!def || normalizedPlan === "free") return 0;
   const unit = interval === "yearly" ? def.yearlyMonthlyEquivalentUsd : def.monthlyPriceUsd;
   const raw = def.perSeatPricing ? unit * Math.max(1, Math.floor(seats)) : unit;
   return Math.round(raw * 100) / 100;

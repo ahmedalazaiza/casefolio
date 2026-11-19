@@ -1,41 +1,27 @@
-import { desc, eq } from "@casefolio/db";
 import { ArrowRight, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { requireSession } from "@/lib/auth/session";
-import { db, dbSchema } from "@/lib/db";
+import { listWorkspaceExportsHistoryForUser } from "@/lib/exports/service";
 import { EXPORT_PRESETS } from "@/lib/exports/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function WorkspaceExportsHistoryPage() {
-  const { user } = await requireSession("/exports");
-
-  const rows = await db
-    .select({
-      exportJob: dbSchema.exportsTable,
-      projectName: dbSchema.projects.name,
-      projectId: dbSchema.projects.id,
-    })
-    .from(dbSchema.exportsTable)
-    .innerJoin(dbSchema.projects, eq(dbSchema.exportsTable.projectId, dbSchema.projects.id))
-    .where(eq(dbSchema.projects.ownerId, user.id))
-    .orderBy(desc(dbSchema.exportsTable.createdAt))
-    .limit(50);
+  const { user, session } = await requireSession("/exports");
+  const activeOrgId = session.activeOrganizationId ?? null;
+  const rows = await listWorkspaceExportsHistoryForUser(user.id, activeOrgId);
+  const now = new Date();
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 sm:gap-8">
       <header className="v3-pattern-grid relative flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
         <div className="flex flex-col gap-2.5">
-          <Eyebrow className="w-fit">
-            Render Archive
-          </Eyebrow>
-          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
-            Studio exports
-          </h1>
+          <Eyebrow className="w-fit">Render Archive</Eyebrow>
+          <h1 className="v3-display-l text-[var(--cf-text-primary)]">Studio exports</h1>
           <p className="max-w-xl text-sm text-[var(--cf-text-secondary)] sm:text-base">
-            Download past PNG, PDF, and Behance 1440w exports across all your case studies.
+            Download past PNG, PDF, and Behance 1,400px exports across your active workspace.
           </p>
         </div>
         <Link href="/dashboard" className="v3-btn-secondary">
@@ -79,8 +65,11 @@ export default async function WorkspaceExportsHistoryPage() {
           <div className="divide-y divide-[var(--cf-border-subtle)] px-6 py-2 sm:px-8">
             {rows.map(({ exportJob, projectName, projectId }, index) => {
               const preset = EXPORT_PRESETS.find((p) => p.format === exportJob.format);
+              const isExpired = Boolean(
+                exportJob.expiresAt && exportJob.expiresAt.getTime() <= now.getTime(),
+              );
               const downloadUrl =
-                exportJob.status === "completed" && exportJob.r2Key
+                exportJob.status === "completed" && exportJob.r2Key && !isExpired
                   ? `/api/exports/${exportJob.id}/download`
                   : null;
 
@@ -101,17 +90,23 @@ export default async function WorkspaceExportsHistoryPage() {
                         <Badge tone="neutral" withDot={false}>
                           {preset?.label ?? exportJob.format}
                         </Badge>
-                        <Badge
-                          tone={
-                            exportJob.status === "completed"
-                              ? "published"
-                              : exportJob.status === "failed"
-                                ? "danger"
-                                : "draft"
-                          }
-                        >
-                          {exportJob.status === "completed" ? "Ready" : exportJob.status}
-                        </Badge>
+                        {exportJob.status === "completed" && isExpired ? (
+                          <Badge tone="neutral" withDot={false}>
+                            Expired
+                          </Badge>
+                        ) : (
+                          <Badge
+                            tone={
+                              exportJob.status === "completed"
+                                ? "published"
+                                : exportJob.status === "failed"
+                                  ? "danger"
+                                  : "draft"
+                            }
+                          >
+                            {exportJob.status === "completed" ? "Ready" : exportJob.status}
+                          </Badge>
+                        )}
                       </div>
                       <span className="font-mono text-xs text-[var(--cf-text-secondary)]">
                         {exportJob.createdAt.toLocaleString("en-US", {
@@ -153,4 +148,3 @@ export default async function WorkspaceExportsHistoryPage() {
     </div>
   );
 }
-

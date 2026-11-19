@@ -24,8 +24,12 @@ function formatPublishedDate(iso: string | null): string {
 }
 
 export default async function WorkspaceAnalyticsOverviewPage() {
-  const { user } = await requireSession("/analytics");
-  const overview = await getWorkspaceAnalyticsOverview(user.id);
+  const { user, session } = await requireSession("/analytics");
+  const overview = await getWorkspaceAnalyticsOverview(
+    user.id,
+    new Date(),
+    session.activeOrganizationId ?? null,
+  );
 
   return (
     <div
@@ -35,7 +39,9 @@ export default async function WorkspaceAnalyticsOverviewPage() {
       <header className="v3-pattern-grid relative flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
         <div className="flex flex-col gap-2.5">
           <Eyebrow className="w-fit">
-            Analytics
+            {overview.workspaceKind === "team" && overview.workspaceName
+              ? `Analytics · ${overview.workspaceName}`
+              : "Analytics"}
           </Eyebrow>
           <h1 className="v3-display-l text-[var(--cf-text-primary)]">
             All published case studies

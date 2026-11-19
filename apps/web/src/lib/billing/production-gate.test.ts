@@ -97,6 +97,6 @@ describe("evaluateBillingConfig (pure, shared with /api/health)", () => {
       ...realPrices,
       PADDLE_PRICE_TEAM_YEARLY: realPrices.PADDLE_PRICE_PRO_YEARLY,
     });
-    expect(duplicated.problems.join("\n")).toMatch(/six distinct prices/);
+    expect(duplicated.problems.join("\n")).toMatch(/four distinct prices/);
   });
 });

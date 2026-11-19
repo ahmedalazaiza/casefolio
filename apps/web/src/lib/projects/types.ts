@@ -12,11 +12,11 @@ import {
 } from "@/lib/template/schema";
 
 export const FREE_PROJECT_LIMIT = 1;
-export const PRO_PROJECT_LIMIT = -1;
+export const PRO_PROJECT_LIMIT = 10;
 export const TEAMS_PROJECT_LIMIT_PER_SEAT = -1;
 
 export const FREE_PUBLISHED_LIMIT = 1;
-export const PRO_PUBLISHED_LIMIT = -1;
+export const PRO_PUBLISHED_LIMIT = 10;
 export const TEAMS_PUBLISHED_LIMIT_PER_SEAT = -1;
 
 export const FREE_RETAINED_LIMIT = 999_999;

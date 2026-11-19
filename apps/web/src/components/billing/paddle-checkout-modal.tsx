@@ -22,7 +22,6 @@ import {
   formatPlanHeadingLabel,
   formatUsdFromCents,
   getChargeAmountCents,
-  PLUS_INCLUDED_SEATS,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
@@ -209,7 +208,7 @@ export function PaddleCheckoutModal({
         body: JSON.stringify({
           plan: selectedPlan,
           interval: selectedInterval,
-          orgId: selectedPlan === "team" || selectedPlan === "plus" ? orgId : null,
+          orgId: selectedPlan === "team" ? orgId : null,
           seats: effectiveSeats,
         }),
       });
@@ -250,7 +249,7 @@ export function PaddleCheckoutModal({
         body: JSON.stringify({
           plan: selectedPlan,
           interval: selectedInterval,
-          orgId: selectedPlan === "team" || selectedPlan === "plus" ? orgId : null,
+          orgId: selectedPlan === "team" ? orgId : null,
           seats: effectiveSeats,
         }),
       });
@@ -303,8 +302,8 @@ export function PaddleCheckoutModal({
 
         {!prepared ? (
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-3 gap-2.5" role="group" aria-label="Select plan tier">
-              {(["pro", "team", "plus"] as const).map((tier) => {
+            <div className="grid grid-cols-2 gap-2.5" role="group" aria-label="Select plan tier">
+              {(["pro", "team"] as const).map((tier) => {
                 const def = BILLING_PLAN_CATALOG[tier];
                 const active = selectedPlan === tier;
                 const unitCents =
@@ -360,7 +359,7 @@ export function PaddleCheckoutModal({
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Annual · Save {planDef.yearlySavingsPercent}%
+                Annual · 2 months free
               </button>
             </div>
 
@@ -374,7 +373,7 @@ export function PaddleCheckoutModal({
                     Paid seats ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS})
                   </span>
                   <span className="text-muted-foreground type-caption">
-                    Need 11–{PLUS_INCLUDED_SEATS} seats? Choose Plus for a flat agency rate.
+                    $5.99/seat/mo · $4.99/seat/mo on annual (2 months free).
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -411,20 +410,6 @@ export function PaddleCheckoutModal({
                     <Plus className="size-3.5" />
                   </button>
                 </div>
-              </div>
-            )}
-
-            {selectedPlan === "plus" && (
-              <div
-                data-testid="checkout-plus-capacity-note"
-                className="border-border bg-surface flex flex-col gap-0.5 rounded-xl border px-4 py-3"
-              >
-                <span className="text-foreground type-body-s-strong">
-                  Flat rate · Up to {PLUS_INCLUDED_SEATS} team seats included
-                </span>
-                <span className="text-muted-foreground type-caption">
-                  Includes Custom Domain, complete White-Labeling, and priority 24/7 support.
-                </span>
               </div>
             )}
 

@@ -36,8 +36,7 @@ function resolveAppBase(override?: string): string {
 
 function formatPlanLabel(plan: string | null | undefined): string {
   const clean = (plan ?? "pro").trim().toLowerCase();
-  if (clean === "plus") return "Casefolio Plus";
-  if (clean === "team") return "Casefolio Team";
+  if (clean === "team" || clean === "plus") return "Casefolio Teams";
   if (clean === "pro") return "Casefolio Pro";
   return "Casefolio Free";
 }
@@ -970,7 +969,7 @@ export function buildOwnershipTransferredEmail(args: {
         : `Ownership transferred to ${args.newOwnerName}`,
       paragraphs: [
         isNewOwner
-          ? `Ownership handoff is complete. You now hold full Owner authority for ${args.organizationName}, including seat billing, custom domains, and workspace governance.`
+          ? `Ownership handoff is complete. You now hold full Owner authority for ${args.organizationName}, including seat billing, member permissions, and workspace governance.`
           : `Ownership handoff for ${args.organizationName} is complete. ${args.newOwnerName} is now the primary Owner, and your membership continues with Admin access.`,
       ],
       specs: [
@@ -2024,7 +2023,7 @@ export const EMAIL_TEMPLATE_CATALOG: readonly EmailCatalogEntry[] = [
   // Billing & Subscriptions
   {
     key: "billing.subscription_activated",
-    title: "Subscription Activated (Pro / Team / Plus)",
+    title: "Subscription Activated (Pro / Teams)",
     audience: "billing",
     audienceLabel: "Billing & Plans",
     department: "billing",

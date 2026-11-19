@@ -53,6 +53,9 @@ export async function POST(request: Request) {
       id: result.invitationId,
       email: result.email,
       role: result.role,
+      expiresAtIso: result.expiresAtIso,
     },
+    inviteUrl: result.inviteUrl,
+    emailDelivered: result.emailDelivered,
   });
 }

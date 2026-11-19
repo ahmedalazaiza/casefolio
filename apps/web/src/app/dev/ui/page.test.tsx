@@ -56,10 +56,10 @@ describe("/dev/ui design system showcase (C-102)", () => {
     expect(screen.getByText("All templates")).toBeInTheDocument();
 
     // InputField states (error & disabled)
-    const invalidInput = screen.getByLabelText("Custom domain");
+    const invalidInput = screen.getByLabelText("Invite teammate");
     expect(invalidInput).toHaveAttribute("aria-invalid", "true");
     expect(
-      screen.getByText("Enter a valid domain name such as work.alex.design."),
+      screen.getByText("Enter a valid work email address such as alex@studio.design."),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Workspace ID")).toBeDisabled();
 

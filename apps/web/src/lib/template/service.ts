@@ -10,6 +10,7 @@ import {
 } from "@casefolio/db";
 import { db, dbSchema } from "@/lib/db";
 import { notifyTemplateVersionPublished } from "@/lib/notifications/service";
+import { isLegacyPlaceholderCoverUrl } from "@/lib/template/cover-url";
 import {
   normalizeRawTemplateJsonCoverIfMissing,
   parseAndValidateTemplateJson,
@@ -119,6 +120,25 @@ export async function recordAdminAuditLog(
     action,
     meta,
   });
+}
+
+async function revalidateTemplatesEverywhere(templateId?: string): Promise<void> {
+  try {
+    const { revalidatePath, revalidateTag } = await import("next/cache");
+    revalidateTag("templates", "max");
+    revalidatePath("/", "page");
+    revalidatePath("/templates", "page");
+    revalidatePath("/new");
+    revalidatePath("/dashboard");
+    revalidatePath("/published");
+    revalidatePath("/admin");
+    revalidatePath("/admin/templates");
+    if (templateId) {
+      revalidatePath(`/admin/templates/${templateId}`);
+    }
+  } catch {
+    // Safe no-op outside Next.js server request runtime (e.g., CLI seeds & unit tests)
+  }
 }
 
 export async function saveTemplateDraftFromWizard({
@@ -311,6 +331,8 @@ export async function saveTemplateDraftFromWizard({
     type: validMeta.type,
     category: category.name,
   });
+
+  await revalidateTemplatesEverywhere(savedTemplate.id);
 
   return {
     ok: true,
@@ -673,6 +695,8 @@ export async function createNewTemplateVersion({
     changelog: insertedVersion.changelog,
   });
 
+  await revalidateTemplatesEverywhere(templateId);
+
   return {
     ok: true,
     versionId: insertedVersion.id,
@@ -727,12 +751,7 @@ export async function publishTemplateVersion({
     return updatedTpl ?? null;
   });
 
-  try {
-    const { revalidatePath } = await import("next/cache");
-    revalidatePath("/templates");
-  } catch {
-    // Safe no-op outside Next.js server request runtime
-  }
+  await revalidateTemplatesEverywhere(templateId);
 
   if (tplRow) {
     await notifyTemplateVersionPublished({
@@ -785,6 +804,8 @@ export async function archiveTemplate({
     slug: tpl.slug,
   });
 
+  await revalidateTemplatesEverywhere(templateId);
+
   return {
     ok: true,
     status: "archived",
@@ -822,6 +843,8 @@ export async function unarchiveTemplateToDraft({
     slug: tpl.slug,
   });
 
+  await revalidateTemplatesEverywhere(templateId);
+
   return {
     ok: true,
     status: "draft",
@@ -845,6 +868,12 @@ export async function updateTemplateCover({
     return {
       ok: false,
       error: "A cover / thumbnail image is required.",
+    };
+  }
+  if (isLegacyPlaceholderCoverUrl(cleanCoverUrl)) {
+    return {
+      ok: false,
+      error: "Upload a real cover image instead of a legacy placeholder URL (cdn.casefolio.app).",
     };
   }
 
@@ -919,6 +948,8 @@ export async function updateTemplateCover({
     coverRatio: cleanRatio,
   });
 
+  await revalidateTemplatesEverywhere(templateId);
+
   return {
     ok: true,
     coverUrl: cleanCoverUrl,
@@ -987,6 +1018,8 @@ export async function deleteAdminTemplate({
       pinnedProjectCount,
     });
 
+    await revalidateTemplatesEverywhere(templateId);
+
     return { ok: true, mode: "retired_archived" };
   }
 
@@ -1002,6 +1035,8 @@ export async function deleteAdminTemplate({
     slug: tpl.slug,
     name: tpl.name,
   });
+
+  await revalidateTemplatesEverywhere();
 
   return { ok: true, mode: "deleted" };
 }

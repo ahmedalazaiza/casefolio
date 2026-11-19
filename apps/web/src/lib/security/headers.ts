@@ -2,6 +2,7 @@ export interface SecurityHeadersOptions {
   isDev: boolean;
   posthogHost?: string;
   r2Endpoint?: string;
+  allowSameOriginFraming?: boolean;
 }
 
 export interface HttpHeaderEntry {
@@ -43,6 +44,10 @@ export function buildContentSecurityPolicy(options: SecurityHeadersOptions): str
       "https://*.ingest.us.sentry.io",
       "https://*.ingest.de.sentry.io",
       "https://*.r2.cloudflarestorage.com",
+      "https://fonts.googleapis.com",
+      "https://fonts.gstatic.com",
+      "https://rsms.me",
+      "https://imagedelivery.net",
       ...extraConnectOrigins,
       ...(options.isDev ? ["ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*"] : []),
     ]),
@@ -56,7 +61,7 @@ export function buildContentSecurityPolicy(options: SecurityHeadersOptions): str
     "font-src 'self' data: https://fonts.gstatic.com https://rsms.me",
     `connect-src ${connectSrc.join(" ")}`,
     "frame-src 'self' https://*.paddle.com https://buy.paddle.com https://sandbox-buy.paddle.com",
-    "frame-ancestors 'none'",
+    options.allowSameOriginFraming ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self' https://accounts.google.com",
     "object-src 'none'",
@@ -78,7 +83,7 @@ export function buildSecurityHeaders(options: SecurityHeadersOptions): HttpHeade
     },
     {
       key: "X-Frame-Options",
-      value: "DENY",
+      value: options.allowSameOriginFraming ? "SAMEORIGIN" : "DENY",
     },
     {
       key: "Referrer-Policy",

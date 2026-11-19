@@ -67,7 +67,7 @@ describe("Dashboard project management service (C-1004)", () => {
           type: "mobile",
           category: "Fintech",
           tier: "free",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-cover.png",
           coverRatio: "4:3",
         },
       });

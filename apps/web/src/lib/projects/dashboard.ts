@@ -10,14 +10,15 @@ import {
   type UserRole,
 } from "@casefolio/db";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
-import { getWorkspaceQuotas } from "@/lib/billing/plans";
+import { FREE_LIFETIME_PROJECT_LIMIT, getWorkspaceQuotas } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
-import { can } from "@/lib/entitlements";
+import { can, evaluateEntitlement } from "@/lib/entitlements";
 import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
   resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
+import { revalidatePublicProject } from "@/lib/projects/public-cache";
 import { resolveProjectOrTemplateThumbnailUrl } from "@/lib/template/cover-url";
 import {
   authorizeProjectAccess,
@@ -367,7 +368,7 @@ export async function duplicateProjectForUser(
     return {
       ok: false,
       code: "FORBIDDEN",
-      error: "Upgrade to Pro, Team, or Plus to duplicate case studies built on Pro templates.",
+      error: "Upgrade to Casefolio Pro or Teams to duplicate case studies built on Pro templates.",
     };
   }
 
@@ -400,7 +401,15 @@ export async function duplicateProjectForUser(
 
   const now = new Date();
   const txDup = await db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT id FROM workspaces WHERE id = ${auth.workspace.id} FOR UPDATE`);
+    const wsLock = await tx.execute<{
+      id: string;
+      lifetime_projects_created: string | number;
+    }>(sql`
+      SELECT id, lifetime_projects_created
+      FROM workspaces
+      WHERE id = ${auth.workspace.id}
+      FOR UPDATE
+    `);
     const countsRes = await tx.execute<{
       active_count: string | number;
       retained_count: string | number;
@@ -413,12 +422,36 @@ export async function duplicateProjectForUser(
     `);
     const activeCount = Number(countsRes.rows[0]?.active_count ?? 0);
     const retainedCount = Number(countsRes.rows[0]?.retained_count ?? 0);
+    const lifetimeCreated = Math.max(
+      Number(wsLock.rows[0]?.lifetime_projects_created ?? 0),
+      retainedCount,
+    );
 
-    if (activeCount >= effectiveMaxActive) {
+    if (effectivePlan === "free" && lifetimeCreated >= FREE_LIFETIME_PROJECT_LIMIT) {
+      const decision = evaluateEntitlement("free", "create_project", {
+        projectsCount: activeCount,
+        retainedProjectsCount: retainedCount,
+        lifetimeProjectsCreated: lifetimeCreated,
+      });
       return {
         ok: false as const,
         code: "PLAN_LIMIT_REACHED" as const,
-        error: `This workspace has reached its limit of ${effectiveMaxActive} active case studies. Archive an existing project or upgrade your plan.`,
+        error: decision.message,
+      };
+    }
+
+    if (activeCount >= effectiveMaxActive) {
+      const decision = evaluateEntitlement(effectivePlan, "create_project", {
+        projectsCount: activeCount,
+        paidSeats: auth.entitlement.paidSeats,
+      });
+      return {
+        ok: false as const,
+        code: "PLAN_LIMIT_REACHED" as const,
+        error:
+          decision.allowed === false
+            ? decision.message
+            : `This workspace has reached its limit of ${effectiveMaxActive} active case studies. Archive or delete an existing project or upgrade your plan.`,
       };
     }
 
@@ -454,6 +487,14 @@ export async function duplicateProjectForUser(
         updatedAt: now,
       })
       .returning();
+
+    await tx
+      .update(dbSchema.workspaces)
+      .set({
+        lifetimeProjectsCreated: sql`${dbSchema.workspaces.lifetimeProjectsCreated} + 1`,
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.workspaces.id, auth.workspace.id));
 
     return { ok: true as const, created: inserted };
   });
@@ -555,6 +596,10 @@ export async function archiveProjectForUser(
     projectIds: [auth.project.id],
   });
 
+  if (auth.project.slug) {
+    revalidatePublicProject(auth.project.slug);
+  }
+
   return {
     ok: true,
     projectId: auth.project.id,
@@ -642,7 +687,12 @@ export async function deleteProjectForUser(
     };
   }
 
+  // Never decrement `workspaces.lifetime_projects_created` on deletion so Free's 1 lifetime Case Study credit is enforced.
   await db.delete(dbSchema.projects).where(eq(dbSchema.projects.id, projectId));
+
+  if (auth.project.slug) {
+    revalidatePublicProject(auth.project.slug);
+  }
 
   return {
     ok: true,

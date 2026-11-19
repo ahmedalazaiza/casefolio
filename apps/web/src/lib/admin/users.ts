@@ -32,6 +32,10 @@ export interface FetchPaddleSubscriptionOptions {
   fetchImpl?: typeof fetch;
 }
 
+function normalizeAdminPlan(plan: PlanTier): PlanTier {
+  return plan === "plus" ? "team" : plan;
+}
+
 export async function fetchLivePaddleSubscription(
   paddleSubscriptionId: string,
   options: FetchPaddleSubscriptionOptions = {},
@@ -185,7 +189,7 @@ export async function listAdminUsers(options?: {
       name: u.name,
       email: u.email,
       role: u.role,
-      plan: u.plan,
+      plan: normalizeAdminPlan(u.plan),
       suspended: u.suspended,
       billingInterval: interval,
       subscriptionStatus: sub?.status ?? null,
@@ -341,7 +345,9 @@ export async function getAdminUserDetail(
       paymentSummary: "—",
     };
   } else {
-    const fallbackPlan: PlanTier = dbSub.plan !== "free" ? dbSub.plan : user.plan;
+    const fallbackPlan: PlanTier = normalizeAdminPlan(
+      dbSub.plan !== "free" ? dbSub.plan : user.plan,
+    );
     const fallbackInterval = detectSubscriptionInterval({
       createdAt: dbSub.createdAt,
       currentPeriodEnd: dbSub.currentPeriodEnd,
@@ -351,10 +357,10 @@ export async function getAdminUserDetail(
       ? await fetchLivePaddleSubscription(dbSub.paddleSubscriptionId, paddleOptions)
       : null;
 
-    const effectivePlan = livePaddle?.plan ?? fallbackPlan;
+    const effectivePlan = normalizeAdminPlan(livePaddle?.plan ?? fallbackPlan);
     const effectiveInterval = livePaddle?.interval ?? fallbackInterval;
     const amountUsd =
-      effectivePlan === "pro" || effectivePlan === "team" || effectivePlan === "plus"
+      effectivePlan === "pro" || effectivePlan === "team"
         ? getChargeAmountUsd(effectivePlan, effectiveInterval, dbSub.currentPaidCapacity ?? 1)
         : 0;
 
@@ -383,7 +389,7 @@ export async function getAdminUserDetail(
     name: user.name,
     email: user.email,
     role: user.role,
-    plan: user.plan,
+    plan: normalizeAdminPlan(user.plan),
     suspended: user.suspended,
     jobTitle: user.jobTitle,
     workspaceName: membershipRows[0]?.orgName ?? null,
@@ -500,7 +506,7 @@ export async function syncUserSubscriptionFromPaddle(
 
   const live = await fetchLivePaddleSubscription(sub.paddleSubscriptionId, paddleOptions);
   if (live) {
-    const nextPlan = live.plan ?? sub.plan;
+    const nextPlan = normalizeAdminPlan(live.plan ?? sub.plan);
     const nextPeriodEnd = live.renewsAtIso ? new Date(live.renewsAtIso) : sub.currentPeriodEnd;
 
     await db
@@ -599,20 +605,21 @@ export async function getAdminSubscriptionsOverview(
       canceledLast30d += 1;
     }
 
+    const normalizedPlan = normalizeAdminPlan(sub.plan);
     const subSeats = sub.currentPaidCapacity ?? 1;
     if (
-      sub.plan !== "free" &&
+      normalizedPlan !== "free" &&
       isSubscriptionGrantingAccess(sub.status, sub.currentPeriodEnd, now, sub.pastDueSince)
     ) {
-      mrrUsd += computeSubscriptionMrrUsd(sub.plan, interval, subSeats);
+      mrrUsd += computeSubscriptionMrrUsd(normalizedPlan, interval, subSeats);
       if (sub.userId) payingUserIds.add(sub.userId);
     }
 
     if (recentSubscriptions.length < 25) {
       const owner = sub.userId ? userById.get(sub.userId) : undefined;
       const amountUsd =
-        sub.plan === "pro" || sub.plan === "team" || sub.plan === "plus"
-          ? getChargeAmountUsd(sub.plan, interval, subSeats)
+        normalizedPlan === "pro" || normalizedPlan === "team"
+          ? getChargeAmountUsd(normalizedPlan, interval, subSeats)
           : 0;
 
       recentSubscriptions.push({
@@ -621,7 +628,7 @@ export async function getAdminSubscriptionsOverview(
         customerName: owner?.name ?? "Team workspace",
         customerEmail: owner?.email ?? "—",
         paddleSubscriptionId: sub.paddleSubscriptionId,
-        plan: sub.plan,
+        plan: normalizedPlan,
         interval,
         amountUsd,
         status: sub.status,

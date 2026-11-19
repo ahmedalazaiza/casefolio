@@ -166,7 +166,7 @@ export const V3_FAQ_ITEMS = [
   {
     question: "What happens to published pages if I cancel?",
     answer:
-      "Nothing is deleted. On the Free plan you keep 1 active case study live and editable, while additional projects stay safely archived until you upgrade again.",
+      "Nothing is deleted. Free ($0) includes 1 lifetime Case Study credit, Pro ($7.99/mo · $79.90/yr with 2 months free) includes up to 10 rotatable Case Studies and custom Case Study URLs (/p/your-custom-slug), and Teams ($5.99/seat/mo · 2 months free on annual, 2–25 seats) includes unlimited shared Case Studies. If you cancel, 1 project stays live on Free while extra projects remain safely locked until you upgrade again.",
   },
 ] as const;
 

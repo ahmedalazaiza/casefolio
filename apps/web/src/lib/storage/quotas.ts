@@ -46,10 +46,10 @@ export const PLAN_UPLOAD_QUOTAS: Record<PlanTier, PlanUploadQuota> = {
     maxAssetsPerProject: 300,
   },
   plus: {
-    maxFileBytes: 50 * DECIMAL_MB,
-    maxTotalBytes: 200 * DECIMAL_GB,
-    monthlyUploadsBytes: 400 * DECIMAL_GB,
-    maxAssetsPerProject: 500,
+    maxFileBytes: 25 * DECIMAL_MB,
+    maxTotalBytes: 10 * DECIMAL_GB,
+    monthlyUploadsBytes: 20 * DECIMAL_GB,
+    maxAssetsPerProject: 300,
   },
 };
 
@@ -63,13 +63,11 @@ export function getUploadQuotaForPlan(
     maxTotalBytes: wsQuotas.storageBytesLimit,
     monthlyUploadsBytes: wsQuotas.monthlyUploadsBytesLimit,
     maxAssetsPerProject:
-      plan === "plus"
-        ? 500
-        : plan === "team"
-          ? 300
-          : plan === "pro"
-            ? 200
-            : 50,
+      plan === "team" || plan === "plus"
+        ? 300
+        : plan === "pro"
+          ? 200
+          : 50,
   };
 }
 

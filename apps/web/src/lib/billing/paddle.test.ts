@@ -123,8 +123,8 @@ describe("Paddle Billing signature, checkout & idempotent webhooks (C-701)", () 
       expect(prep.ok).toBe(true);
       if (!prep.ok) return;
       expect(prep.session.priceId).toBe(env.PADDLE_PRICE_PRO_YEARLY);
-      expect(prep.session.amountUsd).toBe(95.88);
-      expect(prep.session.amountCents).toBe(9588);
+      expect(prep.session.amountUsd).toBe(79.9);
+      expect(prep.session.amountCents).toBe(7990);
 
       // 2. Complete sandbox checkout -> dispatches signed webhook -> upgrades user to Pro
       const completed = await completeSandboxCheckoutForUser(
@@ -234,37 +234,43 @@ describe("Paddle Billing signature, checkout & idempotent webhooks (C-701)", () 
     }
   });
 
-  it("enforces Team 2–10 seat pricing ($6.99/$5.59), blocks 11th seat with PLUS_UPGRADE_REQUIRED, and provisions Plus ($99/$79, 20 seats, custom domain)", async () => {
-    // Dynamic Team per-seat pricing (2..10 seats)
+  it("enforces Teams 2–25 per-seat pricing ($5.99/mo · $59.90/yr = 2 months free), blocks >25 seats with CAPACITY_REVIEW_REQUIRED, and provisions multi-seat Teams workspaces", async () => {
     const twoSeatsMonthly = computeTeamsPrice(2, "monthly");
     expect(twoSeatsMonthly).toMatchObject({
       ok: true,
       seats: 2,
-      monthlyTotalCents: 1398,
-      monthlyTotalUsd: 13.98,
+      monthlyTotalCents: 1198,
+      monthlyTotalUsd: 11.98,
     });
     const tenSeatsYearly = computeTeamsPrice(10, "yearly");
     expect(tenSeatsYearly).toMatchObject({
       ok: true,
       seats: 10,
-      yearlyMonthlyEquivalentCents: 5590,
-      yearlyTotalCents: 67080,
-      yearlyTotalUsd: 670.8,
+      yearlyMonthlyEquivalentCents: 4990,
+      yearlyTotalCents: 59900,
+      yearlyTotalUsd: 599,
     });
-    const elevenSeats = computeTeamsPrice(11, "monthly");
-    expect(elevenSeats).toMatchObject({
+    const maxSelfServeSeats = computeTeamsPrice(25, "monthly");
+    expect(maxSelfServeSeats).toMatchObject({
+      ok: true,
+      seats: 25,
+      monthlyTotalCents: 14975,
+      monthlyTotalUsd: 149.75,
+    });
+    const twentySixSeats = computeTeamsPrice(26, "monthly");
+    expect(twentySixSeats).toMatchObject({
       ok: false,
-      code: "PLUS_UPGRADE_REQUIRED",
+      code: "CAPACITY_REVIEW_REQUIRED",
     });
 
     const stamp = Date.now();
-    const email = `c701-plus-${stamp}@casefolio.test`;
+    const email = `c701-teams-${stamp}@casefolio.test`;
     const [createdUser] = await db
       .insert(dbSchema.users)
       .values({
         email,
         emailVerified: true,
-        name: "Plus Agency Owner",
+        name: "Teams Studio Owner",
         plan: "free",
         role: "user",
       })
@@ -275,39 +281,35 @@ describe("Paddle Billing signature, checkout & idempotent webhooks (C-701)", () 
     const createdEventIds: string[] = [];
 
     try {
-      // Prepare Plus annual checkout ($948/yr flat, 20 seats included)
-      const prepPlus = await prepareCheckoutSessionForUser(
-        { id: userId, email, name: "Plus Agency Owner" },
-        { plan: "plus", interval: "yearly" },
+      const prepTeams = await prepareCheckoutSessionForUser(
+        { id: userId, email, name: "Teams Studio Owner" },
+        { plan: "team", interval: "yearly", seats: 5 },
       );
-      expect(prepPlus.ok).toBe(true);
-      if (!prepPlus.ok) return;
-      createdOrgId = prepPlus.session.orgId;
-      expect(prepPlus.session.priceId).toBe(env.PADDLE_PRICE_PLUS_YEARLY);
-      expect(prepPlus.session.amountCents).toBe(94800);
-      expect(prepPlus.session.amountUsd).toBe(948);
-      expect(prepPlus.session.seats).toBe(1); // Flat-rate Paddle item quantity = 1 (covers up to 20 seats)
+      expect(prepTeams.ok).toBe(true);
+      if (!prepTeams.ok) return;
+      createdOrgId = prepTeams.session.orgId;
+      expect(prepTeams.session.priceId).toBe(env.PADDLE_PRICE_TEAM_YEARLY);
+      expect(prepTeams.session.amountCents).toBe(29950);
+      expect(prepTeams.session.amountUsd).toBe(299.5);
+      expect(prepTeams.session.seats).toBe(5);
 
-      // Complete sandbox checkout for Plus org
-      const completedPlus = await completeSandboxCheckoutForUser(
-        { id: userId, email, name: "Plus Agency Owner" },
-        { plan: "plus", interval: "yearly", orgId: createdOrgId! },
+      const completedTeams = await completeSandboxCheckoutForUser(
+        { id: userId, email, name: "Teams Studio Owner" },
+        { plan: "team", interval: "yearly", seats: 5, orgId: createdOrgId! },
       );
-      expect(completedPlus.ok).toBe(true);
-      if (!completedPlus.ok) return;
-      createdEventIds.push(completedPlus.eventId);
-      expect(completedPlus.effectivePlan).toBe("plus");
+      expect(completedTeams.ok).toBe(true);
+      if (!completedTeams.ok) return;
+      createdEventIds.push(completedTeams.eventId);
+      expect(completedTeams.effectivePlan).toBe("team");
 
-      // Plus workspace has maxSeats=20, customDomainEnabled=true, watermarkEnabled=false
-      const [plusWs] = await db
+      const [teamWs] = await db
         .select()
         .from(dbSchema.workspaces)
         .where(eq(dbSchema.workspaces.organizationId, createdOrgId!));
-      expect(plusWs?.maxSeats).toBe(20);
-      expect(plusWs?.customDomainEnabled).toBe(true);
-      expect(plusWs?.watermarkEnabled).toBe(false);
+      expect(teamWs?.maxSeats).toBe(5);
+      expect(teamWs?.customDomainEnabled).toBe(false);
+      expect(teamWs?.watermarkEnabled).toBe(false);
 
-      // Custom domains are not available yet: configuring one is refused
       const domainRes = await updateTeamCustomDomain({
         actorUserId: userId,
         organizationId: createdOrgId!,

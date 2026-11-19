@@ -13,8 +13,8 @@ import { env } from "@/env";
 import { sendTeamInvitationEmail } from "@/lib/auth/email";
 import { inviteTeamMemberSchema } from "@/lib/auth/schemas";
 import {
-  PLUS_INCLUDED_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
+  TEAMS_MIN_SEATS,
 } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import {
@@ -56,6 +56,8 @@ export type InviteTeamMemberResult =
       ok: true;
       invitationId: string;
       invitationToken: string;
+      inviteUrl: string;
+      emailDelivered: boolean;
       email: string;
       role: "admin" | "member";
       expiresAtIso: string;
@@ -69,12 +71,21 @@ export type InviteTeamMemberResult =
         | "FORBIDDEN"
         | "TEAM_PLAN_REQUIRED"
         | "TEAM_SEAT_LIMIT_REACHED"
-        | "PLUS_PLAN_REQUIRED"
         | "WORKSPACE_PAST_DUE_OR_FROZEN"
         | "ALREADY_MEMBER"
         | "INVITATION_FAILED";
       error: string;
     };
+
+export async function getWorkspaceLifetimeProjectsCreated(workspaceId: string): Promise<number> {
+  const [wsRow] = await db
+    .select({ lifetimeProjectsCreated: dbSchema.workspaces.lifetimeProjectsCreated })
+    .from(dbSchema.workspaces)
+    .where(eq(dbSchema.workspaces.id, workspaceId))
+    .limit(1);
+
+  return Number(wsRow?.lifetimeProjectsCreated ?? 0);
+}
 
 export interface TeamSeatOccupancySnapshot {
   paidSeats: number;
@@ -215,7 +226,7 @@ export async function createGatedTeamInvitation({
       ok: false,
       status: 403,
       code: "TEAM_PLAN_REQUIRED",
-      error: "Collaborative team seats require an active Casefolio Team or Plus subscription.",
+      error: "Collaborative team seats require an active Casefolio Teams subscription.",
     };
   }
 
@@ -274,12 +285,12 @@ export async function createGatedTeamInvitation({
 
     const occupiedExcludingThisEmail = existingMemberRows.length + otherPendingEmails.size;
     if (occupiedExcludingThisEmail >= ent.admissionCeiling) {
-      if (ent.plan === "team" && ent.admissionCeiling >= TEAMS_MAX_SELF_SERVE_SEATS) {
+      if (ent.admissionCeiling >= TEAMS_MAX_SELF_SERVE_SEATS) {
         return {
           ok: false,
           status: 403,
-          code: "PLUS_PLAN_REQUIRED",
-          error: `Team plan supports up to ${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) to invite up to ${PLUS_INCLUDED_SEATS} team members.`,
+          code: "TEAM_SEAT_LIMIT_REACHED",
+          error: `Self-serve Teams supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Contact support for 26+ enterprise seats.`,
         };
       }
       return {
@@ -288,10 +299,8 @@ export async function createGatedTeamInvitation({
         code: "TEAM_SEAT_LIMIT_REACHED",
         error:
           ent.renewalQuantity !== null && ent.renewalQuantity < ent.paidSeats
-            ? `Admissions are capped at your scheduled renewal seat target (${ent.admissionCeiling}). Cancel the pending seat decrease or purchase another seat first.`
-            : ent.plan === "plus"
-              ? `All ${PLUS_INCLUDED_SEATS} team seats included in Casefolio Plus are occupied or reserved.`
-              : `All ${ent.paidSeats} paid team seats are occupied or reserved. Purchase an additional seat (up to ${TEAMS_MAX_SELF_SERVE_SEATS}) or upgrade to Plus.`,
+            ? `Admissions are capped at your scheduled renewal seat target (${ent.admissionCeiling}). Cancel the pending seat decrease or add another seat first.`
+            : `All ${ent.paidSeats} paid team seats are occupied or reserved. Add another seat in Team & Seats (up to ${TEAMS_MAX_SELF_SERVE_SEATS} seats, $5.99/seat/mo).`,
       };
     }
 
@@ -344,6 +353,8 @@ export async function createGatedTeamInvitation({
       ok: true,
       invitationId: inserted!.id,
       invitationToken: opaqueToken,
+      inviteUrl: `${env.NEXT_PUBLIC_APP_URL}/account/team?invitationId=${encodeURIComponent(inserted!.id)}&token=${encodeURIComponent(opaqueToken)}`,
+      emailDelivered: false,
       email: normalizedEmail,
       role: valid.role,
       expiresAtIso: expiresAt.toISOString(),
@@ -355,14 +366,14 @@ export async function createGatedTeamInvitation({
   }
 
   // Deliver mail via mail sink / Resend without ever logging `opaqueToken` (`Spec §7.6 & §7.9`)
-  const acceptUrl = `${env.NEXT_PUBLIC_APP_URL}/account/team?invitationId=${encodeURIComponent(txResult.invitationId)}&token=${encodeURIComponent(opaqueToken)}`;
-  await sendTeamInvitationEmail({
+  const acceptUrl = txResult.inviteUrl;
+  const emailDelivery = await sendTeamInvitationEmail({
     email: txResult.email,
     organizationName: orgRow.organization.name,
     inviterName: orgRow.inviterName,
     acceptUrl,
     role: txResult.role,
-  }).catch(() => undefined);
+  }).catch(() => ({ delivered: false }));
 
   await notifyTeamInviteIfExistingUser({
     invitedEmail: txResult.email,
@@ -372,15 +383,27 @@ export async function createGatedTeamInvitation({
     sendEmail: false,
   }).catch(() => undefined);
 
-  return txResult;
+  return {
+    ...txResult,
+    emailDelivered: Boolean(emailDelivery?.delivered),
+  };
 }
+
+export const createTeamInvitation = createGatedTeamInvitation;
 
 export async function resendTeamInvitation(args: {
   actorUserId: string;
   invitationId: string;
   now?: Date;
 }): Promise<
-  | { ok: true; invitationId: string; invitationToken: string; expiresAtIso: string }
+  | {
+      ok: true;
+      invitationId: string;
+      invitationToken: string;
+      inviteUrl: string;
+      emailDelivered: boolean;
+      expiresAtIso: string;
+    }
   | { ok: false; status: 403 | 404 | 409; code: string; error: string }
 > {
   const now = args.now ?? new Date();
@@ -512,18 +535,20 @@ export async function resendTeamInvitation(args: {
   }
 
   const acceptUrl = `${env.NEXT_PUBLIC_APP_URL}/account/team?invitationId=${encodeURIComponent(inv.id)}&token=${encodeURIComponent(newToken)}`;
-  await sendTeamInvitationEmail({
+  const emailDelivery = await sendTeamInvitationEmail({
     email: inv.email,
     organizationName: mem.orgName,
     inviterName: mem.inviterName,
     acceptUrl,
     role: invRole,
-  }).catch(() => undefined);
+  }).catch(() => ({ delivered: false }));
 
   return {
     ok: true,
     invitationId: inv.id,
     invitationToken: newToken,
+    inviteUrl: acceptUrl,
+    emailDelivered: Boolean(emailDelivery?.delivered),
     expiresAtIso: expiresAt.toISOString(),
   };
 }
@@ -614,6 +639,121 @@ export async function revokeTeamInvitation(args: {
       .update(dbSchema.seatReservations)
       .set({ status: "revoked", updatedAt: now })
       .where(eq(dbSchema.seatReservations.invitationId, inv.id));
+
+    return { ok: true as const };
+  });
+
+  if (!txRes.ok) {
+    return txRes;
+  }
+
+  return { ok: true, invitationId: inv.id };
+}
+
+export async function declineTeamInvitation(args: {
+  actorUserId: string;
+  invitationId: string;
+  token?: string;
+  now?: Date;
+}): Promise<
+  | { ok: true; invitationId: string }
+  | {
+      ok: false;
+      status: 403 | 404 | 409 | 410;
+      code:
+        | "NOT_FOUND"
+        | "EMAIL_MISMATCH"
+        | "INVALID_TOKEN"
+        | "INVITATION_NOT_PENDING";
+      error: string;
+    }
+> {
+  const now = args.now ?? new Date();
+  const [[actorUser], [inv]] = await Promise.all([
+    db
+      .select({ id: dbSchema.users.id, email: dbSchema.users.email })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, args.actorUserId))
+      .limit(1),
+    db
+      .select()
+      .from(dbSchema.invitations)
+      .where(eq(dbSchema.invitations.id, args.invitationId))
+      .limit(1),
+  ]);
+
+  if (!actorUser || !inv) {
+    return { ok: false, status: 404, code: "NOT_FOUND", error: "Invitation not found." };
+  }
+
+  if (inv.tokenHash && args.token && hashInvitationToken(args.token) !== inv.tokenHash) {
+    return {
+      ok: false,
+      status: 410,
+      code: "INVALID_TOKEN",
+      error: "This invitation link was superseded or is invalid.",
+    };
+  }
+
+  if (normalizeInviteEmail(actorUser.email) !== normalizeInviteEmail(inv.email)) {
+    return {
+      ok: false,
+      status: 403,
+      code: "EMAIL_MISMATCH",
+      error: "Sign in with the email address this invitation was sent to.",
+    };
+  }
+
+  const txRes = await db.transaction(async (tx) => {
+    const lockedRows = await tx.execute<{
+      id: string;
+      status: string;
+      revoked_at: Date | null;
+    }>(sql`
+      SELECT id, status, revoked_at
+      FROM invitations
+      WHERE id = ${inv.id}
+      FOR UPDATE
+    `);
+
+    const locked = lockedRows.rows[0];
+    if (!locked) {
+      return {
+        ok: false as const,
+        status: 404 as const,
+        code: "NOT_FOUND" as const,
+        error: "Invitation not found.",
+      };
+    }
+
+    if (locked.status !== "pending" || locked.revoked_at !== null) {
+      return {
+        ok: false as const,
+        status: 409 as const,
+        code: "INVITATION_NOT_PENDING" as const,
+        error: "This invitation is no longer pending.",
+      };
+    }
+
+    await tx
+      .update(dbSchema.invitations)
+      .set({ status: "canceled", revokedAt: now })
+      .where(eq(dbSchema.invitations.id, inv.id));
+
+    await tx
+      .update(dbSchema.seatReservations)
+      .set({ status: "revoked", updatedAt: now })
+      .where(eq(dbSchema.seatReservations.invitationId, inv.id));
+
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: args.actorUserId,
+      action: "team.invitation.declined",
+      meta: {
+        organizationId: inv.organizationId,
+        invitationId: inv.id,
+      },
+      at: now,
+    });
 
     return { ok: true as const };
   });

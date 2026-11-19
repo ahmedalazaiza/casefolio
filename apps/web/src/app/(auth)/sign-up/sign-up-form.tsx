@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { InputField } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
+import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 import { signUpSchema } from "@/lib/auth/schemas";
 
-export function SignUpForm() {
+export function SignUpForm({ callbackUrl }: { callbackUrl?: string } = {}) {
   const router = useRouter();
+  const safeCallback = callbackUrl ? sanitizeCallbackUrl(callbackUrl) : null;
+  const hasCustomCallback = Boolean(safeCallback && safeCallback !== "/dashboard");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +28,7 @@ export function SignUpForm() {
     setSubmitting(true);
     const { error } = await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/onboarding",
+      callbackURL: hasCustomCallback && safeCallback ? safeCallback : "/onboarding",
     });
     if (error) {
       setFormError(error.message ?? "Unable to connect to Google right now.");
@@ -74,6 +77,9 @@ export function SignUpForm() {
       email: parsed.data.email,
       name: parsed.data.name,
     });
+    if (hasCustomCallback && safeCallback) {
+      params.set("callbackUrl", safeCallback);
+    }
     router.push(`/verify?${params.toString()}`);
   }
 
@@ -184,7 +190,14 @@ export function SignUpForm() {
 
       <p className="text-muted-foreground type-caption">
         Already have an account?{" "}
-        <Link href="/sign-in" className="text-primary font-medium underline underline-offset-4">
+        <Link
+          href={
+            hasCustomCallback && safeCallback
+              ? `/sign-in?callbackUrl=${encodeURIComponent(safeCallback)}`
+              : "/sign-in"
+          }
+          className="text-primary font-medium underline underline-offset-4"
+        >
           Log in
         </Link>
       </p>

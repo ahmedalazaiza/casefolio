@@ -493,7 +493,7 @@ export async function notifyPaymentIssue(args: {
   }
 
   const tierTitle =
-    args.plan === "plus" ? "Plus" : args.plan === "team" ? "Team" : "Pro";
+    args.plan === "team" || args.plan === "plus" ? "Teams" : "Pro";
 
   await createUserNotification({
     userId: args.userId,

@@ -20,7 +20,12 @@ import {
   ScrubbedMarqueeBoost,
   SectionStackSheet,
 } from "@/components/marketing/motion";
-import type { LandingPlatformSnapshot } from "@/lib/marketing/landing-stats";
+import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
+import { Badge, ProBadge } from "@/components/ui/badge";
+import type {
+  LandingPlatformSnapshot,
+  LandingPublishedTemplateItem,
+} from "@/lib/marketing/landing-stats";
 import {
   V3_FEATURE_CARDS,
   V3_MARQUEE_CARDS,
@@ -31,19 +36,43 @@ import { cn } from "@/lib/utils";
 
 const FEATURE_CARD_ICONS = [Globe, FileDown, Layers] as const;
 
+function formatLandingTemplateType(type: LandingPublishedTemplateItem["type"]): string {
+  if (type === "mobile") return "Mobile app";
+  if (type === "web") return "Website";
+  return "Mobile + Web";
+}
+
+function buildMarqueePublishedCards(
+  items: readonly LandingPublishedTemplateItem[],
+): LandingPublishedTemplateItem[] {
+  if (items.length === 0) return [];
+  const repeated: LandingPublishedTemplateItem[] = [];
+  while (repeated.length < 4) {
+    repeated.push(...items);
+  }
+  return repeated;
+}
+
 export function LandingExperience({
-  snapshot: _snapshot,
+  snapshot,
 }: {
   snapshot: LandingPlatformSnapshot;
 }) {
   const [activeShowcaseTab, setActiveShowcaseTab] =
     useState<V3ShowcaseTabId>("slots");
+  const marqueePublishedCards = buildMarqueePublishedCards(
+    snapshot.publishedTemplates ?? [],
+  );
 
   return (
     <div className="relative flex flex-col overflow-x-clip">
       {/* 1. HERO — Architectural Flat Grid + 3-Card Scroll Fan-Out Stage */}
       <section className="v3-pattern-grid relative z-10 overflow-hidden border-b border-[var(--cf-border-subtle)] pt-12 pb-0 sm:pt-16 lg:pt-24">
-        <LandingHeroMotion visual={<LandingHeroVisual />}>
+        <LandingHeroMotion
+          visual={
+            <LandingHeroVisual publishedTemplates={snapshot.publishedTemplates} />
+          }
+        >
           <div className="mx-auto flex flex-col items-center text-center">
             <span className="v3-label mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 text-[var(--cf-text-primary)]">
               <span
@@ -530,36 +559,83 @@ export function LandingExperience({
             <ScrubbedMarqueeBoost>
               <div className="casefolio-marquee-track gap-5 px-3 lg:gap-6">
                 {[0, 1].map((loopIndex) =>
-                  V3_MARQUEE_CARDS.map((card) => (
-                    <Link
-                      key={`${loopIndex}-${card.id}`}
-                      href={card.href}
-                      tabIndex={loopIndex === 1 ? -1 : undefined}
-                      aria-hidden={loopIndex === 1 ? true : undefined}
-                      className="focus-visible:ring-ring/40 group flex w-[18.5rem] shrink-0 flex-col rounded-[1.25rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 transition-all duration-200 outline-none hover:-translate-y-1.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] focus-visible:ring-2 sm:w-[23rem] lg:w-[25.25rem] lg:rounded-[1.5rem]"
-                    >
-                      <div className="h-52 sm:h-64 lg:h-72">
-                        <V3TemplateArtwork variant={card.variant} />
-                      </div>
+                  marqueePublishedCards.length > 0
+                    ? marqueePublishedCards.map((tpl, tplIndex) => (
+                        <Link
+                          key={`${loopIndex}-${tpl.id}-${tplIndex}`}
+                          href={`/new?template=${encodeURIComponent(tpl.slug)}`}
+                          tabIndex={loopIndex === 1 ? -1 : undefined}
+                          aria-hidden={loopIndex === 1 ? true : undefined}
+                          className="focus-visible:ring-ring/40 group flex w-[18.5rem] shrink-0 flex-col rounded-[1.25rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 transition-all duration-200 outline-none hover:-translate-y-1.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] focus-visible:ring-2 sm:w-[23rem] lg:w-[25.25rem] lg:rounded-[1.5rem]"
+                        >
+                          <div className="h-52 sm:h-64 lg:h-72">
+                            <TemplateThumbnail
+                              coverUrl={tpl.coverUrl}
+                              slug={tpl.slug}
+                              name={tpl.name}
+                              theme={tpl.theme ?? null}
+                              className="size-full rounded-xl border border-[var(--cf-border-subtle)]"
+                              imageClassName="group-hover:scale-[1.03]"
+                            />
+                          </div>
 
-                      <div className="mt-3.5 flex items-center justify-between gap-2">
-                        <span className="v3-heading-s text-[var(--cf-text-primary)] transition-colors group-hover:text-[var(--cf-royal-text)]">
-                          {card.name}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-2.5 py-0.5 font-mono text-xs font-medium text-[var(--cf-text-primary)]">
-                          <span
-                            aria-hidden="true"
-                            className="size-1.5 rounded-full bg-[var(--cf-royal)]"
-                          />
-                          <span>{card.version}</span>
-                        </span>
-                      </div>
+                          <div className="mt-3.5 flex items-center justify-between gap-2">
+                            <span className="v3-heading-s truncate text-[var(--cf-text-primary)] transition-colors group-hover:text-[var(--cf-royal-text)]">
+                              {tpl.name}
+                            </span>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              {tpl.tier === "pro" ? (
+                                <ProBadge />
+                              ) : (
+                                <Badge tone="published">Free</Badge>
+                              )}
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-2.5 py-0.5 font-mono text-xs font-medium text-[var(--cf-text-primary)]">
+                                <span
+                                  aria-hidden="true"
+                                  className="size-1.5 rounded-full bg-[var(--cf-royal)]"
+                                />
+                                <span>v{tpl.version}</span>
+                              </span>
+                            </div>
+                          </div>
 
-                      <p className="v3-body-s mt-1.5 text-left text-[var(--cf-text-secondary)]">
-                        {card.subtitle}
-                      </p>
-                    </Link>
-                  )),
+                          <p className="v3-body-s mt-1.5 truncate text-left text-[var(--cf-text-secondary)]">
+                            {formatLandingTemplateType(tpl.type)}
+                            {tpl.categoryName ? ` · ${tpl.categoryName}` : ""} ·{" "}
+                            {tpl.sectionCount} sections · {tpl.slotCount} slots
+                          </p>
+                        </Link>
+                      ))
+                    : V3_MARQUEE_CARDS.map((card) => (
+                        <Link
+                          key={`${loopIndex}-${card.id}`}
+                          href={card.href}
+                          tabIndex={loopIndex === 1 ? -1 : undefined}
+                          aria-hidden={loopIndex === 1 ? true : undefined}
+                          className="focus-visible:ring-ring/40 group flex w-[18.5rem] shrink-0 flex-col rounded-[1.25rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 transition-all duration-200 outline-none hover:-translate-y-1.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] focus-visible:ring-2 sm:w-[23rem] lg:w-[25.25rem] lg:rounded-[1.5rem]"
+                        >
+                          <div className="h-52 sm:h-64 lg:h-72">
+                            <V3TemplateArtwork variant={card.variant} />
+                          </div>
+
+                          <div className="mt-3.5 flex items-center justify-between gap-2">
+                            <span className="v3-heading-s text-[var(--cf-text-primary)] transition-colors group-hover:text-[var(--cf-royal-text)]">
+                              {card.name}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-2.5 py-0.5 font-mono text-xs font-medium text-[var(--cf-text-primary)]">
+                              <span
+                                aria-hidden="true"
+                                className="size-1.5 rounded-full bg-[var(--cf-royal)]"
+                              />
+                              <span>{card.version}</span>
+                            </span>
+                          </div>
+
+                          <p className="v3-body-s mt-1.5 text-left text-[var(--cf-text-secondary)]">
+                            {card.subtitle}
+                          </p>
+                        </Link>
+                      )),
                 )}
               </div>
             </ScrubbedMarqueeBoost>

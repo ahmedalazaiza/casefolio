@@ -172,7 +172,7 @@ export function buildBillingInvoices(events: BillingEventRow[]): {
     const plan: PaidPlanTier =
       mapped?.plan ??
       (simulated && (customData?.plan === "team" || customData?.plan === "plus")
-        ? customData.plan
+        ? "team"
         : "pro");
     const seats =
       typeof firstItem?.quantity === "number" && firstItem.quantity >= 1 ? firstItem.quantity : 1;

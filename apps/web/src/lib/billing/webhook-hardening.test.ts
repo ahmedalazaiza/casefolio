@@ -141,13 +141,11 @@ afterAll(async () => {
 });
 
 describe("Paddle price → plan mapping is exact (P0-3)", () => {
-  it("maps only the six configured price ids (Pro, Team, Plus × Monthly/Yearly) and never guesses from substrings", () => {
+  it("maps only the four configured price ids (Pro & Teams × Monthly/Yearly) and never guesses from substrings", () => {
     expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_PRO_MONTHLY)).toEqual({ plan: "pro", interval: "monthly" });
     expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_PRO_YEARLY)).toEqual({ plan: "pro", interval: "yearly" });
     expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_TEAM_MONTHLY)).toEqual({ plan: "team", interval: "monthly" });
     expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_TEAM_YEARLY)).toEqual({ plan: "team", interval: "yearly" });
-    expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_PLUS_MONTHLY)).toEqual({ plan: "plus", interval: "monthly" });
-    expect(resolvePlanFromServerPriceId(env.PADDLE_PRICE_PLUS_YEARLY)).toEqual({ plan: "plus", interval: "yearly" });
 
     for (const unknown of [
       "pri_01proxxxxxxxxxxxxxxxxxxxx",
@@ -385,31 +383,32 @@ describe("Right plan, right interval, right scope", () => {
     expect(sub?.userId).toBeNull();
   });
 
-  it("provisions flat-rate Plus agency workspace with 20 included seats and custom domain entitlement", async () => {
-    const owner = await createUser("plus-owner");
-    const session = await openCheckout(owner, { plan: "plus", interval: "monthly" });
+  it("provisions 15-seat annual Teams workspace cleanly up to 25 self-serve seats", async () => {
+    const owner = await createUser("teams-15-owner");
+    const session = await openCheckout(owner, { plan: "team", interval: "yearly", seats: 15 });
     expect(session.orgId).toBeTruthy();
-    expect(session.seats).toBe(1); // Flat-rate Paddle item quantity = 1 (covers 20 workspace seats)
+    expect(session.seats).toBe(15);
 
     const result = await post(
       "subscription.activated",
       subscriptionData({
-        priceId: env.PADDLE_PRICE_PLUS_MONTHLY,
-        quantity: 1,
+        priceId: env.PADDLE_PRICE_TEAM_YEARLY,
+        interval: "year",
+        quantity: 15,
         customData: session.customData,
       }),
     );
-    expect(result.effectivePlan).toBe("plus");
-    expect(result.currentPaidCapacity).toBe(20);
-    expect(await planOf(owner.id)).toBe("free"); // Plus scopes to the agency org workspace
+    expect(result.effectivePlan).toBe("team");
+    expect(result.currentPaidCapacity).toBe(15);
+    expect(await planOf(owner.id)).toBe("free");
 
     const [sub] = await db
       .select()
       .from(dbSchema.subscriptions)
       .where(eq(dbSchema.subscriptions.orgId, session.orgId!));
-    expect(sub?.plan).toBe("plus");
-    expect(sub?.maxSeats).toBe(20);
-    expect(sub?.customDomainEnabled).toBe(true);
+    expect(sub?.plan).toBe("team");
+    expect(sub?.maxSeats).toBe(15);
+    expect(sub?.customDomainEnabled).toBe(false);
     expect(sub?.watermarkEnabled).toBe(false);
   });
 });

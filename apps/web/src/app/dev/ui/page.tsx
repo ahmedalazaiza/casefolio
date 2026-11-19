@@ -24,10 +24,10 @@ export const metadata: Metadata = {
 };
 
 const PLAN_FEATURES = [
-  "Unlimited projects",
-  "All published templates",
-  "Publish to Casefolio",
-  "Export PNG & PDF",
+  "Up to 10 active Case Studies",
+  "Custom /p/your-slug URLs",
+  "All Pro & Premium templates",
+  "Watermark-free 2× PNG, PDF & Behance",
 ] as const;
 
 export default function DevUiPage() {
@@ -276,9 +276,9 @@ export default function DevUiPage() {
                 helperText="casefolio.app/p/orbit-banking-redesign"
               />
               <InputField
-                label="Custom domain"
-                defaultValue="invalid domain"
-                error="Enter a valid domain name such as work.alex.design."
+                label="Invite teammate"
+                defaultValue="invalid-email"
+                error="Enter a valid work email address such as alex@studio.design."
               />
               <InputField
                 label="Workspace ID"
@@ -364,21 +364,21 @@ export default function DevUiPage() {
               price="$0"
               period="/forever"
               badgeLabel="Starter"
-              description="Everything you need to build and publish your first case study."
+              description="1 lifetime Case Study credit with full A-to-Z editing and a shareable link."
               ctaLabel="Start free"
               features={[
-                "1 active Case Study",
-                "Standard templates & basic customization",
-                "Live Shareable Link with subtle Casefolio branding",
-                "Watermarked PNG & PDF exports",
+                "1 lifetime Case Study credit",
+                "Starter templates & essential styling",
+                "Auto-generated shareable link (/p/...)",
+                "1× PNG & PDF exports (subtle watermark)",
               ]}
             />
             <PlanCard
               name="Pro"
-              price="$9.99"
+              price="$7.99"
               period="/mo"
               badgeLabel="Popular"
-              description="Unlimited Case Studies, Pro & Premium templates, and watermark-free exports."
+              description="Up to 10 rotatable Case Studies, custom URLs, Pro templates, and watermark-free exports."
               ctaLabel="Choose Pro"
               highlighted
               features={PLAN_FEATURES}

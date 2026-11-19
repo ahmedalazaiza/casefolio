@@ -63,7 +63,7 @@ describe("admin templates detail usage & deletion audit logs (C-902)", () => {
         type: "web",
         category: "Fintech",
         tier: "pro",
-        coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+        coverUrl: "/cdn/covers/orbit-cover.png",
         coverRatio: "4:3",
       },
     });
@@ -108,7 +108,7 @@ describe("admin templates detail usage & deletion audit logs (C-902)", () => {
         type: "mobile",
         category: "Fintech",
         tier: "free",
-        coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+        coverUrl: "/cdn/covers/orbit-cover.png",
         coverRatio: "4:3",
       },
     });

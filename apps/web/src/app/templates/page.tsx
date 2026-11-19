@@ -3,9 +3,8 @@ import { unstable_cache } from "next/cache";
 import { TemplateLibraryClient } from "./template-library-client";
 import { AppShell } from "@/components/layout/app-shell";
 import { MarketingShell } from "@/components/layout/marketing-shell";
-import { computeUserInitials, getServerSession } from "@/lib/auth/session";
-import { can } from "@/lib/entitlements";
-import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
+import { buildWorkspaceShellProps } from "@/components/layout/workspace-shell-props";
+import { getServerSession } from "@/lib/auth/session";
 import { listPublishedLibraryTemplates, listTemplateCategories } from "@/lib/template/service";
 
 const getCachedTemplateCatalog = unstable_cache(
@@ -39,20 +38,16 @@ export default async function TemplatesLibraryPage() {
   }));
 
   if (session) {
-    const effectivePlan = await resolveEffectivePlanForUser(session.user.id);
-    const initials = computeUserInitials(session.user.name, session.user.email);
+    const { shellProps, activePlan } = await buildWorkspaceShellProps(
+      session.user,
+      session.session.activeOrganizationId ?? null,
+    );
     return (
-      <AppShell
-        userInitials={initials}
-        userName={session.user.name}
-        userEmail={session.user.email}
-        userImage={session.user.image}
-        showProBadge={can(effectivePlan, "pro_templates")}
-      >
+      <AppShell {...shellProps}>
         <TemplateLibraryClient
           templates={publishedTemplates}
           categories={categoryOptions}
-          userPlan={effectivePlan}
+          userPlan={activePlan}
           isAuthenticated
         />
       </AppShell>

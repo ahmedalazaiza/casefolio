@@ -25,3 +25,4 @@ describe("SEO routes (sitemap.ts + robots.ts, B7)", () => {
     expect(urls.some((u) => u.includes("/help/"))).toBe(true);
   });
 });
+

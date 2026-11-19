@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth/session";
-import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
+import { can } from "@/lib/entitlements";
+import {
+  resolveActiveContextPlan,
+  resolveEffectivePlanForUser,
+} from "@/lib/entitlements/server";
 import {
   deleteProjectForUser,
   duplicateProjectForUser,
@@ -19,6 +23,7 @@ import type {
 } from "@/lib/projects/dashboard-types";
 import {
   checkProjectSlugAvailability,
+  normalizeProjectSlug,
   publishProjectForUser,
   unpublishProjectForUser,
   type PublishProjectInput,
@@ -94,15 +99,18 @@ export async function checkProjectSlugAction(
   slug: string,
   projectId: string,
 ): Promise<{
+  ok: boolean;
   available: boolean;
   normalizedSlug: string;
   reason?: string;
 }> {
+  const normalizedFallback = normalizeProjectSlug(slug);
   const ctx = await getServerSession();
   if (!ctx) {
     return {
+      ok: false,
       available: false,
-      normalizedSlug: slug.trim().toLowerCase(),
+      normalizedSlug: normalizedFallback,
       reason: "Please sign in to check slug availability.",
     };
   }
@@ -110,8 +118,9 @@ export async function checkProjectSlugAction(
   const rate = consumeUploadRateLimit(`slug-check:${ctx.user.id}`, 60, 60_000);
   if (!rate.allowed) {
     return {
+      ok: false,
       available: false,
-      normalizedSlug: slug.trim().toLowerCase(),
+      normalizedSlug: normalizedFallback,
       reason: "Too many slug availability checks. Please wait a moment.",
     };
   }
@@ -119,8 +128,9 @@ export async function checkProjectSlugAction(
   const parsed = checkSlugActionSchema.safeParse({ slug, projectId });
   if (!parsed.success) {
     return {
+      ok: false,
       available: false,
-      normalizedSlug: slug.trim().toLowerCase(),
+      normalizedSlug: normalizedFallback,
       reason: parsed.error.issues[0]?.message ?? "Invalid slug check input.",
     };
   }
@@ -128,9 +138,26 @@ export async function checkProjectSlugAction(
   // Verify caller has read access to `projectId` before allowing it as `excludeProjectId`,
   // preventing cross-tenant slug-to-projectId enumeration.
   const access = await authorizeProjectAccess(parsed.data.projectId, ctx.user.id, "read");
-  const safeExcludeProjectId = access.ok ? parsed.data.projectId : undefined;
+  const effectivePlan = access.ok
+    ? access.entitlement.plan
+    : await resolveActiveContextPlan(ctx.user.id, ctx.session.activeOrganizationId ?? null);
 
-  return checkProjectSlugAvailability(parsed.data.slug, safeExcludeProjectId);
+  if (!can(effectivePlan, "custom_slug")) {
+    return {
+      ok: true,
+      available: false,
+      normalizedSlug: normalizeProjectSlug(parsed.data.slug),
+      reason: "Custom Case Study URLs require Casefolio Pro or Teams.",
+    };
+  }
+
+  const safeExcludeProjectId = access.ok ? parsed.data.projectId : undefined;
+  const availability = await checkProjectSlugAvailability(parsed.data.slug, safeExcludeProjectId);
+
+  return {
+    ok: true,
+    ...availability,
+  };
 }
 
 export async function publishProjectAction(

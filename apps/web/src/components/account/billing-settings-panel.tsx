@@ -1,17 +1,14 @@
 "use client";
 
-import type { PlanTier } from "@casefolio/db";
 import {
   AlertTriangle,
   Check,
   CreditCard,
   ExternalLink,
-  Globe,
   Loader2,
   Minus,
   Plus,
   RotateCcw,
-  Sparkles,
   Users,
   XCircle,
 } from "lucide-react";
@@ -37,9 +34,11 @@ import {
   formatPlanAmountSummary,
   formatPlanHeadingLabel,
   formatUsdFromCents,
-  PLUS_INCLUDED_SEATS,
+  PRO_MAX_PROJECTS,
+  TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
+  type ActivePlanTier,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
@@ -89,19 +88,18 @@ export function BillingSettingsPanel({
 }: BillingSettingsPanelProps) {
   const router = useRouter();
   const sub = overview.subscription;
-  const effectivePlan = overview.effectivePlan;
+  const effectivePlan: ActivePlanTier =
+    overview.effectivePlan === "plus" || overview.effectivePlan === "team"
+      ? "team"
+      : overview.effectivePlan === "pro"
+        ? "pro"
+        : "free";
   const currentInterval: BillingInterval = sub?.interval ?? "monthly";
   const currentPlanHeading = formatPlanHeadingLabel(effectivePlan, currentInterval);
   const currentAmountSummary = formatPlanAmountSummary(effectivePlan, currentInterval);
   const periodEndFormatted = formatDateLabel(sub?.currentPeriodEndIso);
   const planTitle =
-    effectivePlan === "plus"
-      ? "Plus"
-      : effectivePlan === "team"
-        ? "Team"
-        : effectivePlan === "pro"
-          ? "Pro"
-          : "Free";
+    effectivePlan === "team" ? "Teams" : effectivePlan === "pro" ? "Pro" : "Free";
   const teamBilling = overview.teamBilling ?? null;
   const personalPublished = overview.personalPublishedProjects ?? [];
 
@@ -115,7 +113,7 @@ export function BillingSettingsPanel({
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [pickerInterval, setPickerInterval] =
     useState<BillingInterval>(currentInterval);
-  const [pickerTier, setPickerTier] = useState<PlanTier>(
+  const [pickerTier, setPickerTier] = useState<ActivePlanTier>(
     effectivePlan === "free" ? "pro" : effectivePlan,
   );
 
@@ -131,18 +129,14 @@ export function BillingSettingsPanel({
 
   const [updatePaymentOpen, setUpdatePaymentOpen] = useState(false);
 
-  // Team seat & custom domain management state
+  // Team seat management state
   const [targetSeatCount, setTargetSeatCount] = useState<number>(
     teamBilling && teamBilling.paidSeats > 0
       ? Math.max(TEAMS_MIN_SEATS, teamBilling.paidSeats)
-      : 3,
+      : TEAMS_CALCULATOR_DEFAULT_SEATS,
   );
   const [seatPreview, setSeatPreview] = useState<SeatIncreasePreviewState | null>(null);
   const [seatError, setSeatError] = useState<string | null>(null);
-  const [customDomainInput, setCustomDomainInput] = useState<string>(
-    teamBilling?.customDomain ?? "",
-  );
-  const [domainError, setDomainError] = useState<string | null>(null);
 
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -157,7 +151,6 @@ export function BillingSettingsPanel({
     if (teamBilling && teamBilling.paidSeats > 0) {
       setTargetSeatCount(Math.max(TEAMS_MIN_SEATS, teamBilling.paidSeats));
     }
-    setCustomDomainInput(teamBilling?.customDomain ?? "");
   }, [teamBilling]);
 
   async function handleOpenCustomerPortal() {
@@ -283,7 +276,7 @@ export function BillingSettingsPanel({
 
     if (targetSeatCount > TEAMS_MAX_SELF_SERVE_SEATS) {
       setSeatError(
-        `Casefolio Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} paid seats. Upgrade to Casefolio Plus ($99/mo or $79/mo billed annually) for up to ${PLUS_INCLUDED_SEATS} seats, Custom Domain, and White-Labeling.`,
+        `Self-serve Teams supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} paid seats. Contact support for 26+ enterprise seats.`,
       );
       return;
     }
@@ -432,44 +425,6 @@ export function BillingSettingsPanel({
     }
   }
 
-  async function handleSaveCustomDomain() {
-    if (!teamBilling) return;
-    setBusyAction("custom-domain");
-    setDomainError(null);
-    try {
-      const res = await fetch("/api/paddle/seats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "set_custom_domain",
-          organizationId: teamBilling.organizationId,
-          customDomain: customDomainInput.trim() || null,
-        }),
-      });
-      const json = (await res.json()) as
-        | { ok: true; customDomain: string | null }
-        | { ok: false; error?: string };
-
-      if (!res.ok || !json.ok) {
-        setDomainError(
-          ("error" in json && json.error) || "Could not update custom domain.",
-        );
-        return;
-      }
-
-      toast.success(
-        json.customDomain
-          ? `Custom domain saved: ${json.customDomain}`
-          : "Custom domain cleared.",
-      );
-      router.refresh();
-    } catch {
-      setDomainError("Network error while updating custom domain.");
-    } finally {
-      setBusyAction(null);
-    }
-  }
-
   function handleConfirmPickerSelection() {
     if (pickerTier === "free") {
       if (effectivePlan === "free") {
@@ -486,17 +441,14 @@ export function BillingSettingsPanel({
     setCheckoutPlan(pickerTier);
     setCheckoutInterval(pickerInterval);
     setCheckoutOrgId(
-      pickerTier === "team" || pickerTier === "plus"
-        ? (teamBilling?.organizationId ?? null)
-        : null,
+      pickerTier === "team" ? (teamBilling?.organizationId ?? null) : null,
     );
     setCheckoutOpen(true);
   }
 
   const isPastDue = sub?.status === "past_due";
   const isCancelScheduled = sub?.status === "cancel_at_period_end";
-  const hasPaidAccess =
-    effectivePlan === "pro" || effectivePlan === "team" || effectivePlan === "plus";
+  const hasPaidAccess = effectivePlan === "pro" || effectivePlan === "team";
 
   const statusBadge = (() => {
     if (!hasPaidAccess) {
@@ -601,7 +553,7 @@ export function BillingSettingsPanel({
         {/* Current plan card */}
         <section
           data-testid="billing-current-plan-card"
-          className="border-border/80 bg-wash-panel shadow-card flex flex-col justify-between gap-5 rounded-3xl border p-6 sm:p-7"
+          className="border-border/80 bg-wash-panel flex flex-col justify-between gap-5 rounded-3xl border p-6 sm:p-7"
         >
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
@@ -623,7 +575,7 @@ export function BillingSettingsPanel({
 
             <p className="text-muted-foreground type-body-s">
               {!hasPaidAccess
-                ? "$0 / forever · 1 active Case Study, standard templates, watermarked PNG & PDF export + Live Shareable Link"
+                ? "$0 / forever · 1 lifetime Case Study credit, starter templates, watermarked 1× PNG & PDF export + auto-generated shareable link"
                 : isCancelScheduled
                   ? `${currentAmountSummary} · access ends ${periodEndFormatted}`
                   : `${currentAmountSummary} · next charge ${periodEndFormatted}`}
@@ -742,7 +694,7 @@ export function BillingSettingsPanel({
         {/* Payment method card */}
         <section
           data-testid="billing-payment-method-card"
-          className="border-border/80 bg-elevated shadow-card flex flex-col justify-between gap-5 rounded-3xl border p-6 sm:p-7"
+          className="border-border/80 bg-elevated flex flex-col justify-between gap-5 rounded-3xl border p-6 sm:p-7"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground type-body-s-strong">
@@ -815,7 +767,7 @@ export function BillingSettingsPanel({
       {teamBilling && (
         <section
           data-testid="team-billing-seat-card"
-          className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
+          className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
@@ -831,19 +783,16 @@ export function BillingSettingsPanel({
                       : "neutral"
                   }
                 >
-                  {teamBilling.plan === "plus"
-                    ? "Plus Active"
-                    : teamBilling.plan === "team"
-                      ? "Team Active"
-                      : "Unfunded"}
+                  {teamBilling.plan === "team" || teamBilling.plan === "plus"
+                    ? "Teams Active"
+                    : "Unfunded"}
                 </Badge>
                 <Badge tone="accent">{teamBilling.role}</Badge>
               </div>
               <p className="text-muted-foreground type-body-s">
-                Separate from your personal workspace.{" "}
-                {teamBilling.plan === "plus"
-                  ? `Flat agency rate includes up to ${PLUS_INCLUDED_SEATS} team seats, Custom Domain, and White-Labeling.`
-                  : `Team includes ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} per-seat licenses; upgrade to Plus for up to ${PLUS_INCLUDED_SEATS} seats.`}
+                Separate from your personal workspace. Teams includes {TEAMS_MIN_SEATS}–
+                {TEAMS_MAX_SELF_SERVE_SEATS} per-seat licenses ($5.99/seat/mo · $59.90/seat/yr with
+                2 months free), unlimited shared Case Studies, and custom URLs.
               </p>
             </div>
 
@@ -863,43 +812,10 @@ export function BillingSettingsPanel({
                     }}
                   >
                     <CreditCard className="size-3.5" />
-                    Activate Casefolio Team
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    data-testid="activate-plus-subscription-btn"
-                    onClick={() => {
-                      setCheckoutPlan("plus");
-                      setCheckoutInterval("monthly");
-                      setCheckoutOrgId(teamBilling.organizationId);
-                      setCheckoutOpen(true);
-                    }}
-                  >
-                    <Sparkles className="size-3.5" />
-                    Activate Plus
+                    Activate Casefolio Teams
                   </Button>
                 </div>
               )}
-
-            {teamBilling.isOwner && teamBilling.plan === "team" && (
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                data-testid="upgrade-team-to-plus-btn"
-                onClick={() => {
-                  setCheckoutPlan("plus");
-                  setCheckoutInterval(teamBilling.interval ?? "monthly");
-                  setCheckoutOrgId(teamBilling.organizationId);
-                  setCheckoutOpen(true);
-                }}
-              >
-                <Sparkles className="size-3.5" />
-                Upgrade to Plus ({PLUS_INCLUDED_SEATS} seats)
-              </Button>
-            )}
           </div>
 
           {/* 5 separate, unambiguous seat counters */}
@@ -977,74 +893,59 @@ export function BillingSettingsPanel({
             </div>
           )}
 
-          {teamBilling.isOwner && teamBilling.plan === "team" && (
-            <div className="border-border flex flex-col gap-3 border-t pt-4">
-              {teamBilling.isLockedForQuantityChange && teamBilling.lockReason && (
-                <p className="text-warning type-caption">{teamBilling.lockReason}</p>
-              )}
+          {teamBilling.isOwner &&
+            (teamBilling.plan === "team" || teamBilling.plan === "plus") && (
+              <div className="border-border flex flex-col gap-3 border-t pt-4">
+                {teamBilling.isLockedForQuantityChange && teamBilling.lockReason && (
+                  <p className="text-warning type-caption">{teamBilling.lockReason}</p>
+                )}
 
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-foreground type-body-s-strong">
-                    Adjust paid seats ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS}):
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Decrease target seats"
-                    disabled={
-                      targetSeatCount <=
-                        Math.max(TEAMS_MIN_SEATS, teamBilling.occupiedSeats) ||
-                      teamBilling.isLockedForQuantityChange
-                    }
-                    onClick={() =>
-                      setTargetSeatCount((v) =>
-                        Math.max(TEAMS_MIN_SEATS, teamBilling.occupiedSeats, v - 1),
-                      )
-                    }
-                    className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
-                  >
-                    <Minus className="size-3.5" />
-                  </button>
-                  <span
-                    data-testid="target-seat-count-value"
-                    className="text-foreground type-body-m-strong min-w-8 text-center tabular-nums"
-                  >
-                    {targetSeatCount}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Increase target seats"
-                    disabled={
-                      targetSeatCount >= TEAMS_MAX_SELF_SERVE_SEATS + 1 ||
-                      teamBilling.isLockedForQuantityChange
-                    }
-                    onClick={() =>
-                      setTargetSeatCount((v) =>
-                        Math.min(TEAMS_MAX_SELF_SERVE_SEATS + 1, v + 1),
-                      )
-                    }
-                    className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
-                  >
-                    <Plus className="size-3.5" />
-                  </button>
-                </div>
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-foreground type-body-s-strong">
+                      Adjust paid seats ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS}):
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Decrease target seats"
+                      disabled={
+                        targetSeatCount <=
+                          Math.max(TEAMS_MIN_SEATS, teamBilling.occupiedSeats) ||
+                        teamBilling.isLockedForQuantityChange
+                      }
+                      onClick={() =>
+                        setTargetSeatCount((v) =>
+                          Math.max(TEAMS_MIN_SEATS, teamBilling.occupiedSeats, v - 1),
+                        )
+                      }
+                      className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
+                    >
+                      <Minus className="size-3.5" />
+                    </button>
+                    <span
+                      data-testid="target-seat-count-value"
+                      className="text-foreground type-body-m-strong min-w-8 text-center tabular-nums"
+                    >
+                      {targetSeatCount}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Increase target seats"
+                      disabled={
+                        targetSeatCount >= TEAMS_MAX_SELF_SERVE_SEATS ||
+                        teamBilling.isLockedForQuantityChange
+                      }
+                      onClick={() =>
+                        setTargetSeatCount((v) =>
+                          Math.min(TEAMS_MAX_SELF_SERVE_SEATS, v + 1),
+                        )
+                      }
+                      className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                  </div>
 
-                {targetSeatCount > TEAMS_MAX_SELF_SERVE_SEATS ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    data-testid="seat-limit-upgrade-plus-btn"
-                    onClick={() => {
-                      setCheckoutPlan("plus");
-                      setCheckoutInterval(teamBilling.interval ?? "monthly");
-                      setCheckoutOrgId(teamBilling.organizationId);
-                      setCheckoutOpen(true);
-                    }}
-                  >
-                    <Sparkles className="size-3.5" />
-                    Upgrade to Plus (up to {PLUS_INCLUDED_SEATS} seats)
-                  </Button>
-                ) : (
                   <Button
                     type="button"
                     size="sm"
@@ -1063,94 +964,27 @@ export function BillingSettingsPanel({
                         ? "Schedule renewal decrease"
                         : "Select new seat count"}
                   </Button>
+                </div>
+
+                <p className="text-muted-foreground type-caption">
+                  Self-serve Teams supports {TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats.
+                  Need 26+ enterprise seats? Contact support.
+                </p>
+
+                {seatError && (
+                  <p role="alert" className="text-destructive type-caption">
+                    {seatError}
+                  </p>
                 )}
               </div>
-
-              {targetSeatCount > TEAMS_MAX_SELF_SERVE_SEATS && (
-                <p className="text-muted-foreground type-caption">
-                  Casefolio Team supports up to {TEAMS_MAX_SELF_SERVE_SEATS} seats.
-                  Switch to Casefolio Plus for up to {PLUS_INCLUDED_SEATS} seats at a
-                  predictable flat rate, plus Custom Domain and White-Labeling.
-                </p>
-              )}
-
-              {seatError && (
-                <p role="alert" className="text-destructive type-caption">
-                  {seatError}
-                </p>
-              )}
-            </div>
-          )}
-
-          {teamBilling.plan === "plus" && (
-            <div
-              data-testid="plus-custom-domain-section"
-              className="border-border flex flex-col gap-3 border-t pt-4"
-            >
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <Globe className="text-primary size-4" />
-                  <span className="text-foreground type-body-s-strong">
-                    Custom Domain &amp; White-Labeling
-                  </span>
-                  <Badge tone="published">Included in Plus</Badge>
-                </div>
-                <p className="text-muted-foreground type-caption">
-                  Serve published Case Studies on your agency domain (e.g.{" "}
-                  <span className="font-mono">work.youragency.com</span>) with complete
-                  Casefolio branding removal on live links and PDF metadata.
-                </p>
-              </div>
-
-              {teamBilling.isOwner || teamBilling.role === "admin" ? (
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <Input
-                    data-testid="plus-custom-domain-input"
-                    value={customDomainInput}
-                    onChange={(e) => setCustomDomainInput(e.target.value)}
-                    placeholder="work.youragency.com"
-                    className="max-w-sm font-mono"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    data-testid="save-custom-domain-btn"
-                    disabled={busyAction === "custom-domain"}
-                    onClick={handleSaveCustomDomain}
-                  >
-                    {busyAction === "custom-domain" ? (
-                      <>
-                        <Loader2 className="size-3.5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save custom domain"
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-foreground type-caption font-mono">
-                  {teamBilling.customDomain
-                    ? `Active domain: ${teamBilling.customDomain}`
-                    : "No custom domain configured yet (Owner or Admin can configure)."}
-                </p>
-              )}
-
-              {domainError && (
-                <p role="alert" className="text-destructive type-caption">
-                  {domainError}
-                </p>
-              )}
-            </div>
-          )}
+            )}
         </section>
       )}
 
       {/* Billing details card */}
       <section
         data-testid="billing-details-card"
-        className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
+        className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
       >
         <div className="flex flex-col gap-1">
           <h3 className="text-foreground type-heading-m">Billing details</h3>
@@ -1278,7 +1112,7 @@ export function BillingSettingsPanel({
                   onClick={() => setPickerInterval("monthly")}
                   className={`type-caption rounded-full px-4 py-1.5 transition-all ${
                     pickerInterval === "monthly"
-                      ? "bg-elevated text-foreground shadow-card"
+                      ? "bg-elevated text-foreground border-border border"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -1290,20 +1124,20 @@ export function BillingSettingsPanel({
                   onClick={() => setPickerInterval("yearly")}
                   className={`type-caption rounded-full px-4 py-1.5 transition-all ${
                     pickerInterval === "yearly"
-                      ? "bg-elevated text-foreground shadow-card"
+                      ? "bg-elevated text-foreground border-border border"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Annual · Save {BILLING_PLAN_CATALOG.pro.yearlySavingsPercent}%
+                  Annual · 2 months free
                 </button>
               </div>
 
               <div
                 role="radiogroup"
                 aria-label="Choose plan tier"
-                className="grid gap-3.5 md:grid-cols-2 lg:grid-cols-4"
+                className="grid gap-3.5 md:grid-cols-3"
               >
-                {(["free", "pro", "team", "plus"] as const).map((tier) => {
+                {(["free", "pro", "team"] as const).map((tier) => {
                   const def = BILLING_PLAN_CATALOG[tier];
                   const selected = pickerTier === tier;
                   const unitCents =
@@ -1433,14 +1267,15 @@ export function BillingSettingsPanel({
               <li className="text-foreground type-body-s flex items-start gap-2.5">
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                 <span>
-                  Creating a 2nd Case Study requires upgrading back to Pro, Team, or Plus
+                  Creating or duplicating another Case Study requires upgrading back to Pro
+                  ($7.99/mo · up to {PRO_MAX_PROJECTS} active projects) or Teams
                 </span>
               </li>
               <li className="text-foreground type-body-s flex items-start gap-2.5">
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                 <span>
-                  Subtle Casefolio watermark returns on live links and PNG/PDF exports;
-                  2x PNG &amp; Behance exports lock
+                  Custom URL slug editing locks, subtle Casefolio watermark returns on live links
+                  and PNG/PDF exports, and 2× PNG &amp; Behance exports lock
                 </span>
               </li>
             </ul>
@@ -1696,17 +1531,11 @@ export function BillingSettingsPanel({
                       void handleOpenCustomerPortal();
                     } else {
                       const nextPlan: PaidPlanTier =
-                        effectivePlan === "plus"
-                          ? "plus"
-                          : effectivePlan === "team"
-                            ? "team"
-                            : "pro";
+                        effectivePlan === "team" ? "team" : "pro";
                       setCheckoutPlan(nextPlan);
                       setCheckoutInterval(currentInterval);
                       setCheckoutOrgId(
-                        nextPlan === "team" || nextPlan === "plus"
-                          ? (teamBilling?.organizationId ?? null)
-                          : null,
+                        nextPlan === "team" ? (teamBilling?.organizationId ?? null) : null,
                       );
                       setCheckoutOpen(true);
                     }

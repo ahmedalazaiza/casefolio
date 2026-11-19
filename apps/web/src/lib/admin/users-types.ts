@@ -7,7 +7,6 @@ export const ADMIN_USER_PLAN_FILTERS = [
   "free",
   "pro",
   "team",
-  "plus",
   "suspended",
 ] as const;
 export type AdminUserPlanFilter = (typeof ADMIN_USER_PLAN_FILTERS)[number];
@@ -111,10 +110,11 @@ export function filterAdminUsers(
 ): AdminUserListItem[] {
   const q = args.searchQuery.trim().toLowerCase();
   return users.filter((u) => {
+    const normalizedPlan = u.plan === "plus" ? "team" : u.plan;
     if (args.filter === "suspended") {
       if (!u.suspended) return false;
     } else if (args.filter !== "all") {
-      if (u.plan !== args.filter) return false;
+      if (normalizedPlan !== args.filter) return false;
     }
     if (q) {
       const hay = `${u.name} ${u.email}`.toLowerCase();
@@ -164,7 +164,7 @@ export function serializeAdminUsersCsv(users: readonly AdminUserListItem[]): str
         u.name,
         u.email,
         u.role,
-        u.plan,
+        u.plan === "plus" ? "team" : u.plan,
         u.billingInterval ?? "none",
         u.suspended ? "yes" : "no",
         u.projectCount,

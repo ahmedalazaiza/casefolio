@@ -104,10 +104,33 @@ export function resolveTemplateCoverUrl(
   return null;
 }
 
+function isUserUploadedProjectAssetUrl(rawSrc: string): boolean {
+  const src = rawSrc.trim();
+  if (!src) return false;
+  if (src.startsWith("/cdn/images/") || src.startsWith("/api/assets/")) {
+    return true;
+  }
+  if (src.startsWith("https://") || src.startsWith("http://")) {
+    try {
+      const parsed = new URL(src);
+      if (LEGACY_PLACEHOLDER_HOSTS.has(parsed.hostname.toLowerCase())) {
+        return false;
+      }
+      return (
+        parsed.pathname.startsWith("/cdn/images/") || parsed.pathname.startsWith("/api/assets/")
+      );
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 /**
  * Resolves the best card thumbnail for a user project:
- * uses the project's uploaded Hero mockup image when present, otherwise falls back
- * to the project's template cover thumbnail.
+ * uses the project's uploaded Hero mockup image ONLY when it is an actual user-uploaded
+ * project asset (`/cdn/images/...` or `/api/assets/...`); otherwise ALWAYS returns the
+ * resolved template cover thumbnail so default template hero placeholders never override it.
  */
 export function resolveProjectOrTemplateThumbnailUrl(
   puckData: unknown,
@@ -124,11 +147,7 @@ export function resolveProjectOrTemplateThumbnailUrl(
         const mockup = props.mockup as { src?: unknown } | undefined;
         if (typeof mockup?.src === "string") {
           const src = mockup.src.trim();
-          if (
-            (src.startsWith("/") && !src.startsWith("//")) ||
-            src.startsWith("https://") ||
-            src.startsWith("http://")
-          ) {
+          if (isUserUploadedProjectAssetUrl(src)) {
             return src;
           }
         }

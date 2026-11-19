@@ -454,7 +454,7 @@ export function AdminTemplatesList({
                             slug={item.slug}
                             name={item.name}
                             hideFallbackLabel
-                            className="border-border/80 aspect-[4/3] w-16 rounded-xl border p-2"
+                            className="border-border/80 aspect-[4/3] w-16 rounded-xl border"
                           />
                         </Link>
                         <div className="flex flex-wrap items-center gap-2">

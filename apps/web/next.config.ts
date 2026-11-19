@@ -21,6 +21,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   transpilePackages: ["@casefolio/db", "@casefolio/template-schema", "@casefolio/worker"],
   serverExternalPackages: ["pg-boss", "playwright", "playwright-core"],
+  outputFileTracingExcludes: {
+    "*": [
+      "./.data/**",
+      "../../.data/**",
+      "**/node_modules/playwright/**",
+      "**/node_modules/playwright-core/**",
+    ],
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
     formats: ["image/avif", "image/webp"],
@@ -44,13 +52,22 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    const baseSecurityOptions = {
+      isDev: process.env.NODE_ENV !== "production",
+      posthogHost: validatedEnv.NEXT_PUBLIC_POSTHOG_HOST,
+      r2Endpoint: `https://${validatedEnv.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    };
+
     return [
       {
         source: "/:path*",
+        headers: buildSecurityHeaders(baseSecurityOptions),
+      },
+      {
+        source: "/export/:path*",
         headers: buildSecurityHeaders({
-          isDev: process.env.NODE_ENV !== "production",
-          posthogHost: validatedEnv.NEXT_PUBLIC_POSTHOG_HOST,
-          r2Endpoint: `https://${validatedEnv.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+          ...baseSecurityOptions,
+          allowSameOriginFraming: true,
         }),
       },
     ];

@@ -10,7 +10,7 @@
 | `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` | `test_…` (sandbox client-side token) | `live_` tokens are rejected for sandbox (`/api/health` → `billingConfigured:false`). |
 | `PADDLE_API_KEY` | `pdl_sdbx_apikey_…` | Needed for portal sessions, cancel/resume, seat changes, reconciliation. |
 | `PADDLE_WEBHOOK_SECRET` | `pdl_ntfset_…` from the sandbox notification destination | |
-| `PADDLE_PRICE_PRO_MONTHLY / _YEARLY`, `PADDLE_PRICE_TEAM_MONTHLY / _YEARLY` | four **distinct** real sandbox `pri_01…` ids | Prices must match `/pricing`, whose source of truth is `apps/web/src/lib/billing/plans.ts` (Pro \$9.99/mo · \$95.88/yr; Team \$6.99/seat/mo · \$67.08/seat/yr; Plus \$99/mo · \$948/yr). Unknown price ids are ignored by the webhook — never guessed. |
+| `PADDLE_PRICE_PRO_MONTHLY / _YEARLY`, `PADDLE_PRICE_TEAM_MONTHLY / _YEARLY` | four **distinct** real sandbox `pri_01…` ids | Prices must match `/pricing`, whose source of truth is `apps/web/src/lib/billing/plans.ts` (Pro \$7.99/mo · \$79.90/yr [2 months free]; Teams \$5.99/seat/mo · \$59.90/seat/yr [2 months free, 2–25 seats]). Unknown price ids are ignored by the webhook — never guessed. |
 | `DATABASE_URL` | **its own Neon branch/database** | ⚠️ Builds no longer migrate or seed (`vercel.json` only builds the web app). Apply schema changes explicitly with `pnpm db:migrate:remote` (see §1.1). Never point staging at the production database. |
 | `SEED_ADMIN_EMAIL` | a mailbox you control | Bootstrap superadmin created by `db:seed` (defaults to `admin@casefolio.app`). |
 | `CRON_SECRET` | 16+ random chars | Enables `/api/cron/billing-reconcile` (04:00 UTC) and `/api/cron/maintenance` (03:30 UTC) via Vercel Cron. Return 503 until set. |
@@ -45,8 +45,8 @@ Use a **fresh** user per scenario. Sandbox test card: `4242 4242 4242 4242`, any
 | # | Scenario | Steps | Expected |
 |---|---|---|---|
 | 1 | Pro monthly | Free user → Upgrade → Pro Monthly → pay | Toast "Payment received — activating…" then "You're on Casefolio Pro"; `/account/billing` shows Pro · Monthly, next renewal date, **one** invoice with the real number/amount, card ending 4242; branding removed on projects. |
-| 2 | Pro yearly | Same with Yearly | Pro · Yearly, \$120 invoice, renewal ≈ +1 year. |
-| 3 | Teams (N seats) | Choose Teams, 5 seats → pay | Org created before payment; org plan Team with 5 paid seats; **personal** plan stays Free; owner can invite up to 5. |
+| 2 | Pro yearly | Same with Yearly | Pro · Yearly, \$79.90 invoice (2 months free), renewal ≈ +1 year. |
+| 3 | Teams (N seats) | Choose Teams, 5 seats → pay | Org created before payment; org plan Teams with 5 paid seats (\$29.95/mo or \$299.50/yr); **personal** plan stays Free; owner can invite up to 5. |
 | 4 | Already subscribed | Pro user opens Upgrade → Pro again | Blocked with 409 + "Go to Billing"; no second charge. Second tab opened before paying → second payment is quarantined (see Sentry alert) and its subscription scheduled to cancel. |
 | 5 | Declined card | Use `4000 0000 0000 0002` | Error toast, still Free, no subscription row. Retry with 4242 in the same overlay → Pro. |
 | 6 | Abandon checkout | Open overlay, close it | Still Free; no subscription row (draft/ready transactions are ignored). |

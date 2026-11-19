@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { StepIndicator, type StepState } from "@/components/ui/step-indicator";
+import { isLegacyPlaceholderCoverUrl } from "@/lib/template/cover-url";
 import {
   normalizeRawTemplateJsonCoverIfMissing,
   parseAndValidateTemplateJson,
@@ -116,7 +117,9 @@ export function UploadTemplateWizard({
     setCategory(tpl.category);
     setTier(tpl.tier);
     if (!hasCustomCover) {
-      setCoverUrl(coverWasMissing ? "" : tpl.cover.src);
+      const nextCoverSrc =
+        coverWasMissing || isLegacyPlaceholderCoverUrl(tpl.cover.src) ? "" : tpl.cover.src;
+      setCoverUrl(nextCoverSrc);
     }
     setCoverRatio(tpl.cover.ratio);
   }
@@ -148,7 +151,7 @@ export function UploadTemplateWizard({
       }
       if (!hasCustomCover) {
         const rawSrc = typeof tpl.cover?.src === "string" ? tpl.cover.src.trim() : "";
-        setCoverUrl(rawSrc);
+        setCoverUrl(isLegacyPlaceholderCoverUrl(rawSrc) ? "" : rawSrc);
       }
       if (typeof tpl.cover?.ratio === "string" && tpl.cover.ratio.trim()) {
         setCoverRatio(tpl.cover.ratio.trim());
@@ -204,12 +207,14 @@ export function UploadTemplateWizard({
     setServerError(null);
     setServerIssues([]);
 
-    if (!coverUrl.trim()) {
+    const trimmedCover = coverUrl.trim();
+    if (!trimmedCover || isLegacyPlaceholderCoverUrl(trimmedCover)) {
       setServerError("A cover / thumbnail image is required when adding a template.");
       setServerIssues([
         {
           path: "metadata.coverUrl",
-          message: "Upload a PNG, JPG, or WebP cover image (or enter a valid cover URL) before saving.",
+          message:
+            "Upload a PNG, JPG, or WebP cover image before saving (legacy cdn.casefolio.app placeholder URLs are not allowed).",
         },
       ]);
       return;

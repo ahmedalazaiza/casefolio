@@ -15,30 +15,26 @@ import {
 } from "@casefolio/db";
 import { PgBoss, type JobWithMetadata } from "pg-boss";
 import {
-  renderExportWithPlaywright,
+  EXPORT_QUEUE_NAME,
+  enqueueExportJobToPgBoss,
   type ExportFormat,
+  type ExportQueueJobPayload,
+} from "./queue-publisher";
+import {
+  renderExportWithPlaywright,
   type RenderedExportArtifact,
   type RenderExportInput,
 } from "./renderer";
 import { storeRenderedExportArtifact } from "./storage";
 import { signExportRenderToken } from "./token";
 
-export const EXPORT_QUEUE_NAME = "casefolio-exports" as const;
-const EXPORT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+export {
+  EXPORT_QUEUE_NAME,
+  enqueueExportJobToPgBoss,
+  type ExportQueueJobPayload,
+};
 
-export interface ExportQueueJobPayload {
-  exportId: string;
-  projectId: string;
-  format: ExportFormat;
-  appUrl?: string;
-  workspaceId?: string | null;
-  requestedByUserId?: string | null;
-  scale?: 1 | 2;
-  maxMegapixels?: number;
-  maxPdfPages?: number;
-  timeoutMs?: number;
-  reservationJobId?: string;
-}
+const EXPORT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface ExportFinishedEvent {
   exportId: string;
@@ -605,20 +601,4 @@ export async function startPgBossExportConsumer(options: {
       }
     },
   };
-}
-
-export async function enqueueExportJobToPgBoss(
-  boss: PgBoss,
-  payload: ExportQueueJobPayload,
-): Promise<string | null> {
-  await boss.createQueue(EXPORT_QUEUE_NAME).catch(() => {
-    // Queue already exists
-  });
-
-  return boss.send(EXPORT_QUEUE_NAME, payload, {
-    retryLimit: 2,
-    retryDelay: 3,
-    retryBackoff: true,
-    expireInSeconds: 180,
-  });
 }

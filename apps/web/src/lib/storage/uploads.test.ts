@@ -210,7 +210,7 @@ describe("R2 presigned uploads, EXIF stripping, quotas, and private-until-publis
           type: "mobile",
           category: "Fintech",
           tier: "free",
-          coverUrl: "https://cdn.casefolio.app/templates/orbit/cover.png",
+          coverUrl: "/cdn/covers/orbit-uploads-cover.png",
           coverRatio: "4:3",
         },
       });

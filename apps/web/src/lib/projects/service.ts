@@ -1,6 +1,10 @@
 import { and, eq, sql, type PlanTier, type UserRole } from "@casefolio/db";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
-import { evaluateQuotaUsage, getWorkspaceQuotas } from "@/lib/billing/plans";
+import {
+  evaluateQuotaUsage,
+  FREE_LIFETIME_PROJECT_LIMIT,
+  getWorkspaceQuotas,
+} from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 import { can, evaluateEntitlement } from "@/lib/entitlements";
 import {
@@ -154,6 +158,23 @@ export async function createProjectFromTemplate({
   }
 
   const counts = await getWorkspaceProjectCounts(targetWorkspaceId);
+  if (
+    effectivePlan === "free" &&
+    Math.max(counts.lifetimeProjectsCreated, counts.retainedProjects) >=
+      FREE_LIFETIME_PROJECT_LIMIT
+  ) {
+    const decision = evaluateEntitlement("free", "create_project", {
+      projectsCount: counts.activeProjects,
+      retainedProjectsCount: counts.retainedProjects,
+      lifetimeProjectsCreated: counts.lifetimeProjectsCreated,
+    });
+    return {
+      ok: false,
+      code: "PLAN_LIMIT_REACHED",
+      error: decision.message,
+    };
+  }
+
   if (counts.activeProjects >= maxActiveProjects) {
     const decision = evaluateEntitlement(effectivePlan, "create_project", {
       projectsCount: counts.activeProjects,
@@ -226,7 +247,15 @@ export async function createProjectFromTemplate({
   const now = new Date();
 
   const txCreate = await db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT id FROM workspaces WHERE id = ${targetWorkspaceId} FOR UPDATE`);
+    const wsLock = await tx.execute<{
+      id: string;
+      lifetime_projects_created: string | number;
+    }>(sql`
+      SELECT id, lifetime_projects_created
+      FROM workspaces
+      WHERE id = ${targetWorkspaceId}
+      FOR UPDATE
+    `);
     const countsRes = await tx.execute<{
       active_count: string | number;
       retained_count: string | number;
@@ -239,6 +268,23 @@ export async function createProjectFromTemplate({
     `);
     const activeCount = Number(countsRes.rows[0]?.active_count ?? 0);
     const retainedCount = Number(countsRes.rows[0]?.retained_count ?? 0);
+    const lifetimeCreated = Math.max(
+      Number(wsLock.rows[0]?.lifetime_projects_created ?? 0),
+      retainedCount,
+    );
+
+    if (effectivePlan === "free" && lifetimeCreated >= FREE_LIFETIME_PROJECT_LIMIT) {
+      const decision = evaluateEntitlement("free", "create_project", {
+        projectsCount: activeCount,
+        retainedProjectsCount: retainedCount,
+        lifetimeProjectsCreated: lifetimeCreated,
+      });
+      return {
+        ok: false as const,
+        code: "PLAN_LIMIT_REACHED" as const,
+        error: decision.message,
+      };
+    }
 
     if (activeCount >= maxActiveProjects) {
       const decision = evaluateEntitlement(effectivePlan, "create_project", {
@@ -283,6 +329,14 @@ export async function createProjectFromTemplate({
         updatedAt: now,
       })
       .returning();
+
+    await tx
+      .update(dbSchema.workspaces)
+      .set({
+        lifetimeProjectsCreated: sql`${dbSchema.workspaces.lifetimeProjectsCreated} + 1`,
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.workspaces.id, targetWorkspaceId));
 
     return { ok: true as const, created: inserted };
   });

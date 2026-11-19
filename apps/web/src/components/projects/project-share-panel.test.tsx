@@ -16,18 +16,19 @@ const BASE_SETTINGS: ProjectShareSettingsPayload = {
   isPublished: false,
   publishedAtIso: null,
   updatedAtIso: new Date("2026-11-05T10:00:00.000Z").toISOString(),
-  ownerPlan: "free",
+  ownerPlan: "pro",
   workspaceKind: "personal",
   spaceVisibility: "private",
   requiresTeamPrivatePublicAck: false,
   publicAcknowledged: true,
   canPublish: true,
-  brandingRemoved: false,
-  canRemoveBranding: false,
+  canCustomizeSlug: true,
+  brandingRemoved: true,
+  canRemoveBranding: true,
   whiteLabelEnabled: false,
   customDomain: null,
   publishedCount: 0,
-  maxPublishedProjects: 1,
+  maxPublishedProjects: 10,
   appBaseUrl: "http://localhost:3000",
   preview: {
     eyebrow: "Fintech · iOS",
@@ -95,6 +96,7 @@ describe("ProjectSharePanel (C-601)", () => {
         projectId: BASE_SETTINGS.projectId,
         slug: "orbit-banking-live",
         visibility: "unlisted",
+        brandingRemoved: true,
       });
     });
 
@@ -113,17 +115,57 @@ describe("ProjectSharePanel (C-601)", () => {
     expect(screen.getByTestId("share-status-badge")).toHaveTextContent("Draft · Private");
   });
 
-  it("hides Casefolio OpenGraph badge and shows custom domain white-label copy on Plus workspaces", () => {
+  it("locks custom Case Study URL editing on Free while still allowing auto-slug publishing, and hides Casefolio OpenGraph badge on Pro/Teams", async () => {
+    const user = userEvent.setup();
+    const onCheckSlug = vi.fn();
+    const onPublish = vi.fn().mockResolvedValue({
+      ok: true as const,
+      projectId: BASE_SETTINGS.projectId,
+      slug: "orbit-mobile-banking-550e84",
+      visibility: "public" as const,
+      brandingRemoved: false,
+      publishedAtIso: "2026-11-05T10:05:00.000Z",
+      publicPath: "/p/orbit-mobile-banking-550e84",
+      publicUrl: "http://localhost:3000/p/orbit-mobile-banking-550e84",
+    });
+
+    const { unmount } = render(
+      <ProjectSharePanel
+        initialSettings={{
+          ...BASE_SETTINGS,
+          ownerPlan: "free",
+          canCustomizeSlug: false,
+          canRemoveBranding: false,
+          brandingRemoved: false,
+          maxPublishedProjects: 1,
+          suggestedSlug: "orbit-mobile-banking-550e84",
+        }}
+        onCheckSlug={onCheckSlug}
+        onPublish={onPublish}
+        onUnpublish={vi.fn()}
+      />,
+    );
+
+    const slugInput = screen.getByTestId("publish-slug-input");
+    expect(slugInput).toHaveAttribute("readonly");
+    expect(onCheckSlug).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId("publish-project-button"));
+    await waitFor(() => {
+      expect(onPublish).toHaveBeenCalled();
+    });
+    unmount();
+
     render(
       <ProjectSharePanel
         initialSettings={{
           ...BASE_SETTINGS,
-          ownerPlan: "plus",
+          ownerPlan: "team",
           workspaceKind: "team",
+          canCustomizeSlug: true,
           canRemoveBranding: true,
           brandingRemoved: true,
           whiteLabelEnabled: true,
-          customDomain: "work.northstar.agency",
         }}
         onCheckSlug={vi.fn()}
         onPublish={vi.fn()}
@@ -133,8 +175,5 @@ describe("ProjectSharePanel (C-601)", () => {
 
     const ogPreview = screen.getByTestId("og-card-preview");
     expect(ogPreview).not.toHaveTextContent("Casefolio");
-    expect(
-      screen.getByText(/Custom Domain: work\.northstar\.agency/i),
-    ).toBeInTheDocument();
   });
 });

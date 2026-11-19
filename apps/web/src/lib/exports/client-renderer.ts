@@ -1,5 +1,7 @@
 import type { ExportFormatOption, ExportHistoryItem } from "@/lib/exports/types";
 
+const DIRECT_POST_FALLBACK_MAX_BYTES = 4 * 1024 * 1024; // 4 MiB (below Vercel 4.5 MB request cap)
+
 const CRC32_TABLE = (() => {
   const table = new Uint32Array(256);
   for (let i = 0; i < 256; i++) {
@@ -127,7 +129,7 @@ function escapePdfLiteralString(raw: string): string {
 
 /**
  * Builds a standards-compliant PDF 1.4 document embedding high-DPI JPEG page slices (`/DCTDecode`).
- * When `options.whiteLabel` is `true` (Casefolio Plus), omits all Casefolio branding from PDF metadata.
+ * When `options.whiteLabel` is `true`, omits Casefolio Creator/Producer fields from PDF metadata.
  */
 export function buildMultiPageJpegPdf(
   pages: readonly PdfJpegPageInput[],
@@ -237,14 +239,18 @@ async function canvasToBytes(
   quality?: number,
 ): Promise<Uint8Array> {
   const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (result) => {
-        if (result) resolve(result);
-        else reject(new Error("Canvas encoding failed."));
-      },
-      mimeType,
-      quality,
-    );
+    try {
+      canvas.toBlob(
+        (result) => {
+          if (result) resolve(result);
+          else reject(new Error("Canvas encoding failed."));
+        },
+        mimeType,
+        quality,
+      );
+    } catch (err) {
+      reject(err instanceof Error ? err : new Error("Canvas export blocked by cross-origin asset."));
+    }
   });
   return new Uint8Array(await blob.arrayBuffer());
 }
@@ -274,24 +280,325 @@ function sliceCanvasVertically(
   return slices;
 }
 
+function isCrossOriginHttpAsset(rawSrc: string): boolean {
+  if (!rawSrc || rawSrc.startsWith("data:") || rawSrc.startsWith("blob:")) {
+    return false;
+  }
+  try {
+    const parsed = new URL(rawSrc, window.location.origin);
+    return (
+      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      parsed.origin !== window.location.origin
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function prepareIframeImagesForCanvasCapture(iframeDoc: Document): Promise<void> {
+  const images = Array.from(iframeDoc.images);
+  await Promise.all(
+    images.map((img) => {
+      img.loading = "eager";
+      img.decoding = "sync";
+
+      const currentSrc = img.getAttribute("src") ?? img.src;
+      if (isCrossOriginHttpAsset(currentSrc) && !img.crossOrigin) {
+        img.crossOrigin = "anonymous";
+        if (img.complete && img.naturalWidth > 0) {
+          const reloadSrc = img.src;
+          img.src = reloadSrc;
+        }
+      }
+
+      if (img.complete) {
+        return Promise.resolve();
+      }
+
+      return new Promise<void>((resolve) => {
+        const timer = window.setTimeout(() => resolve(), 6_000);
+        const finish = () => {
+          window.clearTimeout(timer);
+          resolve();
+        };
+        img.addEventListener("load", finish, { once: true });
+        img.addEventListener("error", finish, { once: true });
+      });
+    }),
+  );
+}
+
+async function encodeRenderedCanvasArtifact(
+  capturedCanvas: HTMLCanvasElement,
+  format: ExportFormatOption,
+  preferredScale: number,
+  computedBg: string,
+  projectTitle: string,
+  whiteLabel: boolean,
+): Promise<{
+  payloadBytes: Uint8Array;
+  contentType: "image/png" | "application/pdf" | "application/zip";
+}> {
+  if (format === "png_long") {
+    const payloadBytes = await canvasToBytes(capturedCanvas, "image/png");
+    return { payloadBytes, contentType: "image/png" };
+  }
+
+  if (format === "behance") {
+    const sliceHeight = Math.round(1960 * preferredScale);
+    const slices = sliceCanvasVertically(capturedCanvas, sliceHeight, computedBg);
+    const entries: Array<{ name: string; data: Uint8Array }> = [];
+    for (let idx = 0; idx < slices.length; idx++) {
+      const sliceBytes = await canvasToBytes(slices[idx]!, "image/png");
+      const paddedIdx = String(idx + 1).padStart(2, "0");
+      entries.push({
+        name: `${paddedIdx}-behance-1400px.png`,
+        data: sliceBytes,
+      });
+    }
+    return {
+      payloadBytes: buildBrowserZipArchive(entries),
+      contentType: "application/zip",
+    };
+  }
+
+  const pageSliceHeightPx = Math.round(1920 * preferredScale);
+  const slices = sliceCanvasVertically(capturedCanvas, pageSliceHeightPx, computedBg);
+  const pdfPages: PdfJpegPageInput[] = [];
+  for (const slice of slices) {
+    const jpegBytes = await canvasToBytes(slice, "image/jpeg", 0.92);
+    const pageWidthPt = 1080;
+    const pageHeightPt = Math.max(200, (slice.height / slice.width) * pageWidthPt);
+    pdfPages.push({
+      jpegBytes,
+      pixelWidth: slice.width,
+      pixelHeight: slice.height,
+      pageWidthPt,
+      pageHeightPt,
+    });
+  }
+  return {
+    payloadBytes: buildMultiPageJpegPdf(pdfPages, {
+      title: projectTitle,
+      whiteLabel,
+    }),
+    contentType: "application/pdf",
+  };
+}
+
+interface PresignCompleteApiResponse {
+  ok: boolean;
+  code?: string;
+  error?: string;
+  mode?: "r2" | "direct" | "already_completed";
+  uploadUrl?: string;
+  r2Key?: string;
+  uploadHeaders?: Record<string, string>;
+  exportJob?: ExportHistoryItem;
+}
+
+interface FinalizeCompleteApiResponse {
+  ok: boolean;
+  code?: string;
+  error?: string;
+  exportJob?: ExportHistoryItem;
+}
+
+async function uploadCompletedExportBytes(
+  exportId: string,
+  payloadBytes: Uint8Array,
+  contentType: "image/png" | "application/pdf" | "application/zip",
+): Promise<
+  | { status: "completed"; exportJob: ExportHistoryItem }
+  | { status: "deferred_to_worker" }
+  | { status: "failed"; error: string }
+> {
+  const endpoint = `/api/exports/${encodeURIComponent(exportId)}/complete`;
+  const bodyBuffer = payloadBytes.buffer.slice(
+    payloadBytes.byteOffset,
+    payloadBytes.byteOffset + payloadBytes.byteLength,
+  ) as ArrayBuffer;
+
+  const presignRes = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: "presign",
+      contentType,
+      byteLength: payloadBytes.byteLength,
+    }),
+  });
+
+  if (presignRes.status === 409) {
+    return { status: "deferred_to_worker" };
+  }
+
+  if (presignRes.ok) {
+    const presignJson = (await presignRes.json()) as PresignCompleteApiResponse;
+    if (presignJson.ok && presignJson.mode === "already_completed" && presignJson.exportJob) {
+      return { status: "completed", exportJob: presignJson.exportJob };
+    }
+
+    if (
+      presignJson.ok &&
+      presignJson.mode === "r2" &&
+      presignJson.uploadUrl &&
+      presignJson.r2Key
+    ) {
+      let directPutSucceeded: boolean;
+      try {
+        const putRes = await fetch(presignJson.uploadUrl, {
+          method: "PUT",
+          headers: presignJson.uploadHeaders ?? { "Content-Type": contentType },
+          body: bodyBuffer,
+        });
+        directPutSucceeded = putRes.ok;
+      } catch {
+        directPutSucceeded = false;
+      }
+
+      if (directPutSucceeded) {
+        const finalizeRes = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "finalize",
+            r2Key: presignJson.r2Key,
+            contentType,
+            byteLength: payloadBytes.byteLength,
+          }),
+        });
+
+        if (finalizeRes.status === 409) {
+          return { status: "deferred_to_worker" };
+        }
+
+        const finalizeJson = (await finalizeRes.json().catch(() => null)) as
+          | FinalizeCompleteApiResponse
+          | null;
+
+        if (finalizeRes.ok && finalizeJson?.ok && finalizeJson.exportJob) {
+          return { status: "completed", exportJob: finalizeJson.exportJob };
+        }
+
+        return {
+          status: "failed",
+          error: finalizeJson?.error ?? "Unable to finalize uploaded export file.",
+        };
+      }
+
+      if (payloadBytes.byteLength > DIRECT_POST_FALLBACK_MAX_BYTES) {
+        return {
+          status: "failed",
+          error:
+            "Direct cloud storage upload failed for this high-resolution export. Try 1× scale or check R2 CORS configuration.",
+        };
+      }
+    }
+  } else if (payloadBytes.byteLength > DIRECT_POST_FALLBACK_MAX_BYTES) {
+    const errJson = (await presignRes.json().catch(() => null)) as
+      | PresignCompleteApiResponse
+      | null;
+    return {
+      status: "failed",
+      error: errJson?.error ?? "Export file exceeds direct serverless upload size limit.",
+    };
+  }
+
+  // Direct binary POST (local storage mode OR <= 4 MiB fallback when direct R2 PUT is blocked)
+  const directRes = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": contentType,
+    },
+    body: bodyBuffer,
+  });
+
+  if (directRes.status === 409) {
+    return { status: "deferred_to_worker" };
+  }
+
+  const directJson = (await directRes.json().catch(() => null)) as
+    | FinalizeCompleteApiResponse
+    | null;
+
+  if (directRes.ok && directJson?.ok && directJson.exportJob) {
+    return { status: "completed", exportJob: directJson.exportJob };
+  }
+
+  return {
+    status: "failed",
+    error: directJson?.error ?? `Export upload failed (HTTP ${directRes.status}).`,
+  };
+}
+
+async function notifyServerExportRenderFailure(
+  exportId: string,
+  reason: string,
+): Promise<ExportHistoryItem | undefined> {
+  try {
+    const res = await fetch(`/api/exports/${encodeURIComponent(exportId)}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "fail",
+        error: reason.slice(0, 400),
+      }),
+    });
+    if (!res.ok) return undefined;
+    const json = (await res.json()) as FinalizeCompleteApiResponse;
+    return json.exportJob;
+  } catch {
+    return undefined;
+  }
+}
+
+export function triggerExportFileDownload(downloadUrl: string): void {
+  if (typeof window === "undefined" || typeof document === "undefined" || !downloadUrl) {
+    return;
+  }
+  if (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent)) {
+    return;
+  }
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = "";
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  window.setTimeout(() => {
+    link.remove();
+  }, 1_000);
+}
+
+export type BrowserAssistedExportOutcome =
+  | { status: "completed"; exportJob: ExportHistoryItem }
+  | { status: "skipped" | "deferred_to_worker" }
+  | { status: "failed"; error: string; exportJob?: ExportHistoryItem };
+
 const inFlightClientExportIds = new Set<string>();
 
 /**
- * Renders `/export/<jobId>?token=...` inside a hidden same-origin iframe and uploads the
- * resulting high-DPI PNG / Behance ZIP / multi-page PDF to `/api/exports/<jobId>/complete`
- * when no external Playwright worker has claimed a queued export job.
+ * Renders `/export/<jobId>?token=...` inside a hidden same-origin iframe, captures high-DPI
+ * PNG / PDF / Behance ZIP, and uploads via presigned R2 PUT (or direct fallback) with structured
+ * error diagnostics so exports never hang silently on Queued.
  */
-export async function runBrowserAssistedExport(
+export async function runBrowserAssistedExportDetailed(
   job: ExportHistoryItem,
-): Promise<ExportHistoryItem | null> {
+): Promise<BrowserAssistedExportOutcome> {
   if (typeof window === "undefined" || typeof document === "undefined") {
-    return null;
+    return { status: "skipped" };
   }
   if (!job.renderUrl || job.status !== "queued") {
-    return null;
+    return { status: "skipped" };
   }
   if (inFlightClientExportIds.has(job.id)) {
-    return null;
+    return { status: "skipped" };
   }
 
   inFlightClientExportIds.add(job.id);
@@ -316,7 +623,7 @@ export async function runBrowserAssistedExport(
   try {
     await new Promise<void>((resolve, reject) => {
       const timeout = window.setTimeout(() => {
-        reject(new Error("Timed out loading export render frame."));
+        reject(new Error("Timed out loading the case study render frame."));
       }, 20_000);
 
       iframe.onload = () => {
@@ -325,42 +632,52 @@ export async function runBrowserAssistedExport(
       };
       iframe.onerror = () => {
         window.clearTimeout(timeout);
-        reject(new Error("Failed to load export render frame."));
+        reject(new Error("Failed to load the case study render frame."));
       };
       iframe.src = job.renderUrl!;
     });
 
-    const iframeDoc = iframe.contentDocument;
-    if (!iframeDoc) {
-      throw new Error("Export render document unavailable.");
+    let iframeDoc: Document | null = null;
+    try {
+      iframeDoc = iframe.contentDocument;
+    } catch {
+      iframeDoc = null;
     }
 
-    // Wait up to 8s for `[data-testid="export-render-ready"]`
-    let readyRoot = iframeDoc.querySelector('[data-testid="export-render-ready"]') as HTMLElement | null;
-    const deadline = Date.now() + 8_000;
+    if (!iframeDoc) {
+      throw new Error(
+        "Export render frame was blocked or returned an invalid page. Refresh and try exporting again.",
+      );
+    }
+
+    // Wait up to 10s for `[data-testid="export-render-ready"]`
+    let readyRoot = iframeDoc.querySelector(
+      '[data-testid="export-render-ready"]',
+    ) as HTMLElement | null;
+    const deadline = Date.now() + 10_000;
     while (!readyRoot && Date.now() < deadline) {
-      await new Promise((r) => window.setTimeout(r, 120));
-      readyRoot = iframeDoc.querySelector('[data-testid="export-render-ready"]') as HTMLElement | null;
+      await new Promise((r) => window.setTimeout(r, 100));
+      readyRoot = iframeDoc.querySelector(
+        '[data-testid="export-render-ready"]',
+      ) as HTMLElement | null;
     }
 
     if (!readyRoot) {
-      throw new Error("Export renderer did not become ready.");
+      throw new Error("Case study export view did not finish initializing.");
     }
+
+    const initialHeight = Math.max(
+      readyRoot.scrollHeight,
+      iframeDoc.documentElement.scrollHeight,
+      900,
+    );
+    iframe.style.height = `${initialHeight}px`;
 
     if (iframeDoc.fonts?.ready) {
       await iframeDoc.fonts.ready.catch(() => undefined);
     }
 
-    const images = Array.from(iframeDoc.images);
-    await Promise.all(
-      images.map((img) => {
-        if (img.complete) return Promise.resolve();
-        return new Promise<void>((res) => {
-          img.addEventListener("load", () => res(), { once: true });
-          img.addEventListener("error", () => res(), { once: true });
-        });
-      }),
-    );
+    await prepareIframeImagesForCanvasCapture(iframeDoc);
 
     const fullHeight = Math.max(
       readyRoot.scrollHeight,
@@ -368,94 +685,117 @@ export async function runBrowserAssistedExport(
       900,
     );
     iframe.style.height = `${fullHeight}px`;
-    await new Promise((r) => window.setTimeout(r, 150));
+    await new Promise((r) => window.setTimeout(r, 120));
 
     const { domToCanvas } = await import("modern-screenshot");
     const ownerPlan = readyRoot.dataset.ownerPlan ?? "free";
     const whiteLabel = readyRoot.dataset.whiteLabel === "true";
     const projectTitle = readyRoot.dataset.projectTitle?.trim() || "Case Study";
     const preferredScale =
-      ownerPlan === "free" ? 1 : fullHeight * 2 <= 16_000 ? 2 : 1;
-    const capturedCanvas = await domToCanvas(readyRoot, {
-      scale: preferredScale,
-      width: viewportWidth,
-      height: fullHeight,
-    });
+      ownerPlan === "free" ? 1 : job.scale === 1 ? 1 : fullHeight * 2 <= 16_000 ? 2 : 1;
 
     const computedBg =
       iframe.contentWindow?.getComputedStyle(readyRoot).backgroundColor || "#09090b";
 
-    let payloadBytes: Uint8Array;
-    let contentType: string;
-
-    const format: ExportFormatOption = job.format;
-    if (format === "png_long") {
-      payloadBytes = await canvasToBytes(capturedCanvas, "image/png");
-      contentType = "image/png";
-    } else if (format === "behance") {
-      const sliceHeight = Math.round(1960 * preferredScale);
-      const slices = sliceCanvasVertically(capturedCanvas, sliceHeight, computedBg);
-      const entries: Array<{ name: string; data: Uint8Array }> = [];
-      for (let idx = 0; idx < slices.length; idx++) {
-        const sliceBytes = await canvasToBytes(slices[idx]!, "image/png");
-        const paddedIdx = String(idx + 1).padStart(2, "0");
-        entries.push({
-          name: `${paddedIdx}-behance-1400px.png`,
-          data: sliceBytes,
-        });
+    const attachCrossOriginOnClone = (cloned: Node) => {
+      if (cloned instanceof HTMLImageElement) {
+        const src = cloned.getAttribute("src") ?? cloned.src;
+        if (isCrossOriginHttpAsset(src)) {
+          cloned.crossOrigin = "anonymous";
+        }
       }
-      payloadBytes = buildBrowserZipArchive(entries);
-      contentType = "application/zip";
-    } else {
-      const pageSliceHeightPx = Math.round(1920 * preferredScale);
-      const slices = sliceCanvasVertically(capturedCanvas, pageSliceHeightPx, computedBg);
-      const pdfPages: PdfJpegPageInput[] = [];
-      for (const slice of slices) {
-        const jpegBytes = await canvasToBytes(slice, "image/jpeg", 0.92);
-        const pageWidthPt = 1080;
-        const pageHeightPt = Math.max(200, (slice.height / slice.width) * pageWidthPt);
-        pdfPages.push({
-          jpegBytes,
-          pixelWidth: slice.width,
-          pixelHeight: slice.height,
-          pageWidthPt,
-          pageHeightPt,
-        });
-      }
-      payloadBytes = buildMultiPageJpegPdf(pdfPages, {
-        title: projectTitle,
-        whiteLabel,
-      });
-      contentType = "application/pdf";
-    }
-
-    const bodyBuffer = payloadBytes.buffer.slice(
-      payloadBytes.byteOffset,
-      payloadBytes.byteOffset + payloadBytes.byteLength,
-    ) as ArrayBuffer;
-
-    const completeRes = await fetch(`/api/exports/${encodeURIComponent(job.id)}/complete`, {
-      method: "POST",
-      headers: {
-        "Content-Type": contentType,
-      },
-      body: bodyBuffer,
-    });
-
-    if (!completeRes.ok) {
-      return null;
-    }
-
-    const json = (await completeRes.json()) as {
-      ok: boolean;
-      exportJob?: ExportHistoryItem;
     };
-    return json.ok && json.exportJob ? json.exportJob : null;
-  } catch {
-    return null;
+
+    let artifact: {
+      payloadBytes: Uint8Array;
+      contentType: "image/png" | "application/pdf" | "application/zip";
+    };
+
+    try {
+      const capturedCanvas = await domToCanvas(readyRoot, {
+        scale: preferredScale,
+        width: viewportWidth,
+        height: fullHeight,
+        timeout: 20_000,
+        onCloneEachNode: attachCrossOriginOnClone,
+      });
+
+      artifact = await encodeRenderedCanvasArtifact(
+        capturedCanvas,
+        job.format,
+        preferredScale,
+        computedBg,
+        projectTitle,
+        whiteLabel,
+      );
+    } catch {
+      // Graceful tainted-canvas fallback: filter out uncorsed third-party images if canvas readback failed
+      const safeCanvas = await domToCanvas(readyRoot, {
+        scale: preferredScale,
+        width: viewportWidth,
+        height: fullHeight,
+        timeout: 20_000,
+        filter: (node) => {
+          if (node instanceof HTMLImageElement) {
+            const src = node.getAttribute("src") ?? node.src;
+            if (isCrossOriginHttpAsset(src)) {
+              return false;
+            }
+          }
+          return true;
+        },
+      });
+
+      artifact = await encodeRenderedCanvasArtifact(
+        safeCanvas,
+        job.format,
+        preferredScale,
+        computedBg,
+        projectTitle,
+        whiteLabel,
+      );
+    }
+
+    const uploadOutcome = await uploadCompletedExportBytes(
+      job.id,
+      artifact.payloadBytes,
+      artifact.contentType,
+    );
+
+    if (uploadOutcome.status === "completed") {
+      return uploadOutcome;
+    }
+
+    if (uploadOutcome.status === "deferred_to_worker") {
+      return { status: "deferred_to_worker" };
+    }
+
+    const failedJob = await notifyServerExportRenderFailure(job.id, uploadOutcome.error);
+    return {
+      status: "failed",
+      error: uploadOutcome.error,
+      exportJob: failedJob,
+    };
+  } catch (err) {
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : "Unable to render export in your browser. Please try again.";
+    const failedJob = await notifyServerExportRenderFailure(job.id, message);
+    return {
+      status: "failed",
+      error: message,
+      exportJob: failedJob,
+    };
   } finally {
     inFlightClientExportIds.delete(job.id);
     iframe.remove();
   }
 }
 
+export async function runBrowserAssistedExport(
+  job: ExportHistoryItem,
+): Promise<ExportHistoryItem | null> {
+  const outcome = await runBrowserAssistedExportDetailed(job);
+  return outcome.status === "completed" ? outcome.exportJob : null;
+}

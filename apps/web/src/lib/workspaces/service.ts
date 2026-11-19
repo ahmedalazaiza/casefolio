@@ -18,9 +18,11 @@ import {
 import {
   evaluateQuotaUsage,
   formatResetDateIstanbul,
+  FREE_LIFETIME_PROJECT_LIMIT,
   type WorkspacePlanQuotas,
 } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
+import { evaluateEntitlement } from "@/lib/entitlements";
 import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
@@ -63,6 +65,7 @@ export interface WorkspaceUsageSnapshot {
   activeProjects: number;
   publishedProjects: number;
   retainedProjects: number;
+  lifetimeProjectsCreated: number;
   storageBytes: number;
   monthlyExportsUsed: number;
   monthlyUploadsBytesUsed: number;
@@ -162,27 +165,35 @@ export async function getWorkspaceStorageUsageBytes(workspaceId: string): Promis
 }
 
 /**
- * Computes active, simultaneously published, and total retained (including archived) project counts
- * in active spaces of `workspaceId` (`Spec §4 & §5.1`).
+ * Computes active, simultaneously published, total retained (including archived), and lifetime created
+ * project counts in active spaces of `workspaceId` (`Spec §4 & §5.1`).
  */
 export async function getWorkspaceProjectCounts(workspaceId: string): Promise<{
   activeProjects: number;
   publishedProjects: number;
   retainedProjects: number;
+  lifetimeProjectsCreated: number;
 }> {
-  const rows = await db
-    .select({
-      visibility: dbSchema.projects.visibility,
-      archivedAt: dbSchema.projects.archivedAt,
-    })
-    .from(dbSchema.projects)
-    .innerJoin(dbSchema.spaces, eq(dbSchema.projects.spaceId, dbSchema.spaces.id))
-    .where(
-      and(
-        eq(dbSchema.projects.workspaceId, workspaceId),
-        eq(dbSchema.spaces.recoveryState, "active"),
+  const [[wsRow], rows] = await Promise.all([
+    db
+      .select({ lifetimeProjectsCreated: dbSchema.workspaces.lifetimeProjectsCreated })
+      .from(dbSchema.workspaces)
+      .where(eq(dbSchema.workspaces.id, workspaceId))
+      .limit(1),
+    db
+      .select({
+        visibility: dbSchema.projects.visibility,
+        archivedAt: dbSchema.projects.archivedAt,
+      })
+      .from(dbSchema.projects)
+      .innerJoin(dbSchema.spaces, eq(dbSchema.projects.spaceId, dbSchema.spaces.id))
+      .where(
+        and(
+          eq(dbSchema.projects.workspaceId, workspaceId),
+          eq(dbSchema.spaces.recoveryState, "active"),
+        ),
       ),
-    );
+  ]);
 
   let activeProjects = 0;
   let publishedProjects = 0;
@@ -196,10 +207,17 @@ export async function getWorkspaceProjectCounts(workspaceId: string): Promise<{
     }
   }
 
+  const retainedProjects = rows.length;
+  const lifetimeProjectsCreated = Math.max(
+    wsRow?.lifetimeProjectsCreated ?? 0,
+    retainedProjects,
+  );
+
   return {
     activeProjects,
     publishedProjects,
-    retainedProjects: rows.length,
+    retainedProjects,
+    lifetimeProjectsCreated,
   };
 }
 
@@ -323,6 +341,7 @@ export async function getWorkspaceUsageSnapshot(
     activeProjects: counts.activeProjects,
     publishedProjects: counts.publishedProjects,
     retainedProjects: counts.retainedProjects,
+    lifetimeProjectsCreated: counts.lifetimeProjectsCreated,
     storageBytes,
     monthlyExportsUsed: exportsMeter.total,
     monthlyUploadsBytesUsed: uploadsMeter.total,
@@ -521,15 +540,12 @@ export async function createSpaceForUser(args: {
       };
     }
   } else {
-    if (
-      (ent.plan !== "team" && ent.plan !== "plus") ||
-      ent.quotas.sharedSpacesLimit <= 0
-    ) {
+    if (ent.plan !== "team" || ent.quotas.sharedSpacesLimit <= 0) {
       return {
         ok: false,
         status: 403,
         code: "TEAM_PLAN_REQUIRED",
-        error: "An active Casefolio Team or Plus subscription is required to create shared spaces.",
+        error: "An active Casefolio Teams subscription is required to create shared spaces.",
       };
     }
 
@@ -637,14 +653,14 @@ export async function transitionSpaceVisibility(args: {
 
   if (args.targetVisibility === "shared") {
     if (
-      (auth.entitlement.plan !== "team" && auth.entitlement.plan !== "plus") ||
+      auth.entitlement.plan !== "team" ||
       auth.entitlement.quotas.sharedSpacesLimit <= 0
     ) {
       return {
         ok: false,
         status: 403,
         code: "TEAM_PLAN_REQUIRED",
-        error: "An active Casefolio Team or Plus subscription is required for shared spaces.",
+        error: "An active Casefolio Teams subscription is required for shared spaces.",
       };
     }
 
@@ -997,12 +1013,37 @@ export async function copyProjectAcrossWorkspaces(args: {
       .where(eq(dbSchema.assets.projectId, sourceAuth.project.id)),
   ]);
 
-  if (destCounts.activeProjects >= destAuth.entitlement.quotas.activeProjectsLimit) {
+  if (
+    destAuth.entitlement.plan === "free" &&
+    Math.max(destCounts.lifetimeProjectsCreated, destCounts.retainedProjects) >=
+      FREE_LIFETIME_PROJECT_LIMIT
+  ) {
+    const decision = evaluateEntitlement("free", "create_project", {
+      projectsCount: destCounts.activeProjects,
+      retainedProjectsCount: destCounts.retainedProjects,
+      lifetimeProjectsCreated: destCounts.lifetimeProjectsCreated,
+    });
     return {
       ok: false,
       status: 403,
       code: "PROJECT_LIMIT_REACHED",
-      error: `Destination workspace has reached its limit of ${destAuth.entitlement.quotas.activeProjectsLimit} active projects.`,
+      error: decision.message,
+    };
+  }
+
+  if (destCounts.activeProjects >= destAuth.entitlement.quotas.activeProjectsLimit) {
+    const decision = evaluateEntitlement(destAuth.entitlement.plan, "create_project", {
+      projectsCount: destCounts.activeProjects,
+      paidSeats: destAuth.entitlement.paidSeats,
+    });
+    return {
+      ok: false,
+      status: 403,
+      code: "PROJECT_LIMIT_REACHED",
+      error:
+        decision.allowed === false
+          ? decision.message
+          : `Destination workspace has reached its limit of ${destAuth.entitlement.quotas.activeProjectsLimit} active projects.`,
     };
   }
 
@@ -1084,8 +1125,14 @@ export async function copyProjectAcrossWorkspaces(args: {
     ) as Record<string, unknown>;
 
     const txResult = await db.transaction(async (tx) => {
-      await tx.execute(sql`
-        SELECT id FROM workspaces WHERE id = ${destAuth.workspace.id} FOR UPDATE
+      const wsLock = await tx.execute<{
+        id: string;
+        lifetime_projects_created: string | number;
+      }>(sql`
+        SELECT id, lifetime_projects_created
+        FROM workspaces
+        WHERE id = ${destAuth.workspace.id}
+        FOR UPDATE
       `);
 
       const currentRows = await tx
@@ -1103,13 +1150,41 @@ export async function copyProjectAcrossWorkspaces(args: {
 
       const lockedActive = currentRows.filter((r) => r.archivedAt === null).length;
       const lockedRetained = currentRows.length;
+      const lockedLifetime = Math.max(
+        Number(wsLock.rows[0]?.lifetime_projects_created ?? 0),
+        lockedRetained,
+      );
 
-      if (lockedActive >= destAuth.entitlement.quotas.activeProjectsLimit) {
+      if (
+        destAuth.entitlement.plan === "free" &&
+        lockedLifetime >= FREE_LIFETIME_PROJECT_LIMIT
+      ) {
+        const decision = evaluateEntitlement("free", "create_project", {
+          projectsCount: lockedActive,
+          retainedProjectsCount: lockedRetained,
+          lifetimeProjectsCreated: lockedLifetime,
+        });
         return {
           ok: false as const,
           status: 403 as const,
           code: "PROJECT_LIMIT_REACHED",
-          error: `Destination workspace has reached its limit of ${destAuth.entitlement.quotas.activeProjectsLimit} active projects.`,
+          error: decision.message,
+        };
+      }
+
+      if (lockedActive >= destAuth.entitlement.quotas.activeProjectsLimit) {
+        const decision = evaluateEntitlement(destAuth.entitlement.plan, "create_project", {
+          projectsCount: lockedActive,
+          paidSeats: destAuth.entitlement.paidSeats,
+        });
+        return {
+          ok: false as const,
+          status: 403 as const,
+          code: "PROJECT_LIMIT_REACHED",
+          error:
+            decision.allowed === false
+              ? decision.message
+              : `Destination workspace has reached its limit of ${destAuth.entitlement.quotas.activeProjectsLimit} active projects.`,
         };
       }
 
@@ -1197,6 +1272,14 @@ export async function copyProjectAcrossWorkspaces(args: {
         createdAt: now,
         updatedAt: now,
       });
+
+      await tx
+        .update(dbSchema.workspaces)
+        .set({
+          lifetimeProjectsCreated: sql`${dbSchema.workspaces.lifetimeProjectsCreated} + 1`,
+          updatedAt: now,
+        })
+        .where(eq(dbSchema.workspaces.id, destAuth.workspace.id));
 
       if (clonedAssetRows.length > 0) {
         await tx.insert(dbSchema.assets).values(clonedAssetRows);

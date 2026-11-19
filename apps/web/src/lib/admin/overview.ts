@@ -200,7 +200,8 @@ export async function getAdminOverviewMetrics(
         ? (webhookIntervals.get(sub.paddleSubscriptionId) ?? null)
         : null,
     });
-    mrrUsd += computeSubscriptionMrrUsd(sub.plan, interval, sub.currentPaidCapacity ?? 1);
+    const normalizedPlan = sub.plan === "plus" ? "team" : sub.plan;
+    mrrUsd += computeSubscriptionMrrUsd(normalizedPlan, interval, sub.currentPaidCapacity ?? 1);
   }
 
   const publishedCaseStudies = projectAggRows[0]?.publishedCaseStudies ?? 0;

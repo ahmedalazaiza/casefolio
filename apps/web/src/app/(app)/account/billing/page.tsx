@@ -16,7 +16,7 @@ export default async function AccountBillingPage({
   const { user, session } = await requireSession("/account/billing");
   const [{ portal }, overview] = await Promise.all([
     searchParams,
-    getUserBillingOverview(user.id, new Date(), session.activeOrganizationId ?? null),
+    getUserBillingOverview(user.id, session.activeOrganizationId ?? null),
   ]);
 
   return (

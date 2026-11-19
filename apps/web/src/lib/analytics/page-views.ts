@@ -26,6 +26,7 @@ import { can } from "@/lib/entitlements";
 import { listDashboardProjectsForUser } from "@/lib/projects/dashboard";
 import { extractClientIp } from "@/lib/security/auth-rate-limit";
 import { authorizeProjectAccess } from "@/lib/workspaces/acl";
+import { listWorkspaceSwitcherState } from "@/lib/workspaces/service";
 
 export * from "@/lib/analytics/page-views-utils";
 
@@ -440,6 +441,9 @@ export interface WorkspaceAnalyticsProjectRow {
 }
 
 export interface WorkspaceAnalyticsOverview {
+  workspaceId?: string;
+  workspaceName?: string;
+  workspaceKind?: "personal" | "team";
   totalViews30d: number;
   publishedCount: number;
   totalProjectsCount: number;
@@ -457,12 +461,24 @@ export async function getWorkspaceAnalyticsOverview(
   activeOrgId: string | null = null,
 ): Promise<WorkspaceAnalyticsOverview> {
   // Strictly scoped to visible spaces in the active workspace (`Spec §9 & §10.1`)
-  const visibleProjects = await listDashboardProjectsForUser(userId, activeOrgId, {
-    includeArchived: false,
-  });
+  const [visibleProjects, switcher] = await Promise.all([
+    listDashboardProjectsForUser(userId, activeOrgId, {
+      includeArchived: false,
+    }),
+    listWorkspaceSwitcherState(userId, activeOrgId, now),
+  ]);
+
+  const activeWorkspace = switcher.activeWorkspace;
+  const workspaceMeta = {
+    workspaceId: activeWorkspace.workspaceId,
+    workspaceName:
+      activeWorkspace.kind === "personal" ? "Personal Workspace" : activeWorkspace.name,
+    workspaceKind: activeWorkspace.kind,
+  };
 
   if (visibleProjects.length === 0) {
     return {
+      ...workspaceMeta,
       totalViews30d: 0,
       publishedCount: 0,
       totalProjectsCount: 0,
@@ -535,6 +551,7 @@ export async function getWorkspaceAnalyticsOverview(
   const topCandidate = projectRows.find((r) => r.isPublished) ?? projectRows[0] ?? null;
 
   return {
+    ...workspaceMeta,
     totalViews30d,
     publishedCount,
     totalProjectsCount: visibleProjects.length,

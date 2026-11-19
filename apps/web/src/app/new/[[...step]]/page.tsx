@@ -1,8 +1,10 @@
+import { eq } from "@casefolio/db";
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { WizardStepKey } from "@/app/new/create-project-wizard";
 import { WizardClient } from "@/app/new/wizard-client";
 import { requireSession } from "@/lib/auth/session";
+import { db, dbSchema } from "@/lib/db";
 import { createProjectAction } from "@/lib/projects/actions";
 import { listPublishedLibraryTemplates } from "@/lib/template/service";
 import { listWorkspaceSwitcherState } from "@/lib/workspaces/service";
@@ -39,7 +41,11 @@ export default async function NewProjectWizardPage({
   const { user, session } = await requireSession(callbackPath);
 
   if (user.role === "user" && !user.onboardingCompletedAt) {
-    redirect("/onboarding");
+    const now = new Date();
+    await db
+      .update(dbSchema.users)
+      .set({ onboardingCompletedAt: now, updatedAt: now })
+      .where(eq(dbSchema.users.id, user.id));
   }
 
   const [templates, workspaceContext] = await Promise.all([
@@ -47,11 +53,17 @@ export default async function NewProjectWizardPage({
     listWorkspaceSwitcherState(user.id, session.activeOrganizationId ?? null),
   ]);
 
+  const lifetimeProjectsCreated = Math.max(
+    workspaceContext.activeWorkspace.usage.lifetimeProjectsCreated,
+    workspaceContext.activeWorkspace.usage.activeProjects,
+  );
+
   return (
     <WizardClient
       templates={templates}
       userPlan={workspaceContext.activeWorkspace.plan}
       existingProjectCount={workspaceContext.activeWorkspace.usage.activeProjects}
+      lifetimeProjectsCreated={lifetimeProjectsCreated}
       activeProjectsLimit={workspaceContext.activeWorkspace.quotas.activeProjectsLimit}
       spaces={workspaceContext.spaces}
       workspaceName={workspaceContext.activeWorkspace.name}

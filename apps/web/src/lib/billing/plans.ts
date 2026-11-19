@@ -1,17 +1,24 @@
 import type { PlanTier } from "@casefolio/db";
 import { z } from "zod";
 
-export const PLAN_CATALOG_VERSION = "2026-11-13.v2" as const;
+export const PLAN_CATALOG_VERSION = "2026-11-19.v3" as const;
 
 export const DECIMAL_KB = 1_000;
 export const DECIMAL_MB = 1_000_000;
 export const DECIMAL_GB = 1_000_000_000;
 
+export const FREE_LIFETIME_PROJECT_LIMIT = 1;
+export const PRO_MAX_PROJECTS = 10;
+
 export const TEAMS_MIN_SEATS = 2;
-export const TEAMS_MAX_SELF_SERVE_SEATS = 10;
-export const PLUS_INCLUDED_SEATS = 20;
+export const TEAMS_MAX_SELF_SERVE_SEATS = 25;
 export const TEAMS_CALCULATOR_DEFAULT_SEATS = 3;
-export const TEAMS_CALCULATOR_QUICK_SEATS = [2, 3, 5, 8, 10] as const;
+export const TEAMS_CALCULATOR_QUICK_SEATS = [2, 3, 5, 10, 15, 25] as const;
+
+/** @deprecated Legacy alias retained only for DB migration compatibility; Plus plan has been retired. */
+export const PLUS_INCLUDED_SEATS = TEAMS_MAX_SELF_SERVE_SEATS;
+
+export const ANNUAL_FREE_MONTHS = 2;
 
 export const UNLIMITED_CASE_STUDIES = -1;
 export const UNLIMITED_PROJECTS_LIMIT = 999_999;
@@ -48,7 +55,10 @@ export function normalizeBillingInterval(
   return "monthly";
 }
 
-export const PAID_PLAN_TIERS = ["pro", "team", "plus"] as const;
+export const ACTIVE_PLAN_TIERS = ["free", "pro", "team"] as const;
+export type ActivePlanTier = (typeof ACTIVE_PLAN_TIERS)[number];
+
+export const PAID_PLAN_TIERS = ["pro", "team"] as const;
 export type PaidPlanTier = (typeof PAID_PLAN_TIERS)[number];
 
 export const SUBSCRIPTION_LIFECYCLE_STATUSES = [
@@ -84,26 +94,15 @@ export const checkoutRequestSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["seats"],
-          message: `Team requires at least ${TEAMS_MIN_SEATS} seats (${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats).`,
+          message: `Teams requires at least ${TEAMS_MIN_SEATS} seats (${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats).`,
         });
       } else if (val.seats > TEAMS_MAX_SELF_SERVE_SEATS) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["seats"],
-          message: `Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Plus for up to ${PLUS_INCLUDED_SEATS} team seats.`,
+          message: `Self-serve Teams supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Contact support for 26+ enterprise seats.`,
         });
       }
-    }
-    if (
-      val.plan === "plus" &&
-      val.seats !== undefined &&
-      (val.seats < 1 || val.seats > PLUS_INCLUDED_SEATS)
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["seats"],
-        message: `Plus is a flat-rate plan including up to ${PLUS_INCLUDED_SEATS} team seats.`,
-      });
     }
   });
 
@@ -162,6 +161,7 @@ export interface BillingPlanDefinition {
   minSeats: number;
   maxSeats: number;
   maxCaseStudies: number;
+  customSlugEnabled: boolean;
   customDomainEnabled: boolean;
   watermarkEnabled: boolean;
   whiteLabelEnabled: boolean;
@@ -169,12 +169,45 @@ export interface BillingPlanDefinition {
   features: readonly string[];
 }
 
+const TEAMS_CATALOG_DEFINITION: BillingPlanDefinition = {
+  tier: "team",
+  name: "Teams",
+  tagline: "Built for product design teams and studios collaborating with per-seat control.",
+  scopeSummary: `Shared Team Workspace · ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`,
+  includesLabel: "Includes everything in Pro, plus:",
+  monthlyPriceCents: 599,
+  yearlyTotalCents: 5_990,
+  yearlyMonthlyEquivalentCents: 499,
+  yearlySavingsCents: 1_198,
+  monthlyPriceUsd: 5.99,
+  yearlyTotalUsd: 59.9,
+  yearlyMonthlyEquivalentUsd: 4.99,
+  yearlySavingsPercent: 17,
+  perSeatPricing: true,
+  defaultSeats: TEAMS_CALCULATOR_DEFAULT_SEATS,
+  minSeats: TEAMS_MIN_SEATS,
+  maxSeats: TEAMS_MAX_SELF_SERVE_SEATS,
+  maxCaseStudies: UNLIMITED_CASE_STUDIES,
+  customSlugEnabled: true,
+  customDomainEnabled: false,
+  watermarkEnabled: false,
+  whiteLabelEnabled: false,
+  highlighted: true,
+  features: [
+    `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats ($5.99/seat/mo · 2 months free on annual)`,
+    "Unlimited shared Case Studies across your studio",
+    "Team Dashboard: invite by email, track invite status & manage roles",
+    "Custom Case Study URLs (/p/your-custom-slug) on all live links",
+    "Shared Brand Kit, 10 GB/seat pooled storage & 365-day analytics",
+  ],
+};
+
 export const BILLING_PLAN_CATALOG: Record<PlanTier, BillingPlanDefinition> = {
   free: {
     tier: "free",
     name: "Free",
-    tagline: "Explore the Casefolio builder and publish your first UI/UX case study for free.",
-    scopeSummary: "Personal workspace · 1 user",
+    tagline: "Build and publish 1 complete UI/UX Case Study from A to Z for free.",
+    scopeSummary: "Personal workspace · 1 lifetime Case Study credit",
     monthlyPriceCents: 0,
     yearlyTotalCents: 0,
     yearlyMonthlyEquivalentCents: 0,
@@ -187,109 +220,55 @@ export const BILLING_PLAN_CATALOG: Record<PlanTier, BillingPlanDefinition> = {
     defaultSeats: 1,
     minSeats: 1,
     maxSeats: 1,
-    maxCaseStudies: 1,
+    maxCaseStudies: FREE_LIFETIME_PROJECT_LIMIT,
+    customSlugEnabled: false,
     customDomainEnabled: false,
     watermarkEnabled: true,
     whiteLabelEnabled: false,
     features: [
-      "1 user (Personal workspace only)",
-      "Maximum 1 active Case Study",
-      "Standard templates & essential color and font styling",
-      "PNG & PDF exports (includes subtle Casefolio watermark)",
-      "Live Shareable Link on casefolio.app",
+      "1 user (Personal workspace)",
+      "1 complete Case Study credit (one-time lifetime allowance)",
+      "Full A-to-Z builder with starter templates, colors & typography",
+      "1× PNG & PDF exports (includes subtle Casefolio watermark)",
+      "Shareable auto-generated public link (custom URL requires Pro)",
     ],
   },
   pro: {
     tier: "pro",
     name: "Pro",
-    tagline: "Built for freelance designers and solo creators shipping unlimited case studies.",
-    scopeSummary: "Solo designer plan · 1 seat",
+    tagline: "Built for freelance designers and solo creators rotating up to 10 active projects.",
+    scopeSummary: `Solo designer plan · Up to ${PRO_MAX_PROJECTS} active projects`,
     includesLabel: "Includes everything in Free, plus:",
-    monthlyPriceCents: 999,
-    yearlyTotalCents: 9_588,
-    yearlyMonthlyEquivalentCents: 799,
-    yearlySavingsCents: 2_400,
-    monthlyPriceUsd: 9.99,
-    yearlyTotalUsd: 95.88,
-    yearlyMonthlyEquivalentUsd: 7.99,
-    yearlySavingsPercent: 20,
+    monthlyPriceCents: 799,
+    yearlyTotalCents: 7_990,
+    yearlyMonthlyEquivalentCents: 666,
+    yearlySavingsCents: 1_598,
+    monthlyPriceUsd: 7.99,
+    yearlyTotalUsd: 79.9,
+    yearlyMonthlyEquivalentUsd: 6.66,
+    yearlySavingsPercent: 17,
     perSeatPricing: false,
     defaultSeats: 1,
     minSeats: 1,
     maxSeats: 1,
-    maxCaseStudies: UNLIMITED_CASE_STUDIES,
+    maxCaseStudies: PRO_MAX_PROJECTS,
+    customSlugEnabled: true,
     customDomainEnabled: false,
     watermarkEnabled: false,
     whiteLabelEnabled: false,
     features: [
       "1 seat (Personal workspace)",
-      "Unlimited Case Studies",
-      "Full access to all Pro & Premium templates",
-      "Full styling control (custom fonts, palettes & custom sections)",
-      "Watermark-free high-res PNG, PDF & Behance 1400px exports",
-      "Live Shareable Link + basic 90-day view analytics",
+      `Up to ${PRO_MAX_PROJECTS} active Case Studies (delete & replace anytime)`,
+      "Custom Case Study URL (/p/your-custom-slug) for every live project",
+      "Full access to all Pro & Premium templates and custom styling",
+      "Watermark-free 2× Retina PNG, PDF & Behance 1400px exports",
+      "90-day live portfolio view analytics",
     ],
   },
-  team: {
-    tier: "team",
-    name: "Team",
-    tagline: "Designed for product design teams and studios collaborating in one workspace.",
-    scopeSummary: "Shared Team Workspace · 2–10 seats",
-    includesLabel: "Includes everything in Pro, plus:",
-    monthlyPriceCents: 699,
-    yearlyTotalCents: 6_708,
-    yearlyMonthlyEquivalentCents: 559,
-    yearlySavingsCents: 1_680,
-    monthlyPriceUsd: 6.99,
-    yearlyTotalUsd: 67.08,
-    yearlyMonthlyEquivalentUsd: 5.59,
-    yearlySavingsPercent: 20,
-    perSeatPricing: true,
-    defaultSeats: TEAMS_CALCULATOR_DEFAULT_SEATS,
-    minSeats: TEAMS_MIN_SEATS,
-    maxSeats: TEAMS_MAX_SELF_SERVE_SEATS,
-    maxCaseStudies: UNLIMITED_CASE_STUDIES,
-    customDomainEnabled: false,
-    watermarkEnabled: false,
-    whiteLabelEnabled: false,
-    highlighted: true,
-    features: [
-      "2–10 seats ($6.99/seat/mo or $5.59/seat/mo billed annually)",
-      "Shared Team Workspace with Admin, Editor & Viewer permissions",
-      "Unlimited shared Case Studies across your studio",
-      "Shared Brand Kit (team logos, colors & reusable custom sections)",
-      "Real-time commenting & review mode on Case Studies",
-    ],
-  },
+  team: TEAMS_CATALOG_DEFINITION,
   plus: {
+    ...TEAMS_CATALOG_DEFINITION,
     tier: "plus",
-    name: "Plus",
-    tagline: "Built for design agencies and larger teams needing white-labeled client delivery.",
-    scopeSummary: "Agency plan · Up to 20 team seats included",
-    includesLabel: "Includes everything in Team, plus:",
-    monthlyPriceCents: 9_900,
-    yearlyTotalCents: 94_800,
-    yearlyMonthlyEquivalentCents: 7_900,
-    yearlySavingsCents: 24_000,
-    monthlyPriceUsd: 99,
-    yearlyTotalUsd: 948,
-    yearlyMonthlyEquivalentUsd: 79,
-    yearlySavingsPercent: 20,
-    perSeatPricing: false,
-    defaultSeats: PLUS_INCLUDED_SEATS,
-    minSeats: 1,
-    maxSeats: PLUS_INCLUDED_SEATS,
-    maxCaseStudies: UNLIMITED_CASE_STUDIES,
-    customDomainEnabled: true,
-    watermarkEnabled: false,
-    whiteLabelEnabled: true,
-    features: [
-      "Up to 20 team seats included at one flat rate (no per-seat math)",
-      "Complete white-labeling across live pages, links & PDF metadata",
-      "Unlimited shared Case Studies, Shared Brand Kit & 200 GB storage",
-      "Agency-wide 365-day portfolio analytics & 2,000 monthly exports",
-      "Priority 24/7 support & dedicated onboarding",
-    ],
   },
 };
 
@@ -313,7 +292,7 @@ export type TeamsPriceResult =
   | TeamsPriceCalculation
   | {
       ok: false;
-      code: "INVALID_SEATS" | "PLUS_UPGRADE_REQUIRED" | "CAPACITY_REVIEW_REQUIRED";
+      code: "INVALID_SEATS" | "CAPACITY_REVIEW_REQUIRED";
       seats: number;
       maxSelfServeSeats: number;
       message: string;
@@ -330,20 +309,17 @@ export function computeTeamsPrice(
       code: "INVALID_SEATS",
       seats,
       maxSelfServeSeats: TEAMS_MAX_SELF_SERVE_SEATS,
-      message: `Team plan requires between ${TEAMS_MIN_SEATS} and ${TEAMS_MAX_SELF_SERVE_SEATS} seats.`,
+      message: `Teams plan requires between ${TEAMS_MIN_SEATS} and ${TEAMS_MAX_SELF_SERVE_SEATS} seats.`,
     };
   }
 
   if (seats > TEAMS_MAX_SELF_SERVE_SEATS) {
-    const fitsPlus = seats <= PLUS_INCLUDED_SEATS;
     return {
       ok: false,
-      code: fitsPlus ? "PLUS_UPGRADE_REQUIRED" : "CAPACITY_REVIEW_REQUIRED",
+      code: "CAPACITY_REVIEW_REQUIRED",
       seats,
       maxSelfServeSeats: TEAMS_MAX_SELF_SERVE_SEATS,
-      message: fitsPlus
-        ? `Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Plus ($99/mo or $79/mo billed annually) for up to ${PLUS_INCLUDED_SEATS} team seats.`
-        : `Team supports up to ${TEAMS_MAX_SELF_SERVE_SEATS} seats and Plus includes up to ${PLUS_INCLUDED_SEATS} seats. Contact us for 21+ enterprise seats.`,
+      message: `Self-serve Teams supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Contact support for 26+ enterprise seats.`,
     };
   }
 
@@ -378,6 +354,7 @@ export interface WorkspacePlanQuotas {
   activeProjectsLimit: number;
   publishedProjectsLimit: number;
   retainedProjectsLimit: number;
+  lifetimeProjectsLimit: number | null;
   storageBytesLimit: number;
   monthlyUploadsBytesLimit: number;
   monthlyBandwidthBytesLimit: number;
@@ -391,6 +368,7 @@ export interface WorkspacePlanQuotas {
   sharedSpacesLimit: number;
   analyticsRetentionDays: number;
   historyRetentionDays: number;
+  customSlugEnabled: boolean;
   brandingRemovable: boolean;
   watermarkEnabled: boolean;
   customDomainEnabled: boolean;
@@ -409,37 +387,7 @@ export function getWorkspaceQuotas(
   plan: PlanTier,
   rawPaidSeats = 1,
 ): WorkspacePlanQuotas {
-  if (plan === "plus") {
-    const S = PLUS_INCLUDED_SEATS;
-    return {
-      plan: "plus",
-      paidSeats: S,
-      maxCaseStudies: UNLIMITED_CASE_STUDIES,
-      activeProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
-      publishedProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
-      retainedProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
-      storageBytesLimit: 10 * DECIMAL_GB * S,
-      monthlyUploadsBytesLimit: 20 * DECIMAL_GB * S,
-      monthlyBandwidthBytesLimit: 25 * DECIMAL_GB * S,
-      maxFileBytes: 50 * DECIMAL_MB,
-      monthlyExportsLimit: 2_000,
-      maxPngWidthPx: 2_880,
-      maxExportMegapixels: 120,
-      maxPdfPages: 60,
-      exportTimeoutSeconds: 120,
-      privateSpacesPerMemberLimit: 10,
-      sharedSpacesLimit: 10 * S,
-      analyticsRetentionDays: 365,
-      historyRetentionDays: 90,
-      brandingRemovable: true,
-      watermarkEnabled: false,
-      customDomainEnabled: true,
-      whiteLabelEnabled: true,
-      collaborationEnabled: true,
-    };
-  }
-
-  if (plan === "team") {
+  if (plan === "team" || plan === "plus") {
     const S = clampTeamsSeats(rawPaidSeats);
     return {
       plan: "team",
@@ -448,6 +396,7 @@ export function getWorkspaceQuotas(
       activeProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
       publishedProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
       retainedProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
+      lifetimeProjectsLimit: null,
       storageBytesLimit: 10 * DECIMAL_GB * S,
       monthlyUploadsBytesLimit: 20 * DECIMAL_GB * S,
       monthlyBandwidthBytesLimit: 25 * DECIMAL_GB * S,
@@ -461,6 +410,7 @@ export function getWorkspaceQuotas(
       sharedSpacesLimit: 10 * S,
       analyticsRetentionDays: 365,
       historyRetentionDays: 90,
+      customSlugEnabled: true,
       brandingRemovable: true,
       watermarkEnabled: false,
       customDomainEnabled: false,
@@ -473,10 +423,11 @@ export function getWorkspaceQuotas(
     return {
       plan: "pro",
       paidSeats: 1,
-      maxCaseStudies: UNLIMITED_CASE_STUDIES,
-      activeProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
-      publishedProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
+      maxCaseStudies: PRO_MAX_PROJECTS,
+      activeProjectsLimit: PRO_MAX_PROJECTS,
+      publishedProjectsLimit: PRO_MAX_PROJECTS,
       retainedProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
+      lifetimeProjectsLimit: null,
       storageBytesLimit: 5 * DECIMAL_GB,
       monthlyUploadsBytesLimit: 10 * DECIMAL_GB,
       monthlyBandwidthBytesLimit: 25 * DECIMAL_GB,
@@ -490,6 +441,7 @@ export function getWorkspaceQuotas(
       sharedSpacesLimit: 0,
       analyticsRetentionDays: 90,
       historyRetentionDays: 30,
+      customSlugEnabled: true,
       brandingRemovable: true,
       watermarkEnabled: false,
       customDomainEnabled: false,
@@ -501,10 +453,11 @@ export function getWorkspaceQuotas(
   return {
     plan: "free",
     paidSeats: 1,
-    maxCaseStudies: 1,
-    activeProjectsLimit: 1,
-    publishedProjectsLimit: 1,
+    maxCaseStudies: FREE_LIFETIME_PROJECT_LIMIT,
+    activeProjectsLimit: FREE_LIFETIME_PROJECT_LIMIT,
+    publishedProjectsLimit: FREE_LIFETIME_PROJECT_LIMIT,
     retainedProjectsLimit: UNLIMITED_PROJECTS_LIMIT,
+    lifetimeProjectsLimit: FREE_LIFETIME_PROJECT_LIMIT,
     storageBytesLimit: 250 * DECIMAL_MB,
     monthlyUploadsBytesLimit: 500 * DECIMAL_MB,
     monthlyBandwidthBytesLimit: 1 * DECIMAL_GB,
@@ -518,6 +471,7 @@ export function getWorkspaceQuotas(
     sharedSpacesLimit: 0,
     analyticsRetentionDays: 7,
     historyRetentionDays: 7,
+    customSlugEnabled: false,
     brandingRemovable: false,
     watermarkEnabled: true,
     customDomainEnabled: false,
@@ -675,12 +629,9 @@ export function formatPlanHeadingLabel(
   }
   const interval = normalizeBillingInterval(intervalInput);
   const suffix = interval === "yearly" ? "Annual" : "Monthly";
-  if (plan === "plus") {
-    return `Plus (up to ${PLUS_INCLUDED_SEATS} seats) · ${suffix}`;
-  }
-  if (plan === "team") {
+  if (plan === "team" || plan === "plus") {
     const count = typeof seats === "number" && seats >= 1 ? seats : TEAMS_MIN_SEATS;
-    return `Team (${count} ${count === 1 ? "seat" : "seats"}) · ${suffix}`;
+    return `Teams (${count} ${count === 1 ? "seat" : "seats"}) · ${suffix}`;
   }
   return `Pro · ${suffix}`;
 }
@@ -695,44 +646,41 @@ export function formatPlanAmountSummary(
   if (plan === "free") {
     return "$0 / forever";
   }
-  if (plan === "team") {
+  if (plan === "team" || plan === "plus") {
     const calc = computeTeamsPrice(clampTeamsSeats(seats), interval);
     if (!calc.ok) {
       return interval === "yearly"
-        ? "$5.59/seat/mo (billed annually)"
-        : "$6.99/seat/mo";
+        ? "$4.99/seat/mo (billed annually · 2 months free)"
+        : "$5.99/seat/mo";
     }
     if (interval === "yearly") {
-      return `${formatUsdFromCents(calc.yearlyMonthlyEquivalentCents)}/mo (${formatUsdFromCents(calc.yearlyTotalCents)}/yr for ${calc.seats} seats)`;
+      return `${formatUsdFromCents(calc.yearlyMonthlyEquivalentCents)}/mo (${formatUsdFromCents(calc.yearlyTotalCents)}/yr for ${calc.seats} seats · 2 months free)`;
     }
     return `${formatUsdFromCents(calc.monthlyTotalCents)}/mo (${calc.seats} seats)`;
   }
   if (interval === "yearly") {
-    return `${formatUsdFromCents(def.yearlyMonthlyEquivalentCents)}/mo (billed ${formatUsdFromCents(def.yearlyTotalCents)}/yr)`;
+    return `${formatUsdFromCents(def.yearlyMonthlyEquivalentCents)}/mo (billed ${formatUsdFromCents(def.yearlyTotalCents)}/yr · 2 months free)`;
   }
   return `${formatUsdFromCents(def.monthlyPriceCents)}/mo`;
 }
 
 export function getChargeAmountCents(
-  plan: PaidPlanTier,
+  plan: PaidPlanTier | PlanTier,
   intervalInput: BillingIntervalInput,
   seats = 1,
 ): number {
   const interval = normalizeBillingInterval(intervalInput);
-  if (plan === "team") {
+  if (plan === "free") return 0;
+  if (plan === "team" || plan === "plus") {
     const calc = computeTeamsPrice(clampTeamsSeats(seats), interval);
     return calc.ok ? calc.chargeCents : BILLING_PLAN_CATALOG.team.monthlyPriceCents * TEAMS_MIN_SEATS;
-  }
-  if (plan === "plus") {
-    const def = BILLING_PLAN_CATALOG.plus;
-    return interval === "yearly" ? def.yearlyTotalCents : def.monthlyPriceCents;
   }
   const def = BILLING_PLAN_CATALOG.pro;
   return interval === "yearly" ? def.yearlyTotalCents : def.monthlyPriceCents;
 }
 
 export function getChargeAmountUsd(
-  plan: PaidPlanTier,
+  plan: PaidPlanTier | PlanTier,
   intervalInput: BillingIntervalInput,
   seats = 1,
 ): number {
@@ -829,13 +777,6 @@ export function evaluateSubscriptionLifecycle(args: {
   };
 }
 
-/**
- * Determines whether a subscription row currently grants paid entitlements.
- * - `active`, `trialing`: grants access.
- * - `past_due`: grants existing usage during the 7-day grace window counted from `pastDueSince` (first failure).
- * - `cancel_at_period_end`: grants access until `currentPeriodEnd` (`paidThrough`).
- * - `paused`, `canceled`: revokes paid access once effective.
- */
 export function isSubscriptionGrantingAccess(
   status: string,
   currentPeriodEnd: Date | null | undefined,

@@ -32,7 +32,7 @@ export const EXPORT_PRESETS: readonly ExportPresetDescriptor[] = [
     label: "PNG Long Presentation",
     badge: "1,440px (1×) · 2,880px (2× Paid)",
     description:
-      "Full-length PNG presentation (1× with subtle Casefolio watermark on Free; high-res 1×/2× without watermark on Pro, Team & Plus).",
+      "Full-length PNG presentation (1× with subtle Casefolio watermark on Free; high-res 1×/2× without watermark on Pro & Teams).",
     requiresPro: false,
     fileExtension: "png",
   },
@@ -41,7 +41,7 @@ export const EXPORT_PRESETS: readonly ExportPresetDescriptor[] = [
     label: "PDF Case Study",
     badge: "Up to 60 Pages · Selectable Text",
     description:
-      "Multi-section PDF document (includes subtle Casefolio watermark on Free; unwatermarked on Pro/Team and completely white-labeled on Plus).",
+      "Multi-section PDF document (includes subtle Casefolio watermark on Free; watermark-free on Pro & Teams).",
     requiresPro: false,
     fileExtension: "pdf",
   },
@@ -55,6 +55,26 @@ export const EXPORT_PRESETS: readonly ExportPresetDescriptor[] = [
     fileExtension: "zip",
   },
 ] as const;
+
+export const clientExportCompleteActionSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("presign"),
+    contentType: z.enum(["image/png", "application/pdf", "application/zip"]),
+    byteLength: z.number().int().positive(),
+  }),
+  z.object({
+    action: z.literal("finalize"),
+    r2Key: z.string().min(1).max(512),
+    contentType: z.enum(["image/png", "application/pdf", "application/zip"]),
+    byteLength: z.number().int().positive(),
+  }),
+  z.object({
+    action: z.literal("fail"),
+    error: z.string().min(1).max(500),
+  }),
+]);
+
+export type ClientExportCompleteActionInput = z.infer<typeof clientExportCompleteActionSchema>;
 
 export const createExportInputSchema = z.object({
   projectId: z.string().uuid("Invalid project ID."),

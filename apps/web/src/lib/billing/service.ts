@@ -17,12 +17,12 @@ import {
   BILLING_PLAN_CATALOG,
   cancelSubscriptionInputSchema,
   checkoutRequestSchema,
+  clampTeamsSeats,
   computeTeamsPrice,
   evaluateSubscriptionLifecycle,
   getChargeAmountCents,
   getChargeAmountUsd,
   isSubscriptionLockedForQuantityChange,
-  PLUS_INCLUDED_SEATS,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
   TEAMS_MIN_SEATS,
@@ -98,7 +98,6 @@ export type PrepareCheckoutResult =
       ok: false;
       code:
         | "VALIDATION_ERROR"
-        | "PLUS_UPGRADE_REQUIRED"
         | "CAPACITY_REVIEW_REQUIRED"
         | "FORBIDDEN"
         | "RATE_LIMITED"
@@ -234,17 +233,10 @@ export async function prepareCheckoutSessionForUser(
     Number.isInteger(rawObj.seats) &&
     rawObj.seats > TEAMS_MAX_SELF_SERVE_SEATS
   ) {
-    if (rawObj.seats <= PLUS_INCLUDED_SEATS) {
-      return {
-        ok: false,
-        code: "PLUS_UPGRADE_REQUIRED",
-        error: `Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo flat rate) for up to ${PLUS_INCLUDED_SEATS} seats.`,
-      };
-    }
     return {
       ok: false,
       code: "CAPACITY_REVIEW_REQUIRED",
-      error: `Self-service plans support up to ${PLUS_INCLUDED_SEATS} seats on Plus. Contact support for enterprise capacity.`,
+      error: `Self-serve Teams supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Contact support for 26+ enterprise seats.`,
     };
   }
 
@@ -277,7 +269,7 @@ export async function prepareCheckoutSessionForUser(
     return {
       ok: false,
       code: "VALIDATION_ERROR",
-      error: "Casefolio Pro covers one personal workspace only. Choose Team or Plus for an organization.",
+      error: "Casefolio Pro covers one personal workspace only. Choose Casefolio Teams for an organization.",
     };
   }
 
@@ -300,7 +292,7 @@ export async function prepareCheckoutSessionForUser(
         error: "Only the workspace Owner can purchase or modify team billing.",
       };
     }
-  } else if (valid.plan === "team" || valid.plan === "plus") {
+  } else if (valid.plan === "team") {
     const [owned] = await db
       .select({ orgId: dbSchema.memberships.orgId })
       .from(dbSchema.memberships)
@@ -325,11 +317,9 @@ export async function prepareCheckoutSessionForUser(
       return {
         ok: false,
         code:
-          calc.code === "PLUS_UPGRADE_REQUIRED"
-            ? "PLUS_UPGRADE_REQUIRED"
-            : calc.code === "CAPACITY_REVIEW_REQUIRED"
-              ? "CAPACITY_REVIEW_REQUIRED"
-              : "VALIDATION_ERROR",
+          calc.code === "CAPACITY_REVIEW_REQUIRED"
+            ? "CAPACITY_REVIEW_REQUIRED"
+            : "VALIDATION_ERROR",
         error: calc.message,
       };
     }
@@ -351,14 +341,13 @@ export async function prepareCheckoutSessionForUser(
     }
   }
 
-  // Team and Plus always belong to an organization: resolve/create it BEFORE payment so the purchase can
-  // never degrade into a personal "team" or "plus" plan.
-  if ((valid.plan === "team" || valid.plan === "plus") && !orgId) {
+  // Teams always belongs to an organization: resolve/create it BEFORE payment so the purchase can
+  // never degrade into a personal "team" plan.
+  if (valid.plan === "team" && !orgId) {
     orgId = await resolveOrCreateOwnedTeamOrgId(actor);
   }
 
-  // One live subscription per scope (personal workspace / organization), EXCEPT upgrading an active
-  // Team workspace to Plus.
+  // One live subscription per scope (personal workspace / organization).
   const [existingScopeSub] = await db
     .select({
       plan: dbSchema.subscriptions.plan,
@@ -378,18 +367,11 @@ export async function prepareCheckoutSessionForUser(
     .orderBy(desc(dbSchema.subscriptions.updatedAt))
     .limit(1);
 
-  const isTeamToPlusUpgrade =
-    Boolean(orgId) &&
-    existingScopeSub?.plan === "team" &&
-    valid.plan === "plus" &&
-    existingScopeSub.status !== "past_due";
-
   if (
     existingScopeSub?.paddleSubscriptionId &&
     ["active", "trialing", "past_due", "paused", "cancel_at_period_end"].includes(
       existingScopeSub.status,
-    ) &&
-    !isTeamToPlusUpgrade
+    )
   ) {
     const scheduledToEnd =
       existingScopeSub.status === "cancel_at_period_end" ||
@@ -479,7 +461,7 @@ async function recoverSimulatedPastDueSubscription(
   const valid = parsed.data;
 
   let orgId = valid.orgId ?? null;
-  if ((valid.plan === "team" || valid.plan === "plus") && !orgId) {
+  if (valid.plan === "team" && !orgId) {
     const [owned] = await db
       .select({ orgId: dbSchema.memberships.orgId })
       .from(dbSchema.memberships)
@@ -531,12 +513,9 @@ async function recoverSimulatedPastDueSubscription(
   const periodDays = sub.interval === "yearly" ? 365 : 30;
   const periodEnd = new Date(now.getTime() + periodDays * 24 * 60 * 60 * 1000);
   const eventId = `evt_sdbx_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
-  const subPlan: PaidPlanTier = sub.orgId
-    ? sub.plan === "plus"
-      ? "plus"
-      : "team"
-    : "pro";
+  const subPlan: PaidPlanTier = sub.orgId ? "team" : "pro";
   const priceId = resolveServerPaddlePriceId(subPlan, sub.interval);
+  const recoveredSeats = subPlan === "team" ? clampTeamsSeats(sub.currentPaidCapacity) : 1;
 
   const rawBody = JSON.stringify({
     event_id: eventId,
@@ -551,7 +530,7 @@ async function recoverSimulatedPastDueSubscription(
       scheduled_change: null,
       items: [
         {
-          quantity: subPlan === "plus" ? 1 : sub.currentPaidCapacity,
+          quantity: recoveredSeats,
           price: {
             id: priceId,
             billing_cycle: { interval: sub.interval === "yearly" ? "year" : "month", frequency: 1 },
@@ -578,10 +557,10 @@ async function recoverSimulatedPastDueSubscription(
   return {
     ok: true,
     eventId: result.eventId,
-    effectivePlan: result.effectivePlan ?? sub.plan,
+    effectivePlan: result.effectivePlan ?? subPlan,
     subscriptionId: result.subscriptionId,
     orgId: sub.orgId,
-    seats: sub.currentPaidCapacity,
+    seats: recoveredSeats,
   };
 }
 
@@ -606,7 +585,6 @@ export async function completeSandboxCheckoutForUser(
       code:
         | "SANDBOX_ONLY"
         | "VALIDATION_ERROR"
-        | "PLUS_UPGRADE_REQUIRED"
         | "CAPACITY_REVIEW_REQUIRED"
         | "FORBIDDEN"
         | "RATE_LIMITED"
@@ -656,7 +634,7 @@ export async function completeSandboxCheckoutForUser(
   const targetOrgId = session.orgId;
 
   let existingSub: typeof dbSchema.subscriptions.$inferSelect | undefined;
-  if ((session.plan === "team" || session.plan === "plus") && targetOrgId) {
+  if (session.plan === "team" && targetOrgId) {
     await ensureTeamWorkspaceForOrganization(targetOrgId, actor.id);
     const [byOrg] = await db
       .select()
@@ -762,7 +740,7 @@ export async function completeSandboxCheckoutForUser(
     effectivePlan: result.effectivePlan ?? (simulateFailure ? "free" : session.plan),
     subscriptionId: result.subscriptionId,
     orgId: targetOrgId,
-    seats: session.plan === "plus" ? PLUS_INCLUDED_SEATS : session.seats,
+    seats: session.seats,
   };
 }
 
@@ -844,32 +822,22 @@ export async function getTeamBillingSeatOverviewForUser(
   const isOrgPaidActive = Boolean(
     subRow && (subRow.plan === "team" || subRow.plan === "plus") && lifecycle?.grantsPaidAccess,
   );
-  const activePlan: PlanTier = isOrgPaidActive ? subRow!.plan : "free";
+  const activePlan: PlanTier = isOrgPaidActive ? "team" : "free";
   const paidSeats =
-    activePlan === "plus"
-      ? PLUS_INCLUDED_SEATS
-      : activePlan === "team"
-        ? Math.max(TEAMS_MIN_SEATS, subRow!.currentPaidCapacity)
-        : 0;
+    activePlan === "team" ? clampTeamsSeats(subRow!.currentPaidCapacity) : 0;
   const renewalSeats = activePlan === "team" ? (subRow!.renewalQuantity ?? null) : null;
   const effectiveCeiling =
     renewalSeats !== null ? Math.min(paidSeats, renewalSeats) : paidSeats;
   const availableSeats = Math.max(0, effectiveCeiling - occupiedSeats);
 
-  const lockCheck =
-    activePlan === "plus"
-      ? {
-          locked: true as const,
-          reason: `Casefolio Plus is a flat-rate plan that includes up to ${PLUS_INCLUDED_SEATS} seats.`,
-        }
-      : subRow
-        ? isSubscriptionLockedForQuantityChange({
-            status: subRow.status,
-            scheduledChangeAction: subRow.scheduledChangeAction,
-            currentPeriodEnd: subRow.currentPeriodEnd,
-            now,
-          })
-        : { locked: false as const, reason: null };
+  const lockCheck = subRow
+    ? isSubscriptionLockedForQuantityChange({
+        status: subRow.status,
+        scheduledChangeAction: subRow.scheduledChangeAction,
+        currentPeriodEnd: subRow.currentPeriodEnd,
+        now,
+      })
+    : { locked: false as const, reason: null };
 
   return {
     organizationId: chosen.org.id,
@@ -893,15 +861,21 @@ export async function getTeamBillingSeatOverviewForUser(
     isLockedForQuantityChange: lockCheck.locked,
     lockReason: lockCheck.reason,
     customDomain: wsRow?.customDomain ?? null,
-    customDomainEnabled: activePlan === "plus",
+    customDomainEnabled: false,
   };
 }
 
 export async function getUserBillingOverview(
   userId: string,
-  now: Date = new Date(),
-  activeOrgId?: string | null,
+  nowOrActiveOrgId?: Date | string | null,
+  maybeActiveOrgId?: string | null,
 ): Promise<UserBillingOverview> {
+  const now = nowOrActiveOrgId instanceof Date ? nowOrActiveOrgId : new Date();
+  const activeOrgId =
+    nowOrActiveOrgId instanceof Date
+      ? (maybeActiveOrgId ?? null)
+      : (nowOrActiveOrgId ?? maybeActiveOrgId ?? null);
+
   const personal = await ensurePersonalWorkspaceForUser(userId);
 
   const [[userRow], [personalWs], [subRow], personalPubs, teamBilling] = await Promise.all([
@@ -953,7 +927,8 @@ export async function getUserBillingOverview(
       pastDueSince: subRow.pastDueSince,
       now,
     });
-    const derivedPlan: PlanTier = lifecycle.grantsPaidAccess ? subRow.plan : "free";
+    const derivedPlan: PlanTier =
+      lifecycle.grantsPaidAccess && subRow.plan === "pro" ? "pro" : "free";
     if (derivedPlan !== effectivePlan) {
       effectivePlan = derivedPlan;
       await db
@@ -1043,7 +1018,7 @@ export async function getUserBillingOverview(
           id: subRow.id,
           paddleCustomerId: subRow.paddleCustomerId ?? null,
           paddleSubscriptionId: subRow.paddleSubscriptionId ?? null,
-          plan: subRow.plan,
+          plan: subRow.plan === "plus" ? "team" : subRow.plan,
           interval: detectedInterval,
           status: subRow.status,
           currentPeriodEndIso: subRow.currentPeriodEnd
@@ -1577,7 +1552,6 @@ export async function previewTeamSeatIncrease(args: {
       ok: false;
       code:
         | "FORBIDDEN"
-        | "PLUS_UPGRADE_REQUIRED"
         | "CAPACITY_REVIEW_REQUIRED"
         | "VALIDATION_ERROR"
         | "QUANTITY_LOCKED"
@@ -1595,17 +1569,10 @@ export async function previewTeamSeatIncrease(args: {
     };
   }
   if (args.targetSeats > TEAMS_MAX_SELF_SERVE_SEATS) {
-    if (args.targetSeats <= PLUS_INCLUDED_SEATS) {
-      return {
-        ok: false,
-        code: "PLUS_UPGRADE_REQUIRED",
-        error: `Team supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Upgrade to Casefolio Plus ($99/mo flat rate) for up to ${PLUS_INCLUDED_SEATS} seats.`,
-      };
-    }
     return {
       ok: false,
       code: "CAPACITY_REVIEW_REQUIRED",
-      error: `Self-service plans support up to ${PLUS_INCLUDED_SEATS} seats on Plus. Contact support for enterprise capacity.`,
+      error: `Self-serve Teams supports ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats. Contact support for 26+ enterprise seats.`,
     };
   }
 
@@ -1640,7 +1607,7 @@ export async function previewTeamSeatIncrease(args: {
     .orderBy(desc(dbSchema.subscriptions.updatedAt))
     .limit(1);
 
-  if (!subRow || subRow.plan !== "team") {
+  if (!subRow || (subRow.plan !== "team" && subRow.plan !== "plus")) {
     return {
       ok: false,
       code: "VALIDATION_ERROR",
@@ -2606,7 +2573,7 @@ export async function updateTeamCustomDomain(_args: {
   | { ok: true; customDomain: string | null }
   | {
       ok: false;
-      code: "FORBIDDEN" | "PLUS_UPGRADE_REQUIRED" | "INVALID_DOMAIN" | "NOT_AVAILABLE";
+      code: "FORBIDDEN" | "INVALID_DOMAIN" | "NOT_AVAILABLE";
       error: string;
     }
 > {

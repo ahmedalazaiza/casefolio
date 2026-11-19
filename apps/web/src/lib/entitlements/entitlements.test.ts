@@ -20,10 +20,12 @@ function extractCookieHeader(setCookie: string | null): string {
 }
 
 describe("Entitlements `can()` & server-side gating (C-702)", () => {
-  it("evaluates all features accurately across Free, Pro, Team (2–10 seats), and Plus (up to 20 seats)", () => {
-    // Free plan checks (1 active Case Study, watermarked PNG & PDF included, Behance/2x PNG locked)
-    expect(can("free", "create_project", { projectsCount: 0 })).toBe(true);
-    expect(can("free", "create_project", { projectsCount: 1 })).toBe(false);
+  it("evaluates all features accurately across Free (1 lifetime credit), Pro (up to 10 rotatable), and Teams (2–25 seats)", () => {
+    // Free plan checks (1 lifetime Case Study credit, auto-slug only, watermarked PNG & PDF included)
+    expect(can("free", "create_project", { projectsCount: 0, lifetimeProjectsCreated: 0 })).toBe(true);
+    expect(can("free", "create_project", { projectsCount: 1, lifetimeProjectsCreated: 1 })).toBe(false);
+    expect(can("free", "create_project", { projectsCount: 0, lifetimeProjectsCreated: 1 })).toBe(false);
+    expect(can("free", "custom_slug")).toBe(false);
     expect(can("free", "pro_templates")).toBe(false);
     expect(can("free", "export_png", { monthlyExportsCount: 4 })).toBe(true);
     expect(can("free", "export_png", { monthlyExportsCount: 5 })).toBe(false);
@@ -38,9 +40,11 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
     expect(can("free", "export_png_2x")).toBe(false);
     expect(can(null, "pro_templates")).toBe(false);
 
-    // Pro plan checks (unlimited Case Studies, watermark-free exports, no custom domain/white-label)
-    expect(can({ plan: "pro" }, "create_project", { projectsCount: 0 })).toBe(true);
-    expect(can({ plan: "pro" }, "create_project", { projectsCount: 250 })).toBe(true);
+    // Pro plan checks (up to 10 rotatable active Case Studies, custom slug, watermark-free exports)
+    expect(can({ plan: "pro" }, "create_project", { projectsCount: 0, lifetimeProjectsCreated: 5 })).toBe(true);
+    expect(can({ plan: "pro" }, "create_project", { projectsCount: 9, lifetimeProjectsCreated: 25 })).toBe(true);
+    expect(can({ plan: "pro" }, "create_project", { projectsCount: 10, lifetimeProjectsCreated: 25 })).toBe(false);
+    expect(can({ plan: "pro" }, "custom_slug")).toBe(true);
     expect(can({ plan: "pro" }, "pro_templates")).toBe(true);
     expect(can({ plan: "pro" }, "export_png", { monthlyExportsCount: 59 })).toBe(true);
     expect(can({ plan: "pro" }, "export_png", { monthlyExportsCount: 60 })).toBe(false);
@@ -54,8 +58,9 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
     expect(can({ plan: "pro" }, "team_seats", { seatsUsed: 1, seatsLimit: 3 })).toBe(false);
     expect(can({ plan: "pro" }, "shared_spaces")).toBe(false);
 
-    // Team plan checks (2–10 seats, 11th seat requires Plus)
+    // Teams plan checks (2–25 self-serve seats, unlimited shared Case Studies, custom slug)
     expect(can({ plan: "team" }, "create_project", { projectsCount: 500 })).toBe(true);
+    expect(can({ plan: "team" }, "custom_slug")).toBe(true);
     expect(can({ plan: "team" }, "pro_templates")).toBe(true);
     expect(can({ plan: "team" }, "export_pdf")).toBe(true);
     expect(can({ plan: "team" }, "export_png_2x")).toBe(true);
@@ -65,7 +70,8 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
     expect(can({ plan: "team" }, "shared_spaces")).toBe(true);
     expect(can({ plan: "team" }, "team_seats", { seatsUsed: 2, seatsLimit: 3 })).toBe(true);
     expect(can({ plan: "team" }, "team_seats", { seatsUsed: 3, seatsLimit: 3 })).toBe(false);
-    expect(can({ plan: "team" }, "team_seats", { seatsUsed: 10, seatsLimit: 10 })).toBe(false);
+    expect(can({ plan: "team" }, "team_seats", { seatsUsed: 24, seatsLimit: 25 })).toBe(true);
+    expect(can({ plan: "team" }, "team_seats", { seatsUsed: 25, seatsLimit: 25 })).toBe(false);
 
     const seatLimitDecision = evaluateEntitlement("team", "team_seats", {
       seatsUsed: 3,
@@ -73,22 +79,10 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
     });
     expect(seatLimitDecision.code).toBe("TEAM_SEAT_LIMIT_REACHED");
 
-    const plusUpgradeDecision = evaluateEntitlement("team", "team_seats", {
-      seatsUsed: 10,
-      seatsLimit: 10,
-    });
-    expect(plusUpgradeDecision.code).toBe("PLUS_PLAN_REQUIRED");
-    expect(plusUpgradeDecision.requiredPlan).toBe("plus");
-
-    // Plus plan checks (up to 20 seats flat, custom domain & complete white-labeling)
+    // Legacy `"plus"` DB rows normalize seamlessly to `"team"`
     expect(can({ plan: "plus" }, "create_project", { projectsCount: 1000 })).toBe(true);
-    expect(can({ plan: "plus" }, "pro_templates")).toBe(true);
-    expect(can({ plan: "plus" }, "remove_watermark")).toBe(true);
-    expect(can({ plan: "plus" }, "custom_domain")).toBe(true);
-    expect(can({ plan: "plus" }, "white_label")).toBe(true);
+    expect(can({ plan: "plus" }, "custom_slug")).toBe(true);
     expect(can({ plan: "plus" }, "shared_spaces")).toBe(true);
-    expect(can({ plan: "plus" }, "team_seats", { seatsUsed: 19, seatsLimit: 20 })).toBe(true);
-    expect(can({ plan: "plus" }, "team_seats", { seatsUsed: 20, seatsLimit: 20 })).toBe(false);
   });
 
   it("enforces server-side Pro template, export format, watermark, subscription expiry, and Team seat gating", async () => {
@@ -314,7 +308,7 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
         expect(inviteOverLimit.code).toBe("TEAM_SEAT_LIMIT_REACHED");
       }
 
-      // Edge Case 2: Team workspace at maximum 10 seats trying to invite 11th member -> PLUS_PLAN_REQUIRED
+      // Edge Case 2: Team workspace at 10 purchased seats blocks 11th until seat count is expanded (up to 25)
       await db
         .update(dbSchema.subscriptions)
         .set({ currentPaidCapacity: 10, maxSeats: 10 })
@@ -348,20 +342,20 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
       });
       expect(eleventhSeatInvite.ok).toBe(false);
       if (!eleventhSeatInvite.ok) {
-        expect(eleventhSeatInvite.code).toBe("PLUS_PLAN_REQUIRED");
+        expect(eleventhSeatInvite.code).toBe("TEAM_SEAT_LIMIT_REACHED");
       }
 
-      // Upgrading workspace to Plus unlocks up to 20 seats immediately
+      // Expanding Teams workspace seat capacity to 15 unlocks inviting the 11th member immediately
       await db
         .update(dbSchema.subscriptions)
-        .set({ plan: "plus", currentPaidCapacity: 20, maxSeats: 20, customDomainEnabled: true })
+        .set({ currentPaidCapacity: 15, maxSeats: 15 })
         .where(eq(dbSchema.subscriptions.orgId, orgId));
       await db
         .update(dbSchema.workspaces)
-        .set({ maxSeats: 20, customDomainEnabled: true })
+        .set({ maxSeats: 15 })
         .where(eq(dbSchema.workspaces.organizationId, orgId));
 
-      const eleventhOnPlus = await createGatedTeamInvitation({
+      const eleventhOnExpandedTeams = await createGatedTeamInvitation({
         actorUserId: userId,
         rawInput: {
           organizationId: orgId,
@@ -370,7 +364,7 @@ describe("Entitlements `can()` & server-side gating (C-702)", () => {
         },
         requestHeaders: cookieHeaders,
       });
-      expect(eleventhOnPlus.ok).toBe(true);
+      expect(eleventhOnExpandedTeams.ok).toBe(true);
 
       // 7. Expired canceled subscription reconciles effective plan back to Free
       const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);

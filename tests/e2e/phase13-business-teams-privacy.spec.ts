@@ -75,7 +75,7 @@ test.describe("Phase 13 Business Model, Teams Seat Billing, Private Spaces & Rec
       await page.goto("/pricing");
       await expect(page.getByTestId("teams-seat-calculator")).toBeVisible();
       await expect(page.getByTestId("teams-calc-seat-count")).toHaveText("3");
-      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$20.97");
+      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$17.97");
 
       await expect(async () => {
         await page.getByTestId("teams-calc-preset-5").click();
@@ -83,11 +83,11 @@ test.describe("Phase 13 Business Model, Teams Seat Billing, Private Spaces & Rec
           timeout: 1_000,
         });
       }).toPass({ timeout: 10_000 });
-      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$34.95");
+      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$29.95");
 
       await page.getByTestId("teams-calc-preset-15").click();
-      await expect(page.getByTestId("teams-calc-plus-recommendation")).toBeVisible();
-      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$99");
+      await expect(page.getByTestId("teams-calc-seat-count")).toHaveText("15");
+      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$89.85");
 
       await page.getByTestId("teams-calc-preset-26").click();
       await expect(page.getByTestId("teams-calc-capacity-review")).toBeVisible();
@@ -100,7 +100,7 @@ test.describe("Phase 13 Business Model, Teams Seat Billing, Private Spaces & Rec
 
       // 2. Public /help/billing-and-plans article + 375/393/1440 + axe-core
       await page.goto("/help/billing-and-plans");
-      await expect(page.getByText(/\$9\.99\/mo/i).first()).toBeVisible();
+      await expect(page.getByText(/\$7\.99\/mo/i).first()).toBeVisible();
       await expect(page.getByText(/Departed member recovery/i).first()).toBeVisible();
       await assertCleanA11yAndResponsive(page, "/help/billing-and-plans");
 

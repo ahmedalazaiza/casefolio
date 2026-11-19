@@ -59,6 +59,8 @@ export function ProjectSharePanel({
   onUnpublish,
   onCheckSlug,
 }: ProjectSharePanelProps) {
+  const canCustomizeSlug =
+    initialSettings.canCustomizeSlug ?? can(initialSettings.ownerPlan, "custom_slug");
   const canRemoveWatermark =
     initialSettings.canRemoveBranding ?? can(initialSettings.ownerPlan, "remove_watermark");
   const canPublishInSpace = initialSettings.canPublish !== false;
@@ -90,6 +92,7 @@ export function ProjectSharePanel({
   const [isUnpublishing, setIsUnpublishing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeTopic, setUpgradeTopic] = useState<"custom_slug" | "branding">("branding");
 
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -98,6 +101,11 @@ export function ProjectSharePanel({
   const fullPublicUrl = `${initialSettings.appBaseUrl}/p/${activeSlug}`;
 
   useEffect(() => {
+    if (!canCustomizeSlug) {
+      setSlugCheckState({ status: "idle" });
+      return;
+    }
+
     const trimmed = slugDraft.trim().replace(/^-+|-+$/g, "");
     if (!trimmed) {
       setSlugCheckState({ status: "idle" });
@@ -138,7 +146,14 @@ export function ProjectSharePanel({
         clearTimeout(checkTimerRef.current);
       }
     };
-  }, [slugDraft, publishedSlug, isPublished, initialSettings.projectId, onCheckSlug]);
+  }, [
+    canCustomizeSlug,
+    slugDraft,
+    publishedSlug,
+    isPublished,
+    initialSettings.projectId,
+    onCheckSlug,
+  ]);
 
   const handlePublish = useCallback(async () => {
     setErrorMessage(null);
@@ -147,7 +162,7 @@ export function ProjectSharePanel({
     try {
       const payload: PublishProjectInput = {
         projectId: initialSettings.projectId,
-        slug: slugDraft,
+        ...(canCustomizeSlug ? { slug: slugDraft } : {}),
         visibility,
         ...(canRemoveWatermark ? { brandingRemoved } : {}),
         ...(requiresPrivateAck && publicAckChecked ? { acknowledgePublicExposure: true } : {}),
@@ -177,6 +192,7 @@ export function ProjectSharePanel({
     }
   }, [
     brandingRemoved,
+    canCustomizeSlug,
     canRemoveWatermark,
     initialSettings.projectId,
     isPublished,
@@ -295,7 +311,7 @@ export function ProjectSharePanel({
           <Link
             href={`/projects/${initialSettings.projectId}/share`}
             aria-current="page"
-            className="bg-elevated text-foreground shadow-card type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2"
+            className="bg-elevated text-foreground border-border/80 type-body-s-strong inline-flex items-center gap-2 rounded-full border px-4 py-2"
           >
             <Globe className="text-primary size-3.5" />
             <span>Publish &amp; Share</span>
@@ -348,12 +364,22 @@ export function ProjectSharePanel({
           )}
 
           {/* Custom URL Slug Card */}
-          <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-7">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-foreground type-heading-m">Public URL Slug</h2>
-              <p className="text-muted-foreground type-body-s">
-                Customize the shareable web address for your case study.
-              </p>
+          <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-foreground type-heading-m">Public URL Slug</h2>
+                <p className="text-muted-foreground type-body-s">
+                  {canCustomizeSlug
+                    ? "Customize the shareable web address for your case study."
+                    : "Free case studies publish with a deterministic shareable link. Upgrade to customize /p/your-slug."}
+                </p>
+              </div>
+              {!canCustomizeSlug && (
+                <Badge tone="pro" withDot={false} data-testid="custom-slug-lock-badge">
+                  <Lock className="size-3" />
+                  <span>Pro &amp; Teams</span>
+                </Badge>
+              )}
             </div>
 
             <div className="flex flex-col gap-2.5">
@@ -367,10 +393,18 @@ export function ProjectSharePanel({
                     id="publish-slug-input"
                     data-testid="publish-slug-input"
                     disabled={!canPublishInSpace}
+                    readOnly={!canCustomizeSlug}
+                    aria-readonly={!canCustomizeSlug ? "true" : undefined}
                     value={slugDraft}
-                    onChange={(e) => setSlugDraft(normalizeClientSlugDraft(e.target.value))}
+                    onChange={(e) => {
+                      if (!canCustomizeSlug) return;
+                      setSlugDraft(normalizeClientSlugDraft(e.target.value));
+                    }}
                     placeholder={initialSettings.suggestedSlug}
-                    className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+                    className={cn(
+                      "border-0 bg-transparent focus-visible:ring-0",
+                      !canCustomizeSlug && "text-muted-foreground cursor-default select-all",
+                    )}
                   />
                 </div>
 
@@ -386,35 +420,62 @@ export function ProjectSharePanel({
                 </Button>
               </div>
 
-              {slugCheckState.status === "checking" && (
-                <p className="text-tertiary type-caption inline-flex items-center gap-1.5">
-                  <Loader2 className="size-3 animate-spin" />
-                  <span>Checking availability...</span>
-                </p>
-              )}
-              {slugCheckState.status === "available" && (
-                <p
-                  data-testid="slug-availability-status"
-                  className="text-success type-caption inline-flex items-center gap-1.5"
-                >
-                  <Check className="size-3.5" />
-                  <span>{slugCheckState.message}</span>
-                </p>
-              )}
-              {slugCheckState.status === "unavailable" && (
-                <p
-                  data-testid="slug-availability-status"
-                  className="text-destructive type-caption inline-flex items-center gap-1.5"
-                >
-                  <AlertCircle className="size-3.5" />
-                  <span>{slugCheckState.message}</span>
-                </p>
+              {!canCustomizeSlug ? (
+                <div className="border-border/70 bg-surface/70 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5">
+                  <span className="text-muted-foreground type-caption inline-flex items-center gap-1.5">
+                    <Lock className="text-primary size-3.5 shrink-0" />
+                    <span>
+                      Auto-generated share link active · Custom URL slugs (/p/your-custom-slug)
+                      require Pro or Teams.
+                    </span>
+                  </span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    data-testid="unlock-custom-url-button"
+                    onClick={() => {
+                      setUpgradeTopic("custom_slug");
+                      setUpgradeOpen(true);
+                    }}
+                  >
+                    <Sparkles className="size-3.5" />
+                    <span>Unlock Custom URL</span>
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {slugCheckState.status === "checking" && (
+                    <p className="text-tertiary type-caption inline-flex items-center gap-1.5">
+                      <Loader2 className="size-3 animate-spin" />
+                      <span>Checking availability...</span>
+                    </p>
+                  )}
+                  {slugCheckState.status === "available" && (
+                    <p
+                      data-testid="slug-availability-status"
+                      className="text-success type-caption inline-flex items-center gap-1.5"
+                    >
+                      <Check className="size-3.5" />
+                      <span>{slugCheckState.message}</span>
+                    </p>
+                  )}
+                  {slugCheckState.status === "unavailable" && (
+                    <p
+                      data-testid="slug-availability-status"
+                      className="text-destructive type-caption inline-flex items-center gap-1.5"
+                    >
+                      <AlertCircle className="size-3.5" />
+                      <span>{slugCheckState.message}</span>
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </section>
 
           {/* Visibility Options Card */}
-          <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-7">
+          <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-7">
             <div className="flex flex-col gap-1">
               <h2 className="text-foreground type-heading-m">Access &amp; Discovery</h2>
               <p className="text-muted-foreground type-body-s">
@@ -536,7 +597,7 @@ export function ProjectSharePanel({
                   !canPublishInSpace ||
                   isSubmitting ||
                   isUnpublishing ||
-                  slugCheckState.status === "unavailable" ||
+                  (canCustomizeSlug && slugCheckState.status === "unavailable") ||
                   (requiresPrivateAck && !publicAckChecked)
                 }
                 onClick={handlePublish}
@@ -554,7 +615,7 @@ export function ProjectSharePanel({
 
         {/* Right Column: Social OG Preview + Plan Branding Card */}
         <div className="flex flex-col gap-6 lg:col-span-5">
-          <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-6 sm:p-7">
+          <section className="border-border/80 bg-elevated flex flex-col gap-4 rounded-3xl border p-6 sm:p-7">
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-col gap-0.5">
                 <h2 className="text-foreground type-heading-s">Social Share Preview</h2>
@@ -622,7 +683,7 @@ export function ProjectSharePanel({
             </div>
           </section>
 
-          <section className="border-border/70 bg-wash-panel shadow-card flex flex-col gap-3 rounded-3xl border p-6 sm:p-7">
+          <section className="border-border/70 bg-wash-panel flex flex-col gap-3 rounded-3xl border p-6 sm:p-7">
             <div className="flex items-center justify-between gap-2">
               <span className="text-foreground type-body-s-strong inline-flex items-center gap-2">
                 <Sparkles className="text-primary size-4" />
@@ -635,15 +696,18 @@ export function ProjectSharePanel({
               <>
                 <p className="text-muted-foreground type-body-s">
                   Free plan live shareable links and PNG/PDF exports include subtle &ldquo;Made with
-                  Casefolio&rdquo; branding. Upgrade to Pro to remove watermarks and unlock 2× PNG
-                  &amp; Behance exports.
+                  Casefolio&rdquo; branding. Upgrade to Pro ($7.99/mo · 2 months free on annual) to
+                  remove watermarks and unlock custom URLs, 2× PNG &amp; Behance exports.
                 </p>
                 <div>
                   <Button
                     type="button"
                     variant="secondary"
                     size="sm"
-                    onClick={() => setUpgradeOpen(true)}
+                    onClick={() => {
+                      setUpgradeTopic("branding");
+                      setUpgradeOpen(true);
+                    }}
                   >
                     Upgrade to Pro
                   </Button>
@@ -652,9 +716,8 @@ export function ProjectSharePanel({
             ) : (
               <div className="flex flex-col gap-3">
                 <p className="text-muted-foreground type-body-s">
-                  {initialSettings.whiteLabelEnabled
-                    ? `Your PLUS workspace enables full White-Labeling — zero Casefolio branding on live links, OpenGraph cards, or PDF metadata${initialSettings.customDomain ? ` (Custom Domain: ${initialSettings.customDomain})` : ""}.`
-                    : `Your ${initialSettings.ownerPlan.toUpperCase()} workspace lets you hide the “Made with Casefolio” footer on public pages and exports.`}
+                  Your {initialSettings.ownerPlan === "team" ? "Teams" : "Pro"} workspace lets you
+                  hide the &ldquo;Made with Casefolio&rdquo; footer on public pages and exports.
                 </p>
                 <label className="text-foreground type-body-s flex items-center gap-2.5">
                   <input
@@ -676,8 +739,16 @@ export function ProjectSharePanel({
       <UpgradePromptDialog
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
-        featureTitle="Remove Casefolio branding"
-        featureDescription="Upgrade to Casefolio Pro to publish clean, unbranded case study URLs and export unbranded PDFs, 2x PNGs, and Behance image packs."
+        featureTitle={
+          upgradeTopic === "custom_slug"
+            ? "Unlock Custom Case Study URLs"
+            : "Remove Casefolio branding"
+        }
+        featureDescription={
+          upgradeTopic === "custom_slug"
+            ? "Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) or Teams to customize /p/your-custom-slug, rotate up to 10 active Case Studies, and export without watermarks."
+            : "Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) to publish unbranded custom URLs and export watermark-free PDFs, 2× PNGs, and Behance image packs."
+        }
       />
     </div>
   );
