@@ -230,6 +230,23 @@ export async function buildWorkspaceShellProps(
       activeOrganizationId: activeOrgId,
       activeWorkspaceName:
         activeWs.kind === "personal" ? "Personal Workspace" : activeWs.name,
+      activeWorkspaceOverview: {
+        kind: activeWs.kind,
+        role: activeWs.role,
+        paidSeats: activeWs.paidSeats,
+        usage: {
+          activeProjects: activeWs.usage.activeProjects,
+          publishedProjects: activeWs.usage.publishedProjects,
+          storageBytes: activeWs.usage.storageBytes,
+          monthlyExportsUsed: activeWs.usage.monthlyExportsUsed,
+        },
+        quotas: {
+          activeProjectsLimit: activeWs.quotas.activeProjectsLimit,
+          publishedProjectsLimit: activeWs.quotas.publishedProjectsLimit,
+          storageBytesLimit: activeWs.quotas.storageBytesLimit,
+          monthlyExportsLimit: activeWs.quotas.monthlyExportsLimit,
+        },
+      },
       workspaces: switcher.workspaces.map((ws) => ({
         workspaceId: ws.workspaceId,
         kind: ws.kind,
@@ -237,6 +254,7 @@ export async function buildWorkspaceShellProps(
         organizationId: ws.organizationId,
         plan: ws.plan,
         paidSeats: ws.paidSeats,
+        role: ws.role,
       })),
       initialUnreadNotifications: notificationsSummary.unreadCount,
       initialNotifications: notificationsSummary.notifications,

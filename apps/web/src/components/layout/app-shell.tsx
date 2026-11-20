@@ -52,11 +52,23 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { PaidPlanTier } from "@/lib/billing/plans";
+import { isUnlimitedProjectsLimit, type PaidPlanTier } from "@/lib/billing/plans";
 import type { NotificationItem } from "@/lib/notifications/types";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "cf-sidebar-collapsed";
+
+function formatBytesCompact(bytes: number): string {
+  const gb = 1024 * 1024 * 1024;
+  const mb = 1024 * 1024;
+  if (bytes >= gb) {
+    return `${(bytes / gb).toFixed(bytes % gb === 0 ? 0 : 1)} GB`;
+  }
+  if (bytes >= mb) {
+    return `${Math.round(bytes / mb)} MB`;
+  }
+  return `${Math.max(0, Math.round(bytes / 1024))} KB`;
+}
 
 export interface WorkspaceNavItem {
   label: string;
@@ -83,6 +95,25 @@ export interface AppShellWorkspaceOption {
   organizationId: string | null;
   plan: PlanTier;
   paidSeats: number;
+  role?: string | null;
+}
+
+export interface AppShellActiveWorkspaceOverview {
+  kind: "personal" | "team";
+  role: string | null;
+  paidSeats: number;
+  usage: {
+    activeProjects: number;
+    publishedProjects: number;
+    storageBytes: number;
+    monthlyExportsUsed: number;
+  };
+  quotas: {
+    activeProjectsLimit: number;
+    publishedProjectsLimit: number;
+    storageBytesLimit: number;
+    monthlyExportsLimit: number;
+  };
 }
 
 export interface AppShellProps {
@@ -110,6 +141,7 @@ export interface AppShellProps {
   } | null;
   activeOrganizationId?: string | null;
   activeWorkspaceName?: string;
+  activeWorkspaceOverview?: AppShellActiveWorkspaceOverview | null;
   workspaces?: AppShellWorkspaceOption[];
   initialUnreadNotifications?: number;
   initialNotifications?: NotificationItem[];
@@ -299,6 +331,7 @@ export function AppShell({
   renewalGraceBanner = null,
   activeOrganizationId = null,
   activeWorkspaceName,
+  activeWorkspaceOverview = null,
   workspaces = [],
   initialUnreadNotifications = 0,
   initialNotifications = [],
@@ -447,7 +480,7 @@ export function AppShell({
 
             <BrandLogo href="/dashboard" subtitle="CASE STUDY BUILDER" />
 
-            {workspaces.length > 1 && activeWsOption && (
+            {activeWsOption && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -455,14 +488,14 @@ export function AppShell({
                     disabled={switchingWorkspace}
                     data-testid="shell-workspace-switcher"
                     aria-label="Switch active workspace"
-                    className="focus-visible:ring-ring/40 hidden max-w-72 items-center gap-2 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2 disabled:opacity-60 md:inline-flex"
+                    className="focus-visible:ring-ring/40 inline-flex max-w-52 items-center gap-2 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-border-strong)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2 disabled:opacity-60 sm:max-w-72"
                   >
                     {switchingWorkspace ? (
-                      <Loader2 className="size-3.5 shrink-0 animate-spin text-[var(--cf-royal-text)]" />
+                      <Loader2 className="size-3.5 shrink-0 animate-spin text-[var(--cf-text-secondary)]" />
                     ) : activeWsOption.kind === "team" ? (
-                      <Users className="size-3.5 shrink-0 text-[var(--cf-royal-text)]" />
+                      <Users className="size-3.5 shrink-0 text-[var(--cf-text-secondary)]" />
                     ) : (
-                      <Building2 className="size-3.5 shrink-0 text-[var(--cf-royal-text)]" />
+                      <Building2 className="size-3.5 shrink-0 text-[var(--cf-text-secondary)]" />
                     )}
                     <span className="truncate">
                       {activeWorkspaceName ??
@@ -470,13 +503,92 @@ export function AppShell({
                           ? "Personal Workspace"
                           : activeWsOption.name)}
                     </span>
-                    <span className="rounded bg-[var(--cf-royal-soft)] px-1.5 py-0.5 font-mono text-[0.625rem] font-bold text-[var(--cf-royal-text)]">
+                    <span className="hidden rounded border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-1.5 py-0.5 font-mono text-[0.625rem] font-semibold text-[var(--cf-text-secondary)] sm:inline-flex">
                       {formatWorkspaceBadgeText(activeWsOption)}
                     </span>
                     <ChevronDown className="size-3.5 shrink-0 text-[var(--cf-text-tertiary)]" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-68">
+                <DropdownMenuContent
+                  align="start"
+                  className="w-80 p-2"
+                  data-testid="shell-workspace-dropdown-content"
+                >
+                  {/* Active Workspace Summary + Quotas */}
+                  <div className="mb-1.5 flex flex-col gap-2.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <span className="truncate text-xs font-bold text-[var(--cf-text-primary)]">
+                          {activeWorkspaceName ??
+                            (activeWsOption.kind === "personal"
+                              ? "Personal Workspace"
+                              : activeWsOption.name)}
+                        </span>
+                        <span className="text-[0.6875rem] text-[var(--cf-text-secondary)]">
+                          {activeWsOption.kind === "personal"
+                            ? `Personal Workspace · ${activeWsOption.plan.toUpperCase()}`
+                            : activeWsOption.plan === "team" || activeWsOption.plan === "plus"
+                              ? `Teams · ${activeWsOption.paidSeats} ${activeWsOption.paidSeats === 1 ? "seat" : "seats"}`
+                              : "Team (Unfunded)"}
+                        </span>
+                      </div>
+                      {(activeWorkspaceOverview?.role ?? activeWsOption.role) && (
+                        <span className="shrink-0 rounded border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 py-0.5 text-[0.625rem] font-semibold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+                          {activeWorkspaceOverview?.role ?? activeWsOption.role}
+                        </span>
+                      )}
+                    </div>
+
+                    {activeWorkspaceOverview && (
+                      <div
+                        data-testid="shell-workspace-quotas"
+                        className="grid grid-cols-2 gap-1.5 text-[0.6875rem]"
+                      >
+                        <div className="flex items-center justify-between gap-1 rounded border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 py-1">
+                          <span className="text-[var(--cf-text-tertiary)]">Active</span>
+                          <span className="font-mono font-semibold text-[var(--cf-text-primary)]">
+                            {activeWorkspaceOverview.usage.activeProjects}/
+                            {isUnlimitedProjectsLimit(
+                              activeWorkspaceOverview.quotas.activeProjectsLimit,
+                            )
+                              ? "Unlimited"
+                              : activeWorkspaceOverview.quotas.activeProjectsLimit}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-1 rounded border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 py-1">
+                          <span className="text-[var(--cf-text-tertiary)]">Published</span>
+                          <span className="font-mono font-semibold text-[var(--cf-text-primary)]">
+                            {activeWorkspaceOverview.usage.publishedProjects}/
+                            {isUnlimitedProjectsLimit(
+                              activeWorkspaceOverview.quotas.publishedProjectsLimit,
+                            )
+                              ? "Unlimited"
+                              : activeWorkspaceOverview.quotas.publishedProjectsLimit}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-1 rounded border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 py-1">
+                          <span className="text-[var(--cf-text-tertiary)]">Storage</span>
+                          <span className="font-mono font-semibold text-[var(--cf-text-primary)]">
+                            {formatBytesCompact(activeWorkspaceOverview.usage.storageBytes)}/
+                            {formatBytesCompact(
+                              activeWorkspaceOverview.quotas.storageBytesLimit,
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-1 rounded border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 py-1">
+                          <span className="text-[var(--cf-text-tertiary)]">Exports</span>
+                          <span className="font-mono font-semibold text-[var(--cf-text-primary)]">
+                            {activeWorkspaceOverview.usage.monthlyExportsUsed}/
+                            {activeWorkspaceOverview.quotas.monthlyExportsLimit}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="px-2 py-1 text-[0.65rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+                    Switch workspace
+                  </div>
                   {workspaces.map((ws) => {
                     const isSelected =
                       (ws.organizationId ?? null) === (activeOrganizationId ?? null);
@@ -486,7 +598,7 @@ export function AppShell({
                       <DropdownMenuItem
                         key={ws.workspaceId}
                         onSelect={() => void handleSwitchWorkspace(ws.organizationId)}
-                        className="flex items-center justify-between gap-2"
+                        className="flex items-center justify-between gap-2 rounded-lg"
                       >
                         <div className="flex min-w-0 items-center gap-2">
                           {ws.kind === "team" ? (
@@ -494,7 +606,7 @@ export function AppShell({
                           ) : (
                             <Building2 className="size-3.5 shrink-0 text-[var(--cf-text-tertiary)]" />
                           )}
-                          <span className="truncate font-medium">{displayTitle}</span>
+                          <span className="truncate text-xs font-medium">{displayTitle}</span>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
                           <span className="rounded bg-[var(--cf-bg-surface)] px-1.5 py-0.5 font-mono text-[0.625rem] font-semibold text-[var(--cf-text-secondary)]">
@@ -506,10 +618,16 @@ export function AppShell({
                     );
                   })}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/account/team" className="flex items-center gap-2">
+                  <DropdownMenuItem asChild className="rounded-lg">
+                    <Link href="/account/team" className="flex items-center gap-2 text-xs">
                       <Users className="size-3.5" />
-                      <span>Team &amp; invitations</span>
+                      <span>Manage team &amp; seats</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="rounded-lg">
+                    <Link href="/account/billing" className="flex items-center gap-2 text-xs">
+                      <CreditCard className="size-3.5" />
+                      <span>Billing &amp; plan</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

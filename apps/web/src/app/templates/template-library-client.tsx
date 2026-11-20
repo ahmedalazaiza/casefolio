@@ -175,7 +175,7 @@ export function TemplateLibraryClient({
           <button
             type="button"
             onClick={resetFilters}
-            className="focus-visible:ring-ring/40 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--cf-royal-text)] transition-colors outline-none hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--cf-text-secondary)] transition-colors outline-none hover:bg-[var(--cf-bg-surface)] hover:text-[var(--cf-text-primary)] focus-visible:ring-2"
           >
             <RotateCcw className="size-3" />
             <span>Reset filters</span>
@@ -199,7 +199,7 @@ export function TemplateLibraryClient({
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="focus-visible:ring-ring/40 h-10 w-full rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pr-8 pl-9 text-xs text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-royal)] focus-visible:bg-[var(--cf-bg-elevated)] focus-visible:ring-2 sm:text-sm"
+            className="focus-visible:ring-ring/40 h-9 w-full rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pr-8 pl-9 text-xs text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-border-strong)] focus-visible:bg-[var(--cf-bg-elevated)] focus-visible:ring-2"
           />
           {searchQuery.trim().length > 0 && (
             <button
@@ -233,9 +233,9 @@ export function TemplateLibraryClient({
                 aria-pressed={active}
                 onClick={() => setTypeFilter(opt.value)}
                 className={cn(
-                  "focus-visible:ring-ring/40 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
+                  "focus-visible:ring-ring/40 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
                   active
-                    ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                    ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
                     : "text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-surface)] hover:text-[var(--cf-text-primary)]",
                 )}
               >
@@ -259,7 +259,7 @@ export function TemplateLibraryClient({
         <div
           role="group"
           aria-label="Filter by plan tier"
-          className="grid grid-cols-3 gap-1 rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] p-1"
+          className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] p-1"
         >
           {TIER_OPTIONS.map((opt) => {
             const active = tierFilter === opt.value;
@@ -271,11 +271,9 @@ export function TemplateLibraryClient({
                 aria-pressed={active}
                 onClick={() => setTierFilter(opt.value)}
                 className={cn(
-                  "focus-visible:ring-ring/40 inline-flex items-center justify-center gap-1 rounded-xs px-1.5 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap transition-colors outline-none focus-visible:ring-2",
+                  "focus-visible:ring-ring/40 inline-flex items-center justify-center gap-1 rounded-md px-1.5 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap transition-colors outline-none focus-visible:ring-2",
                   active
-                    ? isProOption
-                      ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
-                      : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                    ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
                     : "text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-elevated)] hover:text-[var(--cf-text-primary)]",
                 )}
               >
@@ -304,9 +302,9 @@ export function TemplateLibraryClient({
             aria-pressed={categoryFilter === "all"}
             onClick={() => setCategoryFilter("all")}
             className={cn(
-              "focus-visible:ring-ring/40 flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
+              "focus-visible:ring-ring/40 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
               categoryFilter === "all"
-                ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
                 : "text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-surface)] hover:text-[var(--cf-text-primary)]",
             )}
           >
@@ -322,9 +320,9 @@ export function TemplateLibraryClient({
                 aria-pressed={active}
                 onClick={() => setCategoryFilter(cat.slug)}
                 className={cn(
-                  "focus-visible:ring-ring/40 flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
+                  "focus-visible:ring-ring/40 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
                   active
-                    ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                    ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
                     : "text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-surface)] hover:text-[var(--cf-text-primary)]",
                 )}
               >
@@ -377,7 +375,7 @@ export function TemplateLibraryClient({
               data-template-slug={item.slug}
               data-tier={item.tier}
               data-locked={isLocked ? "true" : "false"}
-              className="group flex flex-col justify-between gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3.5 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
+              className="group flex flex-col justify-between gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--cf-border-strong)] hover:shadow-[var(--cf-shadow-hover)]"
             >
               <div className="flex flex-col gap-3.5">
                 {/* Architectural Spec Frame */}
@@ -432,7 +430,7 @@ export function TemplateLibraryClient({
                 {/* Metadata & Palette Strip */}
                 <div className="flex flex-col gap-1.5 px-0.5">
                   <div className="flex items-center justify-between gap-2">
-                    <h2 className="truncate text-base font-bold tracking-tight text-[var(--cf-text-primary)] transition-colors group-hover:text-[var(--cf-royal-text)]">
+                    <h2 className="v3-dashboard-card-title truncate text-[var(--cf-text-primary)]">
                       {item.name}
                     </h2>
 
@@ -469,7 +467,7 @@ export function TemplateLibraryClient({
                 <button
                   type="button"
                   onClick={() => setPreviewItem(item)}
-                  className="focus-visible:ring-ring/40 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-border-strong)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
                 >
                   <Eye className="size-3.5 shrink-0" />
                   <span>Preview</span>
@@ -484,7 +482,7 @@ export function TemplateLibraryClient({
                         setUpgradeTemplateName(item.name);
                       }
                     }}
-                    className="focus-visible:ring-ring/40 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-[var(--cf-royal)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-on-royal)] transition-colors outline-none hover:bg-[var(--cf-royal-hover)] focus-visible:ring-2"
+                    className="focus-visible:ring-ring/40 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--cf-ink)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-on-ink)] transition-opacity outline-none hover:opacity-90 focus-visible:ring-2"
                   >
                     <Lock className="size-3 shrink-0" />
                     <span>Upgrade for Pro</span>
@@ -500,7 +498,7 @@ export function TemplateLibraryClient({
                         surface: "library_card",
                       })
                     }
-                    className="focus-visible:ring-ring/40 group/btn inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-[var(--cf-royal)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-on-royal)] transition-colors outline-none hover:bg-[var(--cf-royal-hover)] focus-visible:ring-2"
+                    className="focus-visible:ring-ring/40 group/btn inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--cf-ink)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-on-ink)] transition-opacity outline-none hover:opacity-90 focus-visible:ring-2"
                   >
                     <span>Use template</span>
                     <ArrowRight className="size-3.5 shrink-0 transition-transform duration-200 group-hover/btn:translate-x-0.5" />
@@ -687,8 +685,8 @@ export function TemplateLibraryClient({
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge
-              tone={isTeamsPlan ? "teams" : canUseProTemplates ? "pro" : "accent"}
-              className="w-fit"
+              tone="neutral"
+              className="w-fit border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)]"
             >
               {isTeamsPlan
                 ? "Teams plan"
@@ -702,165 +700,10 @@ export function TemplateLibraryClient({
           </div>
         </header>
 
-        {/* Unified Horizontal Dashboard Filter Toolbar */}
-        <section
-          aria-label="Template library filters"
-          data-testid="dashboard-template-filter-toolbar"
-          className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3"
-        >
-          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-            {/* Platform Filter Pills */}
-            <div
-              role="group"
-              aria-label="Filter by project type"
-              className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
-            >
-              {TYPE_OPTIONS.map((opt) => {
-                const active = typeFilter === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setTypeFilter(opt.value)}
-                    className={cn(
-                      "focus-visible:ring-ring/40 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
-                      active
-                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                        : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                    )}
-                  >
-                    {opt.value !== "all" ? (
-                      <TypeIcon type={opt.value} />
-                    ) : (
-                      <LayoutTemplate className="size-3.5" aria-hidden="true" />
-                    )}
-                    <span>{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Plan Tier Filter Pills */}
-              <div
-                role="group"
-                aria-label="Filter by plan tier"
-                className="inline-flex items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
-              >
-                {TIER_OPTIONS.map((opt) => {
-                  const active = tierFilter === opt.value;
-                  const isProOption = opt.value === "pro";
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => setTierFilter(opt.value)}
-                      className={cn(
-                        "focus-visible:ring-ring/40 inline-flex items-center justify-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors outline-none focus-visible:ring-2",
-                        active
-                          ? isProOption
-                            ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
-                            : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                          : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                      )}
-                    >
-                      {isProOption && (
-                        <Sparkles className="size-3 shrink-0" aria-hidden="true" />
-                      )}
-                      <span>{opt.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Search Input */}
-              <div className="relative flex min-w-44 flex-1 items-center sm:w-52 sm:flex-initial">
-                <Search
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-3 size-3.5 text-[var(--cf-text-tertiary)]"
-                />
-                <input
-                  type="search"
-                  aria-label="Search templates"
-                  placeholder="Search templates..."
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  className="focus-visible:ring-ring/40 h-9 w-full rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pr-7 pl-8 text-xs text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-royal)] focus-visible:bg-[var(--cf-bg-elevated)] focus-visible:ring-2"
-                />
-                {searchQuery.trim().length > 0 && (
-                  <button
-                    type="button"
-                    aria-label="Clear template search"
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-1.5 inline-flex size-6 items-center justify-center rounded-md text-[var(--cf-text-tertiary)] transition-colors hover:bg-[var(--cf-bg-surface)] hover:text-[var(--cf-text-primary)]"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="focus-visible:ring-ring/40 inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-semibold text-[var(--cf-royal-text)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] focus-visible:ring-2"
-                >
-                  <RotateCcw className="size-3" />
-                  <span>Reset filters</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Row 2: Category Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--cf-border-subtle)] pt-2">
-            <span className="text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-              Category
-            </span>
-            <div
-              role="group"
-              aria-label="Filter by category"
-              className="flex flex-wrap items-center gap-1"
-            >
-              <button
-                type="button"
-                aria-pressed={categoryFilter === "all"}
-                onClick={() => setCategoryFilter("all")}
-                className={cn(
-                  "focus-visible:ring-ring/40 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
-                  categoryFilter === "all"
-                    ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                    : "bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                )}
-              >
-                All categories
-              </button>
-              {categories.map((cat) => {
-                const active = categoryFilter === cat.slug;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setCategoryFilter(cat.slug)}
-                    className={cn(
-                      "focus-visible:ring-ring/40 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
-                      active
-                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                        : "bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                    )}
-                  >
-                    {cat.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <div className="min-w-0">{catalogGrid}</div>
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[14.5rem_minmax(0,1fr)] xl:grid-cols-[15.5rem_minmax(0,1fr)]">
+          {filterDock}
+          <div className="min-w-0">{catalogGrid}</div>
+        </div>
         {modals}
       </div>
     );

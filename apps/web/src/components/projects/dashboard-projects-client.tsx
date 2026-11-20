@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   Archive,
   ArchiveRestore,
-  Building2,
   Copy,
   Download,
   ExternalLink,
@@ -50,7 +49,6 @@ import {
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { isUnlimitedProjectsLimit } from "@/lib/billing/plans";
 import {
   deleteProjectAction,
   duplicateProjectAction,
@@ -109,18 +107,6 @@ function formatProjectTypeLabel(type: ProjectType): string {
   if (type === "web") return "Website";
   if (type === "both") return "Mobile + Web";
   return "Mobile app";
-}
-
-function formatBytesCompact(bytes: number): string {
-  const gb = 1024 * 1024 * 1024;
-  const mb = 1024 * 1024;
-  if (bytes >= gb) {
-    return `${(bytes / gb).toFixed(bytes % gb === 0 ? 0 : 1)} GB`;
-  }
-  if (bytes >= mb) {
-    return `${Math.round(bytes / mb)} MB`;
-  }
-  return `${Math.max(0, Math.round(bytes / 1024))} KB`;
 }
 
 function formatRelativeEdited(iso: string, nowMs: number | null): string {
@@ -668,207 +654,126 @@ export function DashboardProjectsClient({
 
       <div
         data-testid="dashboard-workspace-bar"
-        className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3 sm:px-4 sm:py-3"
+        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-2.5"
       >
-        {/* Top Row: Active Team / Workspace Switcher + Quick Team Link + Single-Line Quota Strip */}
-        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]">
-                {activeWorkspace.kind === "team" ? (
-                  <Users className="size-3.5 shrink-0" />
-                ) : (
-                  <Building2 className="size-3.5 shrink-0" />
-                )}
-              </span>
-              <label htmlFor="dashboard-workspace-select" className="sr-only">
-                Active workspace
-              </label>
-              <select
-                id="dashboard-workspace-select"
-                data-testid="dashboard-workspace-select"
-                disabled={switchingWorkspace}
-                value={activeWorkspace.organizationId ?? "personal"}
-                onChange={(e) =>
-                  handleSwitchWorkspace(e.target.value === "personal" ? null : e.target.value)
-                }
-                className="focus-visible:ring-ring/40 h-8 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-semibold text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
-              >
-                {workspaceContext.workspaces.map((ws) => (
-                  <option key={ws.workspaceId} value={ws.organizationId ?? "personal"}>
-                    {ws.kind === "personal"
-                      ? `Personal Workspace (${ws.plan.toUpperCase()})`
-                      : ws.plan === "team" || ws.plan === "plus"
-                        ? `${ws.name} · Teams (${ws.paidSeats} ${ws.paidSeats === 1 ? "seat" : "seats"})`
-                        : `${ws.name} · Team (Unfunded)`}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Visually hidden select retained for E2E automation while UI workspace switcher + quotas live in Top Navbar */}
+        <label htmlFor="dashboard-workspace-select" className="sr-only">
+          Active workspace
+        </label>
+        <select
+          id="dashboard-workspace-select"
+          data-testid="dashboard-workspace-select"
+          disabled={switchingWorkspace}
+          value={activeWorkspace.organizationId ?? "personal"}
+          onChange={(e) =>
+            handleSwitchWorkspace(e.target.value === "personal" ? null : e.target.value)
+          }
+          className="sr-only"
+        >
+          {workspaceContext.workspaces.map((ws) => (
+            <option key={ws.workspaceId} value={ws.organizationId ?? "personal"}>
+              {ws.kind === "personal"
+                ? `Personal Workspace (${ws.plan.toUpperCase()})`
+                : ws.plan === "team" || ws.plan === "plus"
+                  ? `${ws.name} · Teams (${ws.paidSeats} ${ws.paidSeats === 1 ? "seat" : "seats"})`
+                  : `${ws.name} · Team (Unfunded)`}
+            </option>
+          ))}
+        </select>
 
-            {activeWorkspace.kind === "team" && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {activeWorkspace.role && (
-                  <span className="rounded-md bg-[var(--cf-royal-soft)] px-2 py-0.5 text-[0.6875rem] font-semibold text-[var(--cf-royal-text)] capitalize">
-                    {activeWorkspace.role}
-                  </span>
-                )}
-                <Link
-                  href="/account/team"
-                  className="inline-flex h-7 items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-[0.6875rem] font-semibold text-[var(--cf-text-secondary)] transition-colors hover:border-[var(--cf-royal)] hover:text-[var(--cf-royal-text)]"
-                >
-                  <Users className="size-3 text-[var(--cf-royal-text)]" />
-                  <span>Manage team &amp; seats</span>
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Numeric Quota Meters (`80%` soft warning / `100%` hard cap — Spec §5.9) */}
-          <div className="flex flex-wrap items-center gap-1.5 text-[0.6875rem] text-[var(--cf-text-secondary)]">
-            <span
-              className={cn(
-                "inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-1 whitespace-nowrap",
-                !isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit) &&
-                  activeWorkspace.usage.activeProjects >= activeWorkspace.quotas.activeProjectsLimit
-                  ? "text-destructive font-semibold"
-                  : !isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit) &&
-                      activeWorkspace.usage.activeProjects /
-                        Math.max(1, activeWorkspace.quotas.activeProjectsLimit) >=
-                        0.8
-                    ? "text-warning font-semibold"
-                    : "",
-              )}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+            Spaces
+          </span>
+          {spaces.length > 0 && (
+            <div
+              role="group"
+              aria-label="Filter by space"
+              className="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
             >
-              Active: {activeWorkspace.usage.activeProjects}/
-              {isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit)
-                ? "Unlimited"
-                : activeWorkspace.quotas.activeProjectsLimit}
-            </span>
-            <span className="inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-1 whitespace-nowrap">
-              Published: {activeWorkspace.usage.publishedProjects}/
-              {isUnlimitedProjectsLimit(activeWorkspace.quotas.publishedProjectsLimit)
-                ? "Unlimited"
-                : activeWorkspace.quotas.publishedProjectsLimit}
-            </span>
-            <span
-              className={cn(
-                "inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-1 whitespace-nowrap",
-                activeWorkspace.usage.storageBytes >= activeWorkspace.quotas.storageBytesLimit
-                  ? "text-destructive font-semibold"
-                  : activeWorkspace.usage.storageBytes /
-                        Math.max(1, activeWorkspace.quotas.storageBytesLimit) >=
-                      0.8
-                    ? "text-warning font-semibold"
-                    : "",
-              )}
-            >
-              Storage: {formatBytesCompact(activeWorkspace.usage.storageBytes)}/
-              {formatBytesCompact(activeWorkspace.quotas.storageBytesLimit)}
-            </span>
-            <span className="inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-1 whitespace-nowrap">
-              Exports: {activeWorkspace.usage.monthlyExportsUsed}/
-              {activeWorkspace.quotas.monthlyExportsLimit}
-            </span>
-          </div>
-        </div>
-
-        {/* Bottom Row: Spaces Filter Rail + Space Visibility & Creation Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--cf-border-subtle)] pt-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-              Spaces
-            </span>
-            {spaces.length > 0 && (
-              <div
-                role="group"
-                aria-label="Filter by space"
-                className="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
+              <button
+                type="button"
+                onClick={() => setSpaceFilter("all")}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
+                  spaceFilter === "all"
+                    ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
+                    : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                )}
               >
+                All visible spaces
+              </button>
+              {spaces.map((sp) => (
                 <button
+                  key={sp.id}
                   type="button"
-                  onClick={() => setSpaceFilter("all")}
+                  onClick={() => setSpaceFilter(sp.id)}
                   className={cn(
-                    "rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
-                    spaceFilter === "all"
-                      ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
+                    spaceFilter === sp.id
+                      ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
                       : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                   )}
                 >
-                  All visible spaces
-                </button>
-                {spaces.map((sp) => (
-                  <button
-                    key={sp.id}
-                    type="button"
-                    onClick={() => setSpaceFilter(sp.id)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
-                      spaceFilter === sp.id
-                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                        : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                    )}
-                  >
-                    {sp.visibility === "private" ? (
-                      <Lock className="size-3" />
-                    ) : (
-                      <Users className="size-3" />
-                    )}
-                    <span>{sp.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {activeWorkspace.kind === "team" &&
-              selectedSpaceObj &&
-              (selectedSpaceObj.isMine ||
-                activeWorkspace.role === "owner" ||
-                activeWorkspace.role === "admin") && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  data-testid="dashboard-transition-space-button"
-                  className="h-7 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs"
-                  onClick={() => {
-                    setTransitionSpaceTarget(selectedSpaceObj);
-                    setTransitionConfirmed(false);
-                    setTransitionError(null);
-                  }}
-                >
-                  {selectedSpaceObj.visibility === "private" ? (
-                    <>
-                      <Users className="size-3" />
-                      Make Shared
-                    </>
+                  {sp.visibility === "private" ? (
+                    <Lock className="size-3" />
                   ) : (
-                    <>
-                      <Lock className="size-3" />
-                      Make Private
-                    </>
+                    <Users className="size-3" />
                   )}
-                </Button>
-              )}
+                  <span>{sp.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-testid="dashboard-create-space-button"
-              className="h-7 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs"
-              onClick={() => {
-                setNewSpaceVisibility("private");
-                setCreateSpaceError(null);
-                setCreateSpaceOpen(true);
-              }}
-            >
-              <FolderPlus className="size-3" />
-              New space
-            </Button>
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {activeWorkspace.kind === "team" &&
+            selectedSpaceObj &&
+            (selectedSpaceObj.isMine ||
+              activeWorkspace.role === "owner" ||
+              activeWorkspace.role === "admin") && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid="dashboard-transition-space-button"
+                className="h-7 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs"
+                onClick={() => {
+                  setTransitionSpaceTarget(selectedSpaceObj);
+                  setTransitionConfirmed(false);
+                  setTransitionError(null);
+                }}
+              >
+                {selectedSpaceObj.visibility === "private" ? (
+                  <>
+                    <Users className="size-3" />
+                    Make Shared
+                  </>
+                ) : (
+                  <>
+                    <Lock className="size-3" />
+                    Make Private
+                  </>
+                )}
+              </Button>
+            )}
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="dashboard-create-space-button"
+            className="h-7 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs"
+            onClick={() => {
+              setNewSpaceVisibility("private");
+              setCreateSpaceError(null);
+              setCreateSpaceOpen(true);
+            }}
+          >
+            <FolderPlus className="size-3" />
+            New space
+          </Button>
         </div>
       </div>
     </div>
@@ -1116,28 +1021,16 @@ export function DashboardProjectsClient({
           </div>
         )}
 
-        <header className="v3-pattern-grid relative flex flex-col gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex flex-col gap-1">
-            <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
-              Case Study Builder
-            </Eyebrow>
-            <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
-              Your case studies
-            </h1>
-            <p className="text-xs text-[var(--cf-text-secondary)] sm:text-sm">
-              Turn finished projects into polished, publishable stories.
-            </p>
-          </div>
-
-          <Link
-            href={createProjectHref}
-            className="v3-btn-primary h-9 w-fit px-3.5 py-2 text-xs font-semibold"
-          >
-            <span>New project</span>
-            <span className="inline-flex size-5 items-center justify-center rounded bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-              <Plus className="size-3" />
-            </span>
-          </Link>
+        <header className="v3-pattern-grid relative flex flex-col gap-1 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+          <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
+            Case Study Builder
+          </Eyebrow>
+          <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
+            Your case studies
+          </h1>
+          <p className="text-xs text-[var(--cf-text-secondary)] sm:text-sm">
+            Turn finished projects into polished, publishable stories.
+          </p>
         </header>
 
         <section
@@ -1354,7 +1247,7 @@ export function DashboardProjectsClient({
                 className={cn(
                   "focus-visible:ring-ring/40 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
                   active
-                    ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                    ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
                     : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                 )}
               >

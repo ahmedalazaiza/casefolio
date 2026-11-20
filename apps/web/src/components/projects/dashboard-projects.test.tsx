@@ -61,6 +61,7 @@ describe("DashboardProjectsClient (C-1004 · Figma 2:2003 / 2:2172 / 2:2980)", (
     render(<DashboardProjectsClient initialProjects={[]} />);
 
     expect(screen.getByTestId("dashboard-empty-state")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^New project$/i })).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
         name: "Your first case study starts here",
@@ -105,6 +106,9 @@ describe("DashboardProjectsClient (C-1004 · Figma 2:2003 / 2:2172 / 2:2980)", (
     });
 
     render(<DashboardProjectsClient initialProjects={SAMPLE_PROJECTS} />);
+
+    // Header New project button appears when at least 1 project exists
+    expect(screen.getByRole("link", { name: /New project/i })).toBeInTheDocument();
 
     // Status badges rendered accurately
     expect(screen.getByText("Published")).toBeInTheDocument();
