@@ -668,14 +668,18 @@ export function DashboardProjectsClient({
 
       <div
         data-testid="dashboard-workspace-bar"
-        className="flex flex-col gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3.5"
+        className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3 sm:px-4 sm:py-3"
       >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {/* Workspace Switcher + Space Pills */}
-          <div className="flex flex-wrap items-center gap-2.5">
+        {/* Top Row: Active Team / Workspace Switcher + Quick Team Link + Single-Line Quota Strip */}
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
-              <span className="inline-flex size-8 items-center justify-center rounded-xl bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]">
-                <Building2 className="size-4 shrink-0" />
+              <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]">
+                {activeWorkspace.kind === "team" ? (
+                  <Users className="size-3.5 shrink-0" />
+                ) : (
+                  <Building2 className="size-3.5 shrink-0" />
+                )}
               </span>
               <label htmlFor="dashboard-workspace-select" className="sr-only">
                 Active workspace
@@ -688,7 +692,7 @@ export function DashboardProjectsClient({
                 onChange={(e) =>
                   handleSwitchWorkspace(e.target.value === "personal" ? null : e.target.value)
                 }
-                className="type-body-s-strong h-9 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-[var(--cf-text-primary)]"
+                className="focus-visible:ring-ring/40 h-8 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-semibold text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
               >
                 {workspaceContext.workspaces.map((ws) => (
                   <option key={ws.workspaceId} value={ws.organizationId ?? "personal"}>
@@ -702,98 +706,29 @@ export function DashboardProjectsClient({
               </select>
             </div>
 
-            {spaces.length > 0 && (
-              <div
-                role="group"
-                aria-label="Filter by space"
-                className="flex flex-wrap items-center gap-1 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1"
-              >
-                <button
-                  type="button"
-                  onClick={() => setSpaceFilter("all")}
-                  className={cn(
-                    "type-caption rounded-lg px-2.5 py-1 font-semibold transition-colors",
-                    spaceFilter === "all"
-                      ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                      : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                  )}
+            {activeWorkspace.kind === "team" && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {activeWorkspace.role && (
+                  <span className="rounded-md bg-[var(--cf-royal-soft)] px-2 py-0.5 text-[0.6875rem] font-semibold text-[var(--cf-royal-text)] capitalize">
+                    {activeWorkspace.role}
+                  </span>
+                )}
+                <Link
+                  href="/account/team"
+                  className="inline-flex h-7 items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-[0.6875rem] font-semibold text-[var(--cf-text-secondary)] transition-colors hover:border-[var(--cf-royal)] hover:text-[var(--cf-royal-text)]"
                 >
-                  All visible spaces
-                </button>
-                {spaces.map((sp) => (
-                  <button
-                    key={sp.id}
-                    type="button"
-                    onClick={() => setSpaceFilter(sp.id)}
-                    className={cn(
-                      "type-caption inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold transition-colors",
-                      spaceFilter === sp.id
-                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                        : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                    )}
-                  >
-                    {sp.visibility === "private" ? (
-                      <Lock className="size-3" />
-                    ) : (
-                      <Users className="size-3" />
-                    )}
-                    <span>{sp.name}</span>
-                  </button>
-                ))}
+                  <Users className="size-3 text-[var(--cf-royal-text)]" />
+                  <span>Manage team &amp; seats</span>
+                </Link>
               </div>
             )}
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-testid="dashboard-create-space-button"
-              onClick={() => {
-                setNewSpaceVisibility("private");
-                setCreateSpaceError(null);
-                setCreateSpaceOpen(true);
-              }}
-            >
-              <FolderPlus className="size-3.5" />
-              New space
-            </Button>
-
-            {activeWorkspace.kind === "team" &&
-              selectedSpaceObj &&
-              (selectedSpaceObj.isMine ||
-                activeWorkspace.role === "owner" ||
-                activeWorkspace.role === "admin") && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  data-testid="dashboard-transition-space-button"
-                  onClick={() => {
-                    setTransitionSpaceTarget(selectedSpaceObj);
-                    setTransitionConfirmed(false);
-                    setTransitionError(null);
-                  }}
-                >
-                  {selectedSpaceObj.visibility === "private" ? (
-                    <>
-                      <Users className="size-3.5" />
-                      Make Shared
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="size-3.5" />
-                      Make Private
-                    </>
-                  )}
-                </Button>
-              )}
           </div>
 
           {/* Numeric Quota Meters (`80%` soft warning / `100%` hard cap — Spec §5.9) */}
-          <div className="type-caption flex flex-wrap items-center gap-2 text-[var(--cf-text-secondary)]">
+          <div className="flex flex-wrap items-center gap-1.5 text-[0.6875rem] text-[var(--cf-text-secondary)]">
             <span
               className={cn(
-                "rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1",
+                "inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-1 whitespace-nowrap",
                 !isUnlimitedProjectsLimit(activeWorkspace.quotas.activeProjectsLimit) &&
                   activeWorkspace.usage.activeProjects >= activeWorkspace.quotas.activeProjectsLimit
                   ? "text-destructive font-semibold"
@@ -810,7 +745,7 @@ export function DashboardProjectsClient({
                 ? "Unlimited"
                 : activeWorkspace.quotas.activeProjectsLimit}
             </span>
-            <span className="rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1">
+            <span className="inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-1 whitespace-nowrap">
               Published: {activeWorkspace.usage.publishedProjects}/
               {isUnlimitedProjectsLimit(activeWorkspace.quotas.publishedProjectsLimit)
                 ? "Unlimited"
@@ -818,7 +753,7 @@ export function DashboardProjectsClient({
             </span>
             <span
               className={cn(
-                "rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1",
+                "inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-1 whitespace-nowrap",
                 activeWorkspace.usage.storageBytes >= activeWorkspace.quotas.storageBytesLimit
                   ? "text-destructive font-semibold"
                   : activeWorkspace.usage.storageBytes /
@@ -831,10 +766,108 @@ export function DashboardProjectsClient({
               Storage: {formatBytesCompact(activeWorkspace.usage.storageBytes)}/
               {formatBytesCompact(activeWorkspace.quotas.storageBytesLimit)}
             </span>
-            <span className="rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1">
+            <span className="inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-1 whitespace-nowrap">
               Exports: {activeWorkspace.usage.monthlyExportsUsed}/
               {activeWorkspace.quotas.monthlyExportsLimit}
             </span>
+          </div>
+        </div>
+
+        {/* Bottom Row: Spaces Filter Rail + Space Visibility & Creation Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--cf-border-subtle)] pt-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+              Spaces
+            </span>
+            {spaces.length > 0 && (
+              <div
+                role="group"
+                aria-label="Filter by space"
+                className="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
+              >
+                <button
+                  type="button"
+                  onClick={() => setSpaceFilter("all")}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
+                    spaceFilter === "all"
+                      ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                      : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                  )}
+                >
+                  All visible spaces
+                </button>
+                {spaces.map((sp) => (
+                  <button
+                    key={sp.id}
+                    type="button"
+                    onClick={() => setSpaceFilter(sp.id)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
+                      spaceFilter === sp.id
+                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                        : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                    )}
+                  >
+                    {sp.visibility === "private" ? (
+                      <Lock className="size-3" />
+                    ) : (
+                      <Users className="size-3" />
+                    )}
+                    <span>{sp.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {activeWorkspace.kind === "team" &&
+              selectedSpaceObj &&
+              (selectedSpaceObj.isMine ||
+                activeWorkspace.role === "owner" ||
+                activeWorkspace.role === "admin") && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  data-testid="dashboard-transition-space-button"
+                  className="h-7 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs"
+                  onClick={() => {
+                    setTransitionSpaceTarget(selectedSpaceObj);
+                    setTransitionConfirmed(false);
+                    setTransitionError(null);
+                  }}
+                >
+                  {selectedSpaceObj.visibility === "private" ? (
+                    <>
+                      <Users className="size-3" />
+                      Make Shared
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="size-3" />
+                      Make Private
+                    </>
+                  )}
+                </Button>
+              )}
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              data-testid="dashboard-create-space-button"
+              className="h-7 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs"
+              onClick={() => {
+                setNewSpaceVisibility("private");
+                setCreateSpaceError(null);
+                setCreateSpaceOpen(true);
+              }}
+            >
+              <FolderPlus className="size-3" />
+              New space
+            </Button>
           </div>
         </div>
       </div>
@@ -1049,14 +1082,14 @@ export function DashboardProjectsClient({
   // Empty state — Studio Stage + Numbered Bento Steps
   if (projects.length === 0) {
     return (
-      <div className="mx-auto flex max-w-6xl flex-col gap-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:gap-5">
         {workspaceBar}
 
         {isFreeLifetimeCreditExhausted && (
           <div
             role="status"
             data-testid="dashboard-free-lifetime-used-banner"
-            className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center"
+            className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-4 rounded-xl border p-3.5 sm:flex-row sm:items-center"
           >
             <div className="flex items-start gap-3">
               <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
@@ -1083,23 +1116,26 @@ export function DashboardProjectsClient({
           </div>
         )}
 
-        <header className="v3-pattern-grid relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
-          <div className="flex flex-col gap-2.5">
-            <Eyebrow className="w-fit">
+        <header className="v3-pattern-grid relative flex flex-col gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex flex-col gap-1">
+            <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
               Case Study Builder
             </Eyebrow>
-            <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
               Your case studies
             </h1>
-            <p className="v3-body-m text-[var(--cf-text-secondary)]">
+            <p className="text-xs text-[var(--cf-text-secondary)] sm:text-sm">
               Turn finished projects into polished, publishable stories.
             </p>
           </div>
 
-          <Link href={createProjectHref} className="v3-btn-primary w-fit py-2.5 pr-3 pl-5 text-sm">
+          <Link
+            href={createProjectHref}
+            className="v3-btn-primary h-9 w-fit px-3.5 py-2 text-xs font-semibold"
+          >
             <span>New project</span>
-            <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-              <Plus className="size-3.5" />
+            <span className="inline-flex size-5 items-center justify-center rounded bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+              <Plus className="size-3" />
             </span>
           </Link>
         </header>
@@ -1107,61 +1143,71 @@ export function DashboardProjectsClient({
         <section
           data-testid="dashboard-empty-state"
           aria-labelledby="empty-dashboard-heading"
-          className="v3-pattern-dots-light flex flex-col items-center justify-between gap-12 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center sm:px-14 sm:py-20"
+          className="v3-pattern-dots-light flex flex-col items-center justify-between gap-7 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-8 text-center sm:px-10 sm:py-10"
         >
-          <div className="flex flex-col items-center gap-6">
-            <div aria-hidden="true" className="grid w-full max-w-xs grid-cols-3 gap-2.5">
-              <div className="flex h-28 flex-col justify-between rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3 text-left">
-                <span className="font-mono text-xs font-bold text-[var(--cf-royal-text)]">01</span>
+          <div className="flex flex-col items-center gap-4">
+            <div aria-hidden="true" className="grid w-full max-w-64 grid-cols-3 gap-2">
+              <div className="flex h-20 flex-col justify-between rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-2.5 text-left">
+                <span className="font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+                  01
+                </span>
                 <span className="font-display text-xs font-bold text-[var(--cf-text-primary)]">
                   Template
                 </span>
               </div>
-              <div className="flex h-28 flex-col justify-between rounded-2xl bg-[var(--cf-royal)] p-3 text-left text-[var(--cf-text-on-royal)]">
-                <span className="font-mono text-xs font-bold text-[var(--cf-bg-accent)]">02</span>
+              <div className="flex h-20 flex-col justify-between rounded-xl bg-[var(--cf-royal)] p-2.5 text-left text-[var(--cf-text-on-royal)]">
+                <span className="font-mono text-[0.6875rem] font-bold text-[var(--cf-bg-accent)]">
+                  02
+                </span>
                 <span className="font-display text-xs font-bold">Screens</span>
               </div>
-              <div className="flex h-28 flex-col justify-between rounded-2xl bg-[var(--cf-bg-accent)] p-3 text-left text-[var(--cf-text-on-accent)]">
-                <span className="font-mono text-xs font-bold">03</span>
+              <div className="flex h-20 flex-col justify-between rounded-xl bg-[var(--cf-bg-accent)] p-2.5 text-left text-[var(--cf-text-on-accent)]">
+                <span className="font-mono text-[0.6875rem] font-bold">03</span>
                 <span className="font-display text-xs font-bold">Publish</span>
               </div>
             </div>
 
-            <div className="flex max-w-lg flex-col gap-2.5">
+            <div className="flex max-w-md flex-col gap-1.5">
               <h2
                 id="empty-dashboard-heading"
-                className="v3-heading-m text-[var(--cf-text-primary)]"
+                className="v3-dashboard-section-title text-[var(--cf-text-primary)]"
               >
                 Your first case study starts here
               </h2>
-              <p className="v3-body-m text-[var(--cf-text-secondary)]">
+              <p className="text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
                 Create a project, pick a curated Casefolio template, and drop in your screens.
                 Publish a live link or export high-resolution PNG and PDF files.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-              <Link href={createProjectHref} className="v3-btn-primary py-3 pr-3.5 pl-5 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-0.5">
+              <Link
+                href={createProjectHref}
+                className="v3-btn-primary h-9 px-4 py-2 text-xs font-semibold"
+              >
                 <span>Create your first project</span>
-                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                  <Plus className="size-3.5" />
+                <span className="inline-flex size-5 items-center justify-center rounded bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                  <Plus className="size-3" />
                 </span>
               </Link>
-              <Link href="/templates" className="v3-btn-secondary py-3 px-5 text-sm">
+              <Link
+                href="/templates"
+                className="v3-btn-secondary h-9 px-4 py-2 text-xs font-semibold"
+              >
                 Browse templates
               </Link>
             </div>
           </div>
 
-          <div className="grid w-full max-w-4xl grid-cols-1 gap-4 pt-2 text-left sm:grid-cols-3">
+          <div className="grid w-full max-w-4xl grid-cols-1 gap-3 text-left sm:grid-cols-3">
             {EMPTY_STATE_HINTS.map((hint, index) => (
               <div
                 key={hint.step}
-                className="flex flex-col gap-2.5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-5"
+                className="flex flex-col gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-4"
               >
                 <span
                   className={cn(
-                    "inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-xs font-bold tracking-wider uppercase",
+                    "inline-flex w-fit items-center rounded-md px-2 py-0.5 text-[0.6875rem] font-bold tracking-wider uppercase",
                     index === 1
                       ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
                       : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
@@ -1169,8 +1215,12 @@ export function DashboardProjectsClient({
                 >
                   {hint.step}
                 </span>
-                <h3 className="v3-heading-s text-[var(--cf-text-primary)]">{hint.title}</h3>
-                <p className="v3-body-s text-[var(--cf-text-secondary)]">{hint.description}</p>
+                <h3 className="v3-dashboard-card-title text-[var(--cf-text-primary)]">
+                  {hint.title}
+                </h3>
+                <p className="text-xs leading-relaxed text-[var(--cf-text-secondary)]">
+                  {hint.description}
+                </p>
               </div>
             ))}
           </div>
@@ -1204,14 +1254,14 @@ export function DashboardProjectsClient({
   ];
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-7">
+    <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:gap-5">
       {workspaceBar}
 
       {lockedByDowngradeCount > 0 && (
         <div
           role="status"
           data-testid="dashboard-downgrade-lock-banner"
-          className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center"
+          className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-4 rounded-xl border p-3.5 sm:flex-row sm:items-center"
         >
           <div className="flex items-start gap-3">
             <Lock className="text-warning mt-0.5 size-4 shrink-0" />
@@ -1239,76 +1289,97 @@ export function DashboardProjectsClient({
         </div>
       )}
 
-      {/* Studio Header Banner + Status Command Tabs + New Project CTA */}
-      <header className="v3-pattern-grid relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-col gap-2.5">
-          <Eyebrow className="w-fit">
+      {/* Compact Studio Header Banner + Quick Create + New Project CTA */}
+      <header className="v3-pattern-grid relative flex flex-col gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex flex-col gap-1">
+          <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             Case Study Builder
           </Eyebrow>
-          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+          <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
             Your case studies
           </h1>
-          <p className="v3-body-m text-[var(--cf-text-secondary)]">
+          <p className="text-xs text-[var(--cf-text-secondary)] sm:text-sm">
             Turn finished projects into polished, publishable stories.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div
-            role="group"
-            aria-label="Filter projects by status"
-            className="inline-flex flex-wrap items-center gap-1 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1"
-          >
-            {statusTabs.map((tab) => {
-              const active = statusFilter === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setStatusFilter(tab.id)}
-                  className={cn(
-                    "focus-visible:ring-ring/40 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
-                    active
-                      ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                      : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                  )}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden items-center gap-1.5 sm:flex">
+            <Link
+              href="/new?type=mobile"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-xs font-semibold text-[var(--cf-text-secondary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] hover:text-[var(--cf-royal-text)]"
+            >
+              <Smartphone className="size-3.5 text-[var(--cf-royal-text)]" />
+              <span>Mobile</span>
+            </Link>
+            <Link
+              href="/new?type=web"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-xs font-semibold text-[var(--cf-text-secondary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] hover:text-[var(--cf-royal-text)]"
+            >
+              <Monitor className="size-3.5 text-[var(--cf-royal-text)]" />
+              <span>Website</span>
+            </Link>
           </div>
 
-          <Link href={createProjectHref} className="v3-btn-primary py-2.5 pr-3 pl-5 text-sm">
+          <Link
+            href={createProjectHref}
+            className="v3-btn-primary h-9 px-3.5 py-2 text-xs font-semibold"
+          >
             <span>New project</span>
-            <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-              <Plus className="size-3.5" />
+            <span className="inline-flex size-5 items-center justify-center rounded bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+              <Plus className="size-3" />
             </span>
           </Link>
         </div>
       </header>
 
-      {/* Studio Command Filter Dock */}
-      <div className="flex flex-col gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-2.5 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-lg bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]"
-          >
-            <Search className="size-3.5" />
-          </span>
-          <input
-            type="search"
-            aria-label="Search projects"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search projects…"
-            className="focus-visible:ring-ring/40 type-body-s h-11 w-full rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pr-4 pl-11 text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-royal)] focus-visible:bg-[var(--cf-bg-elevated)] focus-visible:ring-2"
-          />
+      {/* Unified Filter & Search Toolbar (Status Tabs + Search + Type + Sort) */}
+      <div
+        data-testid="dashboard-filter-toolbar"
+        className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3 lg:flex-row lg:items-center lg:justify-between"
+      >
+        <div
+          role="group"
+          aria-label="Filter projects by status"
+          className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
+        >
+          {statusTabs.map((tab) => {
+            const active = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setStatusFilter(tab.id)}
+                className={cn(
+                  "focus-visible:ring-ring/40 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
+                  active
+                    ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                    : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-44 flex-1 sm:w-56 sm:flex-initial">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-[var(--cf-text-tertiary)]"
+            />
+            <input
+              type="search"
+              aria-label="Search projects"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search projects…"
+              className="focus-visible:ring-ring/40 h-9 w-full rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pr-3 pl-8 text-xs text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-royal)] focus-visible:bg-[var(--cf-bg-elevated)] focus-visible:ring-2"
+            />
+          </div>
+
           <label className="sr-only" htmlFor="dashboard-type-filter">
             Filter by project type
           </label>
@@ -1316,7 +1387,7 @@ export function DashboardProjectsClient({
             id="dashboard-type-filter"
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
-            className="focus-visible:ring-ring/40 type-body-s h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 font-medium text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 h-9 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-medium text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
           >
             <option value="all">Type: Any</option>
             <option value="mobile">Type: Mobile app</option>
@@ -1331,30 +1402,22 @@ export function DashboardProjectsClient({
             id="dashboard-sort-select"
             value={sortMode}
             onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className="focus-visible:ring-ring/40 type-body-s h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 font-medium text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 h-9 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-medium text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
           >
             <option value="updated">Sort: Last edited</option>
             <option value="created">Sort: Newest</option>
             <option value="name">Sort: Name (A–Z)</option>
           </select>
 
-          <div className="hidden items-center gap-2 border-l border-[var(--cf-border-subtle)] pl-3 xl:flex">
-            <span className="v3-label text-[var(--cf-text-tertiary)] uppercase">Quick create</span>
-            <Link
-              href="/new?type=mobile"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-royal-border)] bg-[var(--cf-royal-soft)] px-3 py-2 text-xs font-semibold text-[var(--cf-royal-text)] transition-colors hover:bg-[var(--cf-royal)] hover:text-[var(--cf-text-on-royal)]"
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="focus-visible:ring-ring/40 inline-flex h-9 items-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-semibold text-[var(--cf-royal-text)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] focus-visible:ring-2"
             >
-              <Smartphone className="size-3.5" />
-              Mobile
-            </Link>
-            <Link
-              href="/new?type=web"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 py-2 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)]"
-            >
-              <Monitor className="size-3.5" />
-              Website
-            </Link>
-          </div>
+              Reset
+            </button>
+          )}
         </div>
       </div>
 
@@ -1369,32 +1432,32 @@ export function DashboardProjectsClient({
       {visibleProjects.length === 0 && hasFilters ? (
         <div
           data-testid="dashboard-no-results"
-          className="v3-pattern-dots-light flex flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center"
+          className="v3-pattern-dots-light flex flex-col items-center justify-center gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-12 text-center"
         >
           <span
             aria-hidden="true"
-            className="inline-flex size-14 items-center justify-center rounded-2xl bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]"
+            className="inline-flex size-11 items-center justify-center rounded-xl bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]"
           >
-            <Search className="size-6" />
+            <Search className="size-5" />
           </span>
-          <h2 className="v3-heading-m text-[var(--cf-text-primary)]">
+          <h2 className="v3-dashboard-section-title text-[var(--cf-text-primary)]">
             {searchQuery.trim()
               ? `No projects match “${searchQuery.trim()}”`
               : "No matching projects"}
           </h2>
-          <p className="v3-body-s text-[var(--cf-text-secondary)]">
+          <p className="text-xs text-[var(--cf-text-secondary)]">
             Try another name, or clear filters.
           </p>
           <button
             type="button"
             onClick={handleClearFilters}
-            className="v3-btn-secondary mt-1 py-2 text-xs font-semibold"
+            className="v3-btn-secondary mt-1 h-8 px-3.5 py-1.5 text-xs font-semibold"
           >
             Clear filters
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {visibleProjects.map((project, idx) => {
             const palette = ARTWORK_PALETTES[idx % ARTWORK_PALETTES.length]!;
             const badge = resolveProjectStatusBadge(project);
@@ -1433,16 +1496,16 @@ export function DashboardProjectsClient({
                 data-slot="project-card"
                 data-project-id={project.id}
                 className={cn(
-                  "group relative flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground transition-all duration-200",
+                  "group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground transition-all duration-200",
                   isProjectLocked
                     ? "opacity-90"
-                    : "hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
+                    : "hover:-translate-y-0.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
                 )}
               >
                 {/* Architectural Spec Bar */}
-                <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2.5">
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 py-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="inline-flex h-5 shrink-0 items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
+                    <span className="inline-flex h-5 shrink-0 items-center rounded border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-1.5 font-mono text-[0.65rem] font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
                       {indexLabel}
                     </span>
                     <span className="truncate font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)]">
@@ -1451,13 +1514,13 @@ export function DashboardProjectsClient({
                   </div>
                 </div>
 
-                <div className="p-3.5 pb-0">
+                <div className="p-3 pb-0">
                   {isProjectLocked ? (
                     <button
                       type="button"
                       onClick={handleLockedProjectClick}
                       aria-label={`${project.name} is locked — click to renew or upgrade`}
-                      className="focus-visible:ring-ring/40 relative block w-full cursor-pointer overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] text-left outline-none focus-visible:ring-2"
+                      className="focus-visible:ring-ring/40 relative block w-full cursor-pointer overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] text-left outline-none focus-visible:ring-2"
                     >
                       {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
                         <TemplateThumbnail
@@ -1483,7 +1546,7 @@ export function DashboardProjectsClient({
                     <Link
                       href={`/editor/${project.id}`}
                       aria-label={`Open ${project.name} in editor`}
-                      className="focus-visible:ring-ring/40 block overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] outline-none focus-visible:ring-2"
+                      className="focus-visible:ring-ring/40 block overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] outline-none focus-visible:ring-2"
                     >
                       {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
                         <TemplateThumbnail
@@ -1522,20 +1585,20 @@ export function DashboardProjectsClient({
                   )}
                 </div>
 
-                <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 p-4 pt-3.5">
+                <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 p-3.5 pt-3">
                   <div className="flex min-w-0 items-center justify-between gap-2">
                     {isProjectLocked ? (
                       <button
                         type="button"
                         onClick={handleLockedProjectClick}
-                        className="v3-heading-s min-w-0 truncate text-left text-[var(--cf-text-secondary)] transition-colors hover:text-[var(--cf-royal)]"
+                        className="v3-dashboard-card-title min-w-0 truncate text-left text-[var(--cf-text-secondary)] transition-colors hover:text-[var(--cf-royal)]"
                       >
                         {project.name}
                       </button>
                     ) : (
                       <Link
                         href={`/editor/${project.id}`}
-                        className="v3-heading-s min-w-0 truncate text-[var(--cf-text-primary)] transition-colors hover:text-[var(--cf-royal)]"
+                        className="v3-dashboard-card-title min-w-0 truncate text-[var(--cf-text-primary)] transition-colors hover:text-[var(--cf-royal)]"
                       >
                         {project.name}
                       </Link>

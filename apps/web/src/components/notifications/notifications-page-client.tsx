@@ -89,22 +89,22 @@ export function NotificationsPageClient({
   return (
     <div
       data-testid="notifications-page"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-6 sm:gap-8"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5"
     >
-      <header className="v3-pattern-grid relative flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
-        <div className="flex flex-col gap-2.5">
-          <Eyebrow className="w-fit">
+      <header className="v3-pattern-grid relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+        <div className="flex flex-col gap-1">
+          <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             Inbox
           </Eyebrow>
-          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+          <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
             Notifications
           </h1>
-          <p className="max-w-xl text-sm text-[var(--cf-text-secondary)]">
+          <p className="max-w-xl text-xs text-[var(--cf-text-secondary)] sm:text-sm">
             Real-time updates on completed exports, published case studies, and billing events.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {items.length > 0 && (
             <Button
               type="button"
@@ -131,7 +131,7 @@ export function NotificationsPageClient({
           role="group"
           aria-label="Filter notifications"
           data-testid="notifications-filter-bar"
-          className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5"
+          className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1"
         >
           {FILTER_TABS.map((tab) => {
             const isActive = activeFilter === tab.key;
@@ -143,7 +143,7 @@ export function NotificationsPageClient({
                 aria-pressed={isActive}
                 onClick={() => setActiveFilter(tab.key)}
                 className={cn(
-                  "shrink-0 rounded-md px-4 py-2 text-sm transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/40",
+                  "shrink-0 rounded-lg px-3 py-1.5 text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/40",
                   isActive
                     ? "bg-[var(--cf-royal)] font-semibold text-[var(--cf-text-on-royal)]"
                     : "font-medium text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
@@ -159,14 +159,16 @@ export function NotificationsPageClient({
       {visibleItems.length === 0 ? (
         <section
           data-testid="notifications-empty-state"
-          className="v3-pattern-dots-light flex flex-col items-start gap-4 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-8 sm:p-14"
+          className="v3-pattern-dots-light flex flex-col items-start gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-10"
         >
-          <div className="flex size-14 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
-            <Check className="size-6" />
+          <div className="flex size-11 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
+            <Check className="size-5" />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <h2 className="v3-heading-m text-[var(--cf-text-primary)]">You’re all caught up</h2>
-            <p className="max-w-md text-sm leading-relaxed text-[var(--cf-text-secondary)]">
+          <div className="flex flex-col gap-1">
+            <h2 className="v3-dashboard-section-title text-[var(--cf-text-primary)]">
+              You’re all caught up
+            </h2>
+            <p className="max-w-md text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
               We’ll let you know when exports finish or pages go live.
             </p>
           </div>

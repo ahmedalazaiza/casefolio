@@ -440,15 +440,15 @@ export function CreateProjectWizard({
 
         {/* STEP 1: TYPE */}
         {step === "type" && (
-          <div data-testid="wizard-step-type" className="flex flex-1 flex-col justify-between gap-10">
-            <div className="flex flex-col gap-8">
-              <div className="v3-pattern-grid relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-9">
-                <div className="flex flex-col items-start gap-3">
-                  <Eyebrow>Step 1 of 3</Eyebrow>
-                  <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+          <div data-testid="wizard-step-type" className="flex flex-1 flex-col justify-between gap-7">
+            <div className="flex flex-col gap-5">
+              <div className="v3-pattern-grid relative overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+                <div className="flex flex-col items-start gap-1.5">
+                  <Eyebrow className="px-2.5 py-0.5 text-[0.6875rem]">Step 1 of 3</Eyebrow>
+                  <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
                     What are you presenting?
                   </h1>
-                  <p className="v3-body-l max-w-xl text-[var(--cf-text-secondary)]">
+                  <p className="max-w-xl text-xs text-[var(--cf-text-secondary)] sm:text-sm">
                     Pick a platform canvas to filter ratio-locked Casefolio studio templates built
                     specifically for your screens.
                   </p>
@@ -549,21 +549,21 @@ export function CreateProjectWizard({
         {step === "template" && (
           <div
             data-testid="wizard-step-template"
-            className="flex flex-1 flex-col justify-between gap-10"
+            className="flex flex-1 flex-col justify-between gap-7"
           >
-            <div className="flex flex-col gap-6">
-              <div className="v3-pattern-grid relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
-                <div className="flex flex-col items-start gap-3">
-                  <Eyebrow>Step 2 of 3</Eyebrow>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            <div className="flex flex-col gap-5">
+              <div className="v3-pattern-grid relative overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+                <div className="flex flex-col items-start gap-1.5">
+                  <Eyebrow className="px-2.5 py-0.5 text-[0.6875rem]">Step 2 of 3</Eyebrow>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
                       {formatProjectTypeLabel(selectedType)} templates
                     </h1>
-                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3 py-1.5 text-xs font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2.5 py-1 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
                       From Casefolio library
                     </span>
                   </div>
-                  <p className="v3-body-l max-w-xl text-[var(--cf-text-secondary)]">
+                  <p className="max-w-xl text-xs text-[var(--cf-text-secondary)] sm:text-sm">
                     Templates are designed by the Casefolio team — pick a studio layout, then make
                     the narrative and screens yours.
                   </p>
@@ -830,14 +830,14 @@ export function CreateProjectWizard({
             data-testid="wizard-step-details"
             className="grid items-start gap-8 lg:grid-cols-[minmax(0,640px)_minmax(0,420px)] lg:justify-between"
           >
-            <Card className="rounded-[2rem] border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-10">
-              <form onSubmit={handleSubmitCreate} noValidate className="flex flex-col gap-6">
-                <div className="flex flex-col items-start gap-3">
-                  <Eyebrow>Step 3 of 3</Eyebrow>
-                  <h1 className="v3-heading-m sm:v3-display-l text-[var(--cf-text-primary)]">
+            <Card className="rounded-2xl border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+              <form onSubmit={handleSubmitCreate} noValidate className="flex flex-col gap-5">
+                <div className="flex flex-col items-start gap-1.5">
+                  <Eyebrow className="px-2.5 py-0.5 text-[0.6875rem]">Step 3 of 3</Eyebrow>
+                  <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
                     Name your case study
                   </h1>
-                  <p className="v3-body-m text-[var(--cf-text-secondary)]">
+                  <p className="text-xs text-[var(--cf-text-secondary)] sm:text-sm">
                     This is what hiring leads see first. You can customize every slot, font, and
                     section later.
                   </p>

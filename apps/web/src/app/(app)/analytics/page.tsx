@@ -34,43 +34,43 @@ export default async function WorkspaceAnalyticsOverviewPage() {
   return (
     <div
       data-testid="workspace-analytics-overview"
-      className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6 sm:gap-8"
+      className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-4 sm:gap-5"
     >
-      <header className="v3-pattern-grid relative flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
-        <div className="flex flex-col gap-2.5">
-          <Eyebrow className="w-fit">
+      <header className="v3-pattern-grid relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+        <div className="flex flex-col gap-1">
+          <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             {overview.workspaceKind === "team" && overview.workspaceName
               ? `Analytics · ${overview.workspaceName}`
               : "Analytics"}
           </Eyebrow>
-          <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+          <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
             All published case studies
           </h1>
-          <p className="max-w-xl text-sm text-[var(--cf-text-secondary)]">
+          <p className="max-w-xl text-xs text-[var(--cf-text-secondary)] sm:text-sm">
             Privacy-first readership telemetry across your live portfolio links.
           </p>
         </div>
-        <Link href="/published" className="v3-btn-secondary">
+        <Link href="/published" className="v3-btn-secondary h-9 px-3.5 py-2 text-xs font-semibold">
           <span>Manage Published Links</span>
         </Link>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3.5 md:grid-cols-3">
         <article
           data-testid="overview-kpi-total-views"
-          className="v3-pattern-dots-dark v3-sheet-royal flex flex-col justify-between gap-3 rounded-2xl border border-[var(--cf-border-on-royal)] p-6"
+          className="v3-pattern-dots-dark v3-sheet-royal flex flex-col justify-between gap-2 rounded-xl border border-[var(--cf-border-on-royal)] p-4 sm:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold tracking-wider text-[var(--cf-text-on-royal-muted)] uppercase">
+            <span className="font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-royal-muted)] uppercase">
               TOTAL VIEWS
             </span>
-            <span className="rounded-md bg-[var(--cf-bg-accent)] px-2 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-text-on-accent)]">
+            <span className="rounded bg-[var(--cf-bg-accent)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-text-on-accent)]">
               01
             </span>
           </div>
           <span
             data-testid="overview-total-views-value"
-            className="v3-display-l text-[var(--cf-text-on-royal)]"
+            className="v3-dashboard-stat text-[var(--cf-text-on-royal)]"
           >
             {overview.totalViews30d.toLocaleString()}
           </span>
@@ -81,17 +81,17 @@ export default async function WorkspaceAnalyticsOverviewPage() {
 
         <article
           data-testid="overview-kpi-published"
-          className="flex flex-col justify-between gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-soft)]"
+          className="flex flex-col justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 shadow-[var(--cf-shadow-soft)] sm:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+            <span className="font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
               PUBLISHED
             </span>
-            <span className="rounded-md bg-[var(--cf-royal-soft)] px-2 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+            <span className="rounded bg-[var(--cf-royal-soft)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-royal-text)]">
               02
             </span>
           </div>
-          <span className="v3-display-l text-[var(--cf-text-primary)]">
+          <span className="v3-dashboard-stat text-[var(--cf-text-primary)]">
             {overview.publishedCount}
           </span>
           <span className="text-xs font-medium text-[var(--cf-text-secondary)]">
@@ -102,17 +102,17 @@ export default async function WorkspaceAnalyticsOverviewPage() {
 
         <article
           data-testid="overview-kpi-top-page"
-          className="flex min-w-0 flex-col justify-between gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-soft)]"
+          className="flex min-w-0 flex-col justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 shadow-[var(--cf-shadow-soft)] sm:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
+            <span className="font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
               TOP PAGE
             </span>
-            <span className="rounded-md bg-[var(--cf-royal-soft)] px-2 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+            <span className="rounded bg-[var(--cf-royal-soft)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-royal-text)]">
               03
             </span>
           </div>
-          <span className="v3-heading-m truncate text-[var(--cf-text-primary)]">
+          <span className="v3-dashboard-section-title truncate text-[var(--cf-text-primary)]">
             {overview.topPage ? overview.topPage.projectName : "—"}
           </span>
           <span className="text-xs font-medium text-[var(--cf-text-secondary)]">
@@ -124,18 +124,20 @@ export default async function WorkspaceAnalyticsOverviewPage() {
       </div>
 
       {overview.projects.length === 0 ? (
-        <section className="v3-pattern-dots-light flex flex-col items-center justify-center gap-5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-20 text-center">
-          <span className="inline-flex size-16 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
-            <BarChart3 className="size-7" />
+        <section className="v3-pattern-dots-light flex flex-col items-center justify-center gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-12 text-center">
+          <span className="inline-flex size-12 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
+            <BarChart3 className="size-5" />
           </span>
-          <div className="flex flex-col gap-2">
-            <h2 className="v3-heading-m text-[var(--cf-text-primary)]">No case studies yet</h2>
-            <p className="max-w-md text-sm leading-relaxed text-[var(--cf-text-secondary)]">
+          <div className="flex flex-col gap-1.5">
+            <h2 className="v3-dashboard-section-title text-[var(--cf-text-primary)]">
+              No case studies yet
+            </h2>
+            <p className="max-w-md text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
               Create and publish your first case study to track views, unique visitors, and top
               traffic sources.
             </p>
           </div>
-          <Link href="/new" className="v3-btn-primary mt-1">
+          <Link href="/new" className="v3-btn-primary mt-0.5 h-9 px-4 py-2 text-xs font-semibold">
             <span>New case study</span>
             <ArrowRight className="size-3.5" />
           </Link>

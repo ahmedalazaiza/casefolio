@@ -670,19 +670,18 @@ export function TemplateLibraryClient({
   if (isAuthenticated) {
     const isTeamsPlan = userPlan === "team" || userPlan === "plus";
     return (
-      <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-7">
-        <header className="v3-pattern-grid flex flex-col justify-between gap-5 rounded-2xl border border-[var(--cf-border-subtle)] p-6 sm:flex-row sm:items-end sm:p-8">
-          <div className="flex flex-col items-start gap-3">
-            <Eyebrow icon={<LayoutTemplate />}>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
+        <header className="v3-pattern-grid flex flex-col justify-between gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+          <div className="flex flex-col items-start gap-1">
+            <Eyebrow icon={<LayoutTemplate />} className="px-2.5 py-0.5 text-[0.6875rem]">
               Curated Studio Library
             </Eyebrow>
-            <h1 className="v3-display-l text-[var(--cf-text-primary)]">
+            <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
               Template library
             </h1>
-            <p className="v3-body-m max-w-2xl text-[var(--cf-text-secondary)]">
-              Ready-made UI/UX case study layouts crafted by designers. Choose a
-              template, place your screens in ratio-locked mockups, and publish
-              or export in minutes.
+            <p className="max-w-2xl text-xs text-[var(--cf-text-secondary)] sm:text-sm">
+              Choose a template, place your screens in ratio-locked mockups, and publish or export
+              in minutes.
             </p>
           </div>
 
@@ -697,16 +696,171 @@ export function TemplateLibraryClient({
                   ? "PRO plan"
                   : "Free plan"}
             </Badge>
-            <span className="rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3 py-1 font-mono text-xs font-semibold text-[var(--cf-text-secondary)]">
-              {templates.length} layouts
+            <span className="rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1 font-mono text-xs font-semibold text-[var(--cf-text-secondary)] tabular-nums">
+              {filteredTemplates.length}/{templates.length} layouts
             </span>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)]">
-          {filterDock}
-          <div className="min-w-0">{catalogGrid}</div>
-        </div>
+        {/* Unified Horizontal Dashboard Filter Toolbar */}
+        <section
+          aria-label="Template library filters"
+          data-testid="dashboard-template-filter-toolbar"
+          className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3"
+        >
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+            {/* Platform Filter Pills */}
+            <div
+              role="group"
+              aria-label="Filter by project type"
+              className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
+            >
+              {TYPE_OPTIONS.map((opt) => {
+                const active = typeFilter === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setTypeFilter(opt.value)}
+                    className={cn(
+                      "focus-visible:ring-ring/40 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
+                      active
+                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                        : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                    )}
+                  >
+                    {opt.value !== "all" ? (
+                      <TypeIcon type={opt.value} />
+                    ) : (
+                      <LayoutTemplate className="size-3.5" aria-hidden="true" />
+                    )}
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Plan Tier Filter Pills */}
+              <div
+                role="group"
+                aria-label="Filter by plan tier"
+                className="inline-flex items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
+              >
+                {TIER_OPTIONS.map((opt) => {
+                  const active = tierFilter === opt.value;
+                  const isProOption = opt.value === "pro";
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setTierFilter(opt.value)}
+                      className={cn(
+                        "focus-visible:ring-ring/40 inline-flex items-center justify-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors outline-none focus-visible:ring-2",
+                        active
+                          ? isProOption
+                            ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
+                            : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                          : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                      )}
+                    >
+                      {isProOption && (
+                        <Sparkles className="size-3 shrink-0" aria-hidden="true" />
+                      )}
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search Input */}
+              <div className="relative flex min-w-44 flex-1 items-center sm:w-52 sm:flex-initial">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 size-3.5 text-[var(--cf-text-tertiary)]"
+                />
+                <input
+                  type="search"
+                  aria-label="Search templates"
+                  placeholder="Search templates..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className="focus-visible:ring-ring/40 h-9 w-full rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pr-7 pl-8 text-xs text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-royal)] focus-visible:bg-[var(--cf-bg-elevated)] focus-visible:ring-2"
+                />
+                {searchQuery.trim().length > 0 && (
+                  <button
+                    type="button"
+                    aria-label="Clear template search"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-1.5 inline-flex size-6 items-center justify-center rounded-md text-[var(--cf-text-tertiary)] transition-colors hover:bg-[var(--cf-bg-surface)] hover:text-[var(--cf-text-primary)]"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="focus-visible:ring-ring/40 inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-semibold text-[var(--cf-royal-text)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] focus-visible:ring-2"
+                >
+                  <RotateCcw className="size-3" />
+                  <span>Reset filters</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: Category Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--cf-border-subtle)] pt-2">
+            <span className="text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+              Category
+            </span>
+            <div
+              role="group"
+              aria-label="Filter by category"
+              className="flex flex-wrap items-center gap-1"
+            >
+              <button
+                type="button"
+                aria-pressed={categoryFilter === "all"}
+                onClick={() => setCategoryFilter("all")}
+                className={cn(
+                  "focus-visible:ring-ring/40 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
+                  categoryFilter === "all"
+                    ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                    : "bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                )}
+              >
+                All categories
+              </button>
+              {categories.map((cat) => {
+                const active = categoryFilter === cat.slug;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setCategoryFilter(cat.slug)}
+                    className={cn(
+                      "focus-visible:ring-ring/40 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
+                      active
+                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                        : "bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                    )}
+                  >
+                    {cat.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <div className="min-w-0">{catalogGrid}</div>
         {modals}
       </div>
     );

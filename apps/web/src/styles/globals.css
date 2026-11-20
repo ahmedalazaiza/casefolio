@@ -773,6 +773,71 @@
     }
   }
 
+  /* Dashboard & Workspace Typography Scale (proportional SaaS dashboard sizing) */
+  .v3-dashboard-title {
+    font-family: var(--cf-font-display);
+    font-weight: 700;
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+    letter-spacing: -0.02em;
+  }
+
+  @media (min-width: 640px) {
+    .v3-dashboard-title {
+      font-size: 1.5625rem;
+      line-height: 1.95rem;
+      letter-spacing: -0.022em;
+    }
+  }
+
+  .v3-dashboard-stat {
+    font-family: var(--cf-font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1.875rem;
+    letter-spacing: -0.024em;
+  }
+
+  @media (min-width: 640px) {
+    .v3-dashboard-stat {
+      font-size: 1.875rem;
+      line-height: 2.25rem;
+      letter-spacing: -0.025em;
+    }
+  }
+
+  .v3-dashboard-section-title {
+    font-family: var(--cf-font-display);
+    font-weight: 700;
+    font-size: 1.0625rem;
+    line-height: 1.45rem;
+    letter-spacing: -0.014em;
+  }
+
+  @media (min-width: 640px) {
+    .v3-dashboard-section-title {
+      font-size: 1.1875rem;
+      line-height: 1.55rem;
+      letter-spacing: -0.016em;
+    }
+  }
+
+  .v3-dashboard-card-title {
+    font-family: var(--cf-font-display);
+    font-weight: 700;
+    font-size: 0.9375rem;
+    line-height: 1.35rem;
+    letter-spacing: -0.01em;
+  }
+
+  @media (min-width: 640px) {
+    .v3-dashboard-card-title {
+      font-size: 1rem;
+      line-height: 1.4rem;
+      letter-spacing: -0.012em;
+    }
+  }
+
   .v3-body-l {
     font-family: var(--cf-font-body);
     font-weight: 400;

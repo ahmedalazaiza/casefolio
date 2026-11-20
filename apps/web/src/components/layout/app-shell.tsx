@@ -455,10 +455,12 @@ export function AppShell({
                     disabled={switchingWorkspace}
                     data-testid="shell-workspace-switcher"
                     aria-label="Switch active workspace"
-                    className="focus-visible:ring-ring/40 hidden max-w-60 items-center gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 py-1.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2 disabled:opacity-60 md:inline-flex"
+                    className="focus-visible:ring-ring/40 hidden max-w-72 items-center gap-2 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 py-1.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2 disabled:opacity-60 md:inline-flex"
                   >
                     {switchingWorkspace ? (
                       <Loader2 className="size-3.5 shrink-0 animate-spin text-[var(--cf-royal-text)]" />
+                    ) : activeWsOption.kind === "team" ? (
+                      <Users className="size-3.5 shrink-0 text-[var(--cf-royal-text)]" />
                     ) : (
                       <Building2 className="size-3.5 shrink-0 text-[var(--cf-royal-text)]" />
                     )}
@@ -467,6 +469,9 @@ export function AppShell({
                         (activeWsOption.kind === "personal"
                           ? "Personal Workspace"
                           : activeWsOption.name)}
+                    </span>
+                    <span className="rounded bg-[var(--cf-royal-soft)] px-1.5 py-0.5 font-mono text-[0.625rem] font-bold text-[var(--cf-royal-text)]">
+                      {formatWorkspaceBadgeText(activeWsOption)}
                     </span>
                     <ChevronDown className="size-3.5 shrink-0 text-[var(--cf-text-tertiary)]" />
                   </button>
@@ -575,7 +580,7 @@ export function AppShell({
             </button>
           </div>
 
-          <nav aria-label="Workspace navigation" className="flex flex-col gap-1.5">
+          <nav aria-label="Workspace navigation" className="flex flex-col gap-1">
             {APP_NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = isNavItemActive(pathname, item.href);
@@ -586,11 +591,11 @@ export function AppShell({
                   title={sidebarCollapsed ? item.label : undefined}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "focus-visible:ring-ring/40 flex items-center rounded-xl border transition-colors outline-none focus-visible:ring-2",
-                    sidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-3.5 py-2.5",
+                    "focus-visible:ring-ring/40 flex items-center rounded-lg border text-[0.8125rem] transition-colors outline-none focus-visible:ring-2",
+                    sidebarCollapsed ? "justify-center p-2" : "gap-2.5 px-3 py-2",
                     active
-                      ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-sm font-semibold text-[var(--cf-text-on-royal)]"
-                      : "type-body-s border-transparent text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
+                      ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] font-semibold text-[var(--cf-text-on-royal)]"
+                      : "border-transparent font-medium text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
                   )}
                 >
                   <Icon
@@ -721,7 +726,7 @@ export function AppShell({
           </div>
         )}
 
-        <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8 xl:p-10">
+        <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-5 lg:p-6 xl:p-8">
           {children}
         </main>
       </div>

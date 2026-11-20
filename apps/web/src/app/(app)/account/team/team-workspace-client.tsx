@@ -1265,12 +1265,14 @@ export function TeamWorkspaceClient({
       )}
 
       {organizations.length > 0 && currentOrg && (
-        <Card className="flex flex-col gap-6 p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="flex flex-col gap-5 p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
-                <Users className="text-primary size-4" />
-                <h2 className="text-foreground type-heading-m">{currentOrg.name}</h2>
+                <span className="inline-flex size-7 items-center justify-center rounded-lg bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]">
+                  <Users className="size-3.5" />
+                </span>
+                <h2 className="v3-dashboard-section-title text-foreground">{currentOrg.name}</h2>
                 <Badge tone="accent">{formatRoleLabel(currentOrg.myRole)}</Badge>
                 {currentOrg.hasActiveTeamPlan ? (
                   <TeamsBadge />
@@ -1309,7 +1311,7 @@ export function TeamWorkspaceClient({
                     await switchActiveWorkspaceSession(nextId);
                     router.refresh();
                   }}
-                  className="border-border bg-elevated text-foreground type-body-s h-9 rounded-md border px-3"
+                  className="border-border bg-elevated text-foreground h-8 rounded-lg border px-2.5 text-xs font-semibold"
                 >
                   {organizations.map((org) => (
                     <option key={org.id} value={org.id}>
@@ -1322,25 +1324,29 @@ export function TeamWorkspaceClient({
           </div>
 
           {/* Seat Accounting Pill Bar */}
-          <div className="border-border/80 bg-surface/50 grid grid-cols-2 gap-3 rounded-2xl border p-4 sm:grid-cols-4">
-            <div className="flex flex-col gap-0.5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3">
               <span className="text-tertiary type-caption">Paid seats (S)</span>
-              <span className="text-foreground type-body-m-strong">
+              <span className="text-foreground font-display text-base font-bold">
                 {currentOrg.hasActiveTeamPlan ? paidSeats : "0 (Unfunded)"}
               </span>
             </div>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3">
               <span className="text-tertiary type-caption">Active members</span>
-              <span className="text-foreground type-body-m-strong">{activeMembersCount}</span>
+              <span className="text-foreground font-display text-base font-bold">
+                {activeMembersCount}
+              </span>
             </div>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3">
               <span className="text-tertiary type-caption">Reserved invites</span>
-              <span className="text-foreground type-body-m-strong">{pendingInvitationsCount}</span>
+              <span className="text-foreground font-display text-base font-bold">
+                {pendingInvitationsCount}
+              </span>
             </div>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3">
               <span className="text-tertiary type-caption">Available seats</span>
-              <div className="flex items-center gap-2">
-                <span className="text-foreground type-body-m-strong">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-foreground font-display text-base font-bold">
                   {currentOrg.hasActiveTeamPlan ? availableSeats : 0}
                 </span>
                 {isOwner && (
@@ -1348,7 +1354,7 @@ export function TeamWorkspaceClient({
                     href="/account/billing"
                     className="text-primary type-caption underline-offset-4 hover:underline"
                   >
-                    Invoices &amp; billing
+                    Billing &rarr;
                   </Link>
                 )}
               </div>
@@ -1700,7 +1706,7 @@ export function TeamWorkspaceClient({
                 </p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
+              <div className="grid gap-3 sm:grid-cols-[1fr_160px_auto] sm:items-end">
                 <InputField
                   label="Teammate email"
                   type="email"
@@ -1719,7 +1725,7 @@ export function TeamWorkspaceClient({
                     value={isOwner ? inviteRole : "member"}
                     disabled={!isOwner}
                     onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                    className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 type-body-m h-11 rounded-2xl border px-3.5 outline-none focus-visible:ring-2"
+                    className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 h-10 rounded-xl border px-3 text-sm outline-none focus-visible:ring-2"
                   >
                     <option value="member">Member</option>
                     {isOwner && <option value="admin">Admin</option>}
@@ -1779,7 +1785,7 @@ export function TeamWorkspaceClient({
                 <div
                   role="group"
                   aria-label="Filter invitations by status"
-                  className="border-border bg-surface inline-flex items-center gap-1 rounded-lg border p-0.5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
                 >
                   {(
                     [
@@ -1793,10 +1799,10 @@ export function TeamWorkspaceClient({
                       key={tab.id}
                       type="button"
                       onClick={() => setInviteFilter(tab.id)}
-                      className={`type-caption rounded-md px-2.5 py-1 transition-colors ${
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
                         inviteFilter === tab.id
-                          ? "bg-elevated text-foreground font-semibold"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                          : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]"
                       }`}
                     >
                       {tab.label}
