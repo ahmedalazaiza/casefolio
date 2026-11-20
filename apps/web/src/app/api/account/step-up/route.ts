@@ -12,6 +12,7 @@ const stepUpRequestSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("send_otp"),
     purpose: z.enum(STEP_UP_PURPOSES),
+    confirmEmail: z.string().trim().email().optional(),
   }),
   z.object({
     action: z.literal("verify_password"),
@@ -57,6 +58,19 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   if (parsed.data.action === "send_otp") {
+    if (
+      parsed.data.confirmEmail &&
+      parsed.data.confirmEmail.toLowerCase() !== ctx.user.email.toLowerCase()
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "VALIDATION_ERROR",
+          error: "Email confirmation does not match your account email.",
+        },
+        { status: 400 },
+      );
+    }
     const res = await sendStepUpOtp({
       userId: ctx.user.id,
       userEmail: ctx.user.email,

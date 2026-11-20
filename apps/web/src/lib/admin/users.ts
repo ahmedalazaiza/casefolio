@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, max, ne, or, type PlanTier } from "@casefolio/db";
+import { and, count, desc, eq, gte, inArray, isNull, max, ne, or, type PlanTier, type UserRole } from "@casefolio/db";
 import { env } from "@/env";
 import {
   computeSubscriptionMrrUsd,
@@ -9,12 +9,17 @@ import type {
   AdminSubscriptionRow,
   AdminSubscriptionsOverview,
   AdminUserDetail,
+  AdminUserFeedbackRow,
   AdminUserListItem,
   AdminUserProjectRow,
 } from "@/lib/admin/users-types";
 import {
+  FREE_LIFETIME_PROJECT_LIMIT,
   getChargeAmountUsd,
   isSubscriptionGrantingAccess,
+  PRO_MAX_PROJECTS,
+  TEAMS_MAX_SELF_SERVE_SEATS,
+  UNLIMITED_CASE_STUDIES,
   type BillingInterval,
 } from "@/lib/billing/plans";
 import {
@@ -25,6 +30,7 @@ import {
 import { db, dbSchema } from "@/lib/db";
 import { sendAdminAccountSuspensionEmail } from "@/lib/email";
 import { revalidatePublicProject } from "@/lib/projects/public-cache";
+import { executeAccountPurge } from "@/lib/retention/account";
 import { recordAdminAuditLog } from "@/lib/template/service";
 
 export interface FetchPaddleSubscriptionOptions {
@@ -216,45 +222,57 @@ export async function getAdminUserDetail(
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [accountRows, membershipRows, subRows, projectRows, sessionRows] = await Promise.all([
-    db
-      .select({ providerId: dbSchema.accounts.providerId })
-      .from(dbSchema.accounts)
-      .where(eq(dbSchema.accounts.userId, userId)),
-    db
-      .select({ orgName: dbSchema.organizations.name })
-      .from(dbSchema.memberships)
-      .innerJoin(
-        dbSchema.organizations,
-        eq(dbSchema.memberships.orgId, dbSchema.organizations.id),
-      )
-      .where(eq(dbSchema.memberships.userId, userId))
-      .limit(1),
-    db
-      .select()
-      .from(dbSchema.subscriptions)
-      .where(eq(dbSchema.subscriptions.userId, userId))
-      .orderBy(desc(dbSchema.subscriptions.updatedAt))
-      .limit(1),
-    db
-      .select({
-        id: dbSchema.projects.id,
-        name: dbSchema.projects.name,
-        slug: dbSchema.projects.slug,
-        templateVersionId: dbSchema.projects.templateVersionId,
-        visibility: dbSchema.projects.visibility,
-        updatedAt: dbSchema.projects.updatedAt,
-      })
-      .from(dbSchema.projects)
-      .where(eq(dbSchema.projects.ownerId, userId))
-      .orderBy(desc(dbSchema.projects.updatedAt)),
-    db
-      .select({ updatedAt: dbSchema.sessions.updatedAt })
-      .from(dbSchema.sessions)
-      .where(eq(dbSchema.sessions.userId, userId))
-      .orderBy(desc(dbSchema.sessions.updatedAt))
-      .limit(1),
-  ]);
+  const [accountRows, membershipRows, subRows, projectRows, sessionRows, feedbackRows] =
+    await Promise.all([
+      db
+        .select({ providerId: dbSchema.accounts.providerId })
+        .from(dbSchema.accounts)
+        .where(eq(dbSchema.accounts.userId, userId)),
+      db
+        .select({ orgName: dbSchema.organizations.name })
+        .from(dbSchema.memberships)
+        .innerJoin(
+          dbSchema.organizations,
+          eq(dbSchema.memberships.orgId, dbSchema.organizations.id),
+        )
+        .where(eq(dbSchema.memberships.userId, userId))
+        .limit(1),
+      db
+        .select()
+        .from(dbSchema.subscriptions)
+        .where(eq(dbSchema.subscriptions.userId, userId))
+        .orderBy(desc(dbSchema.subscriptions.updatedAt))
+        .limit(1),
+      db
+        .select({
+          id: dbSchema.projects.id,
+          name: dbSchema.projects.name,
+          slug: dbSchema.projects.slug,
+          templateVersionId: dbSchema.projects.templateVersionId,
+          visibility: dbSchema.projects.visibility,
+          updatedAt: dbSchema.projects.updatedAt,
+        })
+        .from(dbSchema.projects)
+        .where(eq(dbSchema.projects.ownerId, userId))
+        .orderBy(desc(dbSchema.projects.updatedAt)),
+      db
+        .select({ updatedAt: dbSchema.sessions.updatedAt })
+        .from(dbSchema.sessions)
+        .where(eq(dbSchema.sessions.userId, userId))
+        .orderBy(desc(dbSchema.sessions.updatedAt)),
+      db
+        .select()
+        .from(dbSchema.productFeedback)
+        .where(
+          and(
+            eq(dbSchema.productFeedback.userId, userId),
+            eq(dbSchema.productFeedback.status, "submitted"),
+          ),
+        )
+        .orderBy(desc(dbSchema.productFeedback.createdAt))
+        .limit(5)
+        .catch(() => []),
+    ]);
 
   const projectIds = projectRows.map((p) => p.id);
   const topProjectsSlice = projectRows.slice(0, 12);
@@ -384,10 +402,22 @@ export async function getAdminUserDetail(
     sessionRows[0]?.updatedAt.getTime() ?? 0,
   );
 
+  const recentFeedback: AdminUserFeedbackRow[] = feedbackRows.map((fb) => ({
+    id: fb.id,
+    rating: fb.rating,
+    triggerMoment: fb.triggerMoment,
+    primaryUseCase: fb.primaryUseCase,
+    topFeatureRequest: fb.topFeatureRequest,
+    comment: fb.comment,
+    createdAtIso: fb.createdAt.toISOString(),
+  }));
+
   return {
     id: user.id,
     name: user.name,
     email: user.email,
+    emailVerified: user.emailVerified,
+    activeSessionsCount: sessionRows.length,
     role: user.role,
     plan: normalizeAdminPlan(user.plan),
     suspended: user.suspended,
@@ -403,6 +433,7 @@ export async function getAdminUserDetail(
     lastExportAtIso,
     projects,
     subscription,
+    recentFeedback,
   };
 }
 
@@ -648,4 +679,202 @@ export async function getAdminSubscriptionsOverview(
     trialsActiveCount,
     recentSubscriptions,
   };
+}
+
+export async function setAdminUserPlanOverride(args: {
+  actorId: string;
+  actorRole: UserRole;
+  targetUserId: string;
+  plan: "free" | "pro" | "team";
+}): Promise<{ ok: true; plan: "free" | "pro" | "team" } | { ok: false; error: string }> {
+  const [target] = await db
+    .select()
+    .from(dbSchema.users)
+    .where(eq(dbSchema.users.id, args.targetUserId))
+    .limit(1);
+
+  if (!target) {
+    return { ok: false, error: "User not found." };
+  }
+
+  const now = new Date();
+  const maxCaseStudies =
+    args.plan === "free"
+      ? FREE_LIFETIME_PROJECT_LIMIT
+      : args.plan === "pro"
+        ? PRO_MAX_PROJECTS
+        : UNLIMITED_CASE_STUDIES;
+  const maxSeats = args.plan === "team" ? TEAMS_MAX_SELF_SERVE_SEATS : 1;
+  const watermarkEnabled = args.plan === "free";
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(dbSchema.users)
+      .set({ plan: args.plan, updatedAt: now })
+      .where(eq(dbSchema.users.id, args.targetUserId));
+
+    await tx
+      .update(dbSchema.workspaces)
+      .set({
+        maxCaseStudies,
+        maxSeats,
+        watermarkEnabled,
+        frozenAt: null,
+        frozenReason: null,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(dbSchema.workspaces.kind, "personal"),
+          eq(dbSchema.workspaces.personalOwnerId, args.targetUserId),
+        ),
+      );
+
+    const [existingSub] = await tx
+      .select()
+      .from(dbSchema.subscriptions)
+      .where(
+        and(
+          eq(dbSchema.subscriptions.userId, args.targetUserId),
+          isNull(dbSchema.subscriptions.orgId),
+        ),
+      )
+      .orderBy(desc(dbSchema.subscriptions.updatedAt))
+      .limit(1);
+
+    const farFuture = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+    if (existingSub) {
+      await tx
+        .update(dbSchema.subscriptions)
+        .set({
+          plan: args.plan,
+          status: args.plan === "free" ? "canceled" : "active",
+          maxCaseStudies,
+          maxSeats,
+          watermarkEnabled,
+          currentPeriodEnd: args.plan === "free" ? now : farFuture,
+          pastDueSince: null,
+          updatedAt: now,
+        })
+        .where(eq(dbSchema.subscriptions.id, existingSub.id));
+    } else if (args.plan !== "free") {
+      const [ws] = await tx
+        .select({ id: dbSchema.workspaces.id })
+        .from(dbSchema.workspaces)
+        .where(
+          and(
+            eq(dbSchema.workspaces.kind, "personal"),
+            eq(dbSchema.workspaces.personalOwnerId, args.targetUserId),
+          ),
+        )
+        .limit(1);
+
+      await tx.insert(dbSchema.subscriptions).values({
+        userId: args.targetUserId,
+        workspaceId: ws?.id ?? null,
+        plan: args.plan,
+        interval: "monthly",
+        status: "active",
+        currentPaidCapacity: 1,
+        maxSeats,
+        maxCaseStudies,
+        watermarkEnabled,
+        currentPeriodEnd: farFuture,
+      });
+    }
+  });
+
+  await recordAdminAuditLog(args.actorId, "admin.user.plan_overridden", {
+    targetUserId: args.targetUserId,
+    previousPlan: target.plan,
+    nextPlan: args.plan,
+    actorRole: args.actorRole,
+  });
+
+  return { ok: true, plan: args.plan };
+}
+
+export async function verifyAdminUserEmail(args: {
+  actorId: string;
+  targetUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const [target] = await db
+    .select({ id: dbSchema.users.id, emailVerified: dbSchema.users.emailVerified })
+    .from(dbSchema.users)
+    .where(eq(dbSchema.users.id, args.targetUserId))
+    .limit(1);
+
+  if (!target) {
+    return { ok: false, error: "User not found." };
+  }
+
+  await db
+    .update(dbSchema.users)
+    .set({ emailVerified: true, updatedAt: new Date() })
+    .where(eq(dbSchema.users.id, args.targetUserId));
+
+  await recordAdminAuditLog(args.actorId, "admin.user.email_verified", {
+    targetUserId: args.targetUserId,
+    wasVerified: target.emailVerified,
+  });
+
+  return { ok: true };
+}
+
+export async function revokeAdminUserSessions(args: {
+  actorId: string;
+  targetUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (args.actorId === args.targetUserId) {
+    return { ok: false, error: "Cannot revoke your own active admin sessions here." };
+  }
+
+  await db.delete(dbSchema.sessions).where(eq(dbSchema.sessions.userId, args.targetUserId));
+
+  await recordAdminAuditLog(args.actorId, "admin.user.sessions_revoked", {
+    targetUserId: args.targetUserId,
+  });
+
+  return { ok: true };
+}
+
+export async function permanentlyDeleteAdminUser(args: {
+  actorId: string;
+  actorRole: UserRole;
+  targetUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (args.actorRole !== "superadmin") {
+    return { ok: false, error: "Only superadmins may permanently delete user accounts." };
+  }
+  if (args.actorId === args.targetUserId) {
+    return { ok: false, error: "You cannot permanently delete your own admin account here." };
+  }
+
+  const [target] = await db
+    .select({ id: dbSchema.users.id, role: dbSchema.users.role, email: dbSchema.users.email })
+    .from(dbSchema.users)
+    .where(eq(dbSchema.users.id, args.targetUserId))
+    .limit(1);
+
+  if (!target) {
+    return { ok: false, error: "User not found." };
+  }
+  if (target.role === "superadmin") {
+    return { ok: false, error: "Superadmin accounts cannot be deleted from admin controls." };
+  }
+
+  const purgeRes = await executeAccountPurge(args.targetUserId, {
+    dissolveOwnedTeams: true,
+  });
+  if (!purgeRes.ok) {
+    return { ok: false, error: purgeRes.error };
+  }
+
+  await recordAdminAuditLog(args.actorId, "admin.user.deleted_permanently", {
+    targetUserId: args.targetUserId,
+    targetEmail: target.email,
+  });
+
+  return { ok: true };
 }

@@ -244,4 +244,120 @@ describe("Account deletion & server-side step-up auth (B1, S9)", () => {
       .where(eq(dbSchema.users.id, u.userId));
     expect(gone).toBeUndefined();
   });
+
+  it("handles Team sole-owner deletion: auto-dissolves empty teams, requires explicit dissolve when teammates exist, and preserves shared projects when a non-owner member purges permanently", async () => {
+    const owner = await createVerifiedUserWithSession();
+    const member = await createVerifiedUserWithSession();
+
+    const [tpl] = await db
+      .select({ id: dbSchema.templates.id, currentVersionId: dbSchema.templates.currentVersionId })
+      .from(dbSchema.templates)
+      .limit(1);
+    expect(tpl?.currentVersionId).toBeTruthy();
+
+    // 1. Empty sole-owned team -> auto-dissolves during immediate account purge
+    const emptyOwner = await createVerifiedUserWithSession();
+    const [emptyOrg] = await db
+      .insert(dbSchema.organizations)
+      .values({
+        name: `Solo Team ${randomUUID().slice(0, 6)}`,
+        slug: `solo-team-${randomUUID().slice(0, 8)}`,
+        seats: 2,
+      })
+      .returning();
+    await db.insert(dbSchema.memberships).values({
+      userId: emptyOwner.userId,
+      orgId: emptyOrg!.id,
+      role: "owner",
+    });
+    const emptyPurge = await executeAccountPurge(emptyOwner.userId);
+    expect(emptyPurge).toEqual({ ok: true, purgedUserId: emptyOwner.userId });
+    const [goneOrg] = await db
+      .select({ id: dbSchema.organizations.id })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, emptyOrg!.id));
+    expect(goneOrg).toBeUndefined();
+
+    // 2. Active team with member: non-owner member purging leaves shared team project intact under Owner
+    const [activeOrg] = await db
+      .insert(dbSchema.organizations)
+      .values({
+        name: `Active Studio ${randomUUID().slice(0, 6)}`,
+        slug: `active-studio-${randomUUID().slice(0, 8)}`,
+        seats: 2,
+      })
+      .returning();
+    await db.insert(dbSchema.memberships).values([
+      { userId: owner.userId, orgId: activeOrg!.id, role: "owner" },
+      { userId: member.userId, orgId: activeOrg!.id, role: "member" },
+    ]);
+    const [teamWs] = await db
+      .insert(dbSchema.workspaces)
+      .values({
+        kind: "team",
+        organizationId: activeOrg!.id,
+        name: activeOrg!.name,
+        slug: `ws-${randomUUID().slice(0, 8)}`,
+        maxSeats: 2,
+      })
+      .returning();
+    const [sharedSpace] = await db
+      .insert(dbSchema.spaces)
+      .values({
+        workspaceId: teamWs!.id,
+        name: "Team Shared",
+        slug: "shared",
+        visibility: "shared",
+        isDefault: true,
+        controllerUserId: owner.userId,
+      })
+      .returning();
+    const [sharedProj] = await db
+      .insert(dbSchema.projects)
+      .values({
+        ownerId: member.userId,
+        createdByUserId: member.userId,
+        orgId: activeOrg!.id,
+        workspaceId: teamWs!.id,
+        spaceId: sharedSpace!.id,
+        templateVersionId: tpl!.currentVersionId!,
+        name: "Shared Team Work",
+        type: "mobile",
+        puckData: {},
+        theme: {},
+      })
+      .returning();
+
+    const memberPurge = await executeAccountPurge(member.userId);
+    expect(memberPurge).toEqual({ ok: true, purgedUserId: member.userId });
+
+    // Shared Team project MUST survive with ownerId reassigned to surviving Owner!
+    const [survivingSharedProj] = await db
+      .select({ ownerId: dbSchema.projects.ownerId })
+      .from(dbSchema.projects)
+      .where(eq(dbSchema.projects.id, sharedProj!.id));
+    expect(survivingSharedProj?.ownerId).toBe(owner.userId);
+
+    // 3. Re-add another member so sole Owner deletion blocks unless `dissolveOwnedTeams: true`
+    const mate2 = await createVerifiedUserWithSession();
+    await db.insert(dbSchema.memberships).values({
+      userId: mate2.userId,
+      orgId: activeOrg!.id,
+      role: "member",
+    });
+
+    const blockedOwnerPurge = await executeAccountPurge(owner.userId);
+    expect(blockedOwnerPurge).toMatchObject({ ok: false, code: "SOLE_TEAM_OWNER" });
+
+    const dissolvedOwnerPurge = await executeAccountPurge(owner.userId, {
+      dissolveOwnedTeams: true,
+    });
+    expect(dissolvedOwnerPurge).toEqual({ ok: true, purgedUserId: owner.userId });
+
+    const [goneActiveOrg] = await db
+      .select({ id: dbSchema.organizations.id })
+      .from(dbSchema.organizations)
+      .where(eq(dbSchema.organizations.id, activeOrg!.id));
+    expect(goneActiveOrg).toBeUndefined();
+  });
 });

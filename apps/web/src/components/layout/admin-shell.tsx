@@ -3,10 +3,13 @@
 import {
   BarChart3,
   CreditCard,
+  FolderKanban,
   LayoutDashboard,
   LayoutTemplate,
   Mail,
   Menu,
+  MessageSquareHeart,
+  PanelTop,
   Search,
   Settings,
   ShieldAlert,
@@ -39,11 +42,14 @@ export interface AdminNavItem {
 
 export const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
   { label: "Overview", href: "/admin", exact: true, icon: LayoutDashboard },
+  { label: "Site CMS", href: "/admin/cms", icon: PanelTop },
+  { label: "Projects", href: "/admin/projects", icon: FolderKanban },
   { label: "Templates", href: "/admin/templates", icon: LayoutTemplate },
   { label: "Categories & types", href: "/admin/categories", icon: Tags },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Subscriptions & plans", href: "/admin/subscriptions", icon: CreditCard },
   { label: "Moderation", href: "/admin/moderation", icon: ShieldAlert },
+  { label: "Feedback", href: "/admin/feedback", icon: MessageSquareHeart },
   { label: "Email studio", href: "/admin/emails", icon: Mail },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Settings & roles", href: "/admin/settings", icon: Settings },

@@ -9,26 +9,45 @@ import { searchHelpArticles, type HelpArticleSummary } from "@/lib/help/search";
 export interface HelpCenterClientProps {
   articles: readonly HelpArticleSummary[];
   initialQuery?: string;
+  cmsIntro?: {
+    eyebrow?: string;
+    title?: string;
+    subtitle?: string;
+    noticeBanner?: string;
+  };
 }
 
-export function HelpCenterClient({ articles, initialQuery = "" }: HelpCenterClientProps) {
+export function HelpCenterClient({
+  articles,
+  initialQuery = "",
+  cmsIntro,
+}: HelpCenterClientProps) {
   const [query, setQuery] = useState(initialQuery);
   const filtered = searchHelpArticles(articles, query);
   const hasQuery = query.trim().length > 0;
 
   return (
     <div className="flex flex-col gap-8">
+      {cmsIntro?.noticeBanner && (
+        <div
+          role="status"
+          className="rounded-xl border border-[var(--cf-royal-border)] bg-[var(--cf-royal-soft)] px-4 py-3 text-center text-sm font-medium text-[var(--cf-text-primary)]"
+        >
+          {cmsIntro.noticeBanner}
+        </div>
+      )}
       {/* Architectural Royal Grid Help Hero + Studio Command Search */}
       <section className="v3-pattern-grid flex flex-col items-center gap-8 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center text-[var(--cf-text-primary)] sm:py-20">
         <div className="flex flex-col items-center gap-4">
           <Eyebrow icon={<LifeBuoy className="size-3.5" />}>
-            Help center
+            {cmsIntro?.eyebrow || "Help center"}
           </Eyebrow>
           <h1 className="v3-display-l text-balance text-[var(--cf-text-primary)]">
-            How can we help?
+            {cmsIntro?.title || "How can we help?"}
           </h1>
           <p className="v3-body-m max-w-lg text-[var(--cf-text-secondary)]">
-            Guides on templates, ratio-locked screen slots, custom domains, exports, and billing.
+            {cmsIntro?.subtitle ||
+              "Guides on templates, ratio-locked screen slots, custom domains, exports, and billing."}
           </p>
         </div>
 

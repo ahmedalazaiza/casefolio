@@ -4,6 +4,8 @@ import { env } from "@/env";
 import { getServerSession } from "@/lib/auth/session";
 import type { BillingInterval } from "@/lib/billing/plans";
 import { resolveServerPaddlePriceId } from "@/lib/billing/server-config";
+import { applyCmsPaddleOverrides } from "@/lib/cms/schema";
+import { getSiteCmsContent } from "@/lib/cms/service";
 import { resolveEffectivePlanForUser } from "@/lib/entitlements/server";
 
 export const metadata: Metadata = {
@@ -24,18 +26,24 @@ export default async function PricingPage({
   const initialInterval: BillingInterval =
     params.interval === "yearly" || params.interval === "annual" ? "yearly" : "monthly";
 
-  const sessionCtx = await getServerSession();
+  const [sessionCtx, cms] = await Promise.all([
+    getServerSession(),
+    getSiteCmsContent(),
+  ]);
   const currentTier = sessionCtx
     ? await resolveEffectivePlanForUser(sessionCtx.user.id)
     : null;
 
-  const paddlePriceMap = {
-    environment: env.PADDLE_ENV,
-    pro_monthly: resolveServerPaddlePriceId("pro", "monthly"),
-    pro_yearly: resolveServerPaddlePriceId("pro", "yearly"),
-    team_monthly: resolveServerPaddlePriceId("team", "monthly"),
-    team_yearly: resolveServerPaddlePriceId("team", "yearly"),
-  };
+  const paddlePriceMap = applyCmsPaddleOverrides(
+    {
+      environment: env.PADDLE_ENV,
+      pro_monthly: resolveServerPaddlePriceId("pro", "monthly"),
+      pro_yearly: resolveServerPaddlePriceId("pro", "yearly"),
+      team_monthly: resolveServerPaddlePriceId("team", "monthly"),
+      team_yearly: resolveServerPaddlePriceId("team", "yearly"),
+    },
+    cms.pricing,
+  );
 
   return (
     <PricingPageClient
@@ -44,6 +52,7 @@ export default async function PricingPage({
       activeOrgId={sessionCtx?.session.activeOrganizationId ?? null}
       paddlePriceMap={paddlePriceMap}
       initialInterval={initialInterval}
+      cmsPricing={cms.pricing}
     />
   );
 }

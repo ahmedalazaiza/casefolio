@@ -1,15 +1,10 @@
-import {
-  ArrowRight,
-  Cookie,
-  EyeOff,
-  ImageOff,
-  LockKeyhole,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, EyeOff, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CmsIcon } from "@/components/cms/cms-icon";
 import { SectionStackSheet } from "@/components/marketing/motion";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { getSiteCmsContent } from "@/lib/cms/service";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Casefolio",
@@ -17,80 +12,9 @@ export const metadata: Metadata = {
     "Learn how Casefolio protects your uploads with automatic EXIF stripping, measures views without tracking cookies, and gives you full data export and deletion control.",
 };
 
-const PRIVACY_PILLARS = [
-  {
-    icon: ImageOff,
-    title: "Automatic EXIF & GPS Stripping",
-    detail:
-      "Every uploaded PNG, JPEG, or WebP has camera, device, and GPS metadata stripped before public delivery.",
-  },
-  {
-    icon: Cookie,
-    title: "Cookie-Free Reader Analytics",
-    detail:
-      "Published case studies use daily-rotating cryptographic salts—zero cross-site ad trackers or cookie banners.",
-  },
-  {
-    icon: LockKeyhole,
-    title: "PCI-Scoped Billing via Paddle",
-    detail:
-      "Payment cards are handled exclusively by Paddle; Casefolio servers never see or store card numbers.",
-  },
-] as const;
+export default async function PrivacyPage() {
+  const { legalAndHelp } = await getSiteCmsContent();
 
-const PRIVACY_CLAUSES = [
-  {
-    id: "collection",
-    step: "01",
-    title: "Information We Collect & Why",
-    summary: "Minimal account and workspace metadata required to run your studio.",
-    body: "When you register for Casefolio, we collect your name, email address, authentication provider identifiers, onboarding preferences, and workspace settings. Inside the editor, we store the structured JSON documents, theme tokens, and visual assets you explicitly upload so we can autosave, preview, publish, and export your case studies reliably.",
-  },
-  {
-    id: "image-sanitization",
-    step: "02",
-    title: "Automatic Image Sanitization & EXIF Stripping",
-    summary: "Protecting hidden location and device metadata on every screenshot.",
-    body: "Designers frequently upload screenshots and photos captured directly on personal devices or office networks. Our upload pipeline validates file signatures, normalizes color profiles, and strips embedded EXIF, GPS coordinates, and camera serial metadata automatically before writing derivatives to object storage.",
-  },
-  {
-    id: "analytics",
-    step: "03",
-    title: "Cookie-Free Public Case Study Analytics",
-    summary: "Understanding recruiter and client engagement without surveillance.",
-    body: "When someone views your published case study at /u/handle/slug, we compute a non-reversible visitor hash using a daily-rotating server salt rather than persistent tracking cookies or third-party ad pixels. This gives you accurate view, referrer, and read-depth insights while respecting reader privacy out of the box.",
-  },
-  {
-    id: "billing-processors",
-    step: "04",
-    title: "Billing & Infrastructure Subprocessors",
-    summary: "Vetted infrastructure partners scoped strictly to service delivery.",
-    body: "Subscription checkout, tax calculation, and invoicing are processed by Paddle (Merchant of Record). Transactional emails (verification codes, password resets, export notifications) and cloud storage operate over TLS-encrypted connections with strict least-privilege credentials. We never sell, rent, or broker designer data or portfolio content to third parties or AI training brokers.",
-  },
-  {
-    id: "security",
-    step: "05",
-    title: "Encryption, Passwords & Confidential Links",
-    summary: "How we safeguard accounts and password-protected NDA case studies.",
-    body: "Account passwords and published case-study share passwords are hashed using modern memory-hard cryptographic algorithms—never stored in plaintext. Session tokens are HTTP-only and scoped, and administrative actions are recorded in immutable audit logs.",
-  },
-  {
-    id: "teams",
-    step: "06",
-    title: "Team Workspaces & Role Permissions",
-    summary: "How shared workspaces manage member visibility.",
-    body: "If you join or invite collaborators to a Team workspace, workspace owners and members can view and edit projects created inside that shared workspace according to their assigned role. Personal workspace projects remain private to your individual account unless explicitly transferred or published.",
-  },
-  {
-    id: "rights",
-    step: "07",
-    title: "Data Portability, Export & Permanent Deletion",
-    summary: "Full self-serve control over your Casefolio account and files.",
-    body: "You may export your case studies or permanently delete individual projects or your entire Casefolio account at any time from Account Settings. Account deletion purges your projects, published routes, and associated media objects in accordance with our retention schedule, subject only to statutory tax records maintained by Paddle.",
-  },
-] as const;
-
-export default function PrivacyPage() {
   return (
     <div className="relative flex flex-col overflow-x-clip bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)]">
       {/* 1. Architectural Grid Hero */}
@@ -98,43 +22,43 @@ export default function PrivacyPage() {
         <div className="v3-container flex flex-col gap-10">
           <div className="flex max-w-3xl flex-col items-start gap-4">
             <Eyebrow step="01" icon={<ShieldCheck />}>
-              Privacy & Data Architecture
+              {legalAndHelp.privacyEyebrow}
             </Eyebrow>
             <h1 className="v3-display-xl text-balance text-[var(--cf-text-primary)]">
-              Privacy <span className="v3-sticker-lime">policy</span>
+              {legalAndHelp.privacyTitleLead}{" "}
+              <span className="v3-sticker-lime">{legalAndHelp.privacyTitleHighlight}</span>
             </h1>
             <p className="v3-body-l text-[var(--cf-text-secondary)]">
-              How Casefolio protects your creative work, strips hidden image
-              metadata, measures readership without ad cookies, and keeps you in
-              control of your data.
+              {legalAndHelp.privacySubtitle}
             </p>
             <p className="font-mono text-xs font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-              Effective April 15, 2026 · Zero Ad Trackers · Never Sold for AI Training
+              {legalAndHelp.privacyEffectiveLine}
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {PRIVACY_PILLARS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.title}
-                  className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="inline-flex size-8 items-center justify-center rounded-md bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
-                      <Icon className="size-4" />
-                    </span>
-                    <h2 className="text-sm font-bold text-[var(--cf-text-primary)]">
-                      {item.title}
-                    </h2>
-                  </div>
-                  <p className="text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
-                    {item.detail}
-                  </p>
+            {legalAndHelp.privacyPillars.map((item) => (
+              <div
+                key={item.title}
+                className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex size-8 items-center justify-center rounded-md bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
+                    <CmsIcon
+                      iconName={item.iconName}
+                      customIconUrl={item.customIconUrl}
+                      className="size-4"
+                    />
+                  </span>
+                  <h2 className="text-sm font-bold text-[var(--cf-text-primary)]">
+                    {item.title}
+                  </h2>
                 </div>
-              );
-            })}
+                <p className="text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
+                  {item.detail}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -153,10 +77,10 @@ export default function PrivacyPage() {
               className="flex flex-col gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 lg:sticky lg:top-24"
             >
               <p className="v3-label text-[var(--cf-text-tertiary)] uppercase">
-                Sections (01–07)
+                Sections (01–{String(legalAndHelp.privacyClauses.length).padStart(2, "0")})
               </p>
               <nav className="flex flex-col gap-1">
-                {PRIVACY_CLAUSES.map((clause) => (
+                {legalAndHelp.privacyClauses.map((clause) => (
                   <a
                     key={clause.id}
                     href={`#${clause.id}`}
@@ -183,7 +107,7 @@ export default function PrivacyPage() {
 
             {/* Right Detailed Clauses */}
             <div className="flex flex-col gap-5">
-              {PRIVACY_CLAUSES.map((clause) => (
+              {legalAndHelp.privacyClauses.map((clause) => (
                 <article
                   key={clause.id}
                   id={clause.id}

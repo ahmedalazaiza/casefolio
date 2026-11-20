@@ -160,6 +160,43 @@ export interface AdminWeeklyPublishBucket {
   publishes: number;
 }
 
+export interface AdminExportFormatTelemetry {
+  format: string;
+  total: number;
+  completed: number;
+  failed: number;
+}
+
+export interface AdminSubscriberTelemetry {
+  freeUsers: number;
+  proMonthly: number;
+  proAnnual: number;
+  teamWorkspaces: number;
+  teamPaidSeats: number;
+  pastDueSubscriptions: number;
+  canceledInRange: number;
+  mrrUsd: number;
+  arrUsd: number;
+}
+
+export interface AdminViewsBucketTelemetry {
+  index: number;
+  label: string;
+  views: number;
+}
+
+export interface AdminPlatformAnalyticsTelemetry {
+  uniqueVisitors: number;
+  failedExports: number;
+  exportsByFormat: AdminExportFormatTelemetry[];
+  subscribers: AdminSubscriberTelemetry;
+  viewsByBucket: AdminViewsBucketTelemetry[];
+  feedbackSummary: {
+    totalResponses: number;
+    averageRating: number | null;
+  };
+}
+
 export interface AdminPlatformAnalytics {
   range: AdminAnalyticsRange;
   publishedCaseStudies: number;
@@ -174,18 +211,33 @@ export interface AdminPlatformAnalytics {
   weeklyPublishes: AdminWeeklyPublishBucket[];
   templateUsage: AdminTemplateUsageShare[];
   topCaseStudies: AdminTopCaseStudyRow[];
+  telemetry?: AdminPlatformAnalyticsTelemetry;
 }
 
 function escapeCsvCell(value: string | number): string {
   const str = String(value);
-  if (/[",\n\r]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`;
+  const sanitized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+  if (/[",\n\r]/.test(sanitized)) {
+    return `"${sanitized.replace(/"/g, '""')}"`;
   }
-  return str;
+  return sanitized;
 }
 
 export function serializeAdminAnalyticsCsv(analytics: AdminPlatformAnalytics): string {
   const lines: string[] = [
+    ["Metric / Case Study", "Slug / Scope", "Author / Category", "Template / Status", "Views / Value", "Completed Exports / Extra"]
+      .map(escapeCsvCell)
+      .join(","),
+    [
+      "Platform Summary",
+      analytics.range,
+      `${analytics.totalUsers} users (${analytics.paidUsers} paid)`,
+      `MRR $${analytics.telemetry?.subscribers.mrrUsd ?? 0}`,
+      analytics.publicViews,
+      analytics.completedExports,
+    ]
+      .map(escapeCsvCell)
+      .join(","),
     ["Case Study", "Slug", "Author", "Template", "Views", "Completed Exports"]
       .map(escapeCsvCell)
       .join(","),
@@ -206,5 +258,48 @@ export function serializeAdminAnalyticsCsv(analytics: AdminPlatformAnalytics): s
     );
   }
 
+  return lines.join("\n");
+}
+
+export function serializeSubscribersTelemetryCsv(analytics: AdminPlatformAnalytics): string {
+  const sub = analytics.telemetry?.subscribers;
+  const lines: string[] = [
+    ["Segment", "Count", "Metric Note"].map(escapeCsvCell).join(","),
+    ["Total Registered Users", analytics.totalUsers, "All accounts"].map(escapeCsvCell).join(","),
+    ["Free Tier Users", sub?.freeUsers ?? Math.max(0, analytics.totalUsers - analytics.paidUsers), "Free lifetime 1 credit"].map(escapeCsvCell).join(","),
+    ["Pro Monthly Active", sub?.proMonthly ?? 0, "$7.99/mo"].map(escapeCsvCell).join(","),
+    ["Pro Annual Active", sub?.proAnnual ?? 0, "$79.90/yr (2 months free)"].map(escapeCsvCell).join(","),
+    ["Teams Active Workspaces", sub?.teamWorkspaces ?? 0, `${sub?.teamPaidSeats ?? 0} paid seats`].map(escapeCsvCell).join(","),
+    ["Past Due (10-day grace)", sub?.pastDueSubscriptions ?? 0, "Pending renewal payment"].map(escapeCsvCell).join(","),
+    ["Canceled In Period", sub?.canceledInRange ?? 0, `Range ${analytics.range}`].map(escapeCsvCell).join(","),
+    ["MRR (USD)", sub?.mrrUsd ?? 0, "Estimated monthly recurring"].map(escapeCsvCell).join(","),
+    ["ARR (USD)", sub?.arrUsd ?? 0, "Annualized recurring (12x MRR)"].map(escapeCsvCell).join(","),
+  ];
+  return lines.join("\n");
+}
+
+export function serializeExportsTelemetryCsv(analytics: AdminPlatformAnalytics): string {
+  const lines: string[] = [
+    ["Export Format", "Total Jobs", "Completed", "Failed"].map(escapeCsvCell).join(","),
+  ];
+  for (const row of analytics.telemetry?.exportsByFormat ?? []) {
+    lines.push([row.format, row.total, row.completed, row.failed].map(escapeCsvCell).join(","));
+  }
+  lines.push(["ALL FORMATS SUMMARY", analytics.completedExports + (analytics.telemetry?.failedExports ?? 0), analytics.completedExports, analytics.telemetry?.failedExports ?? 0].map(escapeCsvCell).join(","));
+  return lines.join("\n");
+}
+
+export function serializeVisitsTelemetryCsv(analytics: AdminPlatformAnalytics): string {
+  const lines: string[] = [
+    ["Bucket Period", "Views", "Period Unique Visitors Total"].map(escapeCsvCell).join(","),
+  ];
+  for (const b of analytics.telemetry?.viewsByBucket ?? []) {
+    lines.push([b.label, b.views, analytics.telemetry?.uniqueVisitors ?? 0].map(escapeCsvCell).join(","));
+  }
+  lines.push(["", "", ""].map(escapeCsvCell).join(","));
+  lines.push(["Top Case Study", "Slug", "Views"].map(escapeCsvCell).join(","));
+  for (const cs of analytics.topCaseStudies) {
+    lines.push([cs.name, cs.slug ?? "", cs.views].map(escapeCsvCell).join(","));
+  }
   return lines.join("\n");
 }

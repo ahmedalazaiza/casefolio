@@ -6,9 +6,11 @@ import {
   CreditCard,
   ExternalLink,
   Loader2,
+  Lock,
   Minus,
   Plus,
   RotateCcw,
+  UserMinus,
   Users,
   XCircle,
 } from "lucide-react";
@@ -31,9 +33,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   BILLING_PLAN_CATALOG,
+  evaluateSubscriptionLifecycle,
   formatPlanAmountSummary,
   formatPlanHeadingLabel,
   formatUsdFromCents,
+  getPastDueDaysRemaining,
+  PAST_DUE_GRACE_DAYS,
   PRO_MAX_PROJECTS,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
@@ -42,7 +47,11 @@ import {
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
-import type { UserBillingOverview } from "@/lib/billing/service";
+import type {
+  PersonalPublicProjectChoice,
+  TeamSeatRosterItem,
+  UserBillingOverview,
+} from "@/lib/billing/service";
 
 const CANCEL_REASONS = [
   { value: "too_expensive", label: "It’s too expensive" },
@@ -78,6 +87,49 @@ function formatDateLabel(iso: string | null | undefined): string {
     month: "short",
     year: "numeric",
   });
+}
+
+function KeepFreeProjectSelector({
+  id,
+  label,
+  projects,
+  value,
+  disabled,
+  onChange,
+  testId,
+}: {
+  id: string;
+  label: string;
+  projects: PersonalPublicProjectChoice[];
+  value: string;
+  disabled?: boolean;
+  onChange: (projectId: string) => void;
+  testId?: string;
+}) {
+  if (projects.length <= 1) return null;
+  return (
+    <div className="border-border/70 bg-surface/80 flex flex-col gap-1.5 rounded-2xl border p-3">
+      <Label htmlFor={id} className="type-caption text-foreground">
+        {label}
+      </Label>
+      <select
+        id={id}
+        data-testid={testId}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="border-border bg-elevated text-foreground type-caption h-9 rounded-xl border px-2.5"
+      >
+        {projects.map((proj) => (
+          <option key={proj.id} value={proj.id}>
+            {proj.name}
+            {proj.slug ? ` (/p/${proj.slug})` : ""}
+            {proj.visibility === "private" ? " · Draft" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 }
 
 export function BillingSettingsPanel({
@@ -137,6 +189,13 @@ export function BillingSettingsPanel({
   );
   const [seatPreview, setSeatPreview] = useState<SeatIncreasePreviewState | null>(null);
   const [seatError, setSeatError] = useState<string | null>(null);
+  const [seatReleaseOpen, setSeatReleaseOpen] = useState(false);
+  const [rosterState, setRosterState] = useState<TeamSeatRosterItem | null>(
+    teamBilling?.occupiedRoster ?? null,
+  );
+  const [seatReleaseBusyId, setSeatReleaseBusyId] = useState<string | null>(null);
+  const [teamCancelOpen, setTeamCancelOpen] = useState(false);
+  const [teamCancelAcknowledged, setTeamCancelAcknowledged] = useState(false);
 
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -151,6 +210,7 @@ export function BillingSettingsPanel({
     if (teamBilling && teamBilling.paidSeats > 0) {
       setTargetSeatCount(Math.max(TEAMS_MIN_SEATS, teamBilling.paidSeats));
     }
+    setRosterState(teamBilling?.occupiedRoster ?? null);
   }, [teamBilling]);
 
   async function handleOpenCustomerPortal() {
@@ -321,8 +381,23 @@ export function BillingSettingsPanel({
       return;
     }
 
+    if (targetSeatCount < teamBilling.paidSeats && rosterState) {
+      const currentOccupied =
+        rosterState.members.length + rosterState.pendingInvites.length;
+      if (targetSeatCount < currentOccupied) {
+        setSeatReleaseOpen(true);
+        return;
+      }
+    }
+
+    await executeScheduleSeatDecrease(targetSeatCount);
+  }
+
+  async function executeScheduleSeatDecrease(nextSeatCount: number) {
+    if (!teamBilling) return;
     // Schedule seat decrease at renewal
     setBusyAction("seat-decrease");
+    setSeatError(null);
     try {
       const res = await fetch("/api/paddle/seats", {
         method: "POST",
@@ -330,7 +405,7 @@ export function BillingSettingsPanel({
         body: JSON.stringify({
           action: "schedule_decrease",
           organizationId: teamBilling.organizationId,
-          targetSeats: targetSeatCount,
+          targetSeats: nextSeatCount,
         }),
       });
       const json = (await res.json()) as
@@ -344,12 +419,131 @@ export function BillingSettingsPanel({
         return;
       }
 
+      setSeatReleaseOpen(false);
       toast.success(
         `Scheduled renewal seat count to ${json.renewalSeats}. Current capacity (${teamBilling.paidSeats}) stays active until renewal.`,
       );
       router.refresh();
     } catch {
       setSeatError("Network error while scheduling seat decrease.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleRevokeInviteForSeatDecrease(invitationId: string) {
+    setSeatReleaseBusyId(`inv:${invitationId}`);
+    setSeatError(null);
+    try {
+      const res = await fetch(`/api/team/invitations/${encodeURIComponent(invitationId)}`, {
+        method: "DELETE",
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setSeatError(json.error ?? "Could not revoke pending invitation.");
+        return;
+      }
+      setRosterState((prev) =>
+        prev
+          ? {
+              ...prev,
+              pendingInvites: prev.pendingInvites.filter((inv) => inv.id !== invitationId),
+            }
+          : prev,
+      );
+      toast.success("Pending invitation revoked — 1 seat freed.");
+      router.refresh();
+    } catch {
+      setSeatError("Network error while revoking invitation.");
+    } finally {
+      setSeatReleaseBusyId(null);
+    }
+  }
+
+  async function handleRemoveMemberForSeatDecrease(memberUserId: string, memberName: string) {
+    if (!teamBilling) return;
+    setSeatReleaseBusyId(`mem:${memberUserId}`);
+    setSeatError(null);
+    try {
+      const res = await fetch("/api/team/members", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationId: teamBilling.organizationId,
+          targetUserId: memberUserId,
+        }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setSeatError(json.error ?? "Could not remove member.");
+        return;
+      }
+      setRosterState((prev) =>
+        prev
+          ? {
+              ...prev,
+              members: prev.members.filter((m) => m.userId !== memberUserId),
+            }
+          : prev,
+      );
+      toast.success(`Removed ${memberName} — 1 seat freed.`);
+      router.refresh();
+    } catch {
+      setSeatError("Network error while removing member.");
+    } finally {
+      setSeatReleaseBusyId(null);
+    }
+  }
+
+  async function handleCancelTeamSubscription() {
+    if (!teamBilling) return;
+    setBusyAction("team-cancel");
+    setActionError(null);
+    try {
+      const res = await fetch("/api/paddle/portal", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgId: teamBilling.organizationId,
+          reason: "other",
+          feedback: "Canceled Teams subscription via Billing settings",
+          immediate: false,
+        }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setActionError(json.error ?? "Could not schedule Teams cancellation.");
+        return;
+      }
+      setTeamCancelOpen(false);
+      setTeamCancelAcknowledged(false);
+      toast.success("Teams subscription scheduled to end at period end.");
+      router.refresh();
+    } catch {
+      setActionError("Network error while cancelling Teams subscription.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleResumeTeamSubscription() {
+    if (!teamBilling) return;
+    setBusyAction("team-resume");
+    try {
+      const res = await fetch("/api/paddle/portal", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId: teamBilling.organizationId }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        toast.error(json.error ?? "Could not resume Teams subscription.");
+        return;
+      }
+      toast.success("Teams subscription resumed.");
+      router.refresh();
+    } catch {
+      toast.error("Network error while resuming Teams subscription.");
     } finally {
       setBusyAction(null);
     }
@@ -450,6 +644,21 @@ export function BillingSettingsPanel({
   const isCancelScheduled = sub?.status === "cancel_at_period_end";
   const hasPaidAccess = effectivePlan === "pro" || effectivePlan === "team";
 
+  const personalPastDueLifecycle =
+    isPastDue && sub
+      ? evaluateSubscriptionLifecycle({
+          status: "past_due",
+          currentPeriodEnd: sub.currentPeriodEndIso ? new Date(sub.currentPeriodEndIso) : null,
+          pastDueSince: sub.pastDueSinceIso ? new Date(sub.pastDueSinceIso) : null,
+        })
+      : null;
+  const personalGraceDaysLeft = personalPastDueLifecycle
+    ? getPastDueDaysRemaining(personalPastDueLifecycle.pastDueEndsAt)
+    : PAST_DUE_GRACE_DAYS;
+  const personalGraceEndLabel = personalPastDueLifecycle?.pastDueEndsAt
+    ? formatDateLabel(personalPastDueLifecycle.pastDueEndsAt.toISOString())
+    : "end of the 10-day grace window";
+
   const statusBadge = (() => {
     if (!hasPaidAccess) {
       return <Badge tone="neutral">Free</Badge>;
@@ -481,14 +690,18 @@ export function BillingSettingsPanel({
               <AlertTriangle className="size-4" />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-foreground type-body-s-strong">Payment failed</span>
+              <span className="text-foreground type-body-s-strong">
+                Payment failed — {personalGraceDaysLeft}{" "}
+                {personalGraceDaysLeft === 1 ? "day" : "days"} left to renew
+              </span>
               <p className="text-muted-foreground type-body-s max-w-xl">
                 We couldn&apos;t charge{" "}
                 {sub.paymentBrand && sub.paymentLast4
                   ? `${sub.paymentBrand} ••${sub.paymentLast4}`
                   : "your payment method"}
-                . Paddle will retry automatically during your 7-day grace window — update
-                your payment method to keep {planTitle} features active.
+                . Renew by {personalGraceEndLabel} during your 10-day grace window — otherwise
+                your account reverts to Free (1 active project) and excess Case Studies lock
+                until payment resumes.
               </p>
             </div>
           </div>
@@ -581,27 +794,33 @@ export function BillingSettingsPanel({
                   : `${currentAmountSummary} · next charge ${periodEndFormatted}`}
             </p>
 
-            {personalPublished.length > 1 && (
-              <div className="border-border/70 bg-surface/80 flex flex-col gap-1.5 rounded-2xl border p-3">
-                <Label htmlFor="keep-public-select" className="type-caption text-foreground">
-                  {!hasPaidAccess
-                    ? "Active Case Study on Free (1 editable & live; extras safely locked):"
-                    : "Keep 1 active Case Study editable & live if downgraded to Free:"}
-                </Label>
-                <select
-                  id="keep-public-select"
-                  data-testid="keep-public-project-select"
-                  value={keepPublicProjectId}
-                  disabled={busyAction === "keep-public"}
-                  onChange={(e) => handleSaveKeepPublicChoice(e.target.value)}
-                  className="border-border bg-elevated text-foreground type-caption h-9 rounded-xl border px-2.5"
-                >
-                  {personalPublished.map((proj) => (
-                    <option key={proj.id} value={proj.id}>
-                      {proj.name} {proj.slug ? `(/p/${proj.slug})` : ""}
-                    </option>
-                  ))}
-                </select>
+            {personalPublished.length > 1 && hasPaidAccess && (
+              <KeepFreeProjectSelector
+                id="keep-public-select"
+                testId="keep-public-project-select"
+                label="Choose 1 active Case Study to keep editable & live if downgraded to Free:"
+                projects={personalPublished}
+                value={keepPublicProjectId}
+                disabled={busyAction === "keep-public"}
+                onChange={(val) => void handleSaveKeepPublicChoice(val)}
+              />
+            )}
+
+            {personalPublished.length > 1 && !hasPaidAccess && (
+              <div
+                data-testid="free-locked-summary-box"
+                className="border-warning/35 bg-warning-soft/50 flex items-start gap-2.5 rounded-2xl border p-3"
+              >
+                <Lock className="text-warning mt-0.5 size-4 shrink-0" />
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-foreground type-caption font-semibold">
+                    1 Case Study active · {personalPublished.length - 1} locked on Free
+                  </span>
+                  <span className="text-muted-foreground type-caption">
+                    Extra Case Studies stay locked and unopenable until you renew or upgrade to
+                    Pro — paying restores all projects and live URLs automatically.
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -778,14 +997,24 @@ export function BillingSettingsPanel({
                 </h3>
                 <Badge
                   tone={
-                    teamBilling.plan === "team" || teamBilling.plan === "plus"
-                      ? "published"
-                      : "neutral"
+                    teamBilling.status === "past_due"
+                      ? "danger"
+                      : teamBilling.status === "cancel_at_period_end"
+                        ? "draft"
+                        : teamBilling.plan === "team" || teamBilling.plan === "plus"
+                          ? "published"
+                          : "neutral"
                   }
                 >
-                  {teamBilling.plan === "team" || teamBilling.plan === "plus"
-                    ? "Teams Active"
-                    : "Unfunded"}
+                  {teamBilling.status === "past_due"
+                    ? `Past due${typeof teamBilling.daysRemaining === "number" ? ` · ${teamBilling.daysRemaining}d left` : ""}`
+                    : teamBilling.status === "cancel_at_period_end"
+                      ? "Cancels soon"
+                      : teamBilling.plan === "team" || teamBilling.plan === "plus"
+                        ? "Teams Active"
+                        : teamBilling.status === "canceled"
+                          ? "Locked · Ended"
+                          : "Unfunded"}
                 </Badge>
                 <Badge tone="accent">{teamBilling.role}</Badge>
               </div>
@@ -812,11 +1041,99 @@ export function BillingSettingsPanel({
                     }}
                   >
                     <CreditCard className="size-3.5" />
-                    Activate Casefolio Teams
+                    {teamBilling.status === "canceled"
+                      ? "Renew Teams to unlock"
+                      : "Activate Casefolio Teams"}
+                  </Button>
+                </div>
+              )}
+
+            {teamBilling.isOwner &&
+              (teamBilling.plan === "team" || teamBilling.plan === "plus") &&
+              teamBilling.status !== "cancel_at_period_end" && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    data-testid="open-cancel-team-modal"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => {
+                      setActionError(null);
+                      setTeamCancelAcknowledged(false);
+                      setTeamCancelOpen(true);
+                    }}
+                  >
+                    Cancel Teams
                   </Button>
                 </div>
               )}
           </div>
+
+          {teamBilling.status === "past_due" && (
+            <div
+              role="alert"
+              data-testid="team-billing-past-due-banner"
+              className="border-destructive/30 bg-destructive-soft flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+            >
+              <p className="text-foreground type-body-s">
+                Team renewal failed —{" "}
+                <strong>
+                  {teamBilling.daysRemaining ?? PAST_DUE_GRACE_DAYS}{" "}
+                  {(teamBilling.daysRemaining ?? PAST_DUE_GRACE_DAYS) === 1 ? "day" : "days"} left
+                </strong>{" "}
+                {teamBilling.graceEndsAtIso
+                  ? `(until ${formatDateLabel(teamBilling.graceEndsAtIso)}) `
+                  : ""}
+                before all Team Case Studies and exports lock until the Owner renews.
+              </p>
+              {teamBilling.isOwner && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (overview.hasLivePaddlePortal) {
+                      void handleOpenCustomerPortal();
+                    } else {
+                      setCheckoutPlan("team");
+                      setCheckoutInterval(teamBilling.interval);
+                      setCheckoutOrgId(teamBilling.organizationId);
+                      setCheckoutOpen(true);
+                    }
+                  }}
+                >
+                  Update team payment
+                </Button>
+              )}
+            </div>
+          )}
+
+          {teamBilling.status === "cancel_at_period_end" && (
+            <div
+              role="status"
+              data-testid="team-billing-cancelled-banner"
+              className="border-warning/30 bg-warning-soft flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+            >
+              <p className="text-foreground type-body-s">
+                Teams subscription ends on{" "}
+                <strong>{formatDateLabel(teamBilling.currentPeriodEndIso)}</strong>. After that, all
+                Team projects lock until renewed (each member keeps 1 Free project in their
+                Personal Workspace).
+              </p>
+              {teamBilling.isOwner && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={busyAction === "team-resume"}
+                  onClick={handleResumeTeamSubscription}
+                >
+                  <RotateCcw className="size-3.5" />
+                  {busyAction === "team-resume" ? "Resuming..." : "Resume Teams"}
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* 5 separate, unambiguous seat counters */}
           <dl className="border-border bg-surface grid grid-cols-2 gap-3 rounded-2xl border p-4 sm:grid-cols-5">
@@ -909,14 +1226,11 @@ export function BillingSettingsPanel({
                       type="button"
                       aria-label="Decrease target seats"
                       disabled={
-                        targetSeatCount <=
-                          Math.max(TEAMS_MIN_SEATS, teamBilling.occupiedSeats) ||
+                        targetSeatCount <= TEAMS_MIN_SEATS ||
                         teamBilling.isLockedForQuantityChange
                       }
                       onClick={() =>
-                        setTargetSeatCount((v) =>
-                          Math.max(TEAMS_MIN_SEATS, teamBilling.occupiedSeats, v - 1),
-                        )
+                        setTargetSeatCount((v) => Math.max(TEAMS_MIN_SEATS, v - 1))
                       }
                       className="border-border bg-surface text-foreground inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
                     >
@@ -968,7 +1282,39 @@ export function BillingSettingsPanel({
 
                 <p className="text-muted-foreground type-caption">
                   Self-serve Teams supports {TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats.
-                  Need 26+ enterprise seats? Contact support.
+                  {targetSeatCount <
+                    (rosterState
+                      ? rosterState.members.length + rosterState.pendingInvites.length
+                      : teamBilling.occupiedSeats) && (
+                    <span className="text-warning font-medium">
+                      {" "}
+                      You currently have{" "}
+                      {rosterState
+                        ? rosterState.members.length + rosterState.pendingInvites.length
+                        : teamBilling.occupiedSeats}{" "}
+                      occupied seats — clicking Schedule will guide you to release unused invites or
+                      members first.
+                    </span>
+                  )}
+                  {targetSeatCount === TEAMS_MIN_SEATS && (
+                    <span>
+                      {" "}
+                      Working solo (1 seat)?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCheckoutPlan("pro");
+                          setCheckoutInterval("monthly");
+                          setCheckoutOrgId(null);
+                          setCheckoutOpen(true);
+                        }}
+                        className="text-primary font-semibold underline-offset-4 hover:underline"
+                      >
+                        Switch to Personal Pro ($7.99/mo)
+                      </button>{" "}
+                      and cancel Teams anytime.
+                    </span>
+                  )}
                 </p>
 
                 {seatError && (
@@ -1284,6 +1630,16 @@ export function BillingSettingsPanel({
               </li>
             </ul>
 
+            <KeepFreeProjectSelector
+              id="downgrade-keep-public-select"
+              testId="downgrade-keep-public-select"
+              label="Choose the 1 Case Study to stay unlocked on Free (all others lock until you re-upgrade):"
+              projects={personalPublished}
+              value={keepPublicProjectId}
+              disabled={busyAction === "cancel"}
+              onChange={setKeepPublicProjectId}
+            />
+
             {actionError && (
               <p
                 role="alert"
@@ -1441,6 +1797,16 @@ export function BillingSettingsPanel({
                 </li>
               </ul>
 
+              <KeepFreeProjectSelector
+                id="cancel-keep-public-select"
+                testId="cancel-keep-public-select"
+                label="Choose the 1 Case Study to keep unlocked on Free after cancellation:"
+                projects={personalPublished}
+                value={keepPublicProjectId}
+                disabled={busyAction === "cancel"}
+                onChange={setKeepPublicProjectId}
+              />
+
               <label className="text-foreground type-body-s flex cursor-pointer items-center gap-2.5">
                 <input
                   type="checkbox"
@@ -1551,6 +1917,230 @@ export function BillingSettingsPanel({
                 </Button>
               </DialogFooter>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Guided Team Seat Release Modal */}
+      {seatReleaseOpen && teamBilling && rosterState && (
+        <Dialog open={seatReleaseOpen} onOpenChange={setSeatReleaseOpen}>
+          <DialogContent className="max-w-lg" data-testid="seat-release-dialog">
+            <DialogHeader>
+              <DialogTitle>Free seats to reduce to {targetSeatCount}</DialogTitle>
+              <DialogDescription>
+                You currently occupy{" "}
+                <strong>
+                  {rosterState.members.length + rosterState.pendingInvites.length}
+                </strong>{" "}
+                seats ({rosterState.members.length} members +{" "}
+                {rosterState.pendingInvites.length} pending invites). Remove or revoke{" "}
+                <strong>
+                  {Math.max(
+                    0,
+                    rosterState.members.length +
+                      rosterState.pendingInvites.length -
+                      targetSeatCount,
+                  )}
+                </strong>{" "}
+                more to schedule the reduction.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex max-h-80 flex-col gap-4 overflow-y-auto pr-1">
+              {rosterState.pendingInvites.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-muted-foreground type-caption font-semibold uppercase tracking-wider">
+                    Pending invitations ({rosterState.pendingInvites.length})
+                  </span>
+                  {rosterState.pendingInvites.map((inv) => {
+                    const busy = seatReleaseBusyId === `inv:${inv.id}`;
+                    return (
+                      <div
+                        key={inv.id}
+                        className="border-border bg-surface flex items-center justify-between gap-2 rounded-xl border px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-foreground type-body-s truncate">{inv.email}</p>
+                          <p className="text-muted-foreground type-caption">
+                            Pending invite · {inv.role}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={Boolean(seatReleaseBusyId)}
+                          onClick={() => void handleRevokeInviteForSeatDecrease(inv.id)}
+                        >
+                          {busy ? <Loader2 className="size-3.5 animate-spin" /> : "Revoke"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <span className="text-muted-foreground type-caption font-semibold uppercase tracking-wider">
+                  Team members ({rosterState.members.length})
+                </span>
+                {rosterState.members
+                  .filter((m) => m.role !== "owner")
+                  .map((member) => {
+                    const busy = seatReleaseBusyId === `mem:${member.userId}`;
+                    return (
+                      <div
+                        key={member.userId}
+                        className="border-border bg-surface flex items-center justify-between gap-2 rounded-xl border px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-foreground type-body-s truncate">
+                            {member.name} ({member.email})
+                          </p>
+                          <p className="text-muted-foreground type-caption">
+                            Active {member.role} · Private projects move to 90d Recovery Portal
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={Boolean(seatReleaseBusyId)}
+                          onClick={() =>
+                            void handleRemoveMemberForSeatDecrease(member.userId, member.name)
+                          }
+                        >
+                          {busy ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <UserMinus className="size-3.5" />
+                              Remove
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {seatError && (
+              <p role="alert" className="text-destructive type-caption">
+                {seatError}
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setSeatReleaseOpen(false)}
+                disabled={busyAction === "seat-decrease"}
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                data-testid="confirm-guided-seat-decrease-btn"
+                disabled={
+                  rosterState.members.length + rosterState.pendingInvites.length >
+                    targetSeatCount || busyAction === "seat-decrease"
+                }
+                onClick={() => void executeScheduleSeatDecrease(targetSeatCount)}
+              >
+                {busyAction === "seat-decrease" ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Scheduling...
+                  </>
+                ) : (
+                  `Schedule decrease to ${targetSeatCount} seats`
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Cancel Teams Subscription Dialog */}
+      {teamCancelOpen && teamBilling && (
+        <Dialog open={teamCancelOpen} onOpenChange={setTeamCancelOpen}>
+          <DialogContent className="max-w-md" data-testid="cancel-team-dialog">
+            <DialogHeader>
+              <DialogTitle>Cancel {teamBilling.organizationName} Teams?</DialogTitle>
+              <DialogDescription>
+                Paid seats stay active until {formatDateLabel(teamBilling.currentPeriodEndIso)}.
+                After that:
+              </DialogDescription>
+            </DialogHeader>
+
+            <ul className="flex flex-col gap-2.5 py-1">
+              <li className="text-foreground type-body-s flex items-start gap-2.5">
+                <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
+                <span>
+                  All Team Case Studies, edits, exports, and live Team links lock completely until
+                  you renew Teams.
+                </span>
+              </li>
+              <li className="text-foreground type-body-s flex items-start gap-2.5">
+                <Check className="text-success mt-0.5 size-4 shrink-0" />
+                <span>
+                  Each team member keeps their own independent Personal Workspace (1 Free Case Study,
+                  or Pro if subscribed personally).
+                </span>
+              </li>
+            </ul>
+
+            <label className="text-foreground type-body-s flex cursor-pointer items-center gap-2.5">
+              <input
+                type="checkbox"
+                data-testid="cancel-team-confirm-checkbox"
+                checked={teamCancelAcknowledged}
+                onChange={(e) => setTeamCancelAcknowledged(e.target.checked)}
+                className="accent-primary size-4 rounded"
+              />
+              <span>
+                I understand Team projects will lock after{" "}
+                {formatDateLabel(teamBilling.currentPeriodEndIso)}
+              </span>
+            </label>
+
+            {actionError && (
+              <p
+                role="alert"
+                className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+              >
+                {actionError}
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setTeamCancelOpen(false)}
+                disabled={busyAction === "team-cancel"}
+              >
+                Keep Teams
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                data-testid="confirm-cancel-team-btn"
+                disabled={!teamCancelAcknowledged || busyAction === "team-cancel"}
+                onClick={() => void handleCancelTeamSubscription()}
+              >
+                {busyAction === "team-cancel" ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Cancelling...
+                  </>
+                ) : (
+                  "Cancel Teams subscription"
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

@@ -633,7 +633,14 @@ export function TeamWorkspaceClient({
     setSeatActionBusy(true);
     try {
       if (targetSeatCount > paidSeats) {
-        const res = await fetch("/api/paddle/seats", {
+        if (targetSeatCount < seatsUsed) {
+        setSeatActionError(
+          `Free ${seatsUsed - targetSeatCount} more seat${seatsUsed - targetSeatCount === 1 ? "" : "s"} by revoking pending invites or removing members below before reducing to ${targetSeatCount} seats.`,
+        );
+        return;
+      }
+
+      const res = await fetch("/api/paddle/seats", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -660,6 +667,13 @@ export function TeamWorkspaceClient({
           renewalChargeCents: json.renewalChargeCents,
           interval: json.interval,
         });
+        return;
+      }
+
+      if (targetSeatCount < seatsUsed) {
+        setSeatActionError(
+          `Free ${seatsUsed - targetSeatCount} more seat${seatsUsed - targetSeatCount === 1 ? "" : "s"} by revoking pending invites or removing members below before reducing to ${targetSeatCount} seats.`,
+        );
         return;
       }
 
@@ -693,6 +707,13 @@ export function TeamWorkspaceClient({
     setSeatActionBusy(true);
     setSeatActionError(null);
     try {
+      if (targetSeatCount < seatsUsed) {
+        setSeatActionError(
+          `Free ${seatsUsed - targetSeatCount} more seat${seatsUsed - targetSeatCount === 1 ? "" : "s"} by revoking pending invites or removing members below before reducing to ${targetSeatCount} seats.`,
+        );
+        return;
+      }
+
       const res = await fetch("/api/paddle/seats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -726,6 +747,13 @@ export function TeamWorkspaceClient({
     setSeatActionError(null);
     setSeatActionMessage(null);
     try {
+      if (targetSeatCount < seatsUsed) {
+        setSeatActionError(
+          `Free ${seatsUsed - targetSeatCount} more seat${seatsUsed - targetSeatCount === 1 ? "" : "s"} by revoking pending invites or removing members below before reducing to ${targetSeatCount} seats.`,
+        );
+        return;
+      }
+
       const res = await fetch("/api/paddle/seats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -996,7 +1024,6 @@ export function TeamWorkspaceClient({
 
   const eligibleTransferCandidates =
     currentOrg?.members.filter((m) => toCanonicalRole(m.role) !== "owner") ?? [];
-  const minAllowedTargetSeats = Math.max(TEAMS_MIN_SEATS, seatsUsed);
 
   return (
     <div className="flex flex-col gap-6">
@@ -1357,11 +1384,11 @@ export function TeamWorkspaceClient({
                           disabled={
                             seatActionBusy ||
                             Boolean(currentOrg.isLockedForQuantityChange) ||
-                            targetSeatCount <= minAllowedTargetSeats
+                            targetSeatCount <= TEAMS_MIN_SEATS
                           }
                           onClick={() =>
                             setTargetSeatCount((prev) =>
-                              Math.max(minAllowedTargetSeats, prev - 1),
+                              Math.max(TEAMS_MIN_SEATS, prev - 1),
                             )
                           }
                           className="border-border bg-elevated text-foreground hover:bg-sunken inline-flex size-8 items-center justify-center rounded-full border disabled:opacity-40"
@@ -1434,6 +1461,16 @@ export function TeamWorkspaceClient({
                         Cancel decrease
                       </Button>
                     </div>
+                  )}
+
+                  {targetSeatCount < seatsUsed && (
+                    <p className="text-warning type-caption">
+                      You have {seatsUsed} occupied seats ({activeMembersCount} active +{" "}
+                      {pendingInvitationsCount} pending). Revoke or remove{" "}
+                      {seatsUsed - targetSeatCount} seat
+                      {seatsUsed - targetSeatCount === 1 ? "" : "s"} below (or use Billing&apos;s
+                      guided flow) before reducing to {targetSeatCount}.
+                    </p>
                   )}
 
                   {currentOrg.isLockedForQuantityChange && currentOrg.lockReason && (

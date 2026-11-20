@@ -6,7 +6,6 @@ import {
   Archive,
   ArchiveRestore,
   Building2,
-  CheckCircle2,
   Copy,
   Download,
   ExternalLink,
@@ -235,44 +234,6 @@ export function DashboardProjectsClient({
     () => projects.filter((p) => p.isLockedByDowngrade && !p.archivedAtIso).length,
     [projects],
   );
-
-  async function handleSetActiveFreeProject(project: DashboardProjectItem) {
-    setBusyProjectId(project.id);
-    try {
-      const res = await fetch("/api/paddle/seats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "keep_public_project",
-          projectId: project.id,
-        }),
-      });
-      const json = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok || !json.ok) {
-        toast.error(json.error ?? "Could not switch active Case Study.");
-        return;
-      }
-      setProjects((prev) =>
-        prev.map((item) => {
-          if (item.archivedAtIso || item.workspaceKind !== "personal") return item;
-          const isChosen = item.id === project.id;
-          return {
-            ...item,
-            isKeptActiveProject: isChosen,
-            isLockedByDowngrade: !isChosen,
-            visibility: isChosen ? item.visibility : "private",
-            publishedAtIso: isChosen ? item.publishedAtIso : null,
-          };
-        }),
-      );
-      toast.success(`“${project.name}” is now your 1 active Case Study on Free.`);
-      router.refresh();
-    } catch {
-      toast.error("Network error while switching active Case Study.");
-    } finally {
-      setBusyProjectId(null);
-    }
-  }
 
   const activeWorkspace = workspaceContext?.activeWorkspace ?? null;
   const spaces = workspaceContext?.spaces ?? [];
@@ -679,17 +640,25 @@ export function DashboardProjectsClient({
         <div
           role="alert"
           data-testid="dashboard-frozen-banner"
-          className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"
+          className="border-destructive/40 bg-destructive-soft text-foreground flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"
         >
-          <div className="flex items-center gap-2.5">
-            <AlertTriangle className="text-warning size-4 shrink-0" />
-            <p className="type-body-s">
-              This workspace is currently in read-only mode (
-              {activeWorkspace.frozenReason === "past_due_expired"
-                ? "past-due grace period ended"
-                : "subscription inactive"}
-              ). Existing projects remain safe and downloadable.
-            </p>
+          <div className="flex items-start gap-2.5">
+            <Lock className="text-destructive mt-0.5 size-4 shrink-0" />
+            <div className="flex flex-col gap-0.5">
+              <p className="type-body-s-strong">
+                Team workspace locked (
+                {activeWorkspace.frozenReason === "past_due_over_10_days" ||
+                activeWorkspace.frozenReason === "past_due_over_7_days" ||
+                activeWorkspace.frozenReason === "past_due_expired"
+                  ? "10-day renewal grace ended"
+                  : "Team subscription ended"}
+                )
+              </p>
+              <p className="text-muted-foreground type-caption">
+                Opening, editing, publishing, and exporting Team projects is locked until the Team
+                Owner renews Teams. Each member still keeps 1 Case Study in their Personal Workspace.
+              </p>
+            </div>
           </div>
           <Button asChild size="sm" variant="secondary">
             <Link href="/account/billing">Manage billing</Link>
@@ -1252,8 +1221,9 @@ export function DashboardProjectsClient({
                 {lockedByDowngradeCount === 1 ? "Case Study" : "Case Studies"} safely locked)
               </span>
               <span className="text-muted-foreground type-caption">
-                None of your work was deleted. Open any locked card&apos;s menu to switch your 1
-                active Case Study, or upgrade to Casefolio Pro to unlock all Case Studies.
+                None of your work was deleted. Extra Case Studies stay strictly Locked (cannot be
+                opened, edited, or exported) until you upgrade back to Casefolio Pro — paying
+                immediately unlocks them and restores their links.
               </span>
             </div>
           </div>
@@ -1434,15 +1404,40 @@ export function DashboardProjectsClient({
                 : "";
             const subtitle = `${formatProjectTypeLabel(project.type)} · ${formatRelativeEdited(project.updatedAtIso, mountedNowMs)}${spaceLabel}`;
             const isBusy = busyProjectId === project.id;
+            const isProjectLocked = Boolean(
+              project.isLockedByDowngrade || project.isLockedByTeamSubscription,
+            );
+            const canDeleteLocked =
+              project.workspaceKind !== "team" || activeWorkspace?.role === "owner";
             const indexLabel = String(idx + 1).padStart(2, "0");
             const windowPath = project.slug ? `p/${project.slug}` : `draft/${project.templateName.toLowerCase()}`;
+
+            function handleLockedProjectClick() {
+              if (project.isLockedByTeamSubscription) {
+                toast.info(
+                  activeWorkspace?.role === "owner"
+                    ? "Renew Casefolio Teams in Billing settings to unlock Team projects."
+                    : "This Team workspace is locked until the Team Owner renews Teams.",
+                );
+                if (activeWorkspace?.role === "owner") {
+                  router.push("/account/billing");
+                }
+                return;
+              }
+              setDowngradeUpgradeOpen(true);
+            }
 
             return (
               <article
                 key={project.id}
                 data-slot="project-card"
                 data-project-id={project.id}
-                className="group relative flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground transition-all duration-200 hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
+                className={cn(
+                  "group relative flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground transition-all duration-200",
+                  isProjectLocked
+                    ? "opacity-90"
+                    : "hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
+                )}
               >
                 {/* Architectural Spec Bar */}
                 <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2.5">
@@ -1457,60 +1452,101 @@ export function DashboardProjectsClient({
                 </div>
 
                 <div className="p-3.5 pb-0">
-                  <Link
-                    href={`/editor/${project.id}`}
-                    aria-label={`Open ${project.name} in editor`}
-                    className="focus-visible:ring-ring/40 block overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] outline-none focus-visible:ring-2"
-                  >
-                    {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
-                      <TemplateThumbnail
-                        testId={`dashboard-project-thumb-${project.id}`}
-                        coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
-                        slug={project.templateSlug}
-                        name={project.name}
-                        className="aspect-[16/10] w-full"
-                        imageClassName="group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <div
-                        className={`relative aspect-[16/10] w-full overflow-hidden ${palette.surface}`}
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`type-heading-l absolute top-5 left-5 select-none ${palette.glyph}`}
-                        >
-                          Aa
+                  {isProjectLocked ? (
+                    <button
+                      type="button"
+                      onClick={handleLockedProjectClick}
+                      aria-label={`${project.name} is locked — click to renew or upgrade`}
+                      className="focus-visible:ring-ring/40 relative block w-full cursor-pointer overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] text-left outline-none focus-visible:ring-2"
+                    >
+                      {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
+                        <TemplateThumbnail
+                          testId={`dashboard-project-thumb-${project.id}`}
+                          coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
+                          slug={project.templateSlug}
+                          name={project.name}
+                          className="aspect-[16/10] w-full grayscale-[35%] opacity-75"
+                        />
+                      ) : (
+                        <div
+                          className={`relative aspect-[16/10] w-full overflow-hidden opacity-75 grayscale-[35%] ${palette.surface}`}
+                        />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[1px]">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--cf-bg-elevated)] px-3 py-1.5 text-xs font-bold text-[var(--cf-text-primary)] shadow-sm">
+                          <Lock className="size-3.5 text-warning" />
+                          <span>Locked · Renew to open</span>
                         </span>
-                        <div
-                          aria-hidden="true"
-                          className="absolute right-30 bottom-0 h-32 w-24 rounded-t-xl bg-[var(--cf-royal)] transition-transform duration-300 group-hover:-translate-y-1"
-                        />
-                        <div
-                          aria-hidden="true"
-                          className="absolute right-20 bottom-0 h-22 w-14 rounded-t-xl bg-[var(--cf-bg-accent)] transition-transform duration-300 group-hover:-translate-y-2"
-                        />
-                        <div
-                          aria-hidden="true"
-                          className="bg-elevated border-border/60 absolute right-4 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
-                        />
                       </div>
-                    )}
-                  </Link>
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/editor/${project.id}`}
+                      aria-label={`Open ${project.name} in editor`}
+                      className="focus-visible:ring-ring/40 block overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] outline-none focus-visible:ring-2"
+                    >
+                      {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
+                        <TemplateThumbnail
+                          testId={`dashboard-project-thumb-${project.id}`}
+                          coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
+                          slug={project.templateSlug}
+                          name={project.name}
+                          className="aspect-[16/10] w-full"
+                          imageClassName="group-hover:scale-[1.03]"
+                        />
+                      ) : (
+                        <div
+                          className={`relative aspect-[16/10] w-full overflow-hidden ${palette.surface}`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`type-heading-l absolute top-5 left-5 select-none ${palette.glyph}`}
+                          >
+                            Aa
+                          </span>
+                          <div
+                            aria-hidden="true"
+                            className="absolute right-30 bottom-0 h-32 w-24 rounded-t-xl bg-[var(--cf-royal)] transition-transform duration-300 group-hover:-translate-y-1"
+                          />
+                          <div
+                            aria-hidden="true"
+                            className="absolute right-20 bottom-0 h-22 w-14 rounded-t-xl bg-[var(--cf-bg-accent)] transition-transform duration-300 group-hover:-translate-y-2"
+                          />
+                          <div
+                            aria-hidden="true"
+                            className="bg-elevated border-border/60 absolute right-4 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
+                          />
+                        </div>
+                      )}
+                    </Link>
+                  )}
                 </div>
 
                 <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 p-4 pt-3.5">
                   <div className="flex min-w-0 items-center justify-between gap-2">
-                    <Link
-                      href={`/editor/${project.id}`}
-                      className="v3-heading-s min-w-0 truncate text-[var(--cf-text-primary)] transition-colors hover:text-[var(--cf-royal)]"
-                    >
-                      {project.name}
-                    </Link>
+                    {isProjectLocked ? (
+                      <button
+                        type="button"
+                        onClick={handleLockedProjectClick}
+                        className="v3-heading-s min-w-0 truncate text-left text-[var(--cf-text-secondary)] transition-colors hover:text-[var(--cf-royal)]"
+                      >
+                        {project.name}
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/editor/${project.id}`}
+                        className="v3-heading-s min-w-0 truncate text-[var(--cf-text-primary)] transition-colors hover:text-[var(--cf-royal)]"
+                      >
+                        {project.name}
+                      </Link>
+                    )}
 
                     <div className="flex shrink-0 items-center gap-1.5">
-                      {project.isLockedByDowngrade ? (
+                      {isProjectLocked ? (
                         <Badge tone="draft" data-testid={`project-locked-badge-${project.id}`}>
-                          Locked · Free limit
+                          {project.isLockedByTeamSubscription
+                            ? "Locked · Team paused"
+                            : "Locked · Free limit"}
                         </Badge>
                       ) : (
                         <Badge tone={badge.tone}>{badge.label}</Badge>
@@ -1534,89 +1570,106 @@ export function DashboardProjectsClient({
 
                         {/* Context menu + Space & Archive actions */}
                         <DropdownMenuContent align="end" className="w-56">
-                          {project.isLockedByDowngrade && (
+                          {isProjectLocked ? (
                             <>
                               <DropdownMenuItem
-                                data-testid={`set-active-project-${project.id}`}
-                                disabled={isBusy}
-                                onSelect={() => void handleSetActiveFreeProject(project)}
+                                data-testid={`unlock-project-${project.id}`}
+                                onSelect={handleLockedProjectClick}
                               >
-                                <CheckCircle2 className="size-4" />
-                                <span>Set as active Case Study</span>
+                                <Sparkles className="size-4" />
+                                <span>
+                                  {project.isLockedByTeamSubscription
+                                    ? activeWorkspace?.role === "owner"
+                                      ? "Renew Teams to unlock"
+                                      : "Locked until Owner renews"
+                                    : "Upgrade to unlock"}
+                                </span>
+                              </DropdownMenuItem>
+                              {canDeleteLocked && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onSelect={() => openDeleteModal(project)}
+                                  >
+                                    <Trash2 className="size-4" />
+                                    <span>Delete</span>
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/editor/${project.id}`}>
+                                  <ExternalLink className="size-4" />
+                                  <span>Open editor</span>
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => openRenameModal(project)}>
+                                <Pencil className="size-4" />
+                                <span>Rename</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={isBusy}
+                                onSelect={() => void handleDuplicate(project)}
+                              >
+                                <Copy className="size-4" />
+                                <span>Duplicate</span>
+                              </DropdownMenuItem>
+                              {spaces.length > 1 && (
+                                <DropdownMenuItem onSelect={() => openMoveModal(project)}>
+                                  <FolderInput className="size-4" />
+                                  <span>Move to space…</span>
+                                </DropdownMenuItem>
+                              )}
+                              {activeWorkspace?.kind === "team" && (
+                                <DropdownMenuItem
+                                  disabled={isBusy}
+                                  onSelect={() => void handleCopyToPersonal(project)}
+                                >
+                                  <Copy className="size-4" />
+                                  <span>Copy to Personal Workspace</span>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem asChild>
+                                <Link href={`/projects/${project.id}/share`}>
+                                  <Share2 className="size-4" />
+                                  <span>Share &amp; publish</span>
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/projects/${project.id}/exports`}>
+                                  <Download className="size-4" />
+                                  <span>Exports</span>
+                                </Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled={isBusy}
+                                onSelect={() => void handleArchiveToggle(project)}
+                              >
+                                {badge.isArchived ? (
+                                  <>
+                                    <ArchiveRestore className="size-4" />
+                                    <span>Unarchive</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Archive className="size-4" />
+                                    <span>Archive</span>
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onSelect={() => openDeleteModal(project)}
+                              >
+                                <Trash2 className="size-4" />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
                             </>
                           )}
-                          <DropdownMenuItem asChild>
-                            <Link href={`/editor/${project.id}`}>
-                              <ExternalLink className="size-4" />
-                              <span>
-                                {project.isLockedByDowngrade ? "View read-only" : "Open editor"}
-                              </span>
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => openRenameModal(project)}>
-                            <Pencil className="size-4" />
-                            <span>Rename</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={isBusy}
-                            onSelect={() => void handleDuplicate(project)}
-                          >
-                            <Copy className="size-4" />
-                            <span>Duplicate</span>
-                          </DropdownMenuItem>
-                          {spaces.length > 1 && (
-                            <DropdownMenuItem onSelect={() => openMoveModal(project)}>
-                              <FolderInput className="size-4" />
-                              <span>Move to space…</span>
-                            </DropdownMenuItem>
-                          )}
-                          {activeWorkspace?.kind === "team" && (
-                            <DropdownMenuItem
-                              disabled={isBusy}
-                              onSelect={() => void handleCopyToPersonal(project)}
-                            >
-                              <Copy className="size-4" />
-                              <span>Copy to Personal Workspace</span>
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem asChild>
-                            <Link href={`/projects/${project.id}/share`}>
-                              <Share2 className="size-4" />
-                              <span>Share &amp; publish</span>
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/projects/${project.id}/exports`}>
-                              <Download className="size-4" />
-                              <span>Exports</span>
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            disabled={isBusy}
-                            onSelect={() => void handleArchiveToggle(project)}
-                          >
-                            {badge.isArchived ? (
-                              <>
-                                <ArchiveRestore className="size-4" />
-                                <span>Unarchive</span>
-                              </>
-                            ) : (
-                              <>
-                                <Archive className="size-4" />
-                                <span>Archive</span>
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onSelect={() => openDeleteModal(project)}
-                          >
-                            <Trash2 className="size-4" />
-                            <span>Delete</span>
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

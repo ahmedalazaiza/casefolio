@@ -23,6 +23,7 @@ import { resolveProjectOrTemplateThumbnailUrl } from "@/lib/template/cover-url";
 import {
   authorizeProjectAccess,
   ensureProjectWorkspaceAndSpace,
+  resolveFreeTierActiveProjectState,
 } from "@/lib/workspaces/acl";
 import { inspectProjectEditLease, revokeUserWorkspaceLeases } from "@/lib/workspaces/leases";
 import {
@@ -169,6 +170,7 @@ export async function listDashboardProjectsForUser(
 
   let downgradedActiveProjectId: string | null = null;
   let hasDowngradeExtraLocks = false;
+  let teamWorkspaceFrozen = false;
 
   if (targetWorkspaceKind === "personal") {
     const [[wsRow], ent] = await Promise.all([
@@ -181,17 +183,16 @@ export async function listDashboardProjectsForUser(
     ]);
 
     if (!ent || ent.plan === "free") {
-      const nonArchived = rows.filter((r) => r.project.archivedAt === null);
-      if (nonArchived.length > 1) {
-        hasDowngradeExtraLocks = true;
-        const keepId = wsRow?.keepPublicProjectId ?? null;
-        downgradedActiveProjectId =
-          keepId && nonArchived.some((r) => r.project.id === keepId)
-            ? keepId
-            : (nonArchived.find((r) => r.project.visibility !== "private")?.project.id ??
-                nonArchived[0]!.project.id);
-      }
+      const freeState = await resolveFreeTierActiveProjectState(
+        targetWorkspaceId,
+        wsRow?.keepPublicProjectId ?? null,
+      );
+      hasDowngradeExtraLocks = freeState.hasExtraLocks;
+      downgradedActiveProjectId = freeState.activeProjectId;
     }
+  } else {
+    const ent = await resolveWorkspaceEntitlementState(targetWorkspaceId);
+    teamWorkspaceFrozen = Boolean(ent?.isFrozen);
   }
 
   return rows.map((row) => {
@@ -202,6 +203,7 @@ export async function listDashboardProjectsForUser(
       hasDowngradeExtraLocks && isNonArchived && row.project.id === downgradedActiveProjectId;
     const isLockedByDowngrade =
       hasDowngradeExtraLocks && isNonArchived && row.project.id !== downgradedActiveProjectId;
+    const isLockedByTeamSubscription = teamWorkspaceFrozen;
 
     return {
       id: row.project.id,
@@ -229,6 +231,7 @@ export async function listDashboardProjectsForUser(
       spaceVisibility: sp?.visibility,
       isCreator: creatorId === userId,
       isLockedByDowngrade,
+      isLockedByTeamSubscription,
       isKeptActiveProject,
     };
   });
@@ -332,6 +335,13 @@ export async function duplicateProjectForUser(
   const { projectId } = parsed.data;
   const auth = await authorizeProjectAccess(projectId, actor.id, "read");
   if (!auth.ok) {
+    if (auth.status === 403) {
+      return {
+        ok: false,
+        code: auth.code === "WORKSPACE_FROZEN" ? "WORKSPACE_FROZEN" : "FORBIDDEN",
+        error: auth.error,
+      };
+    }
     return { ok: false, code: "NOT_FOUND", error: "Project not found." };
   }
 

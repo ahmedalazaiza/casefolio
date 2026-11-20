@@ -250,4 +250,68 @@ describe("AccountSettingsShell & BillingSettingsPanel (C-703)", () => {
     expect(screen.getByText(/Northstar Studio/i)).toBeInTheDocument();
     expect(screen.queryByTestId("plus-custom-domain-section")).not.toBeInTheDocument();
   });
+
+  it("shows 10-day grace alert, pre-downgrade case study picker, guided seat release modal, and Teams cancel modal", async () => {
+    const user = userEvent.setup();
+    render(
+      <BillingSettingsPanel
+        overview={{
+          ...PRO_ACTIVE_OVERVIEW,
+          subscription: {
+            ...PRO_ACTIVE_OVERVIEW.subscription!,
+            status: "past_due",
+            pastDueSinceIso: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          personalPublishedProjects: [
+            { id: "p-1", name: "Primary Case Study", slug: "primary-cs", visibility: "public" },
+            { id: "p-2", name: "Secondary Draft", slug: null, visibility: "private" },
+          ],
+          teamBilling: {
+            organizationId: "org-teams-2",
+            organizationName: "Orion Studio",
+            workspaceId: "ws-teams-2",
+            role: "owner",
+            isOwner: true,
+            plan: "team",
+            status: "active",
+            interval: "monthly",
+            currentPeriodEndIso: "2027-11-05T12:00:00.000Z",
+            pastDueSinceIso: null,
+            paidSeats: 4,
+            renewalSeats: null,
+            activeMembers: 3,
+            reservedInvites: 1,
+            occupiedSeats: 4,
+            availableSeats: 0,
+            occupiedRoster: {
+              members: [
+                { userId: "u-owner", name: "Ahmed", email: "ahmed@example.com", role: "owner" },
+                { userId: "u-m1", name: "Sara", email: "sara@example.com", role: "member" },
+                { userId: "u-m2", name: "Tariq", email: "tariq@example.com", role: "member" },
+              ],
+              pendingInvites: [
+                { id: "inv-1", email: "new@example.com", role: "member", expiresAtIso: "2027-01-01T00:00:00.000Z" },
+              ],
+            },
+            isLockedForQuantityChange: false,
+            lockReason: null,
+          },
+        }}
+        accountName="Ahmed Al-Azaiza"
+        accountEmail="ahmed@example.com"
+      />,
+    );
+
+    expect(screen.getByTestId("billing-payment-failed-banner")).toHaveTextContent(/10-day grace window/i);
+
+    await user.click(screen.getByTestId("open-change-plan-modal"));
+    await user.click(screen.getByTestId("plan-card-free"));
+    await user.click(screen.getByTestId("confirm-plan-selection-btn"));
+    expect(screen.getByTestId("downgrade-keep-public-select")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByLabelText("Decrease target seats"));
+    await user.click(screen.getByTestId("apply-seat-change-btn"));
+    expect(screen.getByTestId("seat-release-dialog")).toBeInTheDocument();
+  });
 });

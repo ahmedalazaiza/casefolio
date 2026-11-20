@@ -2,21 +2,17 @@
 
 import { and, eq, ne } from "@casefolio/db";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { z } from "zod";
-import { env } from "@/env";
 import { isSafeAvatarUrl } from "@/lib/auth/schemas";
 import { getServerSession } from "@/lib/auth/session";
 import { consumeStepUpToken } from "@/lib/auth/step-up";
 import { db, dbSchema } from "@/lib/db";
 import {
   sendAccountDeletionCanceledEmail,
-  sendAccountDeletionScheduledEmail,
   sendSessionsRevokedEmail,
 } from "@/lib/email";
-import {
-  ACCOUNT_DELETION_GRACE_MS,
-  checkSoleOwnerDeletionBlock,
-} from "@/lib/retention/account";
+import { executeAccountPurge } from "@/lib/retention/account";
 
 const updateProfileSchema = z.object({
   name: z
@@ -84,6 +80,7 @@ const revokeSessionSchema = z.object({
 const deleteAccountSchema = z.object({
   confirmEmail: z.string().trim().email("Please enter a valid email address."),
   stepUpToken: z.string().trim().min(20, "Identity confirmation is required."),
+  dissolveOwnedTeams: z.boolean().optional(),
 });
 
 export async function revokeUserSessionAction(
@@ -143,14 +140,15 @@ export async function revokeOtherUserSessionsAction(): Promise<
 }
 
 /**
- * Schedules a 7-day soft-delete grace period after verifying server-side step-up confirmation.
- * Actual account purge (`executeAccountPurge`) runs after `deletionScheduledFor` and aborts
- * if Paddle subscription cancellation fails (`B1` & `S9`).
+ * Permanently and immediately erases the authenticated user's account, personal projects,
+ * published links, exports, sessions, and R2 media after server-verified step-up confirmation.
+ * Cancels active Paddle billing first so users are never billed after deletion.
  */
 export async function deleteUserAccountAction(rawInput: {
   confirmEmail: string;
   stepUpToken: string;
-}): Promise<{ ok: true; scheduledForIso: string } | { ok: false; error: string }> {
+  dissolveOwnedTeams?: boolean;
+}): Promise<{ ok: true; deletedImmediately: true } | { ok: false; code?: string; error: string }> {
   const ctx = await getServerSession();
   if (!ctx) {
     return { ok: false, error: "Authentication required." };
@@ -181,56 +179,30 @@ export async function deleteUserAccountAction(rawInput: {
     return { ok: false, error: stepUp.error };
   }
 
-  const ownerBlock = await checkSoleOwnerDeletionBlock(ctx.user.id);
-  if (ownerBlock.blocked) {
-    return { ok: false, error: ownerBlock.error };
+  const purgeRes = await executeAccountPurge(ctx.user.id, {
+    dissolveOwnedTeams: Boolean(parsed.data.dissolveOwnedTeams),
+  });
+  if (!purgeRes.ok) {
+    return { ok: false, code: purgeRes.code, error: purgeRes.error };
   }
 
-  const now = new Date();
-  const scheduledFor = new Date(now.getTime() + ACCOUNT_DELETION_GRACE_MS);
+  try {
+    const cookieStore = await cookies();
+    for (const c of cookieStore.getAll()) {
+      if (c.name.includes("better-auth")) {
+        cookieStore.delete(c.name);
+      }
+    }
+  } catch {
+    // DB sessions are already purged; browser will prompt sign-in on next request
+  }
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(dbSchema.users)
-      .set({
-        deletionRequestedAt: now,
-        deletionScheduledFor: scheduledFor,
-        updatedAt: now,
-      })
-      .where(eq(dbSchema.users.id, ctx.user.id));
-
-    await tx
-      .delete(dbSchema.sessions)
-      .where(
-        and(
-          eq(dbSchema.sessions.userId, ctx.user.id),
-          ne(dbSchema.sessions.id, ctx.session.id),
-        ),
-      );
-
-    await tx.insert(dbSchema.auditLogs).values({
-      actorId: ctx.user.id,
-      action: "account.deletion_scheduled",
-      meta: {
-        scheduledForIso: scheduledFor.toISOString(),
-      },
-      at: now,
-    });
-  });
-
-  await sendAccountDeletionScheduledEmail({
-    to: ctx.user.email,
-    name: ctx.user.name,
-    scheduledForIso: scheduledFor.toISOString(),
-    cancelUrl: `${env.NEXT_PUBLIC_APP_URL}/account/security`,
-  }).catch(() => undefined);
-
-  revalidatePath("/account");
-  revalidatePath("/account/security");
+  revalidatePath("/", "layout");
+  revalidatePath("/dashboard");
 
   return {
     ok: true,
-    scheduledForIso: scheduledFor.toISOString(),
+    deletedImmediately: true,
   };
 }
 

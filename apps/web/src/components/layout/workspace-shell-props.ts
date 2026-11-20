@@ -2,7 +2,10 @@ import type { PlanTier } from "@casefolio/db";
 import type { AppShellProps } from "@/components/layout/app-shell";
 import { computeUserInitials } from "@/lib/auth/session";
 import {
+  evaluateSubscriptionLifecycle,
   FREE_LIFETIME_PROJECT_LIMIT,
+  getPastDueDaysRemaining,
+  PAST_DUE_GRACE_DAYS,
   PRO_MAX_PROJECTS,
 } from "@/lib/billing/plans";
 import { getUserBillingOverview } from "@/lib/billing/service";
@@ -61,6 +64,7 @@ export async function buildWorkspaceShellProps(
   let quotaSummaryLabel: string;
   let renewsLabel: string;
   let failedPaymentPauseDateLabel: string | null = null;
+  let renewalGraceBanner: AppShellProps["renewalGraceBanner"] = null;
 
   if (activeWs.kind === "team") {
     if (canonicalPlan === "team") {
@@ -75,6 +79,9 @@ export async function buildWorkspaceShellProps(
       const occupiedSeats = occupancy?.occupiedSeats ?? 1;
       const paidSeats = matchedTeamBilling?.paidSeats ?? activeWs.paidSeats;
       const teamStatus = matchedTeamBilling?.status ?? "active";
+      const periodEndDate = matchedTeamBilling?.currentPeriodEndIso
+        ? new Date(matchedTeamBilling.currentPeriodEndIso)
+        : null;
       const periodDate = formatShortDate(matchedTeamBilling?.currentPeriodEndIso ?? null);
 
       planStatus = teamStatus;
@@ -83,12 +90,42 @@ export async function buildWorkspaceShellProps(
       quotaSummaryLabel = `${occupiedSeats} of ${paidSeats} Seats occupied · Unlimited Case Studies`;
 
       if (teamStatus === "past_due") {
-        planLabel = "TEAMS · PAST DUE";
-        renewsLabel = periodDate ? `Payment retry due ${periodDate}` : "Action needed in Billing";
-        failedPaymentPauseDateLabel = periodDate ?? "end of period";
+        const pastDueAnchor = matchedTeamBilling?.pastDueSinceIso
+          ? new Date(matchedTeamBilling.pastDueSinceIso)
+          : periodEndDate;
+        const lifecycle = evaluateSubscriptionLifecycle({
+          status: "past_due",
+          currentPeriodEnd: periodEndDate,
+          pastDueSince: pastDueAnchor,
+          now,
+        });
+        const daysLeft = getPastDueDaysRemaining(lifecycle.pastDueEndsAt, now);
+        const deadlineLabel = formatShortDate(lifecycle.pastDueEndsAt?.toISOString() ?? null);
+        planLabel = daysLeft > 0 ? `TEAMS · RENEW (${daysLeft}D LEFT)` : "TEAMS · PAST DUE";
+        renewsLabel = deadlineLabel ? `Locks ${deadlineLabel}` : "Action needed in Billing";
+        failedPaymentPauseDateLabel = deadlineLabel ?? "end of grace window";
+        renewalGraceBanner = {
+          kind: "past_due",
+          daysRemaining: daysLeft,
+          deadlineLabel: deadlineLabel ?? "soon",
+          isTeam: true,
+          isTeamOwner: Boolean(matchedTeamBilling?.isOwner),
+        };
       } else if (teamStatus === "cancel_at_period_end") {
         planLabel = "TEAMS · CANCELS SOON";
         renewsLabel = periodDate ? `Active until ${periodDate}` : "Scheduled to end";
+        if (periodEndDate && periodEndDate.getTime() > now.getTime()) {
+          const daysLeft = getPastDueDaysRemaining(periodEndDate, now);
+          if (daysLeft <= PAST_DUE_GRACE_DAYS) {
+            renewalGraceBanner = {
+              kind: "ending_soon",
+              daysRemaining: daysLeft,
+              deadlineLabel: periodDate ?? "soon",
+              isTeam: true,
+              isTeamOwner: Boolean(matchedTeamBilling?.isOwner),
+            };
+          }
+        }
       } else {
         planLabel = "TEAMS · ACTIVE";
         renewsLabel = periodDate ? `Renews ${periodDate}` : "Teams subscription active";
@@ -103,6 +140,9 @@ export async function buildWorkspaceShellProps(
     }
   } else if (canonicalPlan === "pro") {
     const personalStatus = billing.subscription?.status ?? "active";
+    const periodEndDate = billing.subscription?.currentPeriodEndIso
+      ? new Date(billing.subscription.currentPeriodEndIso)
+      : null;
     const periodDate = formatShortDate(billing.subscription?.currentPeriodEndIso ?? null);
 
     planStatus = personalStatus;
@@ -111,12 +151,42 @@ export async function buildWorkspaceShellProps(
     quotaSummaryLabel = `${projectsUsed} of ${PRO_MAX_PROJECTS} Case Studies`;
 
     if (personalStatus === "past_due") {
-      planLabel = "PRO · PAST DUE";
-      renewsLabel = periodDate ? `Payment retry due ${periodDate}` : "Action needed in Billing";
-      failedPaymentPauseDateLabel = periodDate ?? "end of period";
+      const pastDueAnchor = billing.subscription?.pastDueSinceIso
+        ? new Date(billing.subscription.pastDueSinceIso)
+        : periodEndDate;
+      const lifecycle = evaluateSubscriptionLifecycle({
+        status: "past_due",
+        currentPeriodEnd: periodEndDate,
+        pastDueSince: pastDueAnchor,
+        now,
+      });
+      const daysLeft = getPastDueDaysRemaining(lifecycle.pastDueEndsAt, now);
+      const deadlineLabel = formatShortDate(lifecycle.pastDueEndsAt?.toISOString() ?? null);
+      planLabel = daysLeft > 0 ? `PRO · RENEW (${daysLeft}D LEFT)` : "PRO · PAST DUE";
+      renewsLabel = deadlineLabel ? `Locks ${deadlineLabel}` : "Action needed in Billing";
+      failedPaymentPauseDateLabel = deadlineLabel ?? "end of grace window";
+      renewalGraceBanner = {
+        kind: "past_due",
+        daysRemaining: daysLeft,
+        deadlineLabel: deadlineLabel ?? "soon",
+        isTeam: false,
+        isTeamOwner: true,
+      };
     } else if (personalStatus === "cancel_at_period_end") {
       planLabel = "PRO · CANCELS SOON";
       renewsLabel = periodDate ? `Active until ${periodDate}` : "Scheduled to end";
+      if (periodEndDate && periodEndDate.getTime() > now.getTime()) {
+        const daysLeft = getPastDueDaysRemaining(periodEndDate, now);
+        if (daysLeft <= PAST_DUE_GRACE_DAYS) {
+          renewalGraceBanner = {
+            kind: "ending_soon",
+            daysRemaining: daysLeft,
+            deadlineLabel: periodDate ?? "soon",
+            isTeam: false,
+            isTeamOwner: true,
+          };
+        }
+      }
     } else {
       planLabel = "PRO · ACTIVE";
       renewsLabel = periodDate ? `Renews ${periodDate}` : "Pro subscription active";
@@ -156,6 +226,7 @@ export async function buildWorkspaceShellProps(
       quotaSummaryLabel,
       renewsLabel,
       failedPaymentPauseDateLabel,
+      renewalGraceBanner,
       activeOrganizationId: activeOrgId,
       activeWorkspaceName:
         activeWs.kind === "personal" ? "Personal Workspace" : activeWs.name,

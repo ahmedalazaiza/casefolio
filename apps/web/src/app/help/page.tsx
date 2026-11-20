@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { HelpCenterClient } from "@/components/help/help-center-client";
 import { HelpShell } from "@/components/help/help-shell";
+import { getSiteCmsContent } from "@/lib/cms/service";
 import { listHelpArticles } from "@/lib/help/articles";
 
 export const metadata: Metadata = {
@@ -17,14 +18,24 @@ export default async function HelpCenterPage({
 }: {
   searchParams?: Promise<{ q?: string }>;
 }) {
-  const params = (await searchParams) ?? {};
+  const [params, cms] = await Promise.all([
+    searchParams,
+    getSiteCmsContent(),
+  ]);
+  const resolvedParams = params ?? {};
   const articles = listHelpArticles();
 
   return (
     <HelpShell>
       <HelpCenterClient
         articles={articles}
-        initialQuery={typeof params.q === "string" ? params.q : ""}
+        initialQuery={typeof resolvedParams.q === "string" ? resolvedParams.q : ""}
+        cmsIntro={{
+          eyebrow: cms.legalAndHelp.helpEyebrow,
+          title: cms.legalAndHelp.helpTitle,
+          subtitle: cms.legalAndHelp.helpSubtitle,
+          noticeBanner: cms.legalAndHelp.helpNoticeBanner,
+        }}
       />
     </HelpShell>
   );

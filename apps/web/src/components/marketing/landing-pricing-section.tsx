@@ -15,18 +15,18 @@ import { useState, type ReactNode } from "react";
 import { ScrollRise } from "@/components/marketing/motion";
 import { PlanCard, type PlanSpecItem } from "@/components/ui/domain-cards";
 import {
-  BILLING_PLAN_CATALOG,
-  clampTeamsSeats,
-  computeTeamsPrice,
   formatUsdFromCents,
-  PRO_MAX_PROJECTS,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
-  TEAMS_MAX_SELF_SERVE_SEATS,
-  TEAMS_MIN_SEATS,
   type ActivePlanTier,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
+import {
+  computeTeamsPriceWithCms,
+  DEFAULT_SITE_CMS_CONTENT,
+  mergeBillingCatalogWithCms,
+  type SiteCmsContent,
+} from "@/lib/cms/schema";
 import {
   FREE_MONTHLY_EXPORT_LIMIT,
   PRO_MONTHLY_EXPORT_LIMIT,
@@ -55,6 +55,7 @@ export interface LandingPricingSectionProps {
   ) => void;
   currentTier?: PlanTier | null;
   showComparisonLink?: boolean;
+  cmsPricing?: SiteCmsContent["pricing"];
 }
 
 export function LandingPricingSection({
@@ -66,15 +67,25 @@ export function LandingPricingSection({
   onSelectPaidPlan,
   currentTier = null,
   showComparisonLink = false,
+  cmsPricing = DEFAULT_SITE_CMS_CONTENT.pricing,
 }: LandingPricingSectionProps) {
-  const [uncontrolledInterval, setUncontrolledInterval] =
-    useState<BillingInterval>(defaultInterval);
-  const [uncontrolledSeats, setUncontrolledSeats] = useState<number>(
-    TEAMS_CALCULATOR_DEFAULT_SEATS,
+  const catalog = mergeBillingCatalogWithCms(cmsPricing);
+  const minSeats = Math.max(1, catalog.team.minSeats);
+  const maxSeats = Math.max(minSeats, catalog.team.maxSeats);
+  const defaultTeamSeats = Math.max(
+    minSeats,
+    Math.min(maxSeats, catalog.team.defaultSeats || TEAMS_CALCULATOR_DEFAULT_SEATS),
   );
 
+  const [uncontrolledInterval, setUncontrolledInterval] =
+    useState<BillingInterval>(defaultInterval);
+  const [uncontrolledSeats, setUncontrolledSeats] = useState<number>(defaultTeamSeats);
+
   const interval = controlledInterval ?? uncontrolledInterval;
-  const teamSeats = clampTeamsSeats(controlledTeamSeats ?? uncontrolledSeats);
+  const teamSeats = Math.max(
+    minSeats,
+    Math.min(maxSeats, Math.round(controlledTeamSeats ?? uncontrolledSeats)),
+  );
 
   function setInterval(next: BillingInterval) {
     setUncontrolledInterval(next);
@@ -82,15 +93,12 @@ export function LandingPricingSection({
   }
 
   function adjustTeamSeats(delta: number) {
-    const next = Math.max(
-      TEAMS_MIN_SEATS,
-      Math.min(TEAMS_MAX_SELF_SERVE_SEATS, teamSeats + delta),
-    );
+    const next = Math.max(minSeats, Math.min(maxSeats, teamSeats + delta));
     setUncontrolledSeats(next);
     onTeamSeatsChange?.(next);
   }
 
-  const teamCalc = computeTeamsPrice(teamSeats, interval);
+  const teamCalc = computeTeamsPriceWithCms(teamSeats, interval, cmsPricing.tiers.team);
 
   return (
     <div className="flex w-full flex-col items-center gap-8">
@@ -126,7 +134,7 @@ export function LandingPricingSection({
         >
           <span>Annual</span>
           <span className="rounded-lg bg-[var(--cf-bg-accent)] px-2.5 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-            2 months free
+            {cmsPricing.annualBadgeLabel}
           </span>
         </button>
       </div>
@@ -139,16 +147,16 @@ export function LandingPricingSection({
         className="grid w-full grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6"
       >
         {DISPLAY_PLAN_ORDER.map((tier) => {
-          const plan = BILLING_PLAN_CATALOG[tier];
+          const plan = catalog[tier];
           const isFree = tier === "free";
           const isTeams = tier === "team";
-          const isHighlighted = Boolean(plan.highlighted);
+          const isHighlighted = cmsPricing.popularTier === tier;
 
           let priceLabel: string;
           let periodLabel: string;
           let billingNote: string;
 
-          if (isFree) {
+          if (isFree && plan.monthlyPriceCents === 0) {
             priceLabel = "$0";
             periodLabel = "/forever";
             billingNote = "No credit card required · Upgrade anytime";
@@ -161,8 +169,8 @@ export function LandingPricingSection({
             periodLabel = interval === "yearly" ? "/yr" : "/mo";
             billingNote =
               interval === "yearly"
-                ? `${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/seat/mo · ${teamSeats} seats (2 months free)`
-                : `${formatUsdFromCents(plan.monthlyPriceCents)}/seat/mo · ${formatUsdFromCents(teamCalc.yearlyTotalCents)}/yr on annual (2 months free)`;
+                ? `${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/seat/mo · ${teamSeats} seats (${cmsPricing.annualBadgeLabel})`
+                : `${formatUsdFromCents(plan.monthlyPriceCents)}/seat/mo · ${formatUsdFromCents(teamCalc.yearlyTotalCents)}/yr on annual (${cmsPricing.annualBadgeLabel})`;
           } else {
             const headlineCents =
               interval === "yearly" ? plan.yearlyTotalCents : plan.monthlyPriceCents;
@@ -170,45 +178,45 @@ export function LandingPricingSection({
             periodLabel = interval === "yearly" ? "/yr" : "/mo";
             billingNote =
               interval === "yearly"
-                ? `Equals ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/mo · 2 months free (save ${formatUsdFromCents(plan.yearlySavingsCents)}/yr)`
-                : `Billed monthly · ${formatUsdFromCents(plan.yearlyTotalCents)}/yr on annual (2 months free)`;
+                ? `Equals ${formatUsdFromCents(plan.yearlyMonthlyEquivalentCents)}/mo · ${cmsPricing.annualBadgeLabel} (save ${formatUsdFromCents(plan.yearlySavingsCents)}/yr)`
+                : `Billed monthly · ${formatUsdFromCents(plan.yearlyTotalCents)}/yr on annual (${cmsPricing.annualBadgeLabel})`;
           }
 
-          const scopeLabel = isFree
-            ? "Personal workspace · 1 lifetime Case Study"
-            : isTeams
-              ? `Product design teams & studios · ${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`
-              : `Freelancers & solo designers · Up to ${PRO_MAX_PROJECTS} active projects`;
-
+          const scopeLabel = plan.scopeSummary;
           const badgeLabel = isHighlighted
-            ? "Most popular"
-            : isFree
-              ? "Free starter"
-              : `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats`;
+            ? cmsPricing.popularBadgeText
+            : plan.badgeLabel || (isFree ? "Free starter" : `${minSeats}–${maxSeats} seats`);
 
           const featuresHeading = isFree
             ? "Included in Free"
-            : tier === "pro"
-              ? "Includes everything in Free, plus"
-              : "Includes everything in Pro, plus";
+            : plan.includesLabel || (tier === "pro" ? "Includes everything in Free, plus" : "Includes everything in Pro, plus");
 
           const specs: readonly PlanSpecItem[] = isFree
             ? [
-                { label: "Case studies", value: "1 lifetime" },
-                { label: "Share link", value: "Auto URL" },
+                {
+                  label: "Case studies",
+                  value: plan.maxCaseStudies < 0 ? "Unlimited" : `${plan.maxCaseStudies} lifetime`,
+                },
+                { label: "Share link", value: plan.customSlugEnabled ? "/p/your-slug" : "Auto URL" },
                 { label: "Exports / mo", value: `${FREE_MONTHLY_EXPORT_LIMIT}/mo (1×)` },
                 { label: "Cloud storage", value: "250 MB" },
               ]
             : tier === "pro"
               ? [
-                  { label: "Case studies", value: `Up to ${PRO_MAX_PROJECTS} active` },
-                  { label: "Custom URL", value: "/p/your-slug" },
+                  {
+                    label: "Case studies",
+                    value: plan.maxCaseStudies < 0 ? "Unlimited" : `Up to ${plan.maxCaseStudies} active`,
+                  },
+                  { label: "Custom URL", value: plan.customSlugEnabled ? "/p/your-slug" : "Auto URL" },
                   { label: "Exports / mo", value: `${PRO_MONTHLY_EXPORT_LIMIT}/mo` },
                   { label: "Cloud storage", value: "5 GB" },
                 ]
               : [
                   { label: "Team seats", value: `${teamSeats} seats` },
-                  { label: "Case studies", value: "Unlimited" },
+                  {
+                    label: "Case studies",
+                    value: plan.maxCaseStudies < 0 ? "Unlimited" : `${plan.maxCaseStudies} shared`,
+                  },
                   {
                     label: "Pooled exports",
                     value: `${teamSeats * TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT}/mo`,
@@ -223,10 +231,10 @@ export function LandingPricingSection({
             : isFree
               ? currentTier
                 ? "Go to Dashboard"
-                : "Start free"
-              : tier === "pro"
-                ? "Upgrade to Pro"
-                : `Start Teams (${teamSeats} seats)`;
+                : plan.ctaLabel
+              : isTeams
+                ? `${plan.ctaLabel.replace(/\s*\(\d+\s*seats\)/i, "")} (${teamSeats} seats)`
+                : plan.ctaLabel;
 
           const ctaHref = isFree
             ? currentTier
@@ -253,7 +261,7 @@ export function LandingPricingSection({
                   </span>
                   <span className="type-caption text-[var(--cf-text-secondary)] tabular-nums">
                     {interval === "yearly"
-                      ? `${formatUsdFromCents(teamCalc.yearlyMonthlyEquivalentCents)}/mo equiv. (2 months free)`
+                      ? `${formatUsdFromCents(teamCalc.yearlyMonthlyEquivalentCents)}/mo equiv. (${cmsPricing.annualBadgeLabel})`
                       : `${formatUsdFromCents(teamCalc.monthlyTotalCents)}/mo total`}
                   </span>
                 </div>
@@ -262,7 +270,7 @@ export function LandingPricingSection({
                     type="button"
                     aria-label="Decrease Team card seats"
                     data-testid="team-card-seats-decrement"
-                    disabled={teamSeats <= TEAMS_MIN_SEATS}
+                    disabled={teamSeats <= minSeats}
                     onClick={() => adjustTeamSeats(-1)}
                     className="inline-flex size-7 items-center justify-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] disabled:opacity-40"
                   >
@@ -278,7 +286,7 @@ export function LandingPricingSection({
                     type="button"
                     aria-label="Increase Team card seats"
                     data-testid="team-card-seats-increment"
-                    disabled={teamSeats >= TEAMS_MAX_SELF_SERVE_SEATS}
+                    disabled={teamSeats >= maxSeats}
                     onClick={() => adjustTeamSeats(1)}
                     className="inline-flex size-7 items-center justify-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] disabled:opacity-40"
                   >

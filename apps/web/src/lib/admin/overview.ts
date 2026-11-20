@@ -388,6 +388,7 @@ export async function getAdminPlatformAnalytics(
   const bucketSpanMs = chartWindowMs / BUCKET_COUNT;
 
   const weeklyPublishBucketExpr = sql<number>`least(${BUCKET_COUNT - 1}, greatest(0, floor((extract(epoch from ${dbSchema.projects.publishedAt}) * 1000 - ${chartStartMs}) / ${bucketSpanMs})::int))`;
+  const weeklyViewBucketExpr = sql<number>`least(${BUCKET_COUNT - 1}, greatest(0, floor((extract(epoch from ${dbSchema.pageViews.at}) * 1000 - ${chartStartMs}) / ${bucketSpanMs})::int))`;
 
   const viewRangeFilterSql = rangeStartIso
     ? sql`WHERE pv.at >= ${rangeStartIso}::timestamptz AND pv.at <= ${nowIso}::timestamptz`
@@ -406,11 +407,17 @@ export async function getAdminPlatformAnalytics(
     projectCountsByVerRows,
     weeklyPublishBucketRows,
     topCaseStudiesRes,
+    exportFormatRows,
+    allSubRows,
+    webhookRows,
+    weeklyViewBucketRows,
+    feedbackAggRows,
   ] = await Promise.all([
     db
       .select({
         totalUsers: count(),
         paidUsers: sql<number>`count(*) filter (where ${dbSchema.users.plan} in ('pro', 'team', 'plus'))::int`,
+        freeUsers: sql<number>`count(*) filter (where ${dbSchema.users.plan} = 'free')::int`,
       })
       .from(dbSchema.users),
     rangeStartIso && prevStartIso
@@ -431,12 +438,14 @@ export async function getAdminPlatformAnalytics(
           .select({
             publicViews: sql<number>`count(*) filter (where ${dbSchema.pageViews.at} >= ${rangeStartIso}::timestamptz and ${dbSchema.pageViews.at} <= ${nowIso}::timestamptz)::int`,
             viewsPrevPeriod: sql<number>`count(*) filter (where ${dbSchema.pageViews.at} >= ${prevStartIso}::timestamptz and ${dbSchema.pageViews.at} < ${rangeStartIso}::timestamptz)::int`,
+            uniqueVisitors: sql<number>`count(distinct ${dbSchema.pageViews.visitorHash}) filter (where ${dbSchema.pageViews.at} >= ${rangeStartIso}::timestamptz and ${dbSchema.pageViews.at} <= ${nowIso}::timestamptz)::int`,
           })
           .from(dbSchema.pageViews)
       : db
           .select({
             publicViews: count(),
             viewsPrevPeriod: sql<number | null>`null::int`,
+            uniqueVisitors: sql<number>`count(distinct ${dbSchema.pageViews.visitorHash})::int`,
           })
           .from(dbSchema.pageViews),
     rangeStartIso && prevStartIso
@@ -522,10 +531,63 @@ export async function getAdminPlatformAnalytics(
       ORDER BY coalesce(vc.views, 0) DESC, coalesce(ec.exports, 0) DESC, p.updated_at DESC
       LIMIT 10
     `),
+    rangeStartIso
+      ? db
+          .select({
+            format: dbSchema.exportsTable.format,
+            total: count(),
+            completed: sql<number>`count(*) filter (where ${dbSchema.exportsTable.status} = 'completed')::int`,
+            failed: sql<number>`count(*) filter (where ${dbSchema.exportsTable.status} = 'failed')::int`,
+          })
+          .from(dbSchema.exportsTable)
+          .where(
+            and(
+              gte(dbSchema.exportsTable.createdAt, rangeStart!),
+              lte(dbSchema.exportsTable.createdAt, now),
+            ),
+          )
+          .groupBy(dbSchema.exportsTable.format)
+      : db
+          .select({
+            format: dbSchema.exportsTable.format,
+            total: count(),
+            completed: sql<number>`count(*) filter (where ${dbSchema.exportsTable.status} = 'completed')::int`,
+            failed: sql<number>`count(*) filter (where ${dbSchema.exportsTable.status} = 'failed')::int`,
+          })
+          .from(dbSchema.exportsTable)
+          .groupBy(dbSchema.exportsTable.format),
+    db.select().from(dbSchema.subscriptions),
+    db
+      .select({ payload: dbSchema.webhookEvents.payload })
+      .from(dbSchema.webhookEvents)
+      .orderBy(desc(dbSchema.webhookEvents.processedAt))
+      .limit(250),
+    db
+      .select({
+        bucketIdx: weeklyViewBucketExpr,
+        total: count(),
+      })
+      .from(dbSchema.pageViews)
+      .where(
+        and(
+          gte(dbSchema.pageViews.at, chartStart),
+          lte(dbSchema.pageViews.at, now),
+        ),
+      )
+      .groupBy(sql`1`),
+    db
+      .select({
+        totalResponses: count(),
+        avgRating: sql<number | null>`round(avg(${dbSchema.productFeedback.rating})::numeric, 2)::float`,
+      })
+      .from(dbSchema.productFeedback)
+      .where(eq(dbSchema.productFeedback.status, "submitted"))
+      .catch(() => [{ totalResponses: 0, avgRating: null }]),
   ]);
 
   const totalUsers = userAggRows[0]?.totalUsers ?? 0;
   const paidUsers = userAggRows[0]?.paidUsers ?? 0;
+  const freeUsers = userAggRows[0]?.freeUsers ?? Math.max(0, totalUsers - paidUsers);
   const freeToProRatePercent =
     totalUsers > 0 ? Math.round((paidUsers / totalUsers) * 1000) / 10 : 0;
 
@@ -601,6 +663,70 @@ export async function getAdminPlatformAnalytics(
     exports: Number(row.exports ?? 0),
   }));
 
+  const webhookIntervals = extractWebhookIntervalsBySubId(webhookRows);
+  let proMonthly = 0;
+  let proAnnual = 0;
+  let teamWorkspaces = 0;
+  let teamPaidSeats = 0;
+  let pastDueSubscriptions = 0;
+  let canceledInRange = 0;
+  let mrrUsd = 0;
+
+  for (const sub of allSubRows) {
+    const normalizedStatus = sub.status.trim().toLowerCase();
+    if (normalizedStatus === "past_due") {
+      pastDueSubscriptions += 1;
+    }
+    if (
+      normalizedStatus === "canceled" &&
+      (!rangeStart || (sub.updatedAt >= rangeStart && sub.updatedAt <= now))
+    ) {
+      canceledInRange += 1;
+    }
+    if (sub.plan === "free") continue;
+    if (!isSubscriptionGrantingAccess(sub.status, sub.currentPeriodEnd, now, sub.pastDueSince)) {
+      continue;
+    }
+    const normalizedPlan = sub.plan === "plus" ? "team" : sub.plan;
+    const interval = detectSubscriptionInterval({
+      createdAt: sub.createdAt,
+      currentPeriodEnd: sub.currentPeriodEnd,
+      webhookBillingInterval: sub.paddleSubscriptionId
+        ? (webhookIntervals.get(sub.paddleSubscriptionId) ?? null)
+        : null,
+    });
+    const seats = sub.currentPaidCapacity ?? 1;
+    mrrUsd += computeSubscriptionMrrUsd(normalizedPlan, interval, seats);
+    if (normalizedPlan === "pro") {
+      if (interval === "yearly") proAnnual += 1;
+      else proMonthly += 1;
+    } else if (normalizedPlan === "team") {
+      teamWorkspaces += 1;
+      teamPaidSeats += seats;
+    }
+  }
+
+  const viewsByBucketMap = new Map<number, number>();
+  for (const vb of weeklyViewBucketRows) {
+    viewsByBucketMap.set(Number(vb.bucketIdx), vb.total);
+  }
+
+  const viewsByBucket = Array.from({ length: BUCKET_COUNT }, (_, idx) => {
+    const startMs = chartStartMs + idx * bucketSpanMs;
+    const label = new Date(startMs).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    return {
+      index: idx,
+      label,
+      views: viewsByBucketMap.get(idx) ?? 0,
+    };
+  });
+
+  const failedExports = exportFormatRows.reduce((s, r) => s + Number(r.failed ?? 0), 0);
+  const roundedMrr = Math.round(mrrUsd * 100) / 100;
+
   return {
     range,
     publishedCaseStudies,
@@ -615,6 +741,32 @@ export async function getAdminPlatformAnalytics(
     weeklyPublishes,
     templateUsage,
     topCaseStudies,
+    telemetry: {
+      uniqueVisitors: viewAggRows[0]?.uniqueVisitors ?? 0,
+      failedExports,
+      exportsByFormat: exportFormatRows.map((r) => ({
+        format: String(r.format),
+        total: Number(r.total ?? 0),
+        completed: Number(r.completed ?? 0),
+        failed: Number(r.failed ?? 0),
+      })),
+      subscribers: {
+        freeUsers,
+        proMonthly,
+        proAnnual,
+        teamWorkspaces,
+        teamPaidSeats,
+        pastDueSubscriptions,
+        canceledInRange,
+        mrrUsd: roundedMrr,
+        arrUsd: Math.round(roundedMrr * 12 * 100) / 100,
+      },
+      viewsByBucket,
+      feedbackSummary: {
+        totalResponses: Number(feedbackAggRows[0]?.totalResponses ?? 0),
+        averageRating: feedbackAggRows[0]?.avgRating ?? null,
+      },
+    },
   };
 }
 

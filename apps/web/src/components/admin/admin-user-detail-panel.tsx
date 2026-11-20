@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowLeft, Mail, RefreshCw, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  EyeOff,
+  KeyRound,
+  Mail,
+  RefreshCw,
+  Send,
+  Star,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -32,11 +42,140 @@ export function AdminUserDetailPanel({
   const [noticeSubject, setNoticeSubject] = useState("");
   const [noticeHeading, setNoticeHeading] = useState("");
   const [noticeMessage, setNoticeMessage] = useState("");
+  const [overridePlan, setOverridePlan] = useState<"free" | "pro" | "team">(
+    initialDetail.plan === "plus" ? "team" : initialDetail.plan,
+  );
+  const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
 
   const isSelf = detail.id === currentAdminId;
   const isSuperadmin = currentAdminRole === "superadmin";
   // Mirrors the server rules: only a superadmin may email users or suspend another admin.
   const canSuspend = !isSelf && (isSuperadmin || detail.role === "user");
+  const canPermanentDelete = isSuperadmin && !isSelf && detail.role !== "superadmin";
+
+  function handlePlanOverride() {
+    setErrorMessage(null);
+    setFeedback(null);
+    startTransition(async () => {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set_plan_override",
+          userId: detail.id,
+          plan: overridePlan,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setErrorMessage(payload.error ?? "Failed to override plan.");
+        return;
+      }
+      setDetail((prev) => ({
+        ...prev,
+        plan: overridePlan,
+        subscription: { ...prev.subscription, plan: overridePlan },
+      }));
+      setFeedback(`Workspace plan updated to ${overridePlan.toUpperCase()}.`);
+      router.refresh();
+    });
+  }
+
+  function handleVerifyEmail() {
+    setErrorMessage(null);
+    setFeedback(null);
+    startTransition(async () => {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify_email", userId: detail.id }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setErrorMessage(payload.error ?? "Failed to verify email.");
+        return;
+      }
+      setDetail((prev) => ({ ...prev, emailVerified: true }));
+      setFeedback("Email marked as verified.");
+      router.refresh();
+    });
+  }
+
+  function handleRevokeSessions() {
+    setErrorMessage(null);
+    setFeedback(null);
+    startTransition(async () => {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "revoke_sessions", userId: detail.id }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setErrorMessage(payload.error ?? "Failed to revoke sessions.");
+        return;
+      }
+      setDetail((prev) => ({ ...prev, activeSessionsCount: 0 }));
+      setFeedback("All active sessions revoked.");
+      router.refresh();
+    });
+  }
+
+  function handlePermanentDelete() {
+    setErrorMessage(null);
+    setFeedback(null);
+    startTransition(async () => {
+      const response = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: detail.id }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setErrorMessage(payload.error ?? "Failed to permanently delete user.");
+        return;
+      }
+      router.push("/admin/users");
+      router.refresh();
+    });
+  }
+
+  function handleUserProjectAction(projectId: string, action: "unpublish" | "delete") {
+    setErrorMessage(null);
+    setFeedback(null);
+    startTransition(async () => {
+      const response =
+        action === "delete"
+          ? await fetch("/api/admin/projects", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ projectId }),
+            })
+          : await fetch("/api/admin/projects", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action, projectId }),
+            });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setErrorMessage(payload.error ?? "Project action failed.");
+        return;
+      }
+      setDetail((prev) => ({
+        ...prev,
+        projects:
+          action === "delete"
+            ? prev.projects.filter((p) => p.id !== projectId)
+            : prev.projects.map((p) =>
+                p.id === projectId ? { ...p, visibility: "private" } : p,
+              ),
+      }));
+      setFeedback(
+        action === "delete" ? "Project deleted permanently." : "Project unpublished to draft.",
+      );
+      router.refresh();
+    });
+  }
 
   function handleSendAdminNotice(event: React.FormEvent) {
     event.preventDefault();
@@ -305,7 +444,12 @@ export function AdminUserDetailPanel({
           </div>
 
           <Card className="min-w-0 gap-4 p-6">
-            <h2 className="text-foreground type-heading-s">User projects</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-foreground type-heading-s">User projects</h2>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/admin/projects">View all platform projects</Link>
+              </Button>
+            </div>
             <div className="w-full max-w-full overflow-x-auto">
               <table className="w-full min-w-120 border-collapse text-left">
                 <thead>
@@ -313,14 +457,15 @@ export function AdminUserDetailPanel({
                     <th className="text-tertiary type-overline py-2.5 pr-4">Project</th>
                     <th className="text-tertiary type-overline px-4 py-2.5">Template</th>
                     <th className="text-tertiary type-overline px-4 py-2.5">Status</th>
-                    <th className="text-tertiary type-overline py-2.5 pl-4 text-right">Updated</th>
+                    <th className="text-tertiary type-overline px-4 py-2.5 text-right">Updated</th>
+                    <th className="text-tertiary type-overline py-2.5 pl-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-border divide-y">
                   {detail.projects.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="text-muted-foreground type-body-s py-8 text-center"
                       >
                         No projects created yet.
@@ -353,8 +498,35 @@ export function AdminUserDetailPanel({
                                 : "Draft"}
                           </Badge>
                         </td>
-                        <td className="text-tertiary type-caption py-3 pl-4 text-right">
+                        <td className="text-tertiary type-caption px-4 py-3 text-right">
                           {formatRelativeActivity(p.updatedAtIso)}
+                        </td>
+                        <td className="py-3 pl-4 text-right">
+                          <div className="flex justify-end gap-1">
+                            {p.visibility !== "private" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                title="Unpublish"
+                                disabled={isPending}
+                                onClick={() => handleUserProjectAction(p.id, "unpublish")}
+                              >
+                                <EyeOff className="size-3.5" />
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              title="Delete project"
+                              disabled={isPending}
+                              className="text-destructive"
+                              onClick={() => handleUserProjectAction(p.id, "delete")}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -363,6 +535,44 @@ export function AdminUserDetailPanel({
               </table>
             </div>
           </Card>
+
+          {detail.recentFeedback && detail.recentFeedback.length > 0 && (
+            <Card className="min-w-0 gap-3 p-6">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-foreground type-heading-s">Submitted Product Feedback</h2>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/admin/feedback">All feedback</Link>
+                </Button>
+              </div>
+              <div className="flex flex-col gap-3">
+                {detail.recentFeedback.map((fb) => (
+                  <div
+                    key={fb.id}
+                    className="rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1 font-semibold text-xs text-[var(--cf-text-primary)]">
+                        <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                        <span>{fb.rating ?? "—"} / 5</span>
+                        {fb.primaryUseCase ? ` · ${fb.primaryUseCase}` : ""}
+                      </span>
+                      <span className="text-muted-foreground type-caption">
+                        {formatRelativeActivity(fb.createdAtIso)}
+                      </span>
+                    </div>
+                    {fb.topFeatureRequest && (
+                      <p className="text-xs font-medium text-[var(--cf-royal-text)] mt-1">
+                        Requested: {fb.topFeatureRequest}
+                      </p>
+                    )}
+                    {fb.comment && (
+                      <p className="text-muted-foreground type-body-s mt-1">{fb.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Right column: Profile + Subscription (Figma 34:8519) */}
@@ -396,7 +606,124 @@ export function AdminUserDetailPanel({
                 <dt className="text-muted-foreground type-body-s">Sign-in</dt>
                 <dd className="text-foreground type-body-s">{detail.signInProvider}</dd>
               </div>
+              {detail.emailVerified !== undefined && (
+                <div className="flex items-center justify-between py-2.5">
+                  <dt className="text-muted-foreground type-body-s">Email verified</dt>
+                  <dd className="text-foreground type-body-s">
+                    {detail.emailVerified ? "Verified" : "Unverified"}
+                  </dd>
+                </div>
+              )}
+              {detail.activeSessionsCount !== undefined && (
+                <div className="flex items-center justify-between py-2.5">
+                  <dt className="text-muted-foreground type-body-s">Active sessions</dt>
+                  <dd className="text-foreground type-body-s font-mono">
+                    {detail.activeSessionsCount}
+                  </dd>
+                </div>
+              )}
             </dl>
+
+            <div className="flex flex-wrap gap-2 border-t border-[var(--cf-border-subtle)] pt-3">
+              {detail.emailVerified === false && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={handleVerifyEmail}
+                >
+                  <CheckCircle2 className="size-3.5" />
+                  Verify email
+                </Button>
+              )}
+              {!isSelf && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={handleRevokeSessions}
+                >
+                  <KeyRound className="size-3.5" />
+                  Revoke sessions
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          <Card className="min-w-0 gap-4 p-6">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="text-foreground type-heading-s">Admin Controls &amp; Plan Override</h2>
+              <span className="text-muted-foreground type-caption">
+                Grant/revoke workspace tier or execute permanent cleanup.
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                aria-label="Override user plan"
+                value={overridePlan}
+                onChange={(e) => setOverridePlan(e.target.value as "free" | "pro" | "team")}
+                className="border-input bg-background h-9 flex-1 rounded-md border px-2 text-xs font-medium"
+              >
+                <option value="free">Free (1 credit)</option>
+                <option value="pro">Pro (10 projects + custom URL)</option>
+                <option value="team">Team (Unlimited shared)</option>
+              </select>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isPending}
+                data-testid="admin-apply-plan-override"
+                onClick={handlePlanOverride}
+              >
+                Apply plan
+              </Button>
+            </div>
+
+            {canPermanentDelete && (
+              <div className="border-destructive/30 bg-destructive-soft/40 flex flex-col gap-2 rounded-xl border p-3">
+                {!confirmPermanentDelete ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => setConfirmPermanentDelete(true)}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Permanently delete user
+                  </Button>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-destructive type-caption font-semibold">
+                      Erase account, all projects &amp; R2 files permanently?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={handlePermanentDelete}
+                      >
+                        Confirm erase
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmPermanentDelete(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           <Card

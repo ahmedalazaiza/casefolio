@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import {
-  computeTeamsPrice,
   formatUsdFromCents,
   getWorkspaceQuotas,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
@@ -14,6 +13,11 @@ import {
   TEAMS_MIN_SEATS,
   type BillingInterval,
 } from "@/lib/billing/plans";
+import {
+  computeTeamsPriceWithCms,
+  DEFAULT_SITE_CMS_CONTENT,
+  type SiteCmsContent,
+} from "@/lib/cms/schema";
 import { formatBytesHuman } from "@/lib/storage/quotas";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +28,8 @@ export interface TeamsSeatCalculatorProps {
   defaultSeats?: number;
   seats?: number;
   onSeatsChange?: (seats: number) => void;
+  cmsTeamPricing?: SiteCmsContent["pricing"]["tiers"]["team"];
+  annualBadgeLabel?: string;
 }
 
 export function TeamsSeatCalculator({
@@ -33,24 +39,25 @@ export function TeamsSeatCalculator({
   defaultSeats = TEAMS_CALCULATOR_DEFAULT_SEATS,
   seats: controlledSeats,
   onSeatsChange,
+  cmsTeamPricing = DEFAULT_SITE_CMS_CONTENT.pricing.tiers.team,
+  annualBadgeLabel = DEFAULT_SITE_CMS_CONTENT.pricing.annualBadgeLabel,
 }: TeamsSeatCalculatorProps) {
+  const minSeats = Math.max(1, cmsTeamPricing.minSeats);
+  const maxSeats = Math.max(minSeats, cmsTeamPricing.maxSeats);
   const [uncontrolledSeats, setUncontrolledSeats] = useState<number>(
-    Math.max(TEAMS_MIN_SEATS, defaultSeats),
+    Math.max(minSeats, defaultSeats),
   );
   const seats = controlledSeats ?? uncontrolledSeats;
   const sliderId = useId();
 
-  const priceResult = computeTeamsPrice(seats, interval);
-  const clampedQuotas = getWorkspaceQuotas(
-    "team",
-    Math.min(seats, TEAMS_MAX_SELF_SERVE_SEATS),
-  );
+  const priceResult = computeTeamsPriceWithCms(seats, interval, cmsTeamPricing);
+  const clampedQuotas = getWorkspaceQuotas("team", Math.min(seats, maxSeats));
 
   function updateSeats(next: number) {
     if (!Number.isFinite(next)) return;
     const bounded = Math.max(
-      TEAMS_MIN_SEATS,
-      Math.min(TEAMS_MAX_SELF_SERVE_SEATS + 1, Math.round(next)),
+      minSeats,
+      Math.min(maxSeats + 1, Math.round(next)),
     );
     setUncontrolledSeats(bounded);
     onSeatsChange?.(bounded);
@@ -67,12 +74,14 @@ export function TeamsSeatCalculator({
             Teams Per-Seat Calculator
           </Eyebrow>
           <h3 className="v3-heading-m text-[var(--cf-text-primary)]">
-            Estimate per-seat Teams pricing ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats) ·{" "}
-            <span className="v3-sticker-lime">2 months free</span> on annual
+            Estimate per-seat Teams pricing ({minSeats}–{maxSeats} seats) ·{" "}
+            <span className="v3-sticker-lime">{annualBadgeLabel}</span> on annual
           </h3>
           <p className="v3-body-s max-w-2xl text-[var(--cf-text-secondary)]">
-            Teams scales smoothly from {TEAMS_MIN_SEATS} to {TEAMS_MAX_SELF_SERVE_SEATS} self-serve
-            seats at $5.99/seat/mo — or $4.99/seat/mo billed $59.90/seat/yr (2 months free). Every
+            Teams scales smoothly from {minSeats} to {maxSeats} self-serve
+            seats at {formatUsdFromCents(cmsTeamPricing.monthlyPriceCents)}/seat/mo — or{" "}
+            {formatUsdFromCents(cmsTeamPricing.yearlyMonthlyEquivalentCents)}/seat/mo billed{" "}
+            {formatUsdFromCents(cmsTeamPricing.yearlyTotalCents)}/seat/yr ({annualBadgeLabel}). Every
             seat expands pooled storage and monthly exports automatically.
           </p>
         </div>

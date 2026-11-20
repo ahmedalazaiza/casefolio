@@ -27,7 +27,74 @@ export const QUOTA_WARNING_RATIO = 0.8;
 export const PAID_GRACE_MAX_RATIO = 1.2;
 export const PAID_GRACE_DURATION_DAYS = 7;
 export const PAID_GRACE_COOLDOWN_DAYS = 365;
-export const PAST_DUE_GRACE_DAYS = 7;
+export const PAST_DUE_GRACE_DAYS = 10;
+
+export const BILLING_FROZEN_REASONS = {
+  PAST_DUE_EXPIRED: "past_due_over_10_days",
+  LEGACY_PAST_DUE_7D: "past_due_over_7_days",
+  TEAM_ENDED: "team_subscription_ended",
+} as const;
+
+export type RestorableBillingSuspensionBase =
+  | "downgraded_pro_to_free_select_one"
+  | "renewal_grace_expired"
+  | "team_subscription_inactive";
+
+const RESTORABLE_BILLING_BASES: readonly RestorableBillingSuspensionBase[] = [
+  "downgraded_pro_to_free_select_one",
+  "renewal_grace_expired",
+  "team_subscription_inactive",
+];
+
+/**
+ * Encodes pre-lock visibility (`public` | `unlisted`) in `published_snapshots.suspended_reason`
+ * so public links paused on downgrade or 10-day renewal expiry restore to exact original visibility
+ * upon repayment while keeping existing string values backwards-compatible.
+ */
+export function encodeBillingSuspendedReason(
+  base: RestorableBillingSuspensionBase,
+  visibility: "public" | "unlisted" | "private",
+): string {
+  return visibility === "unlisted" ? `${base}:unlisted` : base;
+}
+
+/**
+ * Returns the original visibility to restore when a billing-suspended snapshot unlocks after
+ * payment, or `null` if the suspension was non-billing (e.g. `moderation_takedown`).
+ */
+export function parseRestorableBillingSuspendedReason(
+  reason: string | null | undefined,
+): "public" | "unlisted" | null {
+  if (!reason) return null;
+  const trimmed = reason.trim();
+  for (const base of RESTORABLE_BILLING_BASES) {
+    if (trimmed === base || trimmed === `${base}:public`) {
+      return "public";
+    }
+    if (trimmed === `${base}:unlisted`) {
+      return "unlisted";
+    }
+  }
+  return null;
+}
+
+export function isPastDueFrozenReason(reason: string | null | undefined): boolean {
+  return (
+    reason === BILLING_FROZEN_REASONS.PAST_DUE_EXPIRED ||
+    reason === BILLING_FROZEN_REASONS.LEGACY_PAST_DUE_7D ||
+    reason === "past_due_expired"
+  );
+}
+
+export function getPastDueDaysRemaining(
+  pastDueEndsAt: Date | null | undefined,
+  now: Date = new Date(),
+): number {
+  if (!pastDueEndsAt) return 0;
+  const diffMs = pastDueEndsAt.getTime() - now.getTime();
+  if (diffMs <= 0) return 0;
+  return Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+}
 /**
  * Fail-safe: an `active`/`trialing` subscription whose paid-through date is this many days in the
  * past stops granting paid access. A healthy subscription gets a fresh period end from Paddle on

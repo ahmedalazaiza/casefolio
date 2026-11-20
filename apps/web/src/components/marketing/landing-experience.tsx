@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowRight, FileDown, Globe, Layers } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { CmsIcon } from "@/components/cms/cms-icon";
 import { LandingFaqAccordion } from "@/components/marketing/landing-faq-accordion";
 import { LandingHeroMotion } from "@/components/marketing/landing-hero-motion";
 import {
@@ -22,19 +23,16 @@ import {
 } from "@/components/marketing/motion";
 import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, ProBadge } from "@/components/ui/badge";
+import { DEFAULT_SITE_CMS_CONTENT, type SiteCmsContent } from "@/lib/cms/schema";
 import type {
   LandingPlatformSnapshot,
   LandingPublishedTemplateItem,
 } from "@/lib/marketing/landing-stats";
 import {
-  V3_FEATURE_CARDS,
   V3_MARQUEE_CARDS,
-  V3_SHOWCASE_TABS,
   type V3ShowcaseTabId,
 } from "@/lib/marketing/v3-landing-data";
 import { cn } from "@/lib/utils";
-
-const FEATURE_CARD_ICONS = [Globe, FileDown, Layers] as const;
 
 function formatLandingTemplateType(type: LandingPublishedTemplateItem["type"]): string {
   if (type === "mobile") return "Mobile app";
@@ -55,8 +53,10 @@ function buildMarqueePublishedCards(
 
 export function LandingExperience({
   snapshot,
+  cms = DEFAULT_SITE_CMS_CONTENT.landing,
 }: {
   snapshot: LandingPlatformSnapshot;
+  cms?: SiteCmsContent["landing"];
 }) {
   const [activeShowcaseTab, setActiveShowcaseTab] =
     useState<V3ShowcaseTabId>("slots");
@@ -70,7 +70,17 @@ export function LandingExperience({
       <section className="v3-pattern-grid relative z-10 overflow-hidden border-b border-[var(--cf-border-subtle)] pt-12 pb-0 sm:pt-16 lg:pt-24">
         <LandingHeroMotion
           visual={
-            <LandingHeroVisual publishedTemplates={snapshot.publishedTemplates} />
+            cms.heroMockupImageUrl ? (
+              <div className="mx-auto mt-10 max-w-5xl overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2 shadow-xl sm:p-3 lg:mt-14">
+                <img
+                  src={cms.heroMockupImageUrl}
+                  alt="Casefolio hero showcase preview"
+                  className="h-auto w-full rounded-xl object-cover"
+                />
+              </div>
+            ) : (
+              <LandingHeroVisual publishedTemplates={snapshot.publishedTemplates} />
+            )
           }
         >
           <div className="mx-auto flex flex-col items-center text-center">
@@ -79,29 +89,28 @@ export function LandingExperience({
                 aria-hidden="true"
                 className="rounded-full bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] leading-none font-bold text-[var(--cf-text-on-accent)]"
               >
-                01
+                {cms.heroEyebrowStep}
               </span>
-              <span className="uppercase">Curated Case Study Studio</span>
+              <span className="uppercase">{cms.heroEyebrowText}</span>
             </span>
 
             <h1 className="v3-display-xl max-w-[20ch] text-[var(--cf-text-primary)] lg:max-w-none">
-              Turn finished projects into{" "}
+              {cms.heroTitleLead}{" "}
               <br className="hidden lg:block" />
-              <span className="v3-sticker-lime">publishable</span> case studies
+              <span className="v3-sticker-lime">{cms.heroTitleHighlight}</span>{" "}
+              {cms.heroTitleTrail}
             </h1>
 
             <p className="v3-body-l mt-5 max-w-[40rem] text-[var(--cf-text-secondary)] lg:mt-6">
-              Pick a template made by the Casefolio team, drop in your screens,
-              tweak colors and text — then publish a page or export PNG &amp;
-              PDF.
+              {cms.heroSubtitle}
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:mt-10">
               <Link
-                href="/sign-up"
+                href={cms.primaryCtaHref}
                 className="v3-btn-primary focus-visible:ring-ring/40 group outline-none focus-visible:ring-2"
               >
-                <span>Start free</span>
+                <span>{cms.primaryCtaLabel}</span>
                 <span
                   aria-hidden="true"
                   className="inline-flex size-5 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)] transition-transform duration-200 group-hover:translate-x-0.5"
@@ -110,10 +119,10 @@ export function LandingExperience({
                 </span>
               </Link>
               <Link
-                href="/templates"
+                href={cms.secondaryCtaHref}
                 className="v3-btn-secondary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
               >
-                Browse templates
+                {cms.secondaryCtaLabel}
               </Link>
             </div>
           </div>
@@ -138,175 +147,127 @@ export function LandingExperience({
                   aria-hidden="true"
                   className="size-1.5 rounded-full bg-[var(--cf-royal)]"
                 />
-                <span>Structured Workflow</span>
+                <span>{cms.workflowEyebrow}</span>
               </span>
               <h2 className="v3-display-l text-[var(--cf-text-primary)]">
-                Built for{" "}
+                {cms.workflowTitleLead}{" "}
                 <br className="sm:hidden" />
-                <span className="v3-highlight">case studies</span>{" "}
+                <span className="v3-highlight">{cms.workflowTitleHighlight}</span>{" "}
                 <br />
-                ready the moment you are
+                {cms.workflowTitleTrail}
               </h2>
             </HighlightUnfurl>
 
-            {/* Split Panel 01: Templates (Flat Architectural Sheet) */}
-            <DepthStackPanel recede>
-              <div className="group overflow-hidden rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all duration-300 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] lg:grid lg:min-h-[29rem] lg:grid-cols-2 lg:rounded-[2rem]">
-                <div className="flex flex-col items-start justify-between gap-8 border-b border-[var(--cf-border-subtle)] p-6 sm:p-10 lg:border-r lg:border-b-0 lg:p-12">
-                  <div className="flex w-full items-center justify-between gap-3">
-                    <span className="v3-label inline-flex items-center gap-2 rounded-lg bg-[var(--cf-royal)] px-3 py-1.5 text-[var(--cf-text-on-royal)] uppercase">
-                      <span
-                        aria-hidden="true"
-                        className="font-display font-bold text-[var(--cf-bg-accent)]"
-                      >
-                        01
-                      </span>
-                      <span>Templates</span>
-                    </span>
-                    <span className="font-mono text-xs font-medium tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-                      Curated System
-                    </span>
-                  </div>
+            {cms.workflowPanels.map((panel, panelIdx) => {
+              const isSecondaryAccent = panelIdx % 2 === 1;
+              return (
+                <DepthStackPanel key={`${panel.step}-${panel.title}`} recede={panelIdx === 0}>
+                  <div className="group overflow-hidden rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all duration-300 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] lg:grid lg:min-h-[29rem] lg:grid-cols-2 lg:rounded-[2rem]">
+                    <div className="flex flex-col items-start justify-between gap-8 border-b border-[var(--cf-border-subtle)] p-6 sm:p-10 lg:border-r lg:border-b-0 lg:p-12">
+                      <div className="flex w-full items-center justify-between gap-3">
+                        <span
+                          className={cn(
+                            "v3-label inline-flex items-center gap-2 rounded-lg px-3 py-1.5 uppercase",
+                            isSecondaryAccent
+                              ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+                              : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
+                          )}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "font-display font-bold",
+                              !isSecondaryAccent && "text-[var(--cf-bg-accent)]",
+                            )}
+                          >
+                            {panel.step}
+                          </span>
+                          <span>{panel.badgeLabel}</span>
+                        </span>
+                        <span className="font-mono text-xs font-medium tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+                          {panel.metaLabel}
+                        </span>
+                      </div>
 
-                  <div className="flex w-full max-w-[32rem] flex-col items-start gap-5">
-                    <div className="flex flex-col gap-3">
-                      <h3 className="v3-heading-m text-[var(--cf-text-primary)]">
-                        Templates made for case studies
-                      </h3>
-                      <p className="v3-body-m text-[var(--cf-text-secondary)]">
-                        Pick a Mobile, Website or combined layout, designed and
-                        versioned by the Casefolio team. Layout and spacing stay
-                        intact.
-                      </p>
+                      <div className="flex w-full max-w-[32rem] flex-col items-start gap-5">
+                        <div className="flex flex-col gap-3">
+                          <h3 className="v3-heading-m text-[var(--cf-text-primary)]">
+                            {panel.title}
+                          </h3>
+                          <p className="v3-body-m text-[var(--cf-text-secondary)]">
+                            {panel.body}
+                          </p>
+                        </div>
+
+                        <dl className="grid w-full grid-cols-3 divide-x divide-[var(--cf-border-subtle)] border-y border-[var(--cf-border-subtle)] py-3.5">
+                          {panel.specs.map((spec, specIdx) => (
+                            <div
+                              key={`${spec.label}-${specIdx}`}
+                              className={cn(
+                                specIdx === 0 ? "pr-3" : specIdx === panel.specs.length - 1 ? "pl-3" : "px-3",
+                              )}
+                            >
+                              <dt className="font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)] uppercase">
+                                {spec.label}
+                              </dt>
+                              <dd className="v3-body-s-strong mt-0.5 text-[var(--cf-text-primary)]">
+                                {spec.value}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+
+                        {panel.ctaHref.startsWith("#") ? (
+                          <a
+                            href={panel.ctaHref}
+                            className="v3-btn-primary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
+                          >
+                            <span>{panel.ctaLabel}</span>
+                            <ArrowRight className="size-4" />
+                          </a>
+                        ) : (
+                          <Link
+                            href={panel.ctaHref}
+                            className="v3-btn-primary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
+                          >
+                            <span>{panel.ctaLabel}</span>
+                            <ArrowRight className="size-4" />
+                          </Link>
+                        )}
+                      </div>
                     </div>
 
-                    <dl className="grid w-full grid-cols-3 divide-x divide-[var(--cf-border-subtle)] border-y border-[var(--cf-border-subtle)] py-3.5">
-                      <div className="pr-3">
-                        <dt className="font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)] uppercase">
-                          Formats
-                        </dt>
-                        <dd className="v3-body-s-strong mt-0.5 text-[var(--cf-text-primary)]">
-                          App · Web
-                        </dd>
+                    {panel.imageUrl ? (
+                      <div className="flex items-center justify-center bg-[var(--cf-bg-surface)] p-6 sm:p-8">
+                        <img
+                          src={panel.imageUrl}
+                          alt={panel.title}
+                          className="max-h-[24rem] w-full rounded-xl border border-[var(--cf-border-subtle)] object-cover"
+                        />
                       </div>
-                      <div className="px-3">
-                        <dt className="font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)] uppercase">
-                          Spacing
-                        </dt>
-                        <dd className="v3-body-s-strong mt-0.5 text-[var(--cf-text-primary)]">
-                          Grid-locked
-                        </dd>
-                      </div>
-                      <div className="pl-3">
-                        <dt className="font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)] uppercase">
-                          Updates
-                        </dt>
-                        <dd className="v3-body-s-strong mt-0.5 text-[var(--cf-text-primary)]">
-                          Versioned
-                        </dd>
-                      </div>
-                    </dl>
-
-                    <Link
-                      href="/templates"
-                      className="v3-btn-primary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
-                    >
-                      <span>Browse templates</span>
-                      <ArrowRight className="size-4" />
-                    </Link>
+                    ) : panelIdx === 0 ? (
+                      <V3TemplatesPanelMedia />
+                    ) : (
+                      <V3EditorSlotsPanelMedia />
+                    )}
                   </div>
-                </div>
+                </DepthStackPanel>
+              );
+            })}
 
-                <V3TemplatesPanelMedia />
-              </div>
-            </DepthStackPanel>
-
-            {/* Split Panel 02: Editor (Flat Architectural Sheet + Acid-Lime Index) */}
-            <DepthStackPanel>
-              <div className="group overflow-hidden rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all duration-300 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] lg:grid lg:min-h-[29rem] lg:grid-cols-2 lg:rounded-[2rem]">
-                <div className="flex flex-col items-start justify-between gap-8 border-b border-[var(--cf-border-subtle)] p-6 sm:p-10 lg:border-r lg:border-b-0 lg:p-12">
-                  <div className="flex w-full items-center justify-between gap-3">
-                    <span className="v3-label inline-flex items-center gap-2 rounded-lg bg-[var(--cf-bg-accent)] px-3 py-1.5 text-[var(--cf-text-on-accent)] uppercase">
-                      <span
-                        aria-hidden="true"
-                        className="font-display font-bold"
-                      >
-                        02
-                      </span>
-                      <span>Editor</span>
-                    </span>
-                    <span className="font-mono text-xs font-medium tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-                      Constrained Canvas
-                    </span>
-                  </div>
-
-                  <div className="flex w-full max-w-[32rem] flex-col items-start gap-5">
-                    <div className="flex flex-col gap-3">
-                      <h3 className="v3-heading-m text-[var(--cf-text-primary)]">
-                        Edit only what matters
-                      </h3>
-                      <p className="v3-body-m text-[var(--cf-text-secondary)]">
-                        Drop screens into ratio-locked slots, change text, colors
-                        and fonts, then reorder or hide sections.
-                      </p>
-                    </div>
-
-                    <dl className="grid w-full grid-cols-3 divide-x divide-[var(--cf-border-subtle)] border-y border-[var(--cf-border-subtle)] py-3.5">
-                      <div className="pr-3">
-                        <dt className="font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)] uppercase">
-                          Frames
-                        </dt>
-                        <dd className="v3-body-s-strong mt-0.5 text-[var(--cf-text-primary)]">
-                          Ratio-locked
-                        </dd>
-                      </div>
-                      <div className="px-3">
-                        <dt className="font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)] uppercase">
-                          Tokens
-                        </dt>
-                        <dd className="v3-body-s-strong mt-0.5 text-[var(--cf-text-primary)]">
-                          AA checked
-                        </dd>
-                      </div>
-                      <div className="pl-3">
-                        <dt className="font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)] uppercase">
-                          Sections
-                        </dt>
-                        <dd className="v3-body-s-strong mt-0.5 text-[var(--cf-text-primary)]">
-                          Live reorder
-                        </dd>
-                      </div>
-                    </dl>
-
-                    <a
-                      href="#details-showcase"
-                      className="v3-btn-primary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
-                    >
-                      <span>See how it works</span>
-                      <ArrowRight className="size-4" />
-                    </a>
-                  </div>
-                </div>
-
-                <V3EditorSlotsPanelMedia />
-              </div>
-            </DepthStackPanel>
-
-            {/* 3-Column Flat Graphic Bento Feature Grid (White · Electric Royal · Carbon Ink) */}
+            {/* 3-Column Flat Graphic Bento Feature Grid */}
             <ScrollRise
               stagger
               y={26}
               data-testid="landing-feature-grid"
               className="grid grid-cols-1 gap-5 md:grid-cols-3 lg:gap-6"
             >
-              {V3_FEATURE_CARDS.map((card, index) => {
-                const Icon =
-                  FEATURE_CARD_ICONS[index % FEATURE_CARD_ICONS.length]!;
-                const isRoyal = index === 1;
-                const isInk = index === 2;
+              {cms.featureCards.map((card, index) => {
+                const isRoyal = index % 3 === 1;
+                const isInk = index % 3 === 2;
                 return (
                   <article
-                    key={card.title}
+                    key={`${card.title}-${index}`}
                     className={cn(
                       "group relative flex flex-col justify-between gap-8 overflow-hidden rounded-[1.5rem] border p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--cf-shadow-hover)] sm:p-8 lg:rounded-[1.75rem]",
                       isRoyal
@@ -326,7 +287,11 @@ export function LandingExperience({
                             : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
                         )}
                       >
-                        <Icon className="size-5" />
+                        <CmsIcon
+                          iconName={card.iconName}
+                          customIconUrl={card.customIconUrl}
+                          className="size-5"
+                        />
                       </span>
                       <span
                         aria-hidden="true"
@@ -394,14 +359,14 @@ export function LandingExperience({
                     aria-hidden="true"
                     className="size-1.5 rounded-full bg-[var(--cf-bg-accent)]"
                   />
-                  <span>Design System Guardrails</span>
+                  <span>{cms.showcaseEyebrow}</span>
                 </span>
                 <h2 className="v3-heading-m text-[var(--cf-text-inverse)]">
-                  <span className="v3-sticker-lime">Details</span>{" "}
+                  <span className="v3-sticker-lime">{cms.showcaseTitleHighlight}</span>{" "}
                   <br className="sm:hidden" />
-                  that keep every{" "}
+                  {cms.showcaseTitleMiddle}{" "}
                   <br />
-                  case study consistent
+                  {cms.showcaseTitleTrail}
                 </h2>
               </div>
 
@@ -410,7 +375,7 @@ export function LandingExperience({
                 aria-label="Casefolio consistency details"
                 className="flex w-full flex-col gap-2"
               >
-                {V3_SHOWCASE_TABS.map((tab, index) => {
+                {cms.showcaseTabs.map((tab, index) => {
                   const isActive = activeShowcaseTab === tab.id;
                   return (
                     <button
@@ -481,19 +446,19 @@ export function LandingExperience({
                   aria-hidden="true"
                   className="size-1.5 rounded-full bg-[var(--cf-royal)]"
                 />
-                <span>FAQ · Straight Answers</span>
+                <span>{cms.faqEyebrow}</span>
               </span>
               <h2 className="v3-heading-m text-[var(--cf-text-primary)]">
-                Got questions? We have{" "}
+                {cms.faqTitleLead}{" "}
                 <br />
-                <span className="v3-highlight">the answers.</span>
+                <span className="v3-highlight">{cms.faqTitleHighlight}</span>
               </h2>
 
               <Link
-                href="/sign-up"
+                href={cms.faqCtaHref}
                 className="v3-btn-primary focus-visible:ring-ring/40 group outline-none focus-visible:ring-2"
               >
-                <span>Start free</span>
+                <span>{cms.faqCtaLabel}</span>
                 <span
                   aria-hidden="true"
                   className="inline-flex size-5 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)] transition-transform duration-200 group-hover:translate-x-0.5"
@@ -504,7 +469,7 @@ export function LandingExperience({
             </HighlightUnfurl>
 
             <ScrollRise y={24} className="w-full flex-1">
-              <LandingFaqAccordion />
+              <LandingFaqAccordion items={cms.faqItems} />
             </ScrollRise>
           </div>
         </section>
@@ -526,21 +491,21 @@ export function LandingExperience({
                 aria-hidden="true"
                 className="size-1.5 rounded-full bg-[var(--cf-bg-accent)]"
               />
-              <span>Ready to Ship</span>
+              <span>{cms.finalCtaEyebrow}</span>
             </span>
 
             <h2 className="v3-display-l text-[var(--cf-text-primary)]">
-              Your next case study is{" "}
+              {cms.finalCtaTitleLead}{" "}
               <br />
-              <span className="v3-sticker-lime mt-1">one template away</span>
+              <span className="v3-sticker-lime mt-1">{cms.finalCtaTitleHighlight}</span>
             </h2>
 
             <div className="mt-8">
               <Link
-                href="/sign-up"
+                href={cms.finalCtaButtonHref}
                 className="v3-btn-primary focus-visible:ring-ring/40 group px-6 py-3.5 text-base outline-none focus-visible:ring-2"
               >
-                <span>Make it happen</span>
+                <span>{cms.finalCtaButtonLabel}</span>
                 <span
                   aria-hidden="true"
                   className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)] transition-transform duration-200 group-hover:translate-x-0.5"

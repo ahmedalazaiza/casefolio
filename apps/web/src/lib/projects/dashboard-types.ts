@@ -60,6 +60,7 @@ export interface DashboardProjectItem {
   spaceVisibility?: SpaceVisibility;
   isCreator?: boolean;
   isLockedByDowngrade?: boolean;
+  isLockedByTeamSubscription?: boolean;
   isKeptActiveProject?: boolean;
 }
 

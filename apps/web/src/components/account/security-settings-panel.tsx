@@ -10,6 +10,7 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -40,6 +41,13 @@ export interface ActiveSessionView {
   isCurrent: boolean;
 }
 
+export interface SoleOwnedTeamDeletionNotice {
+  organizationId: string;
+  organizationName: string;
+  otherMembersCount: number;
+  hasLiveSubscription: boolean;
+}
+
 export interface SecuritySettingsPanelProps {
   email: string;
   emailVerified: boolean;
@@ -50,6 +58,7 @@ export interface SecuritySettingsPanelProps {
   publishedCount: number;
   sessions: ActiveSessionView[];
   deletionScheduledForIso?: string | null;
+  soleOwnedTeams?: SoleOwnedTeamDeletionNotice[];
 }
 
 export function SecuritySettingsPanel({
@@ -62,6 +71,7 @@ export function SecuritySettingsPanel({
   publishedCount,
   sessions,
   deletionScheduledForIso = null,
+  soleOwnedTeams = [],
 }: SecuritySettingsPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -82,16 +92,14 @@ export function SecuritySettingsPanel({
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Delete account modal + server-side step-up
+  // Delete account modal (2-step email confirmation -> email OTP -> immediate purge)
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<"email" | "verify_code">("email");
   const [confirmEmail, setConfirmEmail] = useState("");
-  const [stepUpMode, setStepUpMode] = useState<"password" | "otp">(
-    hasPasswordAccount ? "password" : "otp",
-  );
-  const [stepUpPassword, setStepUpPassword] = useState("");
   const [stepUpOtp, setStepUpOtp] = useState("");
-  const [stepUpOtpSent, setStepUpOtpSent] = useState(false);
   const [stepUpSending, setStepUpSending] = useState(false);
+  const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
+  const [dissolveOwnedTeams, setDissolveOwnedTeams] = useState(false);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -228,8 +236,14 @@ export function SecuritySettingsPanel({
     });
   }
 
-  async function handleSendStepUpOtp() {
+  async function requestDeleteConfirmationCode() {
     setDeleteError(null);
+    const trimmedEmail = confirmEmail.trim();
+    if (trimmedEmail.toLowerCase() !== email.toLowerCase()) {
+      setDeleteError(`Please enter your account email (${email}) to continue.`);
+      return;
+    }
+
     setStepUpSending(true);
     try {
       const response = await fetch("/api/account/step-up", {
@@ -238,6 +252,7 @@ export function SecuritySettingsPanel({
         body: JSON.stringify({
           action: "send_otp",
           purpose: "account_deletion",
+          confirmEmail: trimmedEmail,
         }),
       });
       const json = (await response.json()) as { ok: boolean; error?: string };
@@ -245,7 +260,8 @@ export function SecuritySettingsPanel({
         setDeleteError(json.error || "Could not send confirmation code.");
         return;
       }
-      setStepUpOtpSent(true);
+      setStepUpOtp("");
+      setDeleteStep("verify_code");
       toast.success(`Sent a 6-digit security confirmation code to ${email}.`);
     } catch {
       setDeleteError("Network error while sending confirmation code.");
@@ -254,29 +270,25 @@ export function SecuritySettingsPanel({
     }
   }
 
-  async function handleDeleteAccount(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSendDeleteCode(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await requestDeleteConfirmationCode();
+  }
+
+  async function handleConfirmDeleteAccount(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDeleteError(null);
     setDeleteSubmitting(true);
 
     try {
-      const stepUpPayload =
-        stepUpMode === "password"
-          ? {
-              action: "verify_password" as const,
-              purpose: "account_deletion" as const,
-              password: stepUpPassword,
-            }
-          : {
-              action: "verify_otp" as const,
-              purpose: "account_deletion" as const,
-              otp: stepUpOtp.trim(),
-            };
-
       const stepUpRes = await fetch("/api/account/step-up", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(stepUpPayload),
+        body: JSON.stringify({
+          action: "verify_otp",
+          purpose: "account_deletion",
+          otp: stepUpOtp.trim(),
+        }),
       });
       const stepUpJson = (await stepUpRes.json()) as
         | { ok: true; stepUpToken: string }
@@ -285,30 +297,29 @@ export function SecuritySettingsPanel({
       if (!stepUpRes.ok || !stepUpJson.ok) {
         setDeleteError(
           ("error" in stepUpJson && stepUpJson.error) ||
-            "Identity verification failed. Please check your credentials.",
+            "Invalid or expired confirmation code. Please check your inbox and try again.",
         );
         return;
       }
 
       const res = await deleteUserAccountAction({
-        confirmEmail,
+        confirmEmail: confirmEmail.trim(),
         stepUpToken: stepUpJson.stepUpToken,
+        dissolveOwnedTeams,
       });
       if (!res.ok) {
         setDeleteError(res.error);
         return;
       }
 
-      toast.success(
-        "Account deletion scheduled for 7 days from now. You can cancel anytime during the grace period.",
-      );
+      toast.success("Your account and all data have been permanently deleted.");
       setDeleteOpen(false);
-      setStepUpPassword("");
       setStepUpOtp("");
       setConfirmEmail("");
-      router.refresh();
+      setDeleteStep("email");
+      window.location.assign("/?accountDeleted=1");
     } catch {
-      setDeleteError("Could not schedule account deletion right now.");
+      setDeleteError("Could not delete account right now.");
     } finally {
       setDeleteSubmitting(false);
     }
@@ -519,10 +530,11 @@ export function SecuritySettingsPanel({
       {/* Delete account danger card */}
       <section className="border-destructive/30 bg-elevated flex flex-col gap-4 rounded-xl border p-6 sm:p-8">
         <div className="flex flex-col gap-1.5">
-          <h2 className="text-foreground type-heading-m">Delete account</h2>
+          <h2 className="text-foreground type-heading-m">Delete account permanently</h2>
           <p className="text-muted-foreground type-body-s">
-            Schedules permanent deletion of your projects, published pages, and exports after a
-            7-day grace period. Active personal subscriptions are canceled before final erasure.
+            Immediately and permanently erases your account, personal case studies, published
+            links, uploads, and exports from our database with zero recovery access. Any active
+            paid subscription is canceled first.
           </p>
         </div>
 
@@ -532,19 +544,18 @@ export function SecuritySettingsPanel({
             variant="destructive"
             size="sm"
             data-testid="open-delete-account-modal"
-            disabled={Boolean(deletionScheduledForIso)}
             onClick={() => {
+              setDeleteStep("email");
               setConfirmEmail("");
-              setStepUpPassword("");
               setStepUpOtp("");
-              setStepUpOtpSent(false);
-              setStepUpMode(hasPasswordAccount ? "password" : "otp");
+              setDeleteAcknowledged(false);
+              setDissolveOwnedTeams(false);
               setDeleteError(null);
               setDeleteOpen(true);
             }}
           >
             <Trash2 className="size-3.5" />
-            {deletionScheduledForIso ? "Deletion scheduled" : "Delete account"}
+            Delete account permanently
           </Button>
         </div>
       </section>
@@ -742,7 +753,7 @@ export function SecuritySettingsPanel({
         </Dialog>
       )}
 
-      {/* Delete account dialog with server-verified step-up */}
+      {/* Delete account dialog: 2-step email -> email OTP -> immediate permanent purge */}
       {deleteOpen && (
         <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <DialogContent className="max-w-md" data-testid="delete-account-dialog">
@@ -752,136 +763,244 @@ export function SecuritySettingsPanel({
                   <AlertTriangle className="size-5" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <DialogTitle>Schedule account deletion?</DialogTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      tone="danger"
+                      withDot={false}
+                      className="border-destructive/30 text-destructive border"
+                    >
+                      {deleteStep === "email" ? "Step 1 of 2" : "Step 2 of 2"}
+                    </Badge>
+                  </div>
+                  <DialogTitle>Delete account permanently?</DialogTitle>
                   <DialogDescription>
-                    After a 7-day grace window, this permanently deletes {projectsCount}{" "}
-                    {projectsCount === 1 ? "project" : "projects"}, {publishedCount}{" "}
-                    published {publishedCount === 1 ? "page" : "pages"} and all exports. You
-                    can cancel anytime within 7 days.
+                    {deleteStep === "email" ? (
+                      <>
+                        Confirm your account email first to receive a 6-digit verification code.
+                        Immediate deletion permanently erases {projectsCount}{" "}
+                        {projectsCount === 1 ? "project" : "projects"}, {publishedCount} published{" "}
+                        {publishedCount === 1 ? "page" : "pages"}, and all uploaded media and
+                        exports from our database.
+                      </>
+                    ) : (
+                      <>
+                        Enter the 6-digit confirmation code sent to{" "}
+                        <span className="font-mono font-medium">{email}</span> and confirm below to
+                        permanently delete your account immediately.
+                      </>
+                    )}
                   </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
 
-            <form onSubmit={handleDeleteAccount} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="delete-confirm-email">
-                  Type <span className="font-mono">{email}</span> to confirm
-                </Label>
-                <Input
-                  id="delete-confirm-email"
-                  type="email"
-                  placeholder={email}
-                  value={confirmEmail}
-                  onChange={(e) => setConfirmEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              {stepUpMode === "password" ? (
+            {deleteStep === "email" ? (
+              <form
+                onSubmit={handleSendDeleteCode}
+                className="flex flex-col gap-4"
+                data-testid="delete-step-email-form"
+              >
                 <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="delete-confirm-email">
+                    Type <span className="font-mono">{email}</span> to confirm
+                  </Label>
+                  <Input
+                    id="delete-confirm-email"
+                    type="email"
+                    placeholder={email}
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                  <p className="text-muted-foreground type-caption">
+                    We&apos;ll send a 6-digit security code to this email before you confirm
+                    immediate account deletion.
+                  </p>
+                </div>
+
+                {deleteError && (
+                  <p
+                    role="alert"
+                    className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+                  >
+                    {deleteError}
+                  </p>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setDeleteOpen(false)}
+                    disabled={stepUpSending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="destructive"
+                    data-testid="send-delete-code-btn"
+                    disabled={
+                      stepUpSending || confirmEmail.trim().toLowerCase() !== email.toLowerCase()
+                    }
+                  >
+                    {stepUpSending ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Sending code...
+                      </>
+                    ) : (
+                      "Send confirmation code"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            ) : (
+              <form
+                onSubmit={handleConfirmDeleteAccount}
+                className="flex flex-col gap-4"
+                data-testid="delete-step-verify-form"
+              >
+                <div className="border-border bg-muted/40 flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Mail className="text-muted-foreground size-4 shrink-0" />
+                    <span className="text-foreground type-caption truncate font-mono">
+                      {confirmEmail.trim() || email}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="change-delete-email-btn"
+                    onClick={() => {
+                      setDeleteStep("email");
+                      setStepUpOtp("");
+                      setDeleteError(null);
+                    }}
+                    className="text-primary type-caption shrink-0 font-medium underline-offset-4 hover:underline"
+                  >
+                    Change email
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="delete-stepup-password">Confirm your password</Label>
+                    <Label htmlFor="delete-stepup-otp">6-digit confirmation code</Label>
                     <button
                       type="button"
-                      onClick={() => {
-                        setStepUpMode("otp");
-                        setDeleteError(null);
-                      }}
-                      className="text-primary type-caption underline-offset-4 hover:underline"
+                      data-testid="resend-delete-code-btn"
+                      disabled={stepUpSending}
+                      onClick={() => void requestDeleteConfirmationCode()}
+                      className="text-primary type-caption underline-offset-4 hover:underline disabled:opacity-50"
                     >
-                      Use email code instead
+                      {stepUpSending ? "Sending..." : "Resend code"}
                     </button>
                   </div>
                   <Input
-                    id="delete-stepup-password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={stepUpPassword}
-                    onChange={(e) => setStepUpPassword(e.target.value)}
+                    id="delete-stepup-otp"
+                    data-testid="delete-stepup-otp"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={stepUpOtp}
+                    onChange={(e) => setStepUpOtp(e.target.value.replace(/\D/g, ""))}
+                    autoComplete="one-time-code"
                     required
                   />
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="delete-stepup-otp">6-digit security code</Label>
-                    {hasPasswordAccount && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStepUpMode("password");
-                          setDeleteError(null);
-                        }}
-                        className="text-primary type-caption underline-offset-4 hover:underline"
+
+                {soleOwnedTeams.length > 0 && (
+                  <div
+                    data-testid="delete-sole-owned-teams-box"
+                    className="border-destructive/35 bg-destructive-soft/50 flex flex-col gap-2.5 rounded-lg border p-3.5"
+                  >
+                    <p className="text-foreground type-caption font-semibold">
+                      You are the sole Owner of{" "}
+                      {soleOwnedTeams.map((t) => `“${t.organizationName}”`).join(", ")} (with
+                      active teammates).
+                    </p>
+                    <p className="text-muted-foreground type-caption">
+                      You can{" "}
+                      <Link
+                        href="/account/team"
+                        className="text-primary font-semibold underline-offset-4 hover:underline"
                       >
-                        Use password instead
-                      </button>
+                        transfer ownership in Team settings
+                      </Link>{" "}
+                      first, or confirm dissolving the team workspace(s) and canceling team billing
+                      below.
+                    </p>
+                    <label className="text-foreground type-caption flex cursor-pointer items-start gap-2 font-medium">
+                      <input
+                        type="checkbox"
+                        data-testid="dissolve-owned-teams-checkbox"
+                        checked={dissolveOwnedTeams}
+                        onChange={(e) => setDissolveOwnedTeams(e.target.checked)}
+                        className="accent-destructive mt-0.5 size-4 rounded"
+                      />
+                      <span>
+                        Dissolve my owned Team workspace(s), cancel team billing, and erase shared
+                        team projects immediately
+                      </span>
+                    </label>
+                  </div>
+                )}
+
+                <label className="text-foreground type-caption flex cursor-pointer items-start gap-2">
+                  <input
+                    type="checkbox"
+                    data-testid="delete-permanent-ack-checkbox"
+                    checked={deleteAcknowledged}
+                    onChange={(e) => setDeleteAcknowledged(e.target.checked)}
+                    className="accent-destructive mt-0.5 size-4 rounded"
+                  />
+                  <span>
+                    I understand all my data and case studies will be permanently deleted immediately
+                    with no recovery.
+                  </span>
+                </label>
+
+                {deleteError && (
+                  <p
+                    role="alert"
+                    className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
+                  >
+                    {deleteError}
+                  </p>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setDeleteOpen(false)}
+                    disabled={deleteSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="destructive"
+                    data-testid="confirm-permanent-delete-btn"
+                    disabled={
+                      deleteSubmitting ||
+                      stepUpOtp.trim().length !== 6 ||
+                      !deleteAcknowledged ||
+                      (soleOwnedTeams.length > 0 && !dissolveOwnedTeams)
+                    }
+                  >
+                    {deleteSubmitting ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Deleting forever...
+                      </>
+                    ) : (
+                      "Delete account forever"
                     )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="delete-stepup-otp"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="000000"
-                      value={stepUpOtp}
-                      onChange={(e) => setStepUpOtp(e.target.value.replace(/\D/g, ""))}
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      disabled={stepUpSending}
-                      onClick={handleSendStepUpOtp}
-                    >
-                      {stepUpSending ? "Sending..." : stepUpOtpSent ? "Resend" : "Send code"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {deleteError && (
-                <p
-                  role="alert"
-                  className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-lg border px-3.5 py-2.5"
-                >
-                  {deleteError}
-                </p>
-              )}
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setDeleteOpen(false)}
-                  disabled={deleteSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  disabled={
-                    deleteSubmitting ||
-                    confirmEmail.trim().toLowerCase() !== email.toLowerCase() ||
-                    (stepUpMode === "password"
-                      ? stepUpPassword.length === 0
-                      : stepUpOtp.trim().length !== 6)
-                  }
-                >
-                  {deleteSubmitting ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Confirming...
-                    </>
-                  ) : (
-                    "Schedule deletion (7 days)"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
       )}

@@ -1,6 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { reconcileStaleSubscriptions } from "@/lib/billing/reconcile";
+import {
+  processRenewalGraceAndExpirations,
+  reconcileStaleSubscriptions,
+} from "@/lib/billing/reconcile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +33,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
-  const summary = await reconcileStaleSubscriptions();
-  return NextResponse.json({ ok: true, ...summary });
+  const [summary, graceSummary] = await Promise.all([
+    reconcileStaleSubscriptions(),
+    processRenewalGraceAndExpirations(),
+  ]);
+  return NextResponse.json({ ok: true, ...summary, grace: graceSummary });
 }

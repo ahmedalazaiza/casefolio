@@ -952,3 +952,44 @@ export const platformSettings = pgTable("platform_settings", {
   updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const PRODUCT_FEEDBACK_STATUSES = ["submitted", "snoozed"] as const;
+export type ProductFeedbackStatus = (typeof PRODUCT_FEEDBACK_STATUSES)[number];
+
+export const PRODUCT_FEEDBACK_TRIGGERS = [
+  "first_publish",
+  "first_export",
+  "milestone_usage",
+  "manual",
+] as const;
+export type ProductFeedbackTrigger = (typeof PRODUCT_FEEDBACK_TRIGGERS)[number];
+
+/** In-app timed 5-star feedback survey & product discovery responses. */
+export const productFeedback = pgTable(
+  "product_feedback",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").$type<ProductFeedbackStatus>().notNull().default("submitted"),
+    rating: integer("rating"),
+    triggerMoment: text("trigger_moment")
+      .$type<ProductFeedbackTrigger>()
+      .notNull()
+      .default("manual"),
+    primaryUseCase: text("primary_use_case"),
+    topFeatureRequest: text("top_feature_request"),
+    sentimentTags: jsonb("sentiment_tags").$type<string[]>().notNull().default([]),
+    comment: text("comment"),
+    planTier: text("plan_tier").$type<PlanTier>().notNull().default("free"),
+    snoozeUntil: timestamp("snooze_until", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("product_feedback_user_status_idx").on(table.userId, table.status),
+    index("product_feedback_created_at_idx").on(table.createdAt),
+    index("product_feedback_rating_idx").on(table.rating),
+  ],
+);

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { forbidden, notFound, redirect } from "next/navigation";
 import { EditorClient } from "@/app/editor/[projectId]/editor-client";
+import { LockedProjectGate } from "@/components/projects/locked-project-gate";
 import { requireSession } from "@/lib/auth/session";
 import { saveProjectEditorAction } from "@/lib/projects/actions";
 import { getProjectEditorAccess } from "@/lib/projects/service";
@@ -31,6 +32,16 @@ export default async function ProjectEditorPage({
   }
   if (access.status === "forbidden") {
     forbidden();
+  }
+  if (access.status === "locked") {
+    return (
+      <LockedProjectGate
+        projectName={access.projectName}
+        workspaceKind={access.workspaceKind}
+        isTeamOwner={access.isTeamOwner}
+        error={access.error}
+      />
+    );
   }
 
   return <EditorClient initialPayload={access.payload} onSaveProject={saveProjectEditorAction} />;

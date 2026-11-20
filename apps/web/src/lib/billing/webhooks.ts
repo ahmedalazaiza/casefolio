@@ -1,10 +1,23 @@
-import { and, desc, eq, inArray, isNull, type PlanTier } from "@casefolio/db";
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  normalizeMembershipRole,
+  type PlanTier,
+} from "@casefolio/db";
 import { z } from "zod";
 import { env } from "@/env";
 import { trackServerProductEvent } from "@/lib/analytics/posthog";
 import {
+  BILLING_FROZEN_REASONS,
+  encodeBillingSuspendedReason,
   evaluateSubscriptionLifecycle,
   FREE_LIFETIME_PROJECT_LIMIT,
+  getPastDueDaysRemaining,
+  parseRestorableBillingSuspendedReason,
   PLAN_CATALOG_VERSION,
   PRO_MAX_PROJECTS,
   TEAMS_MAX_SELF_SERVE_SEATS,
@@ -12,6 +25,7 @@ import {
   UNLIMITED_CASE_STUDIES,
   type BillingInterval,
   type PaidPlanTier,
+  type RestorableBillingSuspensionBase,
   type SubscriptionLifecycleStatus,
 } from "@/lib/billing/plans";
 import {
@@ -28,6 +42,7 @@ import {
 } from "@/lib/entitlements/server";
 import { captureServerException } from "@/lib/monitoring/sentry";
 import { notifyPaymentIssue } from "@/lib/notifications/service";
+import { revalidatePublicProject } from "@/lib/projects/public-cache";
 
 /**
  * Only these Paddle events are allowed to change entitlements.
@@ -356,19 +371,22 @@ export async function handleSignedPaddleWebhookRequest(args: {
 export async function applyPersonalDowngradePublicationRules(
   workspaceId: string,
   now: Date = new Date(),
-): Promise<void> {
+  reasonBase: RestorableBillingSuspensionBase = "downgraded_pro_to_free_select_one",
+): Promise<string[]> {
   const [ws] = await db
     .select()
     .from(dbSchema.workspaces)
     .where(eq(dbSchema.workspaces.id, workspaceId))
     .limit(1);
 
-  if (!ws) return;
+  if (!ws) return [];
 
   const nonArchivedProjects = await db
     .select({
       id: dbSchema.projects.id,
       visibility: dbSchema.projects.visibility,
+      slug: dbSchema.projects.slug,
+      publishedAt: dbSchema.projects.publishedAt,
       updatedAt: dbSchema.projects.updatedAt,
     })
     .from(dbSchema.projects)
@@ -391,8 +409,11 @@ export async function applyPersonalDowngradePublicationRules(
     .set({ brandingRemoved: false, updatedAt: now })
     .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
 
+  const revalidatedSlugs: string[] = [];
+
   if (nonArchivedProjects.length <= 1) {
-    const singleId = nonArchivedProjects[0]?.id ?? null;
+    const single = nonArchivedProjects[0];
+    const singleId = single?.id ?? null;
     await db
       .update(dbSchema.workspaces)
       .set({
@@ -408,15 +429,40 @@ export async function applyPersonalDowngradePublicationRules(
       })
       .where(eq(dbSchema.workspaces.id, workspaceId));
 
-    await db
-      .update(dbSchema.publishedSnapshots)
-      .set({ suspendedReason: null, updatedAt: now })
-      .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
-    return;
+    if (singleId) {
+      const [singleSnap] = await db
+        .select({
+          projectId: dbSchema.publishedSnapshots.projectId,
+          suspendedReason: dbSchema.publishedSnapshots.suspendedReason,
+          publishedAt: dbSchema.publishedSnapshots.publishedAt,
+        })
+        .from(dbSchema.publishedSnapshots)
+        .where(eq(dbSchema.publishedSnapshots.projectId, singleId))
+        .limit(1);
+
+      const restoredVis = parseRestorableBillingSuspendedReason(singleSnap?.suspendedReason);
+      if (singleSnap && restoredVis) {
+        await db
+          .update(dbSchema.publishedSnapshots)
+          .set({ suspendedReason: null, updatedAt: now })
+          .where(eq(dbSchema.publishedSnapshots.projectId, singleId));
+        await db
+          .update(dbSchema.projects)
+          .set({
+            visibility: restoredVis,
+            publishedAt: singleSnap.publishedAt ?? now,
+            updatedAt: now,
+          })
+          .where(eq(dbSchema.projects.id, singleId));
+        if (single?.slug) revalidatedSlugs.push(single.slug);
+      }
+    }
+
+    for (const s of revalidatedSlugs) revalidatePublicProject(s);
+    return revalidatedSlugs;
   }
 
-  // Edge Case 3 (Downgrade Protection): never delete existing Case Studies.
-  // Keep 1 selected active Case Study live/editable and lock + unpublish extra Case Studies.
+  // Keep 1 selected active Case Study live/editable; lock + unpublish extra Case Studies without deleting work.
   const activeId =
     ws.keepPublicProjectId && nonArchivedProjects.some((p) => p.id === ws.keepPublicProjectId)
       ? ws.keepPublicProjectId
@@ -435,7 +481,8 @@ export async function applyPersonalDowngradePublicationRules(
     })
     .where(eq(dbSchema.workspaces.id, workspaceId));
 
-  const extraIds = nonArchivedProjects.filter((p) => p.id !== activeId).map((p) => p.id);
+  const activeProj = nonArchivedProjects.find((p) => p.id === activeId);
+  const extraProjects = nonArchivedProjects.filter((p) => p.id !== activeId);
 
   const [activeSnap] = await db
     .select({
@@ -448,24 +495,37 @@ export async function applyPersonalDowngradePublicationRules(
     .limit(1);
 
   if (activeSnap) {
-    await db
-      .update(dbSchema.publishedSnapshots)
-      .set({ suspendedReason: null, updatedAt: now })
-      .where(eq(dbSchema.publishedSnapshots.projectId, activeSnap.projectId));
+    const restoredVis = parseRestorableBillingSuspendedReason(activeSnap.suspendedReason);
+    if (restoredVis) {
+      await db
+        .update(dbSchema.publishedSnapshots)
+        .set({ suspendedReason: null, updatedAt: now })
+        .where(eq(dbSchema.publishedSnapshots.projectId, activeSnap.projectId));
 
-    if (activeSnap.suspendedReason === "downgraded_pro_to_free_select_one") {
       await db
         .update(dbSchema.projects)
         .set({
-          visibility: "public",
+          visibility: restoredVis,
           publishedAt: activeSnap.publishedAt ?? now,
           updatedAt: now,
         })
         .where(eq(dbSchema.projects.id, activeId));
+      if (activeProj?.slug) revalidatedSlugs.push(activeProj.slug);
     }
   }
 
-  if (extraIds.length > 0) {
+  if (extraProjects.length > 0) {
+    const extraIds = extraProjects.map((p) => p.id);
+    const extraSnapshots = await db
+      .select({
+        projectId: dbSchema.publishedSnapshots.projectId,
+        suspendedReason: dbSchema.publishedSnapshots.suspendedReason,
+      })
+      .from(dbSchema.publishedSnapshots)
+      .where(inArray(dbSchema.publishedSnapshots.projectId, extraIds));
+
+    const snapByProjId = new Map(extraSnapshots.map((s) => [s.projectId, s]));
+
     await db
       .update(dbSchema.projects)
       .set({
@@ -475,17 +535,138 @@ export async function applyPersonalDowngradePublicationRules(
       })
       .where(inArray(dbSchema.projects.id, extraIds));
 
-    await db
-      .update(dbSchema.publishedSnapshots)
-      .set({
-        suspendedReason: "downgraded_pro_to_free_select_one",
-        updatedAt: now,
-      })
-      .where(inArray(dbSchema.publishedSnapshots.projectId, extraIds));
+    for (const proj of extraProjects) {
+      const snap = snapByProjId.get(proj.id);
+      if (snap) {
+        const existingVis =
+          parseRestorableBillingSuspendedReason(snap.suspendedReason) ??
+          (proj.visibility === "unlisted" ? "unlisted" : "public");
+        await db
+          .update(dbSchema.publishedSnapshots)
+          .set({
+            suspendedReason: encodeBillingSuspendedReason(reasonBase, existingVis),
+            updatedAt: now,
+          })
+          .where(eq(dbSchema.publishedSnapshots.projectId, proj.id));
+      }
+      if (proj.slug) revalidatedSlugs.push(proj.slug);
+    }
   }
+
+  for (const s of revalidatedSlugs) {
+    revalidatePublicProject(s);
+  }
+  return revalidatedSlugs;
 }
 
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Unlocks workspace projects, re-applies paid branding removal, and automatically restores any
+ * `/p/[slug]` public or unlisted URLs that were suspended due to downgrade or renewal grace expiry.
+ */
+export async function restoreWorkspaceAfterPaymentTx(
+  tx: DbTx,
+  workspaceId: string,
+  now: Date,
+): Promise<string[]> {
+  await tx
+    .update(dbSchema.projects)
+    .set({ brandingRemoved: true, updatedAt: now })
+    .where(eq(dbSchema.projects.workspaceId, workspaceId));
+
+  await tx
+    .update(dbSchema.publishedSnapshots)
+    .set({ brandingRemoved: true, updatedAt: now })
+    .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
+
+  const suspendedRows = await tx
+    .select({
+      projectId: dbSchema.publishedSnapshots.projectId,
+      suspendedReason: dbSchema.publishedSnapshots.suspendedReason,
+      publishedAt: dbSchema.publishedSnapshots.publishedAt,
+      slug: dbSchema.projects.slug,
+      archivedAt: dbSchema.projects.archivedAt,
+    })
+    .from(dbSchema.publishedSnapshots)
+    .innerJoin(dbSchema.projects, eq(dbSchema.publishedSnapshots.projectId, dbSchema.projects.id))
+    .where(
+      and(
+        eq(dbSchema.publishedSnapshots.workspaceId, workspaceId),
+        isNotNull(dbSchema.publishedSnapshots.suspendedReason),
+      ),
+    );
+
+  const restoredSlugs: string[] = [];
+
+  for (const row of suspendedRows) {
+    const restoredVis = parseRestorableBillingSuspendedReason(row.suspendedReason);
+    if (!restoredVis) {
+      // Never auto-restore moderation_takedown or other non-billing suspensions
+      continue;
+    }
+
+    await tx
+      .update(dbSchema.publishedSnapshots)
+      .set({ suspendedReason: null, updatedAt: now })
+      .where(eq(dbSchema.publishedSnapshots.projectId, row.projectId));
+
+    if (row.archivedAt === null) {
+      await tx
+        .update(dbSchema.projects)
+        .set({
+          visibility: restoredVis,
+          publishedAt: row.publishedAt ?? now,
+          updatedAt: now,
+        })
+        .where(eq(dbSchema.projects.id, row.projectId));
+    }
+
+    if (row.slug) {
+      restoredSlugs.push(row.slug);
+    }
+  }
+
+  return restoredSlugs;
+}
+
+export async function freezeTeamWorkspaceSnapshotsTx(
+  tx: DbTx,
+  workspaceId: string,
+  now: Date,
+): Promise<string[]> {
+  const teamSnaps = await tx
+    .select({
+      projectId: dbSchema.publishedSnapshots.projectId,
+      suspendedReason: dbSchema.publishedSnapshots.suspendedReason,
+      visibility: dbSchema.projects.visibility,
+      slug: dbSchema.projects.slug,
+    })
+    .from(dbSchema.publishedSnapshots)
+    .innerJoin(dbSchema.projects, eq(dbSchema.publishedSnapshots.projectId, dbSchema.projects.id))
+    .where(eq(dbSchema.publishedSnapshots.workspaceId, workspaceId));
+
+  const frozenSlugs: string[] = [];
+  for (const snap of teamSnaps) {
+    if (snap.suspendedReason && !parseRestorableBillingSuspendedReason(snap.suspendedReason)) {
+      continue;
+    }
+    const visToPreserve =
+      parseRestorableBillingSuspendedReason(snap.suspendedReason) ??
+      (snap.visibility === "unlisted" ? "unlisted" : "public");
+
+    await tx
+      .update(dbSchema.publishedSnapshots)
+      .set({
+        suspendedReason: encodeBillingSuspendedReason("team_subscription_inactive", visToPreserve),
+        updatedAt: now,
+      })
+      .where(eq(dbSchema.publishedSnapshots.projectId, snap.projectId));
+
+    if (snap.slug) frozenSlugs.push(snap.slug);
+  }
+  return frozenSlugs;
+}
 
 interface CheckoutIntent {
   operationId: string;
@@ -499,7 +680,12 @@ interface WebhookTxOutcome {
   upgraded: boolean;
   distinctId: string | null;
   postDowngradePersonalWorkspaceId: string | null;
+  revalidatedSlugs?: string[];
   paymentFailedUserId?: string | null;
+  paymentFailedOrgId?: string | null;
+  pastDueAnchorIso?: string | null;
+  pastDueEndsAtIso?: string | null;
+  pastDueDaysRemaining?: number;
   storedPlan?: PlanTier;
   resolvedOrgId?: string | null;
   resolvedUserId?: string | null;
@@ -1239,6 +1425,8 @@ async function processValidatedPaddleWebhookOnce(
     const wsCustomDomainEnabled = false;
     const wsWatermarkEnabled = effectivePlan === "free";
 
+    const revalidatedSlugs: string[] = [];
+
     if (resolvedOrgId) {
       await tx
         .update(dbSchema.organizations)
@@ -1259,19 +1447,14 @@ async function processValidatedPaddleWebhookOnce(
               frozenAt: now,
               frozenReason:
                 details.lifecycleStatus === "past_due"
-                  ? "past_due_over_7_days"
-                  : "team_subscription_ended",
+                  ? BILLING_FROZEN_REASONS.PAST_DUE_EXPIRED
+                  : BILLING_FROZEN_REASONS.TEAM_ENDED,
               updatedAt: now,
             })
             .where(eq(dbSchema.workspaces.id, targetWorkspaceId));
 
-          await tx
-            .update(dbSchema.publishedSnapshots)
-            .set({
-              suspendedReason: "team_subscription_inactive",
-              updatedAt: now,
-            })
-            .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
+          const frozen = await freezeTeamWorkspaceSnapshotsTx(tx, targetWorkspaceId, now);
+          revalidatedSlugs.push(...frozen);
         } else {
           await tx
             .update(dbSchema.workspaces)
@@ -1285,14 +1468,6 @@ async function processValidatedPaddleWebhookOnce(
               updatedAt: now,
             })
             .where(eq(dbSchema.workspaces.id, targetWorkspaceId));
-
-          await tx
-            .update(dbSchema.publishedSnapshots)
-            .set({
-              suspendedReason: null,
-              updatedAt: now,
-            })
-            .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
         }
       }
     } else if (targetWorkspaceId && lifecycle.grantsPaidAccess && !lifecycle.isPastDueReadOnly) {
@@ -1308,14 +1483,6 @@ async function processValidatedPaddleWebhookOnce(
           updatedAt: now,
         })
         .where(eq(dbSchema.workspaces.id, targetWorkspaceId));
-
-      await tx
-        .update(dbSchema.publishedSnapshots)
-        .set({
-          suspendedReason: null,
-          updatedAt: now,
-        })
-        .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
     }
 
     const previousEffectivePlan: PlanTier = existingSub
@@ -1328,18 +1495,30 @@ async function processValidatedPaddleWebhookOnce(
       (envelope.event_type === "subscription.activated" ||
         envelope.event_type === "subscription.created" ||
         previousEffectivePlan !== effectivePlan);
+    const shouldRestoreUnlockedState =
+      lifecycle.grantsPaidAccess &&
+      !lifecycle.isPastDueReadOnly &&
+      (isUpgradeEvent ||
+        previousEffectivePlan === "free" ||
+        existingSub?.status === "past_due" ||
+        existingSub?.status === "canceled" ||
+        existingSub?.status === "paused");
 
-    if (isUpgradeEvent && targetWorkspaceId) {
-      await tx
-        .update(dbSchema.projects)
-        .set({ brandingRemoved: true, updatedAt: now })
-        .where(eq(dbSchema.projects.workspaceId, targetWorkspaceId));
-
-      await tx
-        .update(dbSchema.publishedSnapshots)
-        .set({ brandingRemoved: true, updatedAt: now })
-        .where(eq(dbSchema.publishedSnapshots.workspaceId, targetWorkspaceId));
+    if (shouldRestoreUnlockedState && targetWorkspaceId) {
+      const restored = await restoreWorkspaceAfterPaymentTx(tx, targetWorkspaceId, now);
+      revalidatedSlugs.push(...restored);
+      if (!resolvedOrgId && (previousEffectivePlan === "free" || existingSub?.status === "canceled")) {
+        await tx
+          .update(dbSchema.workspaces)
+          .set({ keepPublicProjectId: null, updatedAt: now })
+          .where(eq(dbSchema.workspaces.id, targetWorkspaceId));
+      }
     }
+
+    const pastDueDaysRemaining =
+      details.lifecycleStatus === "past_due" && lifecycle.pastDueEndsAt
+        ? getPastDueDaysRemaining(lifecycle.pastDueEndsAt, now)
+        : undefined;
 
     return {
       result: {
@@ -1356,8 +1535,15 @@ async function processValidatedPaddleWebhookOnce(
       upgraded: isUpgradeEvent,
       distinctId: verifiedUserId ?? resolvedUserId ?? resolvedOrgId,
       actorUserId,
+      revalidatedSlugs,
       paymentFailedUserId:
-        details.lifecycleStatus === "past_due" ? (verifiedUserId ?? resolvedUserId) : null,
+        details.lifecycleStatus === "past_due" && !resolvedOrgId
+          ? (verifiedUserId ?? resolvedUserId)
+          : null,
+      paymentFailedOrgId: details.lifecycleStatus === "past_due" ? resolvedOrgId : null,
+      pastDueAnchorIso: nextPastDueSince ? nextPastDueSince.toISOString() : null,
+      pastDueEndsAtIso: lifecycle.pastDueEndsAt ? lifecycle.pastDueEndsAt.toISOString() : null,
+      pastDueDaysRemaining,
       storedPlan,
       resolvedOrgId,
       resolvedUserId,
@@ -1402,7 +1588,21 @@ async function processValidatedPaddleWebhookOnce(
     "postDowngradePersonalWorkspaceId" in txOutcome &&
     txOutcome.postDowngradePersonalWorkspaceId
   ) {
-    await applyPersonalDowngradePublicationRules(txOutcome.postDowngradePersonalWorkspaceId, now);
+    const reasonBase: RestorableBillingSuspensionBase =
+      txOutcome.result.lifecycleStatus === "past_due"
+        ? "renewal_grace_expired"
+        : "downgraded_pro_to_free_select_one";
+    await applyPersonalDowngradePublicationRules(
+      txOutcome.postDowngradePersonalWorkspaceId,
+      now,
+      reasonBase,
+    );
+  }
+
+  if ("revalidatedSlugs" in txOutcome && Array.isArray(txOutcome.revalidatedSlugs)) {
+    for (const slug of new Set(txOutcome.revalidatedSlugs)) {
+      revalidatePublicProject(slug);
+    }
   }
 
   if (txOutcome.alert) {
@@ -1467,16 +1667,74 @@ async function processValidatedPaddleWebhookOnce(
     }
   }
 
-  if (
-    !txOutcome.result.deduplicated &&
-    "paymentFailedUserId" in txOutcome &&
-    txOutcome.paymentFailedUserId
-  ) {
-    await notifyPaymentIssue({
-      userId: txOutcome.paymentFailedUserId,
-      plan: txOutcome.storedPlan,
-      eventId: envelope.event_id,
-    }).catch(() => undefined);
+  if (!txOutcome.result.deduplicated && txOutcome.result.subscriptionId) {
+    const failedSubId = txOutcome.result.subscriptionId;
+    const anchorIso =
+      "pastDueAnchorIso" in txOutcome ? txOutcome.pastDueAnchorIso : null;
+    const graceEndsAtIso =
+      "pastDueEndsAtIso" in txOutcome ? txOutcome.pastDueEndsAtIso : null;
+    const daysRemaining =
+      "pastDueDaysRemaining" in txOutcome ? (txOutcome.pastDueDaysRemaining ?? 10) : 10;
+
+    if ("paymentFailedOrgId" in txOutcome && txOutcome.paymentFailedOrgId) {
+      const [orgRow] = await db
+        .select({ name: dbSchema.organizations.name })
+        .from(dbSchema.organizations)
+        .where(eq(dbSchema.organizations.id, txOutcome.paymentFailedOrgId))
+        .limit(1);
+      const members = await db
+        .select({ userId: dbSchema.memberships.userId, role: dbSchema.memberships.role })
+        .from(dbSchema.memberships)
+        .where(eq(dbSchema.memberships.orgId, txOutcome.paymentFailedOrgId));
+      const ownerIds = members
+        .filter((m) => normalizeMembershipRole(m.role) === "owner")
+        .map((m) => m.userId);
+
+      for (const ownerId of ownerIds) {
+        await notifyPaymentIssue({
+          userId: ownerId,
+          plan: txOutcome.storedPlan ?? "team",
+          eventId: envelope.event_id,
+          daysRemaining,
+          graceEndsAtIso,
+          workspaceName: orgRow?.name ?? null,
+          stage: daysRemaining === 0 ? "day_10_locked" : "day_0_failed",
+        }).catch(() => undefined);
+      }
+      if (anchorIso) {
+        const stageKey = daysRemaining === 0 ? "day_10_locked" : "day_0_failed";
+        const noticeKey = `renewal_notice:${failedSubId}:${anchorIso}:${stageKey}`;
+        await db.delete(dbSchema.verifications).where(eq(dbSchema.verifications.identifier, noticeKey));
+        await db.insert(dbSchema.verifications).values({
+          identifier: noticeKey,
+          value: "sent",
+          expiresAt: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+          createdAt: now,
+          updatedAt: now,
+        }).catch(() => undefined);
+      }
+    } else if ("paymentFailedUserId" in txOutcome && txOutcome.paymentFailedUserId) {
+      await notifyPaymentIssue({
+        userId: txOutcome.paymentFailedUserId,
+        plan: txOutcome.storedPlan,
+        eventId: envelope.event_id,
+        daysRemaining,
+        graceEndsAtIso,
+        stage: daysRemaining === 0 ? "day_10_locked" : "day_0_failed",
+      }).catch(() => undefined);
+      if (anchorIso) {
+        const stageKey = daysRemaining === 0 ? "day_10_locked" : "day_0_failed";
+        const noticeKey = `renewal_notice:${failedSubId}:${anchorIso}:${stageKey}`;
+        await db.delete(dbSchema.verifications).where(eq(dbSchema.verifications.identifier, noticeKey));
+        await db.insert(dbSchema.verifications).values({
+          identifier: noticeKey,
+          value: "sent",
+          expiresAt: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+          createdAt: now,
+          updatedAt: now,
+        }).catch(() => undefined);
+      }
+    }
   }
 
   return txOutcome.result;

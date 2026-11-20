@@ -16,6 +16,7 @@ import {
   selectPersonalKeepPublicProject,
 } from "@/lib/billing/service";
 import { UNLIMITED_PROJECTS_LIMIT } from "@/lib/billing/plans";
+import { processRenewalGraceAndExpirations } from "@/lib/billing/reconcile";
 import { resolveServerPaddlePriceId } from "@/lib/billing/server-config";
 import { signPaddleWebhookPayload } from "@/lib/billing/signature";
 import {
@@ -833,9 +834,30 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
     expect(teammateExportDownload.status).toBe("not_found");
   });
 
-  it("7. grants zero seats on failed seat-increase payment and preserves original pastDueSince across repeated failure webhooks (7d grace -> >7d read-only)", async () => {
+  it("7. grants zero seats on failed seat-increase payment and preserves original pastDueSince across repeated failure webhooks (10d grace -> >10d full Team lock while personal Free stays active)", async () => {
     const t0 = new Date("2026-11-07T10:00:00.000Z");
     const team = await createPaidTeamFixture(2, new Date(t0.getTime() - 60_000));
+    const teammate = await admitMemberToTeam(
+      team.org.id,
+      team.owner.id,
+      "member",
+      "team-lock-mate",
+      new Date(t0.getTime() - 50_000),
+    );
+
+    const teamProj = await createProjectFromTemplate({
+      userId: team.owner.id,
+      userPlan: "pro",
+      orgId: team.org.id,
+      input: {
+        type: "mobile",
+        templateId: starterTemplateId,
+        name: "Team Locked Project",
+        spaceId: team.defaultSharedSpaceId,
+      },
+    });
+    expect(teamProj.ok).toBe(true);
+    if (!teamProj.ok) return;
 
     const preview = await previewTeamSeatIncrease({
       actorUserId: team.owner.id,
@@ -902,15 +924,46 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
       .where(eq(dbSchema.subscriptions.orgId, team.org.id));
     expect(subAfterSecondFail?.pastDueSince?.toISOString()).toBe(t0.toISOString());
 
-    // At day 3 (<= 7d grace): workspace still has paid access and is NOT frozen
-    const entDay3 = await resolveWorkspaceEntitlementState(team.workspaceId, tPlus3d);
-    expect(entDay3?.plan).toBe("team");
-    expect(entDay3?.isFrozen).toBe(false);
-
-    // At day 8 (> 7d grace): workspace freezes to read-only!
+    // At day 8 (<= 10d grace): workspace STILL has paid access and is NOT frozen
     const tPlus8d = new Date(t0.getTime() + 8 * 24 * 60 * 60 * 1000);
     const entDay8 = await resolveWorkspaceEntitlementState(team.workspaceId, tPlus8d);
-    expect(entDay8?.isFrozen).toBe(true);
+    expect(entDay8?.plan).toBe("team");
+    expect(entDay8?.isFrozen).toBe(false);
+
+    // At day 11 (> 10d grace): workspace freezes completely! Opening, editing, exporting, and
+    // portability are ALL locked on Team projects until Owner renews, while teammate's personal
+    // Free workspace still grants 1 personal project.
+    const tPlus11d = new Date(t0.getTime() + 11 * 24 * 60 * 60 * 1000);
+    const entDay11 = await resolveWorkspaceEntitlementState(team.workspaceId, tPlus11d);
+    expect(entDay11?.isFrozen).toBe(true);
+    expect(
+      await authorizeProjectAccess(teamProj.projectId, team.owner.id, "read", tPlus11d),
+    ).toMatchObject({
+      ok: false,
+      code: "WORKSPACE_FROZEN",
+    });
+    expect(
+      await authorizeProjectAccess(
+        teamProj.projectId,
+        team.owner.id,
+        "export_portability",
+        tPlus11d,
+      ),
+    ).toMatchObject({
+      ok: false,
+      code: "WORKSPACE_FROZEN",
+    });
+
+    const teammatePersonal = await createProjectFromTemplate({
+      userId: teammate.user.id,
+      userPlan: "free",
+      input: {
+        type: "mobile",
+        templateId: starterTemplateId,
+        name: "Teammate 1 Free Project",
+      },
+    });
+    expect(teammatePersonal.ok).toBe(true);
   });
 
   it("8. schedules renewal seat decreases (do_not_bill) without reducing mid-period capacity, caps new admissions to renewalQuantity, blocks conflicting seat changes, and adopts renewalQuantity on verified renewal", async () => {
@@ -1338,7 +1391,8 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
       .where(eq(dbSchema.projects.workspaceId, personal.workspaceId));
     expect(storedProjects).toHaveLength(3);
 
-    // 2. Study A stays editable and live; Study B & Study C are read-only locked & unpublished
+    // 2. Study A stays editable and live; Study B & Study C are strictly LOCKED (cannot be opened,
+    // edited, exported, or swapped on Free), and their live links are suspended.
     const editA = await authorizeProjectAccess(studyA.projectId, proUser.id, "edit");
     expect(editA.ok).toBe(true);
 
@@ -1353,27 +1407,192 @@ describe("Casefolio Business Model, Workspaces, Privacy & Billing Spec Suite (§
       id: proUser.id,
       role: "user",
     });
-    expect(editorAccessB.status).toBe("ok");
-    if (editorAccessB.status === "ok") {
-      expect(editorAccessB.payload.isReadOnly).toBe(true);
-    }
+    expect(editorAccessB).toMatchObject({
+      status: "locked",
+      code: "FREE_TIER_EXTRA_PROJECT_LOCKED",
+      projectName: "Downgrade Study B",
+    });
 
     expect(await getPublishedProjectBySlug(slugA)).not.toBeNull();
     expect(await getPublishedProjectBySlug(slugB)).toBeNull();
 
-    // 3. Switching active Free Case Study to Study B unlocks & republishes B while locking & unpublishing A
-    const switched = await selectPersonalKeepPublicProject({
+    // 3. Cannot swap active Free project once locked on Free
+    const switchBlocked = await selectPersonalKeepPublicProject({
       actorUserId: proUser.id,
       projectId: studyB.projectId,
     });
-    expect(switched).toEqual({ ok: true, keepPublicProjectId: studyB.projectId });
+    expect(switchBlocked.ok).toBe(false);
 
-    expect((await authorizeProjectAccess(studyB.projectId, proUser.id, "edit")).ok).toBe(true);
-    expect(await authorizeProjectAccess(studyA.projectId, proUser.id, "edit")).toMatchObject({
-      ok: false,
-      code: "FREE_TIER_EXTRA_PROJECT_LOCKED",
+    // 4. Re-subscribing to Pro automatically unlocks Study B & C AND restores `/p/${slugB}` URL!
+    const reup = await completeSandboxCheckoutForUser(
+      { id: proUser.id, email: proUser.email, name: proUser.name },
+      { plan: "pro", interval: "monthly" },
+    );
+    expect(reup.ok).toBe(true);
+
+    const reopenedB = await getProjectEditorAccess(studyB.projectId, {
+      id: proUser.id,
+      role: "user",
     });
+    expect(reopenedB.status).toBe("ok");
     expect(await getPublishedProjectBySlug(slugB)).not.toBeNull();
-    expect(await getPublishedProjectBySlug(slugA)).toBeNull();
+  });
+
+  it("12. drives 10-day renewal grace countdown alerts (Day 0/5/9), reverts to Free & locks extras at Day 10, and auto-unlocks + restores public/unlisted URLs on payment", async () => {
+    const t0 = new Date();
+    const designer = await createVerifiedUser("grace10d");
+
+    const checkout = await completeSandboxCheckoutForUser(
+      { id: designer.id, email: designer.email, name: designer.name },
+      { plan: "pro", interval: "monthly" },
+      { now: t0 },
+    );
+    expect(checkout.ok).toBe(true);
+
+    const p1 = await createProjectFromTemplate({
+      userId: designer.id,
+      userPlan: "pro",
+      input: { type: "mobile", templateId: starterTemplateId, name: "Primary Free Kept" },
+    });
+    const p2 = await createProjectFromTemplate({
+      userId: designer.id,
+      userPlan: "pro",
+      input: { type: "web", templateId: starterTemplateId, name: "Extra Unlisted Study" },
+    });
+    expect(p1.ok && p2.ok).toBe(true);
+    if (!p1.ok || !p2.ok) return;
+
+    const slug1 = `grace-p1-${randomUUID().slice(0, 8)}`;
+    const slug2 = `grace-p2-${randomUUID().slice(0, 8)}`;
+    const pub1 = await publishProjectForUser(
+      { projectId: p1.projectId, slug: slug1, visibility: "public" },
+      { id: designer.id, role: "user" },
+    );
+    const pub2 = await publishProjectForUser(
+      { projectId: p2.projectId, slug: slug2, visibility: "unlisted" },
+      { id: designer.id, role: "user" },
+    );
+    expect(pub1.ok && pub2.ok).toBe(true);
+
+    const [sub] = await db
+      .select()
+      .from(dbSchema.subscriptions)
+      .where(eq(dbSchema.subscriptions.userId, designer.id));
+    expect(sub?.paddleSubscriptionId).toBeTruthy();
+
+    // Pre-select p1 as primary before payment failure
+    const keepChoice = await selectPersonalKeepPublicProject({
+      actorUserId: designer.id,
+      projectId: p1.projectId,
+      now: t0,
+    });
+    expect(keepChoice.ok).toBe(true);
+
+    // Day 0 payment failure webhook starts 10-day grace
+    const failAt = new Date(t0.getTime() + 1_000);
+    const failBody = JSON.stringify({
+      event_id: `evt_grace_fail_${randomUUID().slice(0, 12)}`,
+      event_type: "transaction.payment_failed",
+      occurred_at: failAt.toISOString(),
+      data: {
+        subscription_id: sub!.paddleSubscriptionId,
+        customer_id: sub!.paddleCustomerId,
+        status: "past_due",
+        current_billing_period: {
+          ends_at: new Date(t0.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        custom_data: {
+          userId: designer.id,
+          plan: "pro",
+          interval: "monthly",
+          seats: 1,
+        },
+      },
+    });
+    const failSig = signPaddleWebhookPayload(
+      failBody,
+      env.PADDLE_WEBHOOK_SECRET,
+      Math.floor(failAt.getTime() / 1000),
+    );
+    await handleSignedPaddleWebhookRequest({
+      rawBody: failBody,
+      signatureHeader: failSig,
+      now: failAt,
+    });
+
+    // Day 5 and Day 9 reminders send deduplicated notifications; p2 remains openable during grace
+    const tDay5 = new Date(failAt.getTime() + 5 * 24 * 60 * 60 * 1000);
+    await processRenewalGraceAndExpirations(tDay5);
+    await processRenewalGraceAndExpirations(tDay5); // Idempotent second call
+
+    const tDay9 = new Date(failAt.getTime() + 9 * 24 * 60 * 60 * 1000);
+    await processRenewalGraceAndExpirations(tDay9);
+
+    expect(await getPublishedProjectBySlug(slug2, tDay9)).not.toBeNull();
+    const billingNotifsBeforeEnd = await db
+      .select()
+      .from(dbSchema.notifications)
+      .where(eq(dbSchema.notifications.userId, designer.id));
+    expect(billingNotifsBeforeEnd.length).toBeGreaterThanOrEqual(3);
+
+    // Day 10+ expires grace -> reverts user to Free, keeps p1 active, strictly locks p2 & unpublishes slug2
+    const tDay10 = new Date(failAt.getTime() + 10 * 24 * 60 * 60 * 1000 + 60_000);
+    const lockRun = await processRenewalGraceAndExpirations(tDay10);
+    expect(lockRun.expiredLocked).toBeGreaterThanOrEqual(1);
+
+    const [userAfterDay10] = await db
+      .select({ plan: dbSchema.users.plan })
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, designer.id));
+    expect(userAfterDay10?.plan).toBe("free");
+
+    expect(
+      await getProjectEditorAccess(p2.projectId, { id: designer.id, role: "user" }, tDay10),
+    ).toMatchObject({ status: "locked", code: "FREE_TIER_EXTRA_PROJECT_LOCKED" });
+    expect(await getPublishedProjectBySlug(slug2, tDay10)).toBeNull();
+
+    // Retry payment succeeds at Day 12 -> unlocks p2 immediately AND restores `/p/${slug2}` as `unlisted`!
+    const tDay12 = new Date(failAt.getTime() + 12 * 24 * 60 * 60 * 1000);
+    const futureRenewEnd = new Date(tDay12.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const recoverBody = JSON.stringify({
+      event_id: `evt_grace_recover_${randomUUID().slice(0, 12)}`,
+      event_type: "transaction.completed",
+      occurred_at: tDay12.toISOString(),
+      data: {
+        subscription_id: sub!.paddleSubscriptionId,
+        customer_id: sub!.paddleCustomerId,
+        status: "completed",
+        current_billing_period: {
+          ends_at: futureRenewEnd.toISOString(),
+        },
+        custom_data: {
+          userId: designer.id,
+          plan: "pro",
+          interval: "monthly",
+          seats: 1,
+        },
+      },
+    });
+    const recoverSig = signPaddleWebhookPayload(
+      recoverBody,
+      env.PADDLE_WEBHOOK_SECRET,
+      Math.floor(tDay12.getTime() / 1000),
+    );
+    await handleSignedPaddleWebhookRequest({
+      rawBody: recoverBody,
+      signatureHeader: recoverSig,
+      now: tDay12,
+    });
+
+    expect(
+      (await getProjectEditorAccess(p2.projectId, { id: designer.id, role: "user" }, tDay12))
+        .status,
+    ).toBe("ok");
+    expect(await getPublishedProjectBySlug(slug2, tDay12)).not.toBeNull();
+    const [restoredP2] = await db
+      .select({ visibility: dbSchema.projects.visibility })
+      .from(dbSchema.projects)
+      .where(eq(dbSchema.projects.id, p2.projectId));
+    expect(restoredP2?.visibility).toBe("unlisted");
   });
 });

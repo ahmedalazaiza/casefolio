@@ -15,10 +15,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  BILLING_PLAN_CATALOG,
   formatUsdFromCents,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
+import {
+  DEFAULT_SITE_CMS_CONTENT,
+  mergeBillingCatalogWithCms,
+  type SiteCmsContent,
+} from "@/lib/cms/schema";
 
 export interface UpgradePromptDialogProps {
   open: boolean;
@@ -28,6 +32,7 @@ export interface UpgradePromptDialogProps {
   featureDescription?: string;
   orgId?: string | null;
   onUpgraded?: (plan: PaidPlanTier) => void;
+  cmsPricing?: SiteCmsContent["pricing"];
 }
 
 export function UpgradePromptDialog({
@@ -35,12 +40,17 @@ export function UpgradePromptDialog({
   onOpenChange,
   requiredPlan = "pro",
   featureTitle = "Unlock Casefolio Pro",
-  featureDescription = "Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) for up to 10 rotatable Case Studies, custom /p/your-slug URLs, all Pro & Premium templates, and watermark-free 2× PNG, PDF & Behance exports.",
+  featureDescription,
   orgId = null,
   onUpgraded,
+  cmsPricing = DEFAULT_SITE_CMS_CONTENT.pricing,
 }: UpgradePromptDialogProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const planDef = BILLING_PLAN_CATALOG[requiredPlan];
+  const catalog = mergeBillingCatalogWithCms(cmsPricing);
+  const planDef = catalog[requiredPlan];
+  const resolvedDescription =
+    featureDescription ??
+    `Upgrade to Casefolio ${planDef.name} (${formatUsdFromCents(planDef.monthlyPriceCents)}/mo · ${cmsPricing.annualBadgeLabel} on annual) for up to ${planDef.maxCaseStudies < 0 ? "unlimited" : planDef.maxCaseStudies} active Case Studies, custom /p/your-slug URLs, all Pro & Premium templates, and watermark-free 2× PNG, PDF & Behance exports.`;
 
   return (
     <>
@@ -54,7 +64,7 @@ export function UpgradePromptDialog({
               <DialogTitle>{featureTitle}</DialogTitle>
               <ProBadge />
             </div>
-            <DialogDescription>{featureDescription}</DialogDescription>
+            <DialogDescription>{resolvedDescription}</DialogDescription>
           </DialogHeader>
 
           <div className="border-border/70 bg-wash-panel flex flex-col gap-3 rounded-2xl border p-4">

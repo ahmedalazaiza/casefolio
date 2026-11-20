@@ -486,28 +486,109 @@ export async function notifyPaymentIssue(args: {
   userId: string;
   plan?: string | null;
   eventId?: string;
+  daysRemaining?: number;
+  graceEndsAtIso?: string | null;
+  workspaceName?: string | null;
+  stage?: "day_0_failed" | "day_5_midpoint" | "day_9_final" | "day_10_locked" | "ending_soon";
+  lockedCount?: number;
   appUrl?: string;
 }): Promise<void> {
   if (!UUID_REGEX.test(args.userId)) {
     return;
   }
 
-  const tierTitle =
-    args.plan === "team" || args.plan === "plus" ? "Teams" : "Pro";
+  const isTeam = args.plan === "team" || args.plan === "plus";
+  const tierTitle = isTeam ? "Teams" : "Pro";
+  const days = typeof args.daysRemaining === "number" ? args.daysRemaining : 10;
+  const stage = args.stage ?? "day_0_failed";
+  const wsLabel = args.workspaceName ? ` (${args.workspaceName})` : "";
+
+  if (stage === "day_10_locked") {
+    await createUserNotification({
+      userId: args.userId,
+      kind: "payment_failed",
+      title: isTeam ? "Team workspace locked" : "Account downgraded to Free — extra projects locked",
+      message: isTeam
+        ? `The 10-day renewal window ended${wsLabel}. Team projects and exports are locked until the Owner renews.`
+        : `The 10-day renewal window ended. Your account returned to Free and ${args.lockedCount ? `${args.lockedCount} excess projects are` : "excess projects are"} locked until you renew.`,
+      href: "/account/billing",
+      meta: {
+        plan: args.plan ?? "pro",
+        stage,
+        lockedCount: args.lockedCount ?? null,
+        eventId: args.eventId ?? null,
+      },
+      sendEmail: true,
+      emailSubject: isTeam
+        ? `Action needed: Team workspace${wsLabel} locked after 10-day grace`
+        : "Your Casefolio account returned to Free — extra projects are locked",
+      emailCtaLabel: `Renew ${tierTitle} to unlock`,
+      appUrl: args.appUrl,
+    });
+    return;
+  }
+
+  if (stage === "ending_soon") {
+    await createUserNotification({
+      userId: args.userId,
+      kind: "payment_failed",
+      title: `Subscription ends in ${days} ${days === 1 ? "day" : "days"}`,
+      message: isTeam
+        ? `Your ${tierTitle} subscription${wsLabel} is scheduled to end in ${days} ${days === 1 ? "day" : "days"}. Renew to prevent Team projects from locking.`
+        : `Your ${tierTitle} subscription ends in ${days} ${days === 1 ? "day" : "days"}. Resume auto-renewal to keep all extra Case Studies unlocked.`,
+      href: "/account/billing",
+      meta: {
+        plan: args.plan ?? "pro",
+        stage,
+        daysRemaining: days,
+        graceEndsAtIso: args.graceEndsAtIso ?? null,
+      },
+      sendEmail: true,
+      emailSubject: `Reminder: ${days} ${days === 1 ? "day" : "days"} left on your Casefolio ${tierTitle} subscription`,
+      emailCtaLabel: "Review billing & resume",
+      appUrl: args.appUrl,
+    });
+    return;
+  }
+
+  const deadlineText = args.graceEndsAtIso
+    ? ` (until ${new Date(args.graceEndsAtIso).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })})`
+    : "";
+
+  const title =
+    stage === "day_9_final"
+      ? "Final reminder: Renew today before projects lock"
+      : stage === "day_5_midpoint"
+        ? `Renewal reminder: ${days} days left before projects lock`
+        : `Payment failed — ${days} days left to renew`;
+
+  const message = isTeam
+    ? `We couldn’t renew ${tierTitle}${wsLabel}. You have ${days} ${days === 1 ? "day" : "days"}${deadlineText} before all Team projects lock.`
+    : `We couldn’t process your ${tierTitle} renewal. Renew within ${days} ${days === 1 ? "day" : "days"}${deadlineText} to keep all current Case Studies unlocked before reverting to Free.`;
 
   await createUserNotification({
     userId: args.userId,
     kind: "payment_failed",
-    title: "Payment failed",
-    message: `We couldn’t process your ${tierTitle} subscription renewal. Update your payment method to avoid interruption.`,
+    title,
+    message,
     href: "/account/billing",
     meta: {
       plan: args.plan ?? "pro",
+      stage,
+      daysRemaining: days,
+      graceEndsAtIso: args.graceEndsAtIso ?? null,
       eventId: args.eventId ?? null,
     },
     sendEmail: true,
-    emailSubject: "Action needed: Casefolio payment failed",
-    emailCtaLabel: "Update payment method",
+    emailSubject:
+      stage === "day_9_final"
+        ? `Urgent: Less than 24h to renew Casefolio ${tierTitle} before projects lock`
+        : `Action needed: Renew within ${days} days to keep your Casefolio projects`,
+    emailCtaLabel: "Update payment & renew",
     appUrl: args.appUrl,
   });
 }

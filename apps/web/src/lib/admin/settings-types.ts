@@ -158,7 +158,9 @@ export function classifyAuditAction(action: string): Exclude<AuditActionCategory
   ) {
     return "users";
   }
-  if (action.startsWith("admin.moderation.")) return "moderation";
+  if (action.startsWith("admin.moderation.") || action.startsWith("admin.project.")) {
+    return "moderation";
+  }
   return "settings";
 }
 
@@ -211,6 +213,26 @@ export function formatAuditLogSummary(
       return `Sent test preview for template ${String(meta.templateKey ?? "")}`;
     case "admin.platform_settings.updated":
       return `Sign-ups: ${meta.newSignupsOpen ? "open" : "closed"} · Email verify: ${meta.requireEmailVerification ? "on" : "off"} · Maintenance: ${meta.maintenanceMode ? "on" : "off"}`;
+    case "admin.cms.updated":
+      return `Updated Site CMS section "${String(meta.section ?? "")}" (v${String(meta.version ?? "")})`;
+    case "admin.cms.reset":
+      return `Reset Site CMS section "${String(meta.section ?? "all")}" to default`;
+    case "admin.user.plan_overridden":
+      return `Overrode plan ${String(meta.previousPlan ?? "")} → ${String(meta.nextPlan ?? "")}`;
+    case "admin.user.email_verified":
+      return `Verified user email manually (${String(meta.targetUserId ?? "").slice(0, 8)})`;
+    case "admin.user.sessions_revoked":
+      return `Revoked active sessions (${String(meta.targetUserId ?? "").slice(0, 8)})`;
+    case "admin.user.deleted_permanently":
+      return `Permanently erased account (${String(meta.targetEmail ?? meta.targetUserId ?? "")})`;
+    case "admin.project.unpublished":
+      return `Unpublished project (${String(meta.projectId ?? "").slice(0, 8)})`;
+    case "admin.project.takedown":
+      return `Admin takedown on project (${String(meta.projectId ?? "").slice(0, 8)})`;
+    case "admin.project.restored":
+      return `Restored project (${String(meta.projectId ?? "").slice(0, 8)})`;
+    case "admin.project.deleted":
+      return `Deleted project "${String(meta.projectName ?? meta.projectId ?? "")}"`;
     default:
       return action;
   }

@@ -87,6 +87,11 @@ describe("Route group shells: MarketingShell, AppShell, AdminShell (C-103)", () 
       "6",
     );
 
+    const proActions = screen.getByTestId("sidebar-pro-actions");
+    expect(proActions).toHaveClass("flex-col");
+    expect(screen.getByTestId("sidebar-upgrade-teams-btn")).toHaveClass("w-full", "whitespace-nowrap");
+    expect(screen.getByTestId("sidebar-billing-link")).toHaveClass("w-full", "whitespace-nowrap");
+
     for (const item of APP_NAV_ITEMS) {
       expect(screen.getByRole("link", { name: item.label })).toBeInTheDocument();
     }

@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { pruneOldPageViews } from "@/lib/analytics/page-views";
+import { processRenewalGraceAndExpirations } from "@/lib/billing/reconcile";
 import { runExportMaintenance } from "@/lib/exports/maintenance";
 import { retrySupportTicketDeliveries } from "@/lib/help/tickets";
 import { processScheduledAccountDeletions } from "@/lib/retention/account";
@@ -38,6 +39,7 @@ async function runAllMaintenanceJobs(now = new Date()) {
     supportTickets,
     prunedPageViews,
     prunedRateLimits,
+    graceExpirations,
   ] = await Promise.all([
     runSafe(
       "accountDeletions",
@@ -61,6 +63,11 @@ async function runAllMaintenanceJobs(now = new Date()) {
     ),
     runSafe("prunedPageViews", () => pruneOldPageViews(365, now), 0),
     runSafe("prunedRateLimits", () => pruneSharedRateLimits(24 * 60 * 60 * 1000), 0),
+    runSafe(
+      "graceExpirations",
+      () => processRenewalGraceAndExpirations(now),
+      { pastDueChecked: 0, warningsSent: 0, expiredLocked: 0, scheduledEnded: 0 },
+    ),
   ]);
 
   const hasErrors = Object.keys(errors).length > 0;
@@ -73,6 +80,7 @@ async function runAllMaintenanceJobs(now = new Date()) {
     supportTickets,
     prunedPageViews,
     prunedRateLimits,
+    graceExpirations,
     ...(hasErrors ? { errors } : {}),
   };
 }

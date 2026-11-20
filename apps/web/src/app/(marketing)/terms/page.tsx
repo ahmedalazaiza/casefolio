@@ -1,15 +1,10 @@
-import {
-  ArrowRight,
-  CheckCircle2,
-  CreditCard,
-  FileCheck2,
-  Scale,
-  ShieldAlert,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Scale } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CmsIcon } from "@/components/cms/cms-icon";
 import { SectionStackSheet } from "@/components/marketing/motion";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { getSiteCmsContent } from "@/lib/cms/service";
 
 export const metadata: Metadata = {
   title: "Terms of Use — Casefolio",
@@ -17,80 +12,9 @@ export const metadata: Metadata = {
     "Read the Terms of Use governing your Casefolio workspace, 100% designer content ownership, published links, exports, and Paddle subscription billing.",
 };
 
-const QUICK_HIGHLIGHTS = [
-  {
-    icon: FileCheck2,
-    title: "100% Your Intellectual Property",
-    detail:
-      "You own every screen, narrative, logo, and exported case study you create in Casefolio.",
-  },
-  {
-    icon: CreditCard,
-    title: "Transparent Paddle Billing",
-    detail:
-      "Upgrade, switch intervals, or cancel anytime in one click—access continues until period end.",
-  },
-  {
-    icon: ShieldAlert,
-    title: "Clear Acceptable Use",
-    detail:
-      "Publish work you have rights to share and respect NDA/confidentiality commitments.",
-  },
-] as const;
+export default async function TermsPage() {
+  const { legalAndHelp } = await getSiteCmsContent();
 
-const TERMS_CLAUSES = [
-  {
-    id: "eligibility",
-    step: "01",
-    title: "Workspace Eligibility & Account Security",
-    summary: "Who can operate a Casefolio workspace and how credentials are protected.",
-    body: "By creating a Casefolio account, you confirm that you are at least 16 years old (or the minimum legal age of digital consent in your jurisdiction) and authorized to agree to these Terms of Use on behalf of yourself or your studio. You are responsible for maintaining the confidentiality of your login credentials, passkeys, or OAuth sessions and for all activity conducted within your workspace.",
-  },
-  {
-    id: "ownership",
-    step: "02",
-    title: "Your Work & Intellectual Property Ownership",
-    summary: "You retain 100% ownership of everything you upload, write, and export.",
-    body: "Casefolio claims zero ownership over your UI screenshots, product photography, copywriting, metrics, brand assets, or finished case studies. You grant Casefolio a limited, revocable, worldwide technical license solely to store, optimize, render, and serve your content when you choose to preview, publish a live link, or generate PNG, Behance, or PDF exports.",
-  },
-  {
-    id: "template-license",
-    step: "03",
-    title: "Studio Template & Export License",
-    summary: "How you may use Casefolio layouts, mockups, and generated exports.",
-    body: "All Casefolio template architectures, Puck section schemas, hardware mockup frames, and source code remain the intellectual property of Casefolio Studio. Subject to your active plan tier, Casefolio grants you a non-exclusive license to publish live case studies and distribute exported PNG, Behance, and PDF presentations for personal portfolios, job applications, agency pitches, and client deliverables. Reselling or redistributing raw Casefolio templates as standalone templates is prohibited.",
-  },
-  {
-    id: "acceptable-use",
-    step: "04",
-    title: "Published Links, Custom Slugs & Acceptable Use",
-    summary: "Keeping public case study links safe, lawful, and respectful of rights.",
-    body: "You agree to upload and publish only work that you created or have permission to showcase. You may not use Casefolio to host unlawful, defamatory, deceptive, or malicious content, impersonate third-party brands, scrape platform endpoints, or bypass plan entitlements and rate limits. Password-protected case study links are provided on eligible plans to help you share confidential work responsibly.",
-  },
-  {
-    id: "billing",
-    step: "05",
-    title: "Subscriptions, Taxes & Merchant of Record",
-    summary: "How Pro and Team plans are billed globally via Paddle.",
-    body: "Paid subscriptions (Pro and Team) are processed through Paddle, our authorized Merchant of Record, which handles global payment methods, invoicing, and regional VAT/sales tax compliance. Subscriptions renew automatically on your selected monthly or annual billing cycle unless canceled prior to renewal.",
-  },
-  {
-    id: "cancellation",
-    step: "06",
-    title: "Plan Changes, Cancellation & Workspace Retention",
-    summary: "What happens when you downgrade or cancel a paid subscription.",
-    body: "You can cancel or modify your subscription at any time from Account → Billing. When canceled, paid features remain active through the end of your current paid billing period. Afterward, your workspace transitions gracefully to Free tier limits without deleting your underlying draft content, so you never lose your writing or uploaded assets unexpectedly.",
-  },
-  {
-    id: "liability",
-    step: "07",
-    title: "Service Availability, Warranties & Contact",
-    summary: "Platform reliability commitments, limitation of liability, and updates.",
-    body: "We engineer Casefolio for high availability, automated backups, and deterministic exports, but the service is provided on an 'as is' and 'as available' basis to the maximum extent permitted by applicable law. Casefolio's aggregate liability for any claim relating to the service shall not exceed the fees paid by you in the twelve (12) months preceding the claim. If we make material updates to these Terms, we will notify workspace owners in advance.",
-  },
-] as const;
-
-export default function TermsPage() {
   return (
     <div className="relative flex flex-col overflow-x-clip bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)]">
       {/* 1. Architectural Grid Hero */}
@@ -98,43 +22,43 @@ export default function TermsPage() {
         <div className="v3-container flex flex-col gap-10">
           <div className="flex max-w-3xl flex-col items-start gap-4">
             <Eyebrow step="01" icon={<Scale />}>
-              Studio Legal Agreement
+              {legalAndHelp.termsEyebrow}
             </Eyebrow>
             <h1 className="v3-display-xl text-balance text-[var(--cf-text-primary)]">
-              Terms of <span className="v3-sticker-lime">use</span>
+              {legalAndHelp.termsTitleLead}{" "}
+              <span className="v3-sticker-lime">{legalAndHelp.termsTitleHighlight}</span>
             </h1>
             <p className="v3-body-l text-[var(--cf-text-secondary)]">
-              Clear, designer-friendly terms governing your Casefolio workspace,
-              intellectual property rights, published links, and subscription
-              billing.
+              {legalAndHelp.termsSubtitle}
             </p>
             <p className="font-mono text-xs font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-              Effective April 15, 2026 · Version 2.0
+              {legalAndHelp.termsEffectiveLine}
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {QUICK_HIGHLIGHTS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.title}
-                  className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="inline-flex size-8 items-center justify-center rounded-md bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
-                      <Icon className="size-4" />
-                    </span>
-                    <h2 className="text-sm font-bold text-[var(--cf-text-primary)]">
-                      {item.title}
-                    </h2>
-                  </div>
-                  <p className="text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
-                    {item.detail}
-                  </p>
+            {legalAndHelp.termsHighlights.map((item) => (
+              <div
+                key={item.title}
+                className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex size-8 items-center justify-center rounded-md bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
+                    <CmsIcon
+                      iconName={item.iconName}
+                      customIconUrl={item.customIconUrl}
+                      className="size-4"
+                    />
+                  </span>
+                  <h2 className="text-sm font-bold text-[var(--cf-text-primary)]">
+                    {item.title}
+                  </h2>
                 </div>
-              );
-            })}
+                <p className="text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
+                  {item.detail}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -153,10 +77,10 @@ export default function TermsPage() {
               className="flex flex-col gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 lg:sticky lg:top-24"
             >
               <p className="v3-label text-[var(--cf-text-tertiary)] uppercase">
-                Clauses (01–07)
+                Clauses (01–{String(legalAndHelp.termsClauses.length).padStart(2, "0")})
               </p>
               <nav className="flex flex-col gap-1">
-                {TERMS_CLAUSES.map((clause) => (
+                {legalAndHelp.termsClauses.map((clause) => (
                   <a
                     key={clause.id}
                     href={`#${clause.id}`}
@@ -183,7 +107,7 @@ export default function TermsPage() {
 
             {/* Right Detailed Clauses */}
             <div className="flex flex-col gap-5">
-              {TERMS_CLAUSES.map((clause) => (
+              {legalAndHelp.termsClauses.map((clause) => (
                 <article
                   key={clause.id}
                   id={clause.id}

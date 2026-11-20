@@ -1143,37 +1143,218 @@ export function buildPaymentFailedEmail(args: {
   plan?: string | null;
   billingUrl: string;
   customMessage?: string;
+  daysRemaining?: number;
+  graceEndsAtIso?: string | null;
+  workspaceName?: string | null;
   appBaseUrl?: string;
 }): Omit<SendCasefolioEmailInput, "to"> {
   const baseUrl = resolveAppBase(args.appBaseUrl);
   const planTitle = formatPlanLabel(args.plan);
+  const days = typeof args.daysRemaining === "number" ? args.daysRemaining : 10;
+  const endsLabel = args.graceEndsAtIso
+    ? new Date(args.graceEndsAtIso).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : `${days} days`;
 
   return {
     department: "billing",
     templateKey: "billing.payment_failed",
-    subject: "Action needed: Casefolio payment failed",
+    subject: `Action needed: Renew within ${days} ${days === 1 ? "day" : "days"} to keep your projects unlocked`,
     appBaseUrl: baseUrl,
     content: {
-      previewText: `We couldn’t process your ${planTitle} renewal. Update your payment method to avoid interruption.`,
-      eyebrow: "Billing Alert",
-      heading: "Payment failed",
+      previewText: `We couldn’t process your ${planTitle} renewal. You have ${days} days before excess projects lock.`,
+      eyebrow: "Billing Alert · 10-Day Grace Window",
+      heading: "Payment failed — renewal needed",
       paragraphs: [
         args.customMessage ??
-          `We couldn’t process your ${planTitle} subscription renewal. Update your payment method to avoid interruption to your published links and exports.`,
+          `We couldn’t process your ${planTitle} subscription renewal${args.workspaceName ? ` for ${args.workspaceName}` : ""}. You have ${days} ${days === 1 ? "day" : "days"} (until ${endsLabel}) to renew before your workspace reverts to Free and your extra Case Studies are locked.`,
       ],
       callout: {
         tone: "danger",
-        title: "7-day grace window active",
-        body: "Your case studies and drafts remain safe while Paddle retries your card. Update your payment method in Billing to restore uninterrupted service.",
+        title: `${days}-day grace window active`,
+        body:
+          args.plan === "team" || args.plan === "plus"
+            ? "Your team workspace stays accessible during this 10-day grace period. If payment is not completed by the deadline, all team projects will lock until the Owner renews."
+            : "Your Pro projects and published links stay live during this 10-day grace period. If not renewed in 10 days, your account returns to Free (1 active project) and extra projects lock until you pay again.",
       },
       specs: [
         { label: "Subscription", value: planTitle },
-        { label: "Status", value: "Past due — payment retry needed" },
+        ...(args.workspaceName ? [{ label: "Workspace", value: args.workspaceName }] : []),
+        { label: "Grace Deadline", value: endsLabel },
+        { label: "Status", value: "Past due — update payment method" },
       ],
-      ctaLabel: "Update payment method",
+      ctaLabel: "Update payment & renew",
       ctaUrl: args.billingUrl,
     },
   };
+}
+
+export function buildRenewalGraceReminderEmail(args: {
+  name?: string | null;
+  plan?: string | null;
+  daysRemaining: number;
+  graceEndsAtIso: string;
+  workspaceName?: string | null;
+  appBaseUrl?: string;
+}): Omit<SendCasefolioEmailInput, "to"> {
+  const baseUrl = resolveAppBase(args.appBaseUrl);
+  const planTitle = formatPlanLabel(args.plan);
+  const isTeam = args.plan === "team" || args.plan === "plus";
+  const deadlineLabel = new Date(args.graceEndsAtIso).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const urgent = args.daysRemaining <= 1;
+
+  return {
+    department: "billing",
+    templateKey: "billing.renewal_grace_reminder",
+    subject: urgent
+      ? `Final reminder: ${args.daysRemaining <= 1 ? "Less than 24h" : "1 day"} left before Casefolio projects lock`
+      : `Reminder: ${args.daysRemaining} days left to renew your ${planTitle} plan`,
+    appBaseUrl: baseUrl,
+    content: {
+      previewText: `Renew your ${planTitle} subscription by ${deadlineLabel} to prevent project locking.`,
+      eyebrow: urgent ? "Urgent Renewal Warning" : "Renewal Grace Reminder",
+      heading: urgent
+        ? "Last chance before projects lock"
+        : `${args.daysRemaining} days left to renew`,
+      greeting: args.name ? `Hi ${args.name.trim()},` : undefined,
+      paragraphs: [
+        isTeam
+          ? `Your ${planTitle} subscription${args.workspaceName ? ` for ${args.workspaceName}` : ""} is still past due. Renew before ${deadlineLabel} to keep team projects, exports, and live links active.`
+          : `Your ${planTitle} subscription is still waiting for payment. Renew before ${deadlineLabel} — otherwise your account will revert to Free and extra Case Studies will lock until you subscribe again.`,
+      ],
+      callout: {
+        tone: urgent ? "danger" : "warning",
+        title: urgent ? "Locks in under 24 hours" : `${args.daysRemaining} days remaining`,
+        body: isTeam
+          ? "After the deadline, Team projects become strictly locked (no open, edit, or export) until the Owner renews."
+          : "No projects are deleted, but excess Case Studies become strictly Locked (unopenable) until payment succeeds.",
+      },
+      specs: [
+        { label: "Plan", value: planTitle },
+        ...(args.workspaceName ? [{ label: "Workspace", value: args.workspaceName }] : []),
+        { label: "Deadline", value: deadlineLabel },
+      ],
+      ctaLabel: "Renew subscription now",
+      ctaUrl: `${baseUrl}/account/billing`,
+    },
+  };
+}
+
+export async function sendRenewalGraceReminderEmail(args: {
+  to: string;
+  name?: string | null;
+  plan?: string | null;
+  daysRemaining: number;
+  graceEndsAtIso: string;
+  workspaceName?: string | null;
+  appBaseUrl?: string;
+}): Promise<SendCasefolioEmailResult> {
+  return sendCasefolioEmail({
+    to: args.to,
+    ...buildRenewalGraceReminderEmail(args),
+  });
+}
+
+export function buildGraceExpiredLockedEmail(args: {
+  name?: string | null;
+  plan?: string | null;
+  lockedCount?: number;
+  workspaceName?: string | null;
+  appBaseUrl?: string;
+}): Omit<SendCasefolioEmailInput, "to"> {
+  const baseUrl = resolveAppBase(args.appBaseUrl);
+  const isTeam = args.plan === "team" || args.plan === "plus";
+  const planTitle = formatPlanLabel(args.plan);
+
+  return {
+    department: "billing",
+    templateKey: "billing.grace_expired_locked",
+    subject: isTeam
+      ? `Your Team workspace “${args.workspaceName ?? "Teams"}” is now locked`
+      : "Your 10-day renewal window ended — extra projects are locked",
+    appBaseUrl: baseUrl,
+    content: {
+      previewText: isTeam
+        ? "Team projects and exports are locked until the Owner renews."
+        : "Your account returned to Free. Extra Case Studies are locked until you renew Pro.",
+      eyebrow: "Renewal Grace Ended",
+      heading: isTeam ? "Team workspace locked" : "Account downgraded to Free",
+      greeting: args.name ? `Hi ${args.name.trim()},` : undefined,
+      paragraphs: [
+        isTeam
+          ? `The 10-day renewal grace period for ${args.workspaceName ?? "your Team workspace"} has ended without payment. All team Case Studies, edits, exports, and live links are locked until Teams is renewed. Each member's Personal Workspace remains unaffected (Free: 1 personal Case Study).`
+          : `The 10-day renewal grace window ended without payment, so your account returned to Casefolio Free. Your existing work has NOT been deleted — ${typeof args.lockedCount === "number" && args.lockedCount > 0 ? `${args.lockedCount} excess Case ${args.lockedCount === 1 ? "Study is" : "Studies are"}` : "excess Case Studies are"} safely stored as Locked until you re-subscribe.`,
+      ],
+      specs: [
+        { label: "Current Plan", value: isTeam ? "Team (Locked)" : "Free (1 active project)" },
+        ...(typeof args.lockedCount === "number"
+          ? [{ label: "Locked Case Studies", value: `${args.lockedCount}` }]
+          : []),
+        { label: "Unlock Policy", value: "Instant unlock & URL restoration on payment" },
+      ],
+      ctaLabel: `Renew ${planTitle} to unlock`,
+      ctaUrl: `${baseUrl}/account/billing`,
+    },
+  };
+}
+
+export async function sendGraceExpiredLockedEmail(args: {
+  to: string;
+  name?: string | null;
+  plan?: string | null;
+  lockedCount?: number;
+  workspaceName?: string | null;
+  appBaseUrl?: string;
+}): Promise<SendCasefolioEmailResult> {
+  return sendCasefolioEmail({
+    to: args.to,
+    ...buildGraceExpiredLockedEmail(args),
+  });
+}
+
+export function buildTeamWorkspaceDissolvedEmail(args: {
+  memberName?: string | null;
+  organizationName: string;
+  appBaseUrl?: string;
+}): Omit<SendCasefolioEmailInput, "to"> {
+  const baseUrl = resolveAppBase(args.appBaseUrl);
+  return {
+    department: "team",
+    templateKey: "team.workspace_dissolved",
+    subject: `Team workspace “${args.organizationName}” was closed by the Owner`,
+    appBaseUrl: baseUrl,
+    content: {
+      previewText: `The Owner permanently closed “${args.organizationName}” and canceled team billing.`,
+      eyebrow: "Team Workspace Update",
+      heading: "Team workspace closed",
+      greeting: args.memberName ? `Hi ${args.memberName.trim()},` : undefined,
+      paragraphs: [
+        `The Owner permanently deleted their account and closed the “${args.organizationName}” team workspace. Team billing has been canceled and shared workspace content was removed.`,
+        "Your own Personal Workspace remains active and unaffected.",
+      ],
+      ctaLabel: "Open your Personal Dashboard",
+      ctaUrl: `${baseUrl}/dashboard`,
+    },
+  };
+}
+
+export async function sendTeamWorkspaceDissolvedEmail(args: {
+  to: string;
+  memberName?: string | null;
+  organizationName: string;
+  appBaseUrl?: string;
+}): Promise<SendCasefolioEmailResult> {
+  return sendCasefolioEmail({
+    to: args.to,
+    ...buildTeamWorkspaceDissolvedEmail(args),
+  });
 }
 
 export function buildSubscriptionCanceledEmail(args: {
@@ -2057,15 +2238,62 @@ export const EMAIL_TEMPLATE_CATALOG: readonly EmailCatalogEntry[] = [
   },
   {
     key: "billing.payment_failed",
-    title: "Past-Due Payment Failed (7-Day Grace)",
+    title: "Past-Due Payment Failed (10-Day Grace)",
     audience: "billing",
     audienceLabel: "Billing & Plans",
     department: "billing",
-    triggerSummary: "Urgent dunning alert when a subscription renewal fails in Paddle.",
+    triggerSummary: "Urgent dunning alert when a subscription renewal fails in Paddle (starts 10-day grace).",
     buildSample: (base) =>
       buildPaymentFailedEmail({
         plan: "pro",
+        daysRemaining: 10,
+        graceEndsAtIso: "2026-12-24T00:00:00.000Z",
         billingUrl: `${resolveAppBase(base)}/account/billing`,
+        appBaseUrl: base,
+      }),
+  },
+  {
+    key: "billing.renewal_grace_reminder",
+    title: "10-Day Renewal Countdown Reminder",
+    audience: "billing",
+    audienceLabel: "Billing & Plans",
+    department: "billing",
+    triggerSummary: "Sent on day 5 and day 9 of the 10-day renewal grace window before projects lock.",
+    buildSample: (base) =>
+      buildRenewalGraceReminderEmail({
+        name: "Nadia Al-Khatib",
+        plan: "pro",
+        daysRemaining: 1,
+        graceEndsAtIso: "2026-12-24T00:00:00.000Z",
+        appBaseUrl: base,
+      }),
+  },
+  {
+    key: "billing.grace_expired_locked",
+    title: "Renewal Grace Ended — Projects Locked",
+    audience: "billing",
+    audienceLabel: "Billing & Plans",
+    department: "billing",
+    triggerSummary: "Sent after 10 days unpaid when Pro reverts to Free or Team workspace locks.",
+    buildSample: (base) =>
+      buildGraceExpiredLockedEmail({
+        name: "Nadia Al-Khatib",
+        plan: "pro",
+        lockedCount: 4,
+        appBaseUrl: base,
+      }),
+  },
+  {
+    key: "team.workspace_dissolved",
+    title: "Team Workspace Closed Notification",
+    audience: "team",
+    audienceLabel: "Teams & Collaboration",
+    department: "team",
+    triggerSummary: "Sent to former teammates when the sole Owner permanently closes a Team workspace.",
+    buildSample: (base) =>
+      buildTeamWorkspaceDissolvedEmail({
+        memberName: "Nadia Al-Khatib",
+        organizationName: "Northwind Design Studio",
         appBaseUrl: base,
       }),
   },

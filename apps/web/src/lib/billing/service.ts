@@ -22,6 +22,7 @@ import {
   evaluateSubscriptionLifecycle,
   getChargeAmountCents,
   getChargeAmountUsd,
+  getPastDueDaysRemaining,
   isSubscriptionLockedForQuantityChange,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
   TEAMS_MAX_SELF_SERVE_SEATS,
@@ -51,6 +52,7 @@ import {
 import {
   ensurePersonalWorkspaceForUser,
   ensureTeamWorkspaceForOrganization,
+  resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
 import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
@@ -123,6 +125,21 @@ export interface UserSubscriptionSummary {
   paymentExpiry: string | null;
 }
 
+export interface TeamSeatRosterItem {
+  members: Array<{
+    userId: string;
+    name: string;
+    email: string;
+    role: "owner" | "admin" | "member";
+  }>;
+  pendingInvites: Array<{
+    id: string;
+    email: string;
+    role: "admin" | "member";
+    expiresAtIso: string;
+  }>;
+}
+
 export interface TeamBillingSeatOverview {
   organizationId: string;
   organizationName: string;
@@ -140,6 +157,9 @@ export interface TeamBillingSeatOverview {
   renewalSeats: number | null;
   currentPeriodEndIso: string | null;
   pastDueSinceIso: string | null;
+  graceEndsAtIso?: string | null;
+  daysRemaining?: number | null;
+  occupiedRoster?: TeamSeatRosterItem;
   isLockedForQuantityChange: boolean;
   lockReason: string | null;
   customDomain?: string | null;
@@ -839,6 +859,63 @@ export async function getTeamBillingSeatOverviewForUser(
       })
     : { locked: false as const, reason: null };
 
+  const graceEndsAtIso =
+    subRow?.status === "past_due" && lifecycle?.pastDueEndsAt
+      ? lifecycle.pastDueEndsAt.toISOString()
+      : null;
+  const daysRemaining =
+    subRow?.status === "past_due" && lifecycle?.pastDueEndsAt
+      ? getPastDueDaysRemaining(lifecycle.pastDueEndsAt, now)
+      : subRow?.status === "cancel_at_period_end" && subRow.currentPeriodEnd
+        ? getPastDueDaysRemaining(subRow.currentPeriodEnd, now)
+        : null;
+
+  let occupiedRoster: TeamSeatRosterItem | undefined;
+  if (role === "owner") {
+    const [memberRows, inviteRows] = await Promise.all([
+      db
+        .select({
+          userId: dbSchema.users.id,
+          name: dbSchema.users.name,
+          email: dbSchema.users.email,
+          role: dbSchema.memberships.role,
+        })
+        .from(dbSchema.memberships)
+        .innerJoin(dbSchema.users, eq(dbSchema.memberships.userId, dbSchema.users.id))
+        .where(eq(dbSchema.memberships.orgId, chosen.org.id)),
+      db
+        .select({
+          id: dbSchema.seatReservations.invitationId,
+          email: dbSchema.seatReservations.normalizedEmail,
+          role: dbSchema.seatReservations.role,
+          expiresAt: dbSchema.seatReservations.expiresAt,
+        })
+        .from(dbSchema.seatReservations)
+        .where(
+          and(
+            eq(dbSchema.seatReservations.organizationId, chosen.org.id),
+            eq(dbSchema.seatReservations.status, "active"),
+            gt(dbSchema.seatReservations.expiresAt, now),
+          ),
+        ),
+    ]);
+
+    occupiedRoster = {
+      members: memberRows.map((m) => ({
+        userId: m.userId,
+        name: m.name,
+        email: m.email,
+        role: normalizeMembershipRole(m.role),
+      })),
+      pendingInvites: inviteRows.map((inv) => ({
+        id: inv.id,
+        email: inv.email,
+        role: normalizeMembershipRole(inv.role) === "admin" ? "admin" : "member",
+        expiresAtIso: inv.expiresAt.toISOString(),
+      })),
+    };
+  }
+
   return {
     organizationId: chosen.org.id,
     organizationName: chosen.org.name,
@@ -858,6 +935,9 @@ export async function getTeamBillingSeatOverviewForUser(
       ? subRow.currentPeriodEnd.toISOString()
       : null,
     pastDueSinceIso: subRow?.pastDueSince ? subRow.pastDueSince.toISOString() : null,
+    graceEndsAtIso,
+    daysRemaining,
+    occupiedRoster,
     isLockedForQuantityChange: lockCheck.locked,
     lockReason: lockCheck.reason,
     customDomain: wsRow?.customDomain ?? null,
@@ -1470,7 +1550,9 @@ export async function resumeUserSubscription(
 }
 
 /**
- * Selects which personal project remains public when Pro downgrades to Free (`Spec §11.7`).
+ * Pre-selects which personal project stays active when Pro transitions to Free.
+ * Once the downgrade/expiry has completed onto Free with excess projects locked, switching the
+ * active Free slot is disallowed until the user upgrades back to Pro.
  */
 export async function selectPersonalKeepPublicProject(args: {
   actorUserId: string;
@@ -1479,6 +1561,37 @@ export async function selectPersonalKeepPublicProject(args: {
 }): Promise<{ ok: true; keepPublicProjectId: string | null } | { ok: false; error: string }> {
   const now = args.now ?? new Date();
   const personal = await ensurePersonalWorkspaceForUser(args.actorUserId);
+  const ent = await resolveWorkspaceEntitlementState(personal.workspaceId, now);
+
+  if (!ent || ent.plan === "free") {
+    const [wsRow] = await db
+      .select({ keepPublicProjectId: dbSchema.workspaces.keepPublicProjectId })
+      .from(dbSchema.workspaces)
+      .where(eq(dbSchema.workspaces.id, personal.workspaceId))
+      .limit(1);
+
+    if (wsRow?.keepPublicProjectId && wsRow.keepPublicProjectId !== args.projectId) {
+      const [stillKept] = await db
+        .select({ id: dbSchema.projects.id })
+        .from(dbSchema.projects)
+        .where(
+          and(
+            eq(dbSchema.projects.id, wsRow.keepPublicProjectId),
+            eq(dbSchema.projects.workspaceId, personal.workspaceId),
+            isNull(dbSchema.projects.archivedAt),
+          ),
+        )
+        .limit(1);
+
+      if (stillKept) {
+        return {
+          ok: false,
+          error:
+            "Your 1 active Case Study on Free is already locked in. Extra Case Studies remain locked until you upgrade back to Pro.",
+        };
+      }
+    }
+  }
 
   if (args.projectId) {
     const [proj] = await db
@@ -1508,13 +1621,7 @@ export async function selectPersonalKeepPublicProject(args: {
     })
     .where(eq(dbSchema.workspaces.id, personal.workspaceId));
 
-  const [userRow] = await db
-    .select({ plan: dbSchema.users.plan })
-    .from(dbSchema.users)
-    .where(eq(dbSchema.users.id, args.actorUserId))
-    .limit(1);
-
-  if ((userRow?.plan ?? "free") === "free") {
+  if (!ent || ent.plan === "free") {
     await applyPersonalDowngradePublicationRules(personal.workspaceId, now);
   }
 

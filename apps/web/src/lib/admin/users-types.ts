@@ -22,9 +22,32 @@ export const syncUserSubscriptionInputSchema = z.object({
   userId: z.string().uuid("Invalid user ID."),
 });
 
+export const setUserPlanOverrideInputSchema = z.object({
+  action: z.literal("set_plan_override"),
+  userId: z.string().uuid("Invalid user ID."),
+  plan: z.enum(["free", "pro", "team"]),
+});
+
+export const verifyUserEmailInputSchema = z.object({
+  action: z.literal("verify_email"),
+  userId: z.string().uuid("Invalid user ID."),
+});
+
+export const revokeUserSessionsInputSchema = z.object({
+  action: z.literal("revoke_sessions"),
+  userId: z.string().uuid("Invalid user ID."),
+});
+
+export const adminUsersDeleteSchema = z.object({
+  userId: z.string().uuid("Invalid user ID."),
+});
+
 export const adminUsersPatchSchema = z.discriminatedUnion("action", [
   suspendUserInputSchema,
   syncUserSubscriptionInputSchema,
+  setUserPlanOverrideInputSchema,
+  verifyUserEmailInputSchema,
+  revokeUserSessionsInputSchema,
 ]);
 
 export interface AdminUserListItem {
@@ -62,10 +85,22 @@ export interface AdminPaddleSubscriptionSnapshot {
   paymentSummary: string;
 }
 
+export interface AdminUserFeedbackRow {
+  id: string;
+  rating: number | null;
+  triggerMoment: string;
+  primaryUseCase: string | null;
+  topFeatureRequest: string | null;
+  comment: string | null;
+  createdAtIso: string;
+}
+
 export interface AdminUserDetail {
   id: string;
   name: string;
   email: string;
+  emailVerified?: boolean;
+  activeSessionsCount?: number;
   role: UserRole;
   plan: PlanTier;
   suspended: boolean;
@@ -81,6 +116,7 @@ export interface AdminUserDetail {
   lastExportAtIso: string | null;
   projects: AdminUserProjectRow[];
   subscription: AdminPaddleSubscriptionSnapshot;
+  recentFeedback?: AdminUserFeedbackRow[];
 }
 
 export interface AdminSubscriptionRow {

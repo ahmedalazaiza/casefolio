@@ -73,7 +73,51 @@ export type AuthorizeProjectResult =
       status: 404 | 403;
       code: AccessDeniedCode;
       error: string;
+      lockedContext?: {
+        projectName: string;
+        workspaceKind: "personal" | "team";
+        isTeamOwner: boolean;
+      };
     };
+
+export async function resolveFreeTierActiveProjectState(
+  workspaceId: string,
+  keepPublicProjectId: string | null,
+): Promise<{
+  nonArchivedCount: number;
+  activeProjectId: string | null;
+  hasExtraLocks: boolean;
+}> {
+  const nonArchivedProjects = await db
+    .select({
+      id: dbSchema.projects.id,
+      visibility: dbSchema.projects.visibility,
+    })
+    .from(dbSchema.projects)
+    .where(
+      and(
+        eq(dbSchema.projects.workspaceId, workspaceId),
+        isNull(dbSchema.projects.archivedAt),
+      ),
+    )
+    .orderBy(desc(dbSchema.projects.updatedAt), desc(dbSchema.projects.createdAt));
+
+  if (nonArchivedProjects.length === 0) {
+    return { nonArchivedCount: 0, activeProjectId: null, hasExtraLocks: false };
+  }
+
+  const activeProjectId =
+    keepPublicProjectId && nonArchivedProjects.some((p) => p.id === keepPublicProjectId)
+      ? keepPublicProjectId
+      : (nonArchivedProjects.find((p) => p.visibility !== "private")?.id ??
+          nonArchivedProjects[0]!.id);
+
+  return {
+    nonArchivedCount: nonArchivedProjects.length,
+    activeProjectId,
+    hasExtraLocks: nonArchivedProjects.length > 1,
+  };
+}
 
 function notFoundSpace(): AuthorizeSpaceResult {
   return {
@@ -511,6 +555,61 @@ export async function authorizeProjectAccess(
     templateTier,
   };
 
+  const lockedContext = {
+    projectName: project.name,
+    workspaceKind: spaceAuth.workspace.kind,
+    isTeamOwner:
+      spaceAuth.workspace.kind === "team" && spaceAuth.membershipRole === "owner",
+  };
+
+  // 1. Workspace subscription freeze (`past_due > 10d`, canceled Team subscription, or manual freeze)
+  // Strictly locks opening, editing, publishing, exporting, and copying out Team workspace projects
+  // until the Owner renews. Each team member retains their independent Personal Workspace (1 Free project).
+  if (
+    spaceAuth.entitlement.isFrozen &&
+    action !== "delete"
+  ) {
+    return {
+      ok: false,
+      status: 403,
+      code: "WORKSPACE_FROZEN",
+      error:
+        spaceAuth.workspace.kind === "team"
+          ? "This Team workspace is locked until the Owner renews Teams. Team projects cannot be opened, edited, or exported; your Personal Workspace remains active."
+          : "This workspace is currently read-only due to billing status.",
+      lockedContext,
+    };
+  }
+
+  // 2. Strict Downgrade & 10-day Expiry Lock (Personal Free with >1 non-archived Case Studies):
+  // Only the 1 selected active Case Study stays accessible; extra Case Studies stay stored as
+  // strictly Locked (cannot be opened, edited, published, copied, or exported) until payment resumes.
+  if (
+    spaceAuth.workspace.kind === "personal" &&
+    spaceAuth.entitlement.plan === "free" &&
+    action !== "delete"
+  ) {
+    const freeState = await resolveFreeTierActiveProjectState(
+      spaceAuth.workspace.id,
+      spaceAuth.workspace.keepPublicProjectId,
+    );
+
+    if (
+      freeState.hasExtraLocks &&
+      project.archivedAt === null &&
+      project.id !== freeState.activeProjectId
+    ) {
+      return {
+        ok: false,
+        status: 403,
+        code: "FREE_TIER_EXTRA_PROJECT_LOCKED",
+        error:
+          "Free accounts allow 1 active Case Study. Extra Case Studies remain safely stored as Locked until you renew or upgrade to Pro.",
+        lockedContext,
+      };
+    }
+  }
+
   if (action === "read" || action === "export_portability") {
     return { ok: true, ...baseCtx };
   }
@@ -560,65 +659,6 @@ export async function authorizeProjectAccess(
       code: "PROJECT_ARCHIVED",
       error: "Archived case studies are read-only. Unarchive this project to edit, publish, or export.",
     };
-  }
-
-  // Workspace freeze (`past_due > 7d`, canceled team subscription, or frozen workspace)
-  if (
-    (spaceAuth.entitlement.isFrozen || spaceAuth.space.recoveryState !== "active") &&
-    (action === "edit" ||
-      action === "upload_asset" ||
-      action === "publish" ||
-      action === "unarchive" ||
-      action === "export_aesthetic")
-  ) {
-    return {
-      ok: false,
-      status: 403,
-      code: "WORKSPACE_FROZEN",
-      error: "This workspace is currently read-only due to billing status.",
-    };
-  }
-
-  // Edge Case 3 (Downgrade Protection — Free Tier):
-  // When a personal workspace on Free has >1 non-archived Case Studies, only the 1 selected
-  // active Case Study stays editable/publishable; extra Case Studies are locked without deletion.
-  if (
-    spaceAuth.workspace.kind === "personal" &&
-    spaceAuth.entitlement.plan === "free" &&
-    (action === "edit" || action === "upload_asset" || action === "publish")
-  ) {
-    const nonArchivedProjects = await db
-      .select({
-        id: dbSchema.projects.id,
-        visibility: dbSchema.projects.visibility,
-      })
-      .from(dbSchema.projects)
-      .where(
-        and(
-          eq(dbSchema.projects.workspaceId, spaceAuth.workspace.id),
-          isNull(dbSchema.projects.archivedAt),
-        ),
-      )
-      .orderBy(desc(dbSchema.projects.updatedAt), desc(dbSchema.projects.createdAt));
-
-    if (nonArchivedProjects.length > 1) {
-      const keepId = spaceAuth.workspace.keepPublicProjectId;
-      const activeProjectId =
-        keepId && nonArchivedProjects.some((p) => p.id === keepId)
-          ? keepId
-          : (nonArchivedProjects.find((p) => p.visibility !== "private")?.id ??
-              nonArchivedProjects[0]!.id);
-
-      if (project.id !== activeProjectId) {
-        return {
-          ok: false,
-          status: 403,
-          code: "FREE_TIER_EXTRA_PROJECT_LOCKED",
-          error:
-            "Free accounts allow 1 active Case Study. Select this Case Study as your active project in Billing settings or upgrade to Pro to unlock all Case Studies.",
-        };
-      }
-    }
   }
 
   // Team shared-space role checks (`Spec §9`)

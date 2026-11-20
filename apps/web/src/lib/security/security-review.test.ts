@@ -71,6 +71,7 @@ describe("Phase 11 Security Review & Hardening Audit (C-1101)", () => {
       "api/dev/analytics-events/route.ts": /NODE_ENV\s*===\s*"production"/,
       "api/health/route.ts": /checkWebHealth|status/,
       "cdn/covers/[file]/route.ts": /readPublicTemplateCoverByFileName/,
+      "cdn/cms/[file]/route.ts": /readPublicCmsAssetByFileName/,
     };
 
     for (const file of routeFiles) {

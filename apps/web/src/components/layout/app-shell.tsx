@@ -16,6 +16,7 @@ import {
   LayoutTemplate,
   Loader2,
   Menu,
+  MessageSquareHeart,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
@@ -27,6 +28,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { toast } from "sonner";
 import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal";
+import {
+  dispatchOpenFeedbackSurvey,
+  QuickFeedbackSurvey,
+} from "@/components/feedback/quick-feedback-survey";
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -96,6 +101,13 @@ export interface AppShellProps {
   quotaSummaryLabel?: string;
   renewsLabel?: string;
   failedPaymentPauseDateLabel?: string | null;
+  renewalGraceBanner?: {
+    kind: "past_due" | "ending_soon";
+    daysRemaining: number;
+    deadlineLabel: string;
+    isTeam: boolean;
+    isTeamOwner: boolean;
+  } | null;
   activeOrganizationId?: string | null;
   activeWorkspaceName?: string;
   workspaces?: AppShellWorkspaceOption[];
@@ -223,12 +235,12 @@ function PlanUsageCard({
       )}
 
       {planTier === "pro" && (
-        <div className="mt-0.5 flex items-center gap-2">
+        <div data-testid="sidebar-pro-actions" className="mt-0.5 flex flex-col gap-2">
           <button
             type="button"
             data-testid="sidebar-upgrade-teams-btn"
             onClick={() => onOpenCheckout("team")}
-            className="focus-visible:ring-ring/40 inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[var(--cf-bg-accent)] px-2.5 py-2 text-xs font-bold text-[var(--cf-text-on-accent)] transition-opacity outline-none hover:opacity-95 focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[var(--cf-bg-accent)] px-3 py-2 text-xs font-bold whitespace-nowrap text-[var(--cf-text-on-accent)] transition-opacity outline-none hover:opacity-95 focus-visible:ring-2"
           >
             <Users className="size-3.5 shrink-0" />
             <span>Upgrade to Teams</span>
@@ -236,9 +248,9 @@ function PlanUsageCard({
           <Link
             href="/account/billing"
             data-testid="sidebar-billing-link"
-            className="focus-visible:ring-ring/40 inline-flex items-center justify-center gap-1 rounded-lg border border-[var(--cf-border-on-royal)] px-2.5 py-2 text-xs font-semibold text-[var(--cf-text-on-royal)] transition-colors outline-none hover:bg-[var(--cf-bg-elevated)]/15 focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--cf-border-on-royal)] px-3 py-2 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-on-royal)] transition-colors outline-none hover:bg-[var(--cf-bg-elevated)]/15 focus-visible:ring-2"
           >
-            <CreditCard className="size-3 shrink-0" />
+            <CreditCard className="size-3.5 shrink-0" />
             <span>{isPastDue ? "Update payment" : "Billing"}</span>
           </Link>
         </div>
@@ -284,6 +296,7 @@ export function AppShell({
   quotaSummaryLabel,
   renewsLabel = "Renews Nov 30, 2026",
   failedPaymentPauseDateLabel = null,
+  renewalGraceBanner = null,
   activeOrganizationId = null,
   activeWorkspaceName,
   workspaces = [],
@@ -635,17 +648,28 @@ export function AppShell({
             )}
           </div>
         ) : (
-          <PlanUsageCard
-            planTier={resolvedPlanTier}
-            planStatus={planStatus}
-            planLabel={planLabel}
-            projectsUsed={projectsUsed}
-            projectsLimit={projectsLimit}
-            quotaSummaryLabel={quotaSummaryLabel}
-            renewsLabel={renewsLabel}
-            activeOrganizationId={activeOrganizationId}
-            onOpenCheckout={(targetPlan) => setCheckoutPlan(targetPlan)}
-          />
+          <div className="flex flex-col gap-2">
+            <PlanUsageCard
+              planTier={resolvedPlanTier}
+              planStatus={planStatus}
+              planLabel={planLabel}
+              projectsUsed={projectsUsed}
+              projectsLimit={projectsLimit}
+              quotaSummaryLabel={quotaSummaryLabel}
+              renewsLabel={renewsLabel}
+              activeOrganizationId={activeOrganizationId}
+              onOpenCheckout={(targetPlan) => setCheckoutPlan(targetPlan)}
+            />
+            <button
+              type="button"
+              data-testid="sidebar-feedback-trigger"
+              onClick={() => dispatchOpenFeedbackSurvey("manual")}
+              className="focus-visible:ring-ring/40 flex items-center justify-center gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 py-2 text-xs font-semibold text-[var(--cf-text-secondary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:text-[var(--cf-royal-text)] focus-visible:ring-2"
+            >
+              <MessageSquareHeart className="size-3.5 text-[var(--cf-royal-text)]" />
+              <span>Share quick feedback</span>
+            </button>
+          </div>
         )}
       </aside>
 
@@ -655,23 +679,45 @@ export function AppShell({
           sidebarCollapsed ? "lg:pl-18" : "lg:pl-64",
         )}
       >
-        {failedPaymentPauseDateLabel && (
+        {(renewalGraceBanner || failedPaymentPauseDateLabel) && (
           <div
             role="alert"
             data-testid="app-failed-payment-banner"
-            className="border-destructive/30 bg-destructive-soft text-destructive flex flex-wrap items-center justify-center gap-2 border-b px-4 py-2 text-center"
+            className={cn(
+              "flex flex-wrap items-center justify-center gap-2 border-b px-4 py-2 text-center",
+              renewalGraceBanner?.kind === "ending_soon"
+                ? "border-warning/30 bg-warning-soft text-foreground"
+                : "border-destructive/30 bg-destructive-soft text-destructive",
+            )}
           >
             <AlertTriangle className="size-4 shrink-0" />
             <span className="type-body-s">
-              Your last payment failed — {resolvedPlanTier === "team" ? "Teams" : "Pro"} features
-              pause on {failedPaymentPauseDateLabel}.
+              {renewalGraceBanner
+                ? renewalGraceBanner.kind === "past_due"
+                  ? renewalGraceBanner.isTeam
+                    ? `Team renewal failed — ${renewalGraceBanner.daysRemaining} ${renewalGraceBanner.daysRemaining === 1 ? "day" : "days"} left (until ${renewalGraceBanner.deadlineLabel}) before all Team projects lock.`
+                    : `Renewal payment failed — you have ${renewalGraceBanner.daysRemaining} ${renewalGraceBanner.daysRemaining === 1 ? "day" : "days"} (until ${renewalGraceBanner.deadlineLabel}) before reverting to Free and locking extra Case Studies.`
+                  : renewalGraceBanner.isTeam
+                    ? `Team subscription ends in ${renewalGraceBanner.daysRemaining} ${renewalGraceBanner.daysRemaining === 1 ? "day" : "days"} (${renewalGraceBanner.deadlineLabel}) — renew before Team projects lock.`
+                    : `Your Pro plan ends in ${renewalGraceBanner.daysRemaining} ${renewalGraceBanner.daysRemaining === 1 ? "day" : "days"} (${renewalGraceBanner.deadlineLabel}) — renew to keep all Case Studies unlocked.`
+                : `Your last payment failed — ${resolvedPlanTier === "team" ? "Teams" : "Pro"} features pause on ${failedPaymentPauseDateLabel}.`}
             </span>
-            <Link
-              href="/account/billing"
-              className="text-destructive type-body-s-strong underline underline-offset-4"
-            >
-              Update payment &rarr;
-            </Link>
+            {(!renewalGraceBanner || !renewalGraceBanner.isTeam || renewalGraceBanner.isTeamOwner) && (
+              <Link
+                href="/account/billing"
+                className={cn(
+                  "type-body-s-strong underline underline-offset-4",
+                  renewalGraceBanner?.kind === "ending_soon"
+                    ? "text-foreground"
+                    : "text-destructive",
+                )}
+              >
+                {renewalGraceBanner?.kind === "ending_soon"
+                  ? "Renew subscription"
+                  : "Update payment"}{" "}
+                &rarr;
+              </Link>
+            )}
           </div>
         )}
 
@@ -690,6 +736,7 @@ export function AppShell({
           orgId={checkoutPlan === "team" ? activeOrganizationId : null}
         />
       )}
+      <QuickFeedbackSurvey />
     </div>
   );
 }

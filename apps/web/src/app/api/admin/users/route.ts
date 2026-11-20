@@ -2,10 +2,17 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   listAdminUsers,
+  permanentlyDeleteAdminUser,
+  revokeAdminUserSessions,
+  setAdminUserPlanOverride,
   setAdminUserSuspension,
   syncUserSubscriptionFromPaddle,
+  verifyAdminUserEmail,
 } from "@/lib/admin/users";
-import { adminUsersPatchSchema } from "@/lib/admin/users-types";
+import {
+  adminUsersDeleteSchema,
+  adminUsersPatchSchema,
+} from "@/lib/admin/users-types";
 import { hasAdminRole } from "@/lib/auth/guards";
 import { getServerSession } from "@/lib/auth/session";
 
@@ -56,6 +63,46 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true, suspended: res.suspended });
   }
 
+  if (parsed.data.action === "set_plan_override") {
+    const res = await setAdminUserPlanOverride({
+      actorId: auth.user.id,
+      actorRole: auth.role,
+      targetUserId: parsed.data.userId,
+      plan: parsed.data.plan,
+    });
+    if (!res.ok) {
+      return NextResponse.json({ error: res.error }, { status: 400 });
+    }
+    revalidatePath("/admin/users");
+    revalidatePath(`/admin/users/${parsed.data.userId}`);
+    revalidatePath("/admin/subscriptions");
+    return NextResponse.json({ ok: true, plan: res.plan });
+  }
+
+  if (parsed.data.action === "verify_email") {
+    const res = await verifyAdminUserEmail({
+      actorId: auth.user.id,
+      targetUserId: parsed.data.userId,
+    });
+    if (!res.ok) {
+      return NextResponse.json({ error: res.error }, { status: 400 });
+    }
+    revalidatePath(`/admin/users/${parsed.data.userId}`);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (parsed.data.action === "revoke_sessions") {
+    const res = await revokeAdminUserSessions({
+      actorId: auth.user.id,
+      targetUserId: parsed.data.userId,
+    });
+    if (!res.ok) {
+      return NextResponse.json({ error: res.error }, { status: 400 });
+    }
+    revalidatePath(`/admin/users/${parsed.data.userId}`);
+    return NextResponse.json({ ok: true });
+  }
+
   const syncRes = await syncUserSubscriptionFromPaddle({
     actorId: auth.user.id,
     targetUserId: parsed.data.userId,
@@ -67,4 +114,33 @@ export async function PATCH(request: Request) {
   revalidatePath(`/admin/users/${parsed.data.userId}`);
   revalidatePath("/admin/subscriptions");
   return NextResponse.json(syncRes);
+}
+
+export async function DELETE(request: Request) {
+  const auth = await ensureAdminApi();
+  if ("error" in auth) return auth.error;
+
+  const json = await request.json().catch(() => null);
+  const parsed = adminUsersDeleteSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid user delete payload." },
+      { status: 400 },
+    );
+  }
+
+  const res = await permanentlyDeleteAdminUser({
+    actorId: auth.user.id,
+    actorRole: auth.role,
+    targetUserId: parsed.data.userId,
+  });
+
+  if (!res.ok) {
+    return NextResponse.json({ error: res.error }, { status: 400 });
+  }
+
+  revalidatePath("/admin/users");
+  revalidatePath("/admin/projects");
+  revalidatePath("/admin");
+  return NextResponse.json({ ok: true });
 }

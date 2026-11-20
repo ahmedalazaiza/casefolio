@@ -7,6 +7,7 @@ import {
 } from "@/components/account/security-settings-panel";
 import { requireSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
+import { inspectUserOwnedTeamsForDeletion } from "@/lib/retention/account";
 
 export const metadata: Metadata = {
   title: "Security — Casefolio",
@@ -45,7 +46,7 @@ export default async function AccountSecurityPage() {
   const { user, session } = await requireSession("/account/security");
   const now = new Date();
 
-  const [accountRows, activeSessionRows, [projectsTotal], [publishedTotal]] =
+  const [accountRows, activeSessionRows, [projectsTotal], [publishedTotal], ownedTeamsCheck] =
     await Promise.all([
       db
         .select()
@@ -74,6 +75,7 @@ export default async function AccountSecurityPage() {
             ne(dbSchema.projects.visibility, "private"),
           ),
         ),
+      inspectUserOwnedTeamsForDeletion(user.id),
     ]);
 
   const credentialAccount = accountRows.find(
@@ -119,6 +121,7 @@ export default async function AccountSecurityPage() {
         publishedCount={Number(publishedTotal?.total ?? 0)}
         sessions={sessionViews}
         deletionScheduledForIso={user.deletionScheduledFor?.toISOString() ?? null}
+        soleOwnedTeams={ownedTeamsCheck.blockedTeams}
       />
     </AccountSettingsShell>
   );

@@ -156,7 +156,7 @@ export async function sendCasefolioEmail(
 
   if (isLiveResendKey(env.RESEND_API_KEY)) {
     const resend = new Resend(env.RESEND_API_KEY);
-    const { error } = await resend.emails.send({
+    const primaryPayload = {
       from: rendered.from,
       to: recipients.length === 1 ? recipients[0]! : recipients,
       replyTo: rendered.replyTo,
@@ -167,7 +167,26 @@ export async function sendCasefolioEmail(
         "X-Casefolio-Department": input.department,
         "X-Casefolio-Template": input.templateKey,
       },
-    });
+    };
+
+    let { error } = await resend.emails.send(primaryPayload);
+
+    // When custom domain DNS isn't verified on Resend yet (e.g. default casefolio.com during staging),
+    // automatically retry via Resend's verified onboarding@resend.dev sender so verified test recipients still receive OTPs.
+    if (
+      error &&
+      env.EMAIL_DOMAIN === "casefolio.com" &&
+      /domain.*not verified|not verified|verify.*domain/i.test(error.message ?? "")
+    ) {
+      const displayName = rendered.from.includes("<")
+        ? rendered.from.slice(0, rendered.from.indexOf("<")).trim()
+        : "Casefolio";
+      const fallbackRes = await resend.emails.send({
+        ...primaryPayload,
+        from: `${displayName} <onboarding@resend.dev>`,
+      });
+      error = fallbackRes.error;
+    }
 
     if (error) {
       throw new Error(`Resend email delivery failed: ${error.message}`);

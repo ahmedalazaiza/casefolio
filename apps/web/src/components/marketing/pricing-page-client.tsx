@@ -4,43 +4,34 @@ import type { PlanTier } from "@casefolio/db";
 import {
   ArrowDown,
   ArrowRight,
-  BarChart3,
   Calculator,
   Check,
-  FileDown,
   FolderKanban,
-  Globe,
-  LayoutTemplate,
   MessageCircleQuestion,
   Rocket,
   ShieldCheck,
-  Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal";
+import { CmsIcon } from "@/components/cms/cms-icon";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
 import { ScrollRise, SectionStackSheet } from "@/components/marketing/motion";
 import { TeamsSeatCalculator } from "@/components/marketing/teams-seat-calculator";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import {
-  BILLING_PLAN_CATALOG,
   formatUsdFromCents,
   FREE_LIFETIME_PROJECT_LIMIT,
-  PAID_GRACE_DURATION_DAYS,
-  PRO_MAX_PROJECTS,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
-  TEAMS_MAX_SELF_SERVE_SEATS,
-  TEAMS_MIN_SEATS,
   type BillingInterval,
   type PaidPlanTier,
 } from "@/lib/billing/plans";
 import {
-  FREE_MONTHLY_EXPORT_LIMIT,
-  PRO_MONTHLY_EXPORT_LIMIT,
-  TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT,
-} from "@/lib/exports/types";
+  DEFAULT_SITE_CMS_CONTENT,
+  mergeBillingCatalogWithCms,
+  type SiteCmsContent,
+} from "@/lib/cms/schema";
 import { cn } from "@/lib/utils";
 
 export interface ConfiguredPaddlePriceMap {
@@ -59,6 +50,7 @@ export interface PricingPageClientProps {
   activeOrgId: string | null;
   paddlePriceMap: ConfiguredPaddlePriceMap;
   initialInterval?: BillingInterval;
+  cmsPricing?: SiteCmsContent["pricing"];
 }
 
 type PlanCellValue =
@@ -68,210 +60,6 @@ type PlanCellValue =
       included: boolean;
       detail: string;
     };
-
-interface ComparisonRow {
-  feature: string;
-  hint?: string;
-  free: PlanCellValue;
-  pro: PlanCellValue;
-  team: PlanCellValue;
-}
-
-interface ComparisonGroup {
-  id: string;
-  title: string;
-  description: string;
-  icon: ReactNode;
-  rows: readonly ComparisonRow[];
-}
-
-const COMPARISON_GROUPS: readonly ComparisonGroup[] = [
-  {
-    id: "workspace",
-    title: "Workspace, Seats & Case Studies",
-    description: "Compare seat allocations, active project allowances, and shared vs. personal workspaces.",
-    icon: <FolderKanban className="size-4" />,
-    rows: [
-      {
-        feature: "Seats & workspace scope",
-        free: "1 seat · Personal workspace",
-        pro: "1 seat · Personal workspace",
-        team: `${TEAMS_MIN_SEATS}–${TEAMS_MAX_SELF_SERVE_SEATS} seats · Shared Team workspace`,
-      },
-      {
-        feature: "Case Studies allowance",
-        hint: "Free grants 1 one-time lifetime credit; Pro slots can be deleted or archived anytime to rotate work",
-        free: `${FREE_LIFETIME_PROJECT_LIMIT} lifetime Case Study credit`,
-        pro: `Up to ${PRO_MAX_PROJECTS} active (rotatable)`,
-        team: "Unlimited shared",
-      },
-      {
-        feature: "Team Dashboard (invite by email, invite status & roles)",
-        hint: "Manage Owner, Admin & Member seats with instant prorated additions",
-        free: false,
-        pro: false,
-        team: true,
-      },
-      {
-        feature: "Shared Team Workspace & Brand Kit",
-        hint: "Centralized studio logos, brand colors, reusable blocks, and collaborative spaces",
-        free: false,
-        pro: false,
-        team: true,
-      },
-    ],
-  },
-  {
-    id: "templates",
-    title: "Templates & Styling Control",
-    description: "Starter vs. Pro & Premium templates, custom typography, color palettes, and modular sections.",
-    icon: <LayoutTemplate className="size-4" />,
-    rows: [
-      {
-        feature: "Starter case study templates",
-        free: true,
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "All Pro & Premium templates",
-        free: false,
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "Full A-to-Z styling (colors, typography & modular sections)",
-        free: true,
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "Pre-publish contrast & empty-slot checks",
-        free: true,
-        pro: true,
-        team: true,
-      },
-    ],
-  },
-  {
-    id: "publishing",
-    title: "Live Links & Custom URLs",
-    description: "Shareable web URLs, custom /p/your-slug branding, and watermark removal.",
-    icon: <Globe className="size-4" />,
-    rows: [
-      {
-        feature: "Live Shareable Link",
-        free: true,
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "Custom Case Study URL (/p/your-slug)",
-        hint: "Customize the /p/ slug on published portfolio links",
-        free: "Auto-generated link",
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "Watermark-free exports & removable Casefolio footer",
-        free: { included: false, detail: "Subtle watermark" },
-        pro: true,
-        team: true,
-      },
-    ],
-  },
-  {
-    id: "exports",
-    title: "PNG, Behance & A4 PDF Exports",
-    description: "Pixel-accurate exports formatted for Behance showcases, client presentations, and hiring decks.",
-    icon: <FileDown className="size-4" />,
-    rows: [
-      {
-        feature: "PNG & PDF Case Study export",
-        free: "1× with subtle watermark",
-        pro: "High-res, no watermark",
-        team: "High-res, no watermark",
-      },
-      {
-        feature: "2× Retina PNG (2,880 px) & Behance 1,400 px slice pack",
-        free: false,
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "Monthly export allowance",
-        free: `${FREE_MONTHLY_EXPORT_LIMIT}/mo`,
-        pro: `${PRO_MONTHLY_EXPORT_LIMIT}/mo`,
-        team: `${TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT} × seats/mo`,
-      },
-    ],
-  },
-  {
-    id: "storage-analytics",
-    title: "Analytics, Storage & Recovery",
-    description: "Live portfolio view insights, asset storage quotas, and member recovery protection.",
-    icon: <BarChart3 className="size-4" />,
-    rows: [
-      {
-        feature: "View analytics on live links",
-        free: { included: false, detail: "7-day summary" },
-        pro: "90-day portfolio analytics",
-        team: "365-day team analytics",
-      },
-      {
-        feature: "Asset storage & max upload size",
-        free: "250 MB · 10 MB/file",
-        pro: "5 GB · 25 MB/file",
-        team: "10 GB × seats · 25 MB/file",
-      },
-      {
-        feature: `${PAID_GRACE_DURATION_DAYS}-day paid quota grace buffer & private member recovery`,
-        free: false,
-        pro: true,
-        team: true,
-      },
-    ],
-  },
-  {
-    id: "governance",
-    title: "Privacy & Downgrade Protection",
-    description: "Isolated personal member drafts and non-destructive downgrade safeguards.",
-    icon: <Users className="size-4" />,
-    rows: [
-      {
-        feature: "Non-destructive Free downgrade protection",
-        hint: "Your Case Studies are never deleted — choose 1 active Case Study while extras remain safely stored",
-        free: true,
-        pro: true,
-        team: true,
-      },
-      {
-        feature: "Isolated private member drafts (hidden from Admins)",
-        free: false,
-        pro: false,
-        team: true,
-      },
-    ],
-  },
-];
-
-const PRICING_FAQ_STRIP = [
-  {
-    question: "How do Free, Pro, and Teams compare?",
-    answer:
-      "Free ($0) gives you 1 lifetime Case Study credit to build and publish from A to Z with an auto-generated link. Pro ($7.99/mo or $79.90/yr — 2 months free, $6.66/mo eq.) unlocks up to 10 active rotatable Case Studies, custom /p/your-slug URLs, Pro templates, and watermark-free exports. Teams ($5.99/seat/mo or $59.90/seat/yr — 2 months free, $4.99/seat/mo eq., 2–25 seats) unlocks unlimited shared Case Studies, a Team Dashboard, and pooled studio storage.",
-  },
-  {
-    question: "How does the 1 lifetime Free Case Study credit work?",
-    answer:
-      "Every Free personal workspace includes 1 one-time lifetime Case Study credit. You can edit, archive, unarchive, export, and publish that project freely — deleting it on Free does not issue a new credit. Upgrade to Pro anytime to rotate up to 10 active projects.",
-  },
-  {
-    question: "What happens if I downgrade to Free with multiple Case Studies?",
-    answer:
-      "Nothing is deleted. You pick which 1 Case Study stays active and live, while additional Case Studies remain safely stored and locked until you upgrade again.",
-  },
-] as const;
 
 function renderCellValue(val: PlanCellValue) {
   if (typeof val === "boolean") {
@@ -320,11 +108,15 @@ export function PricingPageClient({
   activeOrgId,
   paddlePriceMap,
   initialInterval = "monthly",
+  cmsPricing = DEFAULT_SITE_CMS_CONTENT.pricing,
 }: PricingPageClientProps) {
+  const catalog = mergeBillingCatalogWithCms(cmsPricing);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PaidPlanTier>("pro");
   const [selectedInterval, setSelectedInterval] = useState<BillingInterval>(initialInterval);
-  const [selectedSeats, setSelectedSeats] = useState<number>(TEAMS_CALCULATOR_DEFAULT_SEATS);
+  const [selectedSeats, setSelectedSeats] = useState<number>(
+    cmsPricing.tiers.team.defaultSeats || TEAMS_CALCULATOR_DEFAULT_SEATS,
+  );
 
   function handleSelectPaidPlan(
     plan: PaidPlanTier,
@@ -334,7 +126,9 @@ export function PricingPageClient({
     setSelectedPlan(plan);
     setSelectedInterval(interval);
     setSelectedSeats(
-      plan === "team" ? (seats ?? TEAMS_CALCULATOR_DEFAULT_SEATS) : selectedSeats,
+      plan === "team"
+        ? (seats ?? cmsPricing.tiers.team.defaultSeats ?? TEAMS_CALCULATOR_DEFAULT_SEATS)
+        : selectedSeats,
     );
     setCheckoutOpen(true);
   }
@@ -348,13 +142,13 @@ export function PricingPageClient({
 
   const proDisplayedLabel = formatUsdFromCents(
     selectedInterval === "yearly"
-      ? BILLING_PLAN_CATALOG.pro.yearlyTotalCents
-      : BILLING_PLAN_CATALOG.pro.monthlyPriceCents,
+      ? catalog.pro.yearlyTotalCents
+      : catalog.pro.monthlyPriceCents,
   );
   const teamDisplayedLabel = formatUsdFromCents(
     selectedInterval === "yearly"
-      ? BILLING_PLAN_CATALOG.team.yearlyTotalCents
-      : BILLING_PLAN_CATALOG.team.monthlyPriceCents,
+      ? catalog.team.yearlyTotalCents
+      : catalog.team.monthlyPriceCents,
   );
 
   return (
@@ -363,17 +157,14 @@ export function PricingPageClient({
       <div className="v3-pattern-grid relative z-10 overflow-hidden pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24">
         <div className="v3-container">
           <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
-            <Eyebrow step="01">Pricing &amp; Plans</Eyebrow>
+            <Eyebrow step={cmsPricing.heroEyebrowStep}>{cmsPricing.heroEyebrowText}</Eyebrow>
             <h1 className="v3-display-xl text-balance text-[var(--cf-text-primary)]">
-              Simple tiers for solo designers &amp;{" "}
-              <span className="v3-sticker-lime">scaling studios.</span>
+              {cmsPricing.heroTitleLead}{" "}
+              <span className="v3-sticker-lime">{cmsPricing.heroTitleHighlight}</span>
             </h1>
 
             <p className="v3-body-l max-w-2xl text-[var(--cf-text-secondary)]">
-              Build and publish {FREE_LIFETIME_PROJECT_LIMIT} complete Case Study free from A to
-              Z — then upgrade to Pro for up to {PRO_MAX_PROJECTS} rotatable Case Studies &amp;
-              custom URLs, or Teams ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats) for
-              unlimited studio collaboration. Get 2 months free on annual billing.
+              {cmsPricing.heroSubtitle}
             </p>
 
             <div className="mt-1 flex flex-wrap items-center justify-center gap-3">
@@ -435,6 +226,7 @@ export function PricingPageClient({
                 onTeamSeatsChange={setSelectedSeats}
                 currentTier={currentTier}
                 onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
+                cmsPricing={cmsPricing}
               />
 
               {/* Merchant of Record note */}
@@ -448,8 +240,8 @@ export function PricingPageClient({
               >
                 <ShieldCheck className="text-success size-4 shrink-0" aria-hidden="true" />
                 <span className="type-caption">
-                  Secure checkout powered by Paddle ({paddlePriceMap.environment} environment) · 2
-                  months free on annual plans · Instant tax &amp; VAT receipts · Cancel anytime.
+                  Secure checkout powered by Paddle ({paddlePriceMap.environment} environment) ·{" "}
+                  {cmsPricing.annualBadgeLabel} on annual plans · Instant tax &amp; VAT receipts · Cancel anytime.
                 </span>
               </div>
             </section>
@@ -482,8 +274,8 @@ export function PricingPageClient({
                 <span className="v3-sticker-lime">included</span> &amp; what&apos;s not
               </h2>
               <p className="v3-body-l max-w-xl text-pretty text-[var(--cf-text-secondary)]">
-                Every feature, monthly quota, seat allowance, and export capability across Free,
-                Pro, and Teams—mapped side by side with zero hidden footnotes.
+                Every feature, monthly quota, seat allowance, and export capability across{" "}
+                {catalog.free.name}, {catalog.pro.name}, and {catalog.team.name}—mapped side by side with zero hidden footnotes.
               </p>
 
               {/* Included vs Not Included Legend */}
@@ -497,8 +289,7 @@ export function PricingPageClient({
                   <span>Not included</span>
                 </span>
                 <span className="type-caption inline-flex items-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 font-mono font-semibold text-[var(--cf-text-primary)]">
-                  Teams: {TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS} seats · Annual = 2 months
-                  free
+                  {cmsPricing.annualPillText}
                 </span>
               </div>
             </div>
@@ -512,23 +303,27 @@ export function PricingPageClient({
                 <p className="type-caption text-[var(--cf-text-secondary)]">
                   Showing{" "}
                   {selectedInterval === "yearly"
-                    ? "annual rates (2 months free)"
+                    ? `annual rates (${cmsPricing.annualBadgeLabel})`
                     : "monthly billing rates"}
                 </p>
               </div>
               <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)]/70 px-5 py-4">
                 <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
-                  {BILLING_PLAN_CATALOG.free.name}
+                  {catalog.free.name}
                 </p>
-                <p className="type-caption text-[var(--cf-text-secondary)]">$0 / forever</p>
+                <p className="type-caption text-[var(--cf-text-secondary)]">
+                  {formatUsdFromCents(catalog.free.monthlyPriceCents)} / forever
+                </p>
               </div>
               <div className="flex items-center border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 p-2.5 px-3">
                 <div className="flex w-full flex-col gap-0.5 rounded-xl bg-[var(--cf-royal)] px-3.5 py-2.5 text-[var(--cf-text-on-royal)]">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-bold">{BILLING_PLAN_CATALOG.pro.name}</span>
-                    <span className="rounded-md bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-                      Most popular
-                    </span>
+                    <span className="text-sm font-bold">{catalog.pro.name}</span>
+                    {cmsPricing.popularTier === "pro" && (
+                      <span className="rounded-md bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+                        {cmsPricing.popularBadgeText}
+                      </span>
+                    )}
                   </div>
                   <p className="type-caption text-[var(--cf-text-on-royal-muted)] tabular-nums">
                     {proDisplayedLabel}
@@ -538,7 +333,7 @@ export function PricingPageClient({
               </div>
               <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)]/70 py-4 pr-6 pl-5">
                 <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
-                  {BILLING_PLAN_CATALOG.team.name}
+                  {catalog.team.name}
                 </p>
                 <p className="type-caption text-[var(--cf-text-secondary)] tabular-nums">
                   {teamDisplayedLabel}
@@ -549,7 +344,7 @@ export function PricingPageClient({
 
             {/* Categorized Comparison Tables (Title outside card + aligned columns) */}
             <ScrollRise stagger y={18} className="flex flex-col gap-10">
-              {COMPARISON_GROUPS.map((group, groupIdx) => (
+              {cmsPricing.comparisonGroups.map((group, groupIdx) => (
                 <section
                   key={group.id}
                   aria-labelledby={`comparison-group-${group.id}`}
@@ -562,7 +357,7 @@ export function PricingPageClient({
                         aria-hidden="true"
                         className="mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
                       >
-                        {group.icon}
+                        <CmsIcon iconName={group.iconName} className="size-4" />
                       </span>
                       <div className="flex min-w-0 flex-col gap-1">
                         <div className="flex flex-wrap items-center gap-2.5">
@@ -611,19 +406,19 @@ export function PricingPageClient({
                             scope="col"
                             className="type-overline border-l border-[var(--cf-border-subtle)]/70 px-5 py-3 text-left text-[var(--cf-text-tertiary)]"
                           >
-                            {BILLING_PLAN_CATALOG.free.name}
+                            {catalog.free.name}
                           </th>
                           <th
                             scope="col"
                             className="type-overline border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 px-5 py-3 text-left text-[var(--cf-royal-text)]"
                           >
-                            {BILLING_PLAN_CATALOG.pro.name}
+                            {catalog.pro.name}
                           </th>
                           <th
                             scope="col"
                             className="type-overline border-l border-[var(--cf-border-subtle)]/70 py-3 pr-6 pl-5 text-left text-[var(--cf-text-tertiary)]"
                           >
-                            {BILLING_PLAN_CATALOG.team.name}
+                            {catalog.team.name}
                           </th>
                         </tr>
                       </thead>
@@ -644,19 +439,19 @@ export function PricingPageClient({
                               )}
                             </td>
                             <td
-                              data-label={BILLING_PLAN_CATALOG.free.name}
+                              data-label={catalog.free.name}
                               className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
                             >
                               {renderCellValue(row.free)}
                             </td>
                             <td
-                              data-label={BILLING_PLAN_CATALOG.pro.name}
+                              data-label={catalog.pro.name}
                               className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-royal-text)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:bg-[var(--cf-bg-surface)]/75 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
                             >
                               {renderCellValue(row.pro)}
                             </td>
                             <td
-                              data-label={BILLING_PLAN_CATALOG.team.name}
+                              data-label={catalog.team.name}
                               className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:py-4.5 md:pr-6 md:pl-5 md:align-middle md:before:content-none"
                             >
                               {renderCellValue(row.team)}
@@ -690,6 +485,8 @@ export function PricingPageClient({
                 onStartTeamsCheckout={
                   isAuthenticated ? handleStartCalculatorCheckout : undefined
                 }
+                cmsTeamPricing={cmsPricing.tiers.team}
+                annualBadgeLabel={cmsPricing.annualBadgeLabel}
               />
             </section>
 
@@ -711,7 +508,7 @@ export function PricingPageClient({
               </div>
 
               <ScrollRise stagger y={14} className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                {PRICING_FAQ_STRIP.map((item, idx) => (
+                {cmsPricing.faqs.map((item, idx) => (
                   <article
                     key={item.question}
                     className="flex flex-col gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"

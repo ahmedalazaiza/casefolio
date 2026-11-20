@@ -3,6 +3,7 @@ import { and, eq, gt } from "@casefolio/db";
 import { auth } from "@/lib/auth/server";
 import { db, dbSchema } from "@/lib/db";
 import { sendStepUpCodeEmail } from "@/lib/email";
+import { sanitizeErrorForLogging } from "@/lib/security/redact";
 import { consumeSharedRateLimit } from "@/lib/security/shared-rate-limit";
 
 export const STEP_UP_PURPOSES = ["account_deletion", "ownership_transfer"] as const;
@@ -58,16 +59,13 @@ function constantTimeHexEqual(aHex: string, bHex: string): boolean {
   return timingSafeEqual(aBuf, bBuf);
 }
 
-/**
- * Enforces session freshness strictly from `sessions.createdAt` (never `updatedAt`).
- */
-export async function assertFreshSessionForStepUp(args: {
+async function assertValidActiveSessionForStepUp(args: {
   userId: string;
   sessionId: string;
   now?: Date;
 }): Promise<
-  | { ok: true }
-  | { ok: false; status: 401 | 403; code: "UNAUTHORIZED" | "SESSION_TOO_OLD"; error: string }
+  | { ok: true; createdAt: Date }
+  | { ok: false; status: 401; code: "UNAUTHORIZED"; error: string }
 > {
   const now = args.now ?? new Date();
   const [sessionRow] = await db
@@ -93,7 +91,31 @@ export async function assertFreshSessionForStepUp(args: {
     };
   }
 
-  if (now.getTime() - sessionRow.createdAt.getTime() > MAX_STEP_UP_SESSION_AGE_MS) {
+  return { ok: true, createdAt: sessionRow.createdAt };
+}
+
+/**
+ * Enforces session freshness strictly from `sessions.createdAt` (never `updatedAt`).
+ */
+export async function assertFreshSessionForStepUp(args: {
+  userId: string;
+  sessionId: string;
+  now?: Date;
+}): Promise<
+  | { ok: true }
+  | { ok: false; status: 401 | 403; code: "UNAUTHORIZED" | "SESSION_TOO_OLD"; error: string }
+> {
+  const now = args.now ?? new Date();
+  const active = await assertValidActiveSessionForStepUp({
+    userId: args.userId,
+    sessionId: args.sessionId,
+    now,
+  });
+  if (!active.ok) {
+    return active;
+  }
+
+  if (now.getTime() - active.createdAt.getTime() > MAX_STEP_UP_SESSION_AGE_MS) {
     return {
       ok: false,
       status: 403,
@@ -151,13 +173,13 @@ export async function sendStepUpOtp(args: {
     }
 > {
   const now = args.now ?? new Date();
-  const fresh = await assertFreshSessionForStepUp({
+  const active = await assertValidActiveSessionForStepUp({
     userId: args.userId,
     sessionId: args.sessionId,
     now,
   });
-  if (!fresh.ok) {
-    return fresh;
+  if (!active.ok) {
+    return active;
   }
 
   const rate = await consumeSharedRateLimit({
@@ -207,7 +229,9 @@ export async function sendStepUpOtp(args: {
         error: "Could not deliver confirmation code right now. Please try again shortly.",
       };
     }
-  } catch {
+  } catch (err) {
+    const safe = sanitizeErrorForLogging(err);
+    console.warn("[step-up] confirmation code delivery error:", safe.message);
     return {
       ok: false,
       status: 502,
@@ -310,13 +334,13 @@ export async function verifyStepUpWithOtp(args: {
   now?: Date;
 }): Promise<StepUpVerificationResult> {
   const now = args.now ?? new Date();
-  const fresh = await assertFreshSessionForStepUp({
+  const active = await assertValidActiveSessionForStepUp({
     userId: args.userId,
     sessionId: args.sessionId,
     now,
   });
-  if (!fresh.ok) {
-    return fresh;
+  if (!active.ok) {
+    return active;
   }
 
   const rate = await consumeSharedRateLimit({

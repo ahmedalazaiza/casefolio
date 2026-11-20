@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { LandingExperience } from "@/components/marketing/landing-experience";
 import { getServerSession } from "@/lib/auth/session";
+import { getSiteCmsContent } from "@/lib/cms/service";
 import { getLandingPlatformSnapshot } from "@/lib/marketing/landing-stats";
 import { hasSessionCookieHeader } from "@/lib/security/edge-guard";
 
@@ -42,6 +43,9 @@ export default async function HomePage() {
     }
   }
 
-  const snapshot = await getLandingPlatformSnapshot();
-  return <LandingExperience snapshot={snapshot} />;
+  const [snapshot, cms] = await Promise.all([
+    getLandingPlatformSnapshot(),
+    getSiteCmsContent(),
+  ]);
+  return <LandingExperience snapshot={snapshot} cms={cms.landing} />;
 }

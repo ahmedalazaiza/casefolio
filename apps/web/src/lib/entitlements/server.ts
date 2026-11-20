@@ -1,5 +1,6 @@
 import { and, desc, eq, isNull, type PlanTier } from "@casefolio/db";
 import {
+  BILLING_FROZEN_REASONS,
   clampTeamsSeats,
   evaluateSubscriptionLifecycle,
   getWorkspaceQuotas,
@@ -315,13 +316,14 @@ export async function resolveWorkspaceEntitlementState(
     ws.kind === "team" && subRow && !lifecycle.grantsPaidAccess && !lifecycle.isPastDueReadOnly,
   );
   const isFrozen =
-    Boolean(ws.frozenAt) || lifecycle.isPastDueReadOnly || teamCanceledOrExpired;
+    Boolean(ws.frozenAt) ||
+    (ws.kind === "team" && (lifecycle.isPastDueReadOnly || teamCanceledOrExpired));
   const frozenReason =
     ws.frozenReason ??
     (lifecycle.isPastDueReadOnly
-      ? "past_due_expired"
+      ? BILLING_FROZEN_REASONS.PAST_DUE_EXPIRED
       : teamCanceledOrExpired
-        ? "subscription_ended"
+        ? BILLING_FROZEN_REASONS.TEAM_ENDED
         : null);
 
   const admissionCeiling =

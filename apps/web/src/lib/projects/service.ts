@@ -377,11 +377,20 @@ export async function createProjectFromTemplate({
 export type ProjectEditorAccessResult =
   | { status: "not_found" }
   | { status: "forbidden" }
+  | {
+      status: "locked";
+      code: "FREE_TIER_EXTRA_PROJECT_LOCKED" | "WORKSPACE_FROZEN";
+      projectName: string;
+      workspaceKind: "personal" | "team";
+      isTeamOwner: boolean;
+      error: string;
+    }
   | { status: "ok"; payload: ProjectEditorPayload };
 
 export async function getProjectEditorAccess(
   projectId: string,
   user: { id: string; role: UserRole },
+  now: Date = new Date(),
 ): Promise<ProjectEditorAccessResult> {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -389,9 +398,24 @@ export async function getProjectEditorAccess(
     return { status: "not_found" };
   }
 
-  // Verify read visibility first (`404` for cross-tenant OR Owner/Admin probing teammate's private project!)
-  const readAuth = await authorizeProjectAccess(projectId, user.id, "read");
+  // Verify read visibility first (`404` for cross-tenant OR Owner/Admin probing teammate's private project;
+  // `403` ONLY when an authorized user hits a plan lock such as Free >1 extra project or lapsed Team freeze!)
+  const readAuth = await authorizeProjectAccess(projectId, user.id, "read", now);
   if (!readAuth.ok) {
+    if (
+      readAuth.status === 403 &&
+      (readAuth.code === "FREE_TIER_EXTRA_PROJECT_LOCKED" || readAuth.code === "WORKSPACE_FROZEN") &&
+      readAuth.lockedContext
+    ) {
+      return {
+        status: "locked",
+        code: readAuth.code,
+        projectName: readAuth.lockedContext.projectName,
+        workspaceKind: readAuth.lockedContext.workspaceKind,
+        isTeamOwner: readAuth.lockedContext.isTeamOwner,
+        error: readAuth.error,
+      };
+    }
     return { status: "not_found" };
   }
 
@@ -414,8 +438,8 @@ export async function getProjectEditorAccess(
     return { status: "not_found" };
   }
 
-  const editAuth = await authorizeProjectAccess(projectId, user.id, "edit");
-  let leaseState = await inspectProjectEditLease(projectId, user.id);
+  const editAuth = await authorizeProjectAccess(projectId, user.id, "edit", now);
+  let leaseState = await inspectProjectEditLease(projectId, user.id, now);
 
   // If editable and in a shared space, proactively acquire/refresh caller's 120s lease if free
   if (editAuth.ok && readAuth.space.visibility === "shared") {

@@ -30,7 +30,11 @@ import {
 } from "@/lib/template/schema";
 import { extractRichTextParagraphs } from "@/lib/template/theme-vars";
 import { recordAndCheckWorkspaceBandwidth } from "@/lib/usage/meter";
-import { authorizeProjectAccess, ensureProjectWorkspaceAndSpace } from "@/lib/workspaces/acl";
+import {
+  authorizeProjectAccess,
+  ensureProjectWorkspaceAndSpace,
+  resolveFreeTierActiveProjectState,
+} from "@/lib/workspaces/acl";
 import { getWorkspaceProjectCounts } from "@/lib/workspaces/service";
 
 export const RESERVED_PROJECT_SLUGS = new Set([
@@ -886,6 +890,7 @@ export async function unpublishProjectForUser(
 
 export async function getPublishedProjectBySlug(
   rawSlug: string,
+  now: Date = new Date(),
 ): Promise<PublishedCaseStudyPayload | null> {
   const normalizedSlug = normalizeProjectSlug(rawSlug);
   if (!normalizedSlug || !PROJECT_SLUG_REGEX.test(normalizedSlug)) {
@@ -933,9 +938,19 @@ export async function getPublishedProjectBySlug(
     return null;
   }
 
-  const ent = await resolveWorkspaceEntitlementState(ensured.workspace.id);
-  if (ent && (ent.lifecycle.isPastDueReadOnly || ent.frozenReason === "fraud_suspended")) {
+  const ent = await resolveWorkspaceEntitlementState(ensured.workspace.id, now);
+  if (ent && (ent.isFrozen || ent.lifecycle.isPastDueReadOnly || ent.frozenReason === "fraud_suspended")) {
     return null;
+  }
+
+  if (ent && ent.kind === "personal" && ent.plan === "free") {
+    const freeState = await resolveFreeTierActiveProjectState(
+      ensured.workspace.id,
+      ent.keepPublicProjectId,
+    );
+    if (freeState.hasExtraLocks && row.project.id !== freeState.activeProjectId) {
+      return null;
+    }
   }
 
   const [snapshot] = await db
