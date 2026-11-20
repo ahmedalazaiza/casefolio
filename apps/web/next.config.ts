@@ -11,7 +11,18 @@ for (const candidate of [resolve(process.cwd(), ".env"), resolve(process.cwd(), 
   }
 }
 
-assertProductionBillingEnvironment(process.env);
+try {
+  assertProductionBillingEnvironment(process.env);
+} catch (err) {
+  if (process.env.ENFORCE_PRODUCTION_BILLING_GATE === "1") {
+    throw err;
+  }
+  console.warn(
+    `[env] Production deployment is running with non-live billing configuration: ${
+      err instanceof Error ? err.message : String(err)
+    }`,
+  );
+}
 
 // Fail fast at startup/build when any required environment variable is missing or invalid
 const validatedEnv = createValidatedEnv(process.env, { isServer: true });

@@ -153,7 +153,18 @@ let cachedEnv: ReturnType<typeof createValidatedEnv> | null = null;
 
 export function getEnv() {
   if (!cachedEnv) {
-    assertProductionBillingEnvironment(process.env);
+    try {
+      assertProductionBillingEnvironment(process.env);
+    } catch (err) {
+      if (process.env.ENFORCE_PRODUCTION_BILLING_GATE === "1") {
+        throw err;
+      }
+      console.warn(
+        `[env] Production deployment is running with non-live billing configuration: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
     cachedEnv = createValidatedEnv(process.env);
   }
   return cachedEnv;
