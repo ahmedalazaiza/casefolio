@@ -442,7 +442,7 @@ export function CreateProjectWizard({
         {step === "type" && (
           <div data-testid="wizard-step-type" className="flex flex-1 flex-col justify-between gap-7">
             <div className="flex flex-col gap-5">
-              <div className="v3-pattern-grid relative overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+              <div className="relative overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
                 <div className="flex flex-col items-start gap-1.5">
                   <Eyebrow className="px-2.5 py-0.5 text-[0.6875rem]">Step 1 of 3</Eyebrow>
                   <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
@@ -552,7 +552,7 @@ export function CreateProjectWizard({
             className="flex flex-1 flex-col justify-between gap-7"
           >
             <div className="flex flex-col gap-5">
-              <div className="v3-pattern-grid relative overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+              <div className="relative overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
                 <div className="flex flex-col items-start gap-1.5">
                   <Eyebrow className="px-2.5 py-0.5 text-[0.6875rem]">Step 2 of 3</Eyebrow>
                   <div className="flex flex-wrap items-center gap-2.5">

@@ -246,13 +246,6 @@
 
   .bg-wash-top {
     background-color: var(--bg-canvas);
-    background-image:
-      linear-gradient(to right, var(--cf-pattern-grid) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--cf-pattern-grid) 1px, transparent 1px);
-    background-size:
-      4rem 4rem,
-      4rem 4rem;
-    background-position: top center;
   }
 
   .bg-wash-panel {

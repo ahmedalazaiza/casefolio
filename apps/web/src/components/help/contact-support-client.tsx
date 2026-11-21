@@ -156,7 +156,7 @@ export function ContactSupportClient({
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="v3-pattern-grid relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-10">
+      <header className="relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-10">
         <div className="flex flex-col gap-3">
           <Eyebrow className="w-fit">
             Support

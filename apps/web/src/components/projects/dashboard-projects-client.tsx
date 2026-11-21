@@ -1021,7 +1021,7 @@ export function DashboardProjectsClient({
           </div>
         )}
 
-        <header className="v3-pattern-grid relative flex flex-col gap-1 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+        <header className="relative flex flex-col gap-1 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
           <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             Case Study Builder
           </Eyebrow>
@@ -1183,7 +1183,7 @@ export function DashboardProjectsClient({
       )}
 
       {/* Compact Studio Header Banner + Quick Create + New Project CTA */}
-      <header className="v3-pattern-grid relative flex flex-col gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <header className="relative flex flex-col gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex flex-col gap-1">
           <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             Case Study Builder

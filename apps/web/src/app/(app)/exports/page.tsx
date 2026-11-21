@@ -16,7 +16,7 @@ export default async function WorkspaceExportsHistoryPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
-      <header className="v3-pattern-grid relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-1">
           <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">Render Archive</Eyebrow>
           <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">Studio exports</h1>

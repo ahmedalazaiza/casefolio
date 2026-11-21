@@ -669,7 +669,7 @@ export function TemplateLibraryClient({
     const isTeamsPlan = userPlan === "team" || userPlan === "plus";
     return (
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
-        <header className="v3-pattern-grid flex flex-col justify-between gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+        <header className="flex flex-col justify-between gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
           <div className="flex flex-col items-start gap-1">
             <Eyebrow icon={<LayoutTemplate />} className="px-2.5 py-0.5 text-[0.6875rem]">
               Curated Studio Library

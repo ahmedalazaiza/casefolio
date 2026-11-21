@@ -280,7 +280,7 @@ export function OnboardingWizard({
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-6 py-12 sm:py-16">
         {step === 1 && (
           <section aria-labelledby="onboarding-step-1-heading" className="flex flex-col gap-8">
-            <div className="v3-pattern-grid flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+            <div className="flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
               <Eyebrow className="w-fit">
                 Step 1 of 3
               </Eyebrow>
@@ -382,7 +382,7 @@ export function OnboardingWizard({
 
         {step === 2 && (
           <section aria-labelledby="onboarding-step-2-heading" className="flex flex-col gap-8">
-            <div className="v3-pattern-grid flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+            <div className="flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
               <Eyebrow className="w-fit">
                 Step 2 of 3
               </Eyebrow>
@@ -475,7 +475,7 @@ export function OnboardingWizard({
             onSubmit={handleComplete}
             className="flex flex-col gap-8"
           >
-            <div className="v3-pattern-grid flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+            <div className="flex flex-col gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
               <Eyebrow className="w-fit">
                 Step 3 of 3
               </Eyebrow>

@@ -37,7 +37,7 @@ export function HelpCenterClient({
         </div>
       )}
       {/* Architectural Royal Grid Help Hero + Studio Command Search */}
-      <section className="v3-pattern-grid flex flex-col items-center gap-8 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center text-[var(--cf-text-primary)] sm:py-20">
+      <section className="flex flex-col items-center gap-8 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center text-[var(--cf-text-primary)] sm:py-20">
         <div className="flex flex-col items-center gap-4">
           <Eyebrow icon={<LifeBuoy className="size-3.5" />}>
             {cmsIntro?.eyebrow || "Help center"}
