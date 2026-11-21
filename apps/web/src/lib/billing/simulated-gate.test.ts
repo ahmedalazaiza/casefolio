@@ -25,6 +25,7 @@ describe("simulated billing opt-in gate (B2)", () => {
 
   it("does not offer a simulated checkout session without the opt-in", async () => {
     vi.stubEnv("ALLOW_SIMULATED_BILLING", "");
+    vi.stubEnv("NEXT_PUBLIC_PADDLE_CLIENT_TOKEN", "test_your_paddle_client_token");
     const res = await prepareCheckoutSessionForUser(actor, input);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.code).toBe("BILLING_NOT_CONFIGURED");

@@ -32,7 +32,15 @@ export default async function PrivacyPage() {
               {legalAndHelp.privacySubtitle}
             </p>
             <p className="font-mono text-xs font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-              {legalAndHelp.privacyEffectiveLine}
+              {legalAndHelp.privacyEffectiveLine} · Operated by{" "}
+              <a
+                href="https://www.layerat.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--cf-text-secondary)] underline underline-offset-4 hover:text-[var(--cf-royal-text)]"
+              >
+                LAYERAT
+              </a>
             </p>
           </div>
 

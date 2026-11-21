@@ -40,6 +40,8 @@ export interface PreparedCheckoutPayload {
   amountCents?: number;
   amountUsd: number;
   customerEmail: string;
+  /** Signed-in customer's Paddle Customer ID (`ctm_...`) for Paddle Retain (`pwCustomer`). */
+  paddleCustomerId?: string | null;
   orgId: string | null;
   /** Identity-free: `operationId` points at the server-side checkout intent. */
   customData: {
@@ -145,9 +147,15 @@ export function PaddleCheckoutModal({
     const planName = BILLING_PLAN_CATALOG[session.plan].name;
     let completionHandled = false;
 
+    const retainCustomerId =
+      session.paddleCustomerId && /^ctm_[a-z0-9]+$/i.test(session.paddleCustomerId)
+        ? session.paddleCustomerId
+        : undefined;
+
     const paddle: Paddle | undefined = await initializePaddle({
-      environment: session.environment,
+      ...(session.environment === "sandbox" ? { environment: "sandbox" } : {}),
       token: session.clientToken,
+      ...(retainCustomerId ? { pwCustomer: { id: retainCustomerId } } : {}),
       eventCallback(event) {
         if (event.name === "checkout.completed" && !completionHandled) {
           completionHandled = true;

@@ -14,8 +14,12 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
-// The signed local billing simulator needs an explicit opt-in (see isSimulatedBillingAllowed).
-process.env.ALLOW_SIMULATED_BILLING ??= "1";
+// The signed local billing simulator needs an explicit opt-in and placeholder token/key in Vitest
+// even when the developer's local .env contains real Paddle Sandbox/Live credentials.
+process.env.PADDLE_ENV = "sandbox";
+process.env.ALLOW_SIMULATED_BILLING = "1";
+process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN = "test_your_paddle_client_token";
+process.env.PADDLE_API_KEY = "pdl_sdbx_apikey_your_key";
 
 afterEach(() => {
   cleanup();

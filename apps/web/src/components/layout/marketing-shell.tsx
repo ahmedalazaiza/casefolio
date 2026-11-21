@@ -355,10 +355,21 @@ export function MarketingShell({
                 </li>
               ))}
             </ul>
-            <div className="flex items-center gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1">
               <p className="v3-body-s text-[var(--cf-text-tertiary)]">
                 {brand.copyrightText}
               </p>
+              <span className="v3-body-s text-[var(--cf-text-tertiary)]">
+                ·{" "}
+                <a
+                  href="https://www.layerat.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[var(--cf-royal-text)] underline-offset-4 hover:underline"
+                >
+                  www.layerat.com
+                </a>
+              </span>
               <ThemeToggle />
             </div>
           </div>

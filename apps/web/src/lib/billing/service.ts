@@ -74,6 +74,11 @@ export interface PreparedCheckoutSession {
   amountUsd: number;
   customerEmail: string;
   /**
+   * Signed-in customer's Paddle Customer ID (`ctm_...`) for Paddle Retain (`pwCustomer`),
+   * when the user already has a synced Paddle customer record. Never internal user ID or email.
+   */
+  paddleCustomerId?: string | null;
+  /**
    * Organization the purchase will belong to (Teams only). Resolved server-side; never trusted
    * from the browser when the webhook arrives.
    */
@@ -372,6 +377,7 @@ export async function prepareCheckoutSessionForUser(
     .select({
       plan: dbSchema.subscriptions.plan,
       status: dbSchema.subscriptions.status,
+      paddleCustomerId: dbSchema.subscriptions.paddleCustomerId,
       paddleSubscriptionId: dbSchema.subscriptions.paddleSubscriptionId,
       scheduledChangeAction: dbSchema.subscriptions.scheduledChangeAction,
     })
@@ -405,6 +411,30 @@ export async function prepareCheckoutSessionForUser(
           ? "Your last payment failed. Update your payment method in Billing instead of buying again."
           : "You already have an active subscription. Manage or change it from Billing — you have not been charged.",
     };
+  }
+
+  let paddleCustomerId: string | null =
+    existingScopeSub?.paddleCustomerId &&
+    /^ctm_[a-z0-9]+$/i.test(existingScopeSub.paddleCustomerId)
+      ? existingScopeSub.paddleCustomerId
+      : null;
+
+  if (!paddleCustomerId) {
+    const [latestCustomerSub] = await db
+      .select({
+        paddleCustomerId: dbSchema.subscriptions.paddleCustomerId,
+      })
+      .from(dbSchema.subscriptions)
+      .where(eq(dbSchema.subscriptions.userId, actor.id))
+      .orderBy(desc(dbSchema.subscriptions.updatedAt))
+      .limit(1);
+
+    if (
+      latestCustomerSub?.paddleCustomerId &&
+      /^ctm_[a-z0-9]+$/i.test(latestCustomerSub.paddleCustomerId)
+    ) {
+      paddleCustomerId = latestCustomerSub.paddleCustomerId;
+    }
   }
 
   const amountCents = getChargeAmountCents(valid.plan, valid.interval, seats);
@@ -445,6 +475,7 @@ export async function prepareCheckoutSessionForUser(
       amountCents,
       amountUsd,
       customerEmail: actor.email,
+      paddleCustomerId,
       orgId,
       customData: {
         operationId,

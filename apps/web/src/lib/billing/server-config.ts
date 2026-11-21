@@ -51,7 +51,9 @@ export function resolvePlanFromServerPriceId(
   return null;
 }
 
-export function isRealPaddleTokenConfigured(token = env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN): boolean {
+export function isRealPaddleTokenConfigured(
+  token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
+): boolean {
   const normalized = token.trim().toLowerCase();
   if (!normalized.startsWith("test_") && !normalized.startsWith("live_")) {
     return false;
@@ -62,7 +64,9 @@ export function isRealPaddleTokenConfigured(token = env.NEXT_PUBLIC_PADDLE_CLIEN
   return !PLACEHOLDER_TOKEN_PATTERNS.some((pat) => normalized.includes(pat));
 }
 
-export function isRealPaddleApiKeyConfigured(apiKey = env.PADDLE_API_KEY): boolean {
+export function isRealPaddleApiKeyConfigured(
+  apiKey = process.env.PADDLE_API_KEY ?? env.PADDLE_API_KEY,
+): boolean {
   const normalized = apiKey.trim().toLowerCase();
   if (!normalized.startsWith("pdl_")) {
     return false;

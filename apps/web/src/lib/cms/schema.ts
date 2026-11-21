@@ -403,7 +403,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
     ],
     footerTagline:
       "The constrained case study studio for product designers, agencies, and creative teams. Pick a layout, drop in screens, and ship.",
-    copyrightText: "© 2026 Casefolio Studio",
+    copyrightText: "© 2026 Casefolio · A product of LAYERAT",
     footerColumns: [
       {
         heading: "Product",
@@ -429,6 +429,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
         links: [
           { label: "Terms of use", href: "/terms" },
           { label: "Privacy policy", href: "/privacy" },
+          { label: "Refund policy", href: "/terms#refunds" },
         ],
       },
     ],
@@ -951,9 +952,9 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       {
         id: "collection",
         step: "01",
-        title: "Information We Collect & Why",
-        summary: "Minimal account and workspace metadata required to run your studio.",
-        body: "When you register for Casefolio, we collect your name, email address, authentication provider identifiers, onboarding preferences, and workspace settings. Inside the editor, we store the structured JSON documents, theme tokens, and visual assets you explicitly upload so we can autosave, preview, publish, and export your case studies reliably.",
+        title: "Information We Collect & Data Controller",
+        summary: "Minimal account and workspace metadata collected by LAYERAT to run Casefolio.",
+        body: "Casefolio is owned and operated by LAYERAT (https://www.layerat.com). When you register for Casefolio, we collect your name, email address, authentication provider identifiers, onboarding preferences, and workspace settings. Inside the editor, we store the structured JSON documents, theme tokens, and visual assets you explicitly upload so we can autosave, preview, publish, and export your case studies reliably.",
       },
       {
         id: "image-sanitization",
@@ -974,7 +975,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
         step: "04",
         title: "Billing & Infrastructure Subprocessors",
         summary: "Vetted infrastructure partners scoped strictly to service delivery.",
-        body: "Subscription checkout, tax calculation, and invoicing are processed by Paddle (Merchant of Record). Transactional emails (verification codes, password resets, export notifications) and cloud storage operate over TLS-encrypted connections with strict least-privilege credentials. We never sell, rent, or broker designer data or portfolio content to third parties or AI training brokers.",
+        body: "Paid subscriptions for Casefolio (a LAYERAT product, www.layerat.com) are processed by Paddle, our authorized Merchant of Record, which handles payment methods, tax calculation, and invoicing. Transactional emails (verification codes, password resets, export notifications) and cloud storage operate over TLS-encrypted connections with strict least-privilege credentials. We never sell, rent, or broker designer data or portfolio content to third parties or AI training brokers.",
       },
       {
         id: "security",
@@ -1028,9 +1029,9 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       {
         id: "eligibility",
         step: "01",
-        title: "Workspace Eligibility & Account Security",
-        summary: "Who can operate a Casefolio workspace and how credentials are protected.",
-        body: "By creating a Casefolio account, you confirm that you are at least 16 years old (or the minimum legal age of digital consent in your jurisdiction) and authorized to agree to these Terms of Use on behalf of yourself or your studio. You are responsible for maintaining the confidentiality of your login credentials, passkeys, or OAuth sessions and for all activity conducted within your workspace.",
+        title: "Operator, Workspace Eligibility & Account Security",
+        summary: "Who operates Casefolio and who can use a workspace.",
+        body: "Casefolio is owned and operated by LAYERAT (https://www.layerat.com). By creating a Casefolio account, you confirm that you are at least 16 years old (or the minimum legal age of digital consent in your jurisdiction) and authorized to agree to these Terms of Use on behalf of yourself or your studio. You are responsible for maintaining the confidentiality of your login credentials, passkeys, or OAuth sessions and for all activity conducted within your workspace.",
       },
       {
         id: "ownership",
@@ -1057,8 +1058,8 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
         id: "billing",
         step: "05",
         title: "Subscriptions, Taxes & Merchant of Record",
-        summary: "How Pro and Team plans are billed globally via Paddle.",
-        body: "Paid subscriptions (Pro and Team) are processed through Paddle, our authorized Merchant of Record, which handles global payment methods, invoicing, and regional VAT/sales tax compliance. Subscriptions renew automatically on your selected monthly or annual billing cycle unless canceled prior to renewal.",
+        summary: "How Pro and Team plans are billed globally via Paddle on behalf of LAYERAT.",
+        body: "Paid subscriptions for Casefolio (Pro and Team) are sold by LAYERAT (https://www.layerat.com) and processed through Paddle, our authorized Merchant of Record, which handles global payment methods, invoicing, and regional VAT/sales tax compliance. Subscriptions renew automatically on your selected monthly or annual billing cycle unless canceled prior to renewal.",
       },
       {
         id: "cancellation",
@@ -1068,8 +1069,15 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
         body: "You can cancel or modify your subscription at any time from Account → Billing. When canceled, paid features remain active through the end of your current paid billing period. Afterward, your workspace transitions gracefully to Free tier limits without deleting your underlying draft content, so you never lose your writing or uploaded assets unexpectedly.",
       },
       {
-        id: "liability",
+        id: "refunds",
         step: "07",
+        title: "Refund & Consumer Withdrawal Policy",
+        summary: "14-day refund eligibility and how refunds are processed via Paddle.",
+        body: "If you are unhappy with your initial Casefolio Pro or Teams purchase, you may request a full refund within fourteen (14) days of your initial transaction in accordance with consumer protection laws and Paddle's Merchant of Record refund policy. To request a refund, contact our billing team via /help/contact or reply directly to your Paddle receipt email. Approved refunds are issued by Paddle back to your original payment method.",
+      },
+      {
+        id: "liability",
+        step: "08",
         title: "Service Availability, Warranties & Contact",
         summary: "Platform reliability commitments, limitation of liability, and updates.",
         body: "We engineer Casefolio for high availability, automated backups, and deterministic exports, but the service is provided on an 'as is' and 'as available' basis to the maximum extent permitted by applicable law. Casefolio's aggregate liability for any claim relating to the service shall not exceed the fees paid by you in the twelve (12) months preceding the claim. If we make material updates to these Terms, we will notify workspace owners in advance.",
