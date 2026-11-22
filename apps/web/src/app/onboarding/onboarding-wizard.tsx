@@ -494,6 +494,8 @@ export function OnboardingWizard({
               <div className="flex items-center gap-5">
                 {avatarUrl ? (
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={avatarUrl}
                     alt={displayName || "Profile avatar"}
                     className="size-20 rounded-xl border border-[var(--cf-border-subtle)] object-cover"

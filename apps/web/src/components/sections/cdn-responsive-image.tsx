@@ -83,6 +83,8 @@ export function CdnResponsiveImage({
   ) {
     return (
       <img
+        loading="lazy"
+        decoding="async"
         src={trimmedSrc}
         alt={alt}
         style={cropFramingStyle ?? undefined}

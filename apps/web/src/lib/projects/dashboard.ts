@@ -19,7 +19,10 @@ import {
   resolveWorkspaceEntitlementState,
 } from "@/lib/entitlements/server";
 import { revalidatePublicProject } from "@/lib/projects/public-cache";
-import { resolveProjectOrTemplateThumbnailUrl } from "@/lib/template/cover-url";
+import {
+  resolveProjectOrTemplateThumbnailUrl,
+  resolveThumbnailFromMockupSrc,
+} from "@/lib/template/cover-url";
 import {
   authorizeProjectAccess,
   ensureProjectWorkspaceAndSpace,
@@ -143,9 +146,28 @@ export async function listDashboardProjectsForUser(
 
   const includeArchived = options?.includeArchived ?? true;
 
+  // Select ONLY the columns the dashboard card needs. The full `puck_data` document (often tens of
+  // KB per project) stays in Postgres: we extract just the first user-uploaded mockup URL in SQL.
+  const mockupThumbSrc = sql<string | null>`(jsonb_path_query_first(${dbSchema.projects.puckData}, '$.content[*].props.mockup.src ? (@ like_regex "^(https?://[^/]+)?/(cdn/images|api/assets)/" && !(@ like_regex "^https?://cdn[.]casefolio[.]app"))') #>> '{}')`;
+
   const rows = await db
     .select({
-      project: dbSchema.projects,
+      project: {
+        id: dbSchema.projects.id,
+        name: dbSchema.projects.name,
+        type: dbSchema.projects.type,
+        visibility: dbSchema.projects.visibility,
+        slug: dbSchema.projects.slug,
+        publishedAt: dbSchema.projects.publishedAt,
+        archivedAt: dbSchema.projects.archivedAt,
+        createdAt: dbSchema.projects.createdAt,
+        updatedAt: dbSchema.projects.updatedAt,
+        workspaceId: dbSchema.projects.workspaceId,
+        spaceId: dbSchema.projects.spaceId,
+        createdByUserId: dbSchema.projects.createdByUserId,
+        ownerId: dbSchema.projects.ownerId,
+      },
+      mockupThumbSrc,
       templateName: dbSchema.templates.name,
       templateTier: dbSchema.templates.tier,
       templateSlug: dbSchema.templates.slug,
@@ -219,8 +241,8 @@ export async function listDashboardProjectsForUser(
       templateTier: row.templateTier,
       templateSlug: row.templateSlug,
       templateCoverUrl: row.templateCoverUrl,
-      thumbnailUrl: resolveProjectOrTemplateThumbnailUrl(
-        row.project.puckData,
+      thumbnailUrl: resolveThumbnailFromMockupSrc(
+        row.mockupThumbSrc,
         row.templateCoverUrl,
         row.templateSlug,
       ),

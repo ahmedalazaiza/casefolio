@@ -72,6 +72,8 @@ export function ProjectCard({
         <div className="bg-sunken relative h-44 w-full overflow-hidden">
           {thumbnailUrl ? (
             <img
+              loading="lazy"
+              decoding="async"
               src={thumbnailUrl}
               alt={title}
               className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"

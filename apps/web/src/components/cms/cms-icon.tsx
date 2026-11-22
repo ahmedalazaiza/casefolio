@@ -55,6 +55,8 @@ export function CmsIcon({
   if (cleanUrl) {
     return (
       <img
+        loading="lazy"
+        decoding="async"
         src={cleanUrl}
         alt=""
         className={cn("object-contain", className, imageClassName)}

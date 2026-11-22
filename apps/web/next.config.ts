@@ -81,6 +81,26 @@ const nextConfig: NextConfig = {
           allowSameOriginFraming: true,
         }),
       },
+      // Static template artwork & landing images (public/): cache at the CDN/browser instead of
+      // revalidating on every view. Two-segment match keeps the `/templates` page itself uncached-by-rule.
+      {
+        source: "/templates/:slug/:file",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
+      {
+        source: "/landing/:file",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
     ];
   },
 };

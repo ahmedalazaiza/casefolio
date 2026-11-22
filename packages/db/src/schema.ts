@@ -139,7 +139,11 @@ export const memberships = pgTable(
     role: text("role").$type<MembershipRole>().notNull().default("member"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("memberships_user_org_uidx").on(table.userId, table.orgId)],
+  (table) => [
+    uniqueIndex("memberships_user_org_uidx").on(table.userId, table.orgId),
+    // "Members of org X" lookups (seat counts, team pages) filter by org only.
+    index("memberships_org_idx").on(table.orgId),
+  ],
 );
 
 // Business Tenancy: workspaces (1 personal workspace per user; 1 team workspace per organization)
@@ -383,6 +387,10 @@ export const projects = pgTable(
     index("projects_org_id_idx").on(table.orgId),
     index("projects_workspace_space_idx").on(table.workspaceId, table.spaceId),
     index("projects_workspace_updated_idx").on(table.workspaceId, table.updatedAt),
+    // Dashboard: WHERE space_id IN (...) ORDER BY updated_at DESC LIMIT n
+    index("projects_space_updated_idx").on(table.spaceId, table.updatedAt),
+    // Template usage counts / FK lookups by template version.
+    index("projects_template_version_idx").on(table.templateVersionId),
   ],
 );
 

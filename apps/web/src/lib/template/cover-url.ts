@@ -157,3 +157,19 @@ export function resolveProjectOrTemplateThumbnailUrl(
 
   return resolveTemplateCoverUrl(templateCoverUrl, templateSlug);
 }
+
+/**
+ * Same decision as {@link resolveProjectOrTemplateThumbnailUrl}, but for callers that already
+ * extracted the first `mockup.src` in SQL (so the full `puck_data` document never leaves Postgres).
+ */
+export function resolveThumbnailFromMockupSrc(
+  mockupSrc: string | null | undefined,
+  templateCoverUrl: string | null | undefined,
+  templateSlug?: string | null,
+): string | null {
+  const src = typeof mockupSrc === "string" ? mockupSrc.trim() : "";
+  if (src && isUserUploadedProjectAssetUrl(src)) {
+    return src;
+  }
+  return resolveTemplateCoverUrl(templateCoverUrl, templateSlug);
+}

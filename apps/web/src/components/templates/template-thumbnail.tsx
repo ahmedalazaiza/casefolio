@@ -54,6 +54,7 @@ export function TemplateThumbnail({
           src={resolvedUrl}
           alt={alt ?? `${name} cover thumbnail`}
           loading={loading}
+          decoding="async"
           onError={() => setFailedUrl(resolvedUrl)}
           className={cn(
             "size-full object-cover object-center transition-transform duration-500",

@@ -68,6 +68,8 @@ export function HeroDevice({
             <div className="obsidian-surface obsidian-hairline w-44 -rotate-6 overflow-hidden rounded-xl border p-2">
               <div className="bg-inverse overflow-hidden rounded-xl border border-border/30">
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src="/templates/cinema/screen-seats.svg"
                   alt=""
                   className="aspect-9/16 w-full object-cover"
@@ -92,6 +94,8 @@ export function HeroDevice({
             <div className="obsidian-surface obsidian-hairline w-56 rotate-3 overflow-hidden rounded-xl border p-2.5">
               <div className="overflow-hidden rounded-xl border border-border/30">
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src="/templates/atlas/hero-planner.svg"
                   alt=""
                   className="aspect-16/10 w-full object-cover"
@@ -201,6 +205,8 @@ export function HeroDevice({
                   className="obsidian-hairline flex flex-col gap-3 rounded-xl border p-3"
                 >
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={screen.src}
                     alt={screen.title}
                     className="aspect-9/16 max-h-80 w-full rounded-xl object-cover"
@@ -222,6 +228,8 @@ export function HeroDevice({
             <div className="grid grid-cols-1 items-center gap-6 p-3 sm:p-6 lg:grid-cols-12">
               <div className="overflow-hidden rounded-xl border obsidian-hairline lg:col-span-7">
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src="/landing/export-bundle-preview.svg"
                   alt="Behance 1400px strip, 2x Retina PNG, and A4 PDF bundle export preview"
                   className="aspect-16/9 w-full object-cover"
@@ -333,6 +341,8 @@ export function WorkMarquee({ templates }: { templates: LandingTemplateShowcaseI
               >
                 <div className="aspect-4/3 overflow-hidden">
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={item.src}
                     alt={dup === 0 ? `${item.name} case study layout` : ""}
                     className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -531,6 +541,8 @@ export function ObsidianWorkflowStage({
             <div className="grid w-full grid-cols-1 items-center gap-4 sm:grid-cols-3">
               <div className="hidden -rotate-6 overflow-hidden rounded-xl border obsidian-hairline shadow-card transition-transform duration-500 hover:rotate-0 sm:block">
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src="/templates/cinema/screen-showtimes.svg"
                   alt="Cinema showtimes mobile frame"
                   className="aspect-9/16 max-h-64 w-full object-cover"
@@ -538,6 +550,8 @@ export function ObsidianWorkflowStage({
               </div>
               <div className="z-10 overflow-hidden rounded-xl border-2 border-primary shadow-overlay transition-transform duration-500 hover:scale-[1.03]">
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src="/templates/cinema/screen-seats.svg"
                   alt="Cinema active iPhone 16 Pro seat picker screen"
                   className="aspect-9/16 max-h-72 w-full object-cover"
@@ -545,6 +559,8 @@ export function ObsidianWorkflowStage({
               </div>
               <div className="hidden rotate-6 overflow-hidden rounded-xl border obsidian-hairline shadow-card transition-transform duration-500 hover:rotate-0 sm:block">
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src="/landing/orbit-home.svg"
                   alt="Orbit fintech home frame"
                   className="aspect-9/16 max-h-64 w-full object-cover"
@@ -636,6 +652,8 @@ export function ObsidianWorkflowStage({
           {active.id === "export" ? (
             <div className="grid w-full items-center gap-5 sm:grid-cols-2">
               <img
+                loading="lazy"
+                decoding="async"
                 src="/landing/export-bundle-preview.svg"
                 alt="Export formats preview"
                 className="aspect-16/9 w-full rounded-xl border obsidian-hairline object-cover"
@@ -789,6 +807,8 @@ export function TemplateStack({
                   className="relative block aspect-4/3 overflow-hidden bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 >
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={template.coverSrc}
                     alt={`Preview ${template.name} — ${template.headline}`}
                     className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
@@ -797,6 +817,8 @@ export function TemplateStack({
                   {template.previewSecondarySrc ? (
                     <div className="border-border/80 bg-elevated/95 pointer-events-none absolute right-3 bottom-3 w-24 translate-y-2 overflow-hidden rounded-xl border p-1 opacity-90 shadow-overlay transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                       <img
+                        loading="lazy"
+                        decoding="async"
                         src={template.previewSecondarySrc}
                         alt=""
                         className="aspect-9/16 w-full rounded-lg object-cover"
@@ -884,6 +906,8 @@ export function FeatureColumns({
       <div className="flex flex-col items-start gap-5 lg:sticky lg:top-24 lg:col-span-5">
         <div className="border-border bg-surface w-full overflow-hidden rounded-xl border p-3">
           <img
+            loading="lazy"
+            decoding="async"
             src="/templates/meridian-pro/cover.svg"
             alt="Meridian dashboard case study composition"
             className="aspect-4/3 w-full rounded-xl object-cover"
@@ -923,6 +947,8 @@ export function FeatureColumns({
           </div>
           <div className="border-border bg-surface flex w-full shrink-0 items-center justify-between gap-4 rounded-xl border p-3 sm:w-52">
             <img
+              loading="lazy"
+              decoding="async"
               src="/landing/orbit-home.svg"
               alt="Orbit mobile preview"
               className="aspect-9/16 h-28 rounded-lg object-cover"

@@ -12,6 +12,7 @@ import {
 import { filterAdminUsers, serializeAdminUsersCsv } from "@/lib/admin/users-types";
 import { auth } from "@/lib/auth/server";
 import { resolveServerPaddlePriceId } from "@/lib/billing/server-config";
+import { BILLING_PLAN_CATALOG } from "@/lib/billing/plans";
 import { db, dbSchema } from "@/lib/db";
 
 const createdUserIds: string[] = [];
@@ -120,9 +121,9 @@ describe("Admin users & subscriptions service (C-904)", () => {
     expect(csv).toContain(memberEmail);
     expect(csv).toContain("pro");
 
-    // 2. Subscriptions overview includes active MRR ($9.99/mo Pro catalog price)
+    // 2. Subscriptions overview includes active MRR (Pro monthly catalog price)
     const subsOverview = await getAdminSubscriptionsOverview();
-    expect(subsOverview.mrrUsd).toBeGreaterThanOrEqual(9.99);
+    expect(subsOverview.mrrUsd).toBeGreaterThanOrEqual(BILLING_PLAN_CATALOG.pro.monthlyPriceUsd);
     expect(subsOverview.payingUsersCount).toBeGreaterThanOrEqual(1);
 
     // 3. Live Paddle API fetch & sync

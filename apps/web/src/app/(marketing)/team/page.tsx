@@ -118,6 +118,8 @@ export default async function TeamPage() {
                     <div className="flex items-center gap-4">
                       {member.avatarImageUrl ? (
                         <img
+                          loading="lazy"
+                          decoding="async"
                           src={member.avatarImageUrl}
                           alt={member.name}
                           className="size-14 shrink-0 rounded-xl border border-[var(--cf-border-subtle)] object-cover"

@@ -51,6 +51,8 @@ export function AvatarBadge({
     >
       {src ? (
         <img
+          loading="lazy"
+          decoding="async"
           src={src}
           alt={alt ?? formattedInitials}
           className="size-full object-cover"

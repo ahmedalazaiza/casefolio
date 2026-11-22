@@ -311,7 +311,9 @@ describe("admin overview & analytics metrics (C-901)", () => {
       beforeSql.activeSubs,
       afterSql.activeSubs,
     );
-    expect(metrics.mrrUsd).toBeGreaterThanOrEqual(9.99 + 5.59);
+    expect(metrics.mrrUsd).toBeGreaterThanOrEqual(
+      computeSubscriptionMrrUsd("pro", "monthly", 1) + computeSubscriptionMrrUsd("team", "yearly", 1),
+    );
     expectMatchesConcurrentSql(
       metrics.publishedCaseStudies,
       beforeSql.publishedProjects,

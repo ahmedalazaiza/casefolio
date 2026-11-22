@@ -6,7 +6,7 @@ import { WizardClient } from "@/app/new/wizard-client";
 import { requireSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
 import { createProjectAction } from "@/lib/projects/actions";
-import { listPublishedLibraryTemplates } from "@/lib/template/service";
+import { getCachedPublishedTemplates } from "@/lib/template/cached-catalog";
 import { listWorkspaceSwitcherState } from "@/lib/workspaces/service";
 
 export const metadata: Metadata = {
@@ -49,7 +49,7 @@ export default async function NewProjectWizardPage({
   }
 
   const [templates, workspaceContext] = await Promise.all([
-    listPublishedLibraryTemplates(),
+    getCachedPublishedTemplates(),
     listWorkspaceSwitcherState(user.id, session.activeOrganizationId ?? null),
   ]);
 

@@ -5,6 +5,7 @@ import {
   desc,
   eq,
   inArray,
+  sql,
   type ProjectType,
   type TemplateTier,
 } from "@casefolio/db";
@@ -358,50 +359,78 @@ export async function listAdminTemplates(): Promise<AdminTemplateSummary[]> {
     return [];
   }
 
-  const allVersions = await db.select().from(dbSchema.templateVersions);
-  const versionById = new Map(allVersions.map((v) => [v.id, v]));
-  const versionIdsByTemplate = new Map<string, string[]>();
-  for (const v of allVersions) {
-    const arr = versionIdsByTemplate.get(v.templateId) ?? [];
-    arr.push(v.id);
-    versionIdsByTemplate.set(v.templateId, arr);
+  // Aggregate inside Postgres: never load every version document or every project row into Node.
+  const versionData = dbSchema.templateVersions.data;
+  const sectionCountExpr = sql<number>`coalesce(jsonb_array_length(case when jsonb_typeof(${versionData} #> '{puck,content}') = 'array' then ${versionData} #> '{puck,content}' else '[]'::jsonb end), 0)`;
+  const slotCountExpr = sql<number>`coalesce((select count(*) from jsonb_object_keys(case when jsonb_typeof(${versionData} #> '{template,slots}') = 'object' then ${versionData} #> '{template,slots}' else '{}'::jsonb end)), 0)`;
+
+  interface VersionStat {
+    id: string;
+    templateId: string;
+    version: string;
+    sectionCount: number;
+    slotCount: number;
   }
 
-  const allProjects = await db
-    .select({ templateVersionId: dbSchema.projects.templateVersionId })
-    .from(dbSchema.projects);
-  const projectCountByVersion = new Map<string, number>();
-  for (const p of allProjects) {
-    projectCountByVersion.set(
-      p.templateVersionId,
-      (projectCountByVersion.get(p.templateVersionId) ?? 0) + 1,
-    );
+  const currentVersionIds = rows
+    .map((row) => row.template.currentVersionId)
+    .filter((id): id is string => Boolean(id));
+  const templateIdsWithoutCurrent = rows
+    .filter((row) => !row.template.currentVersionId)
+    .map((row) => row.template.id);
+
+  const [currentStats, fallbackStats, projectCountRows] = await Promise.all([
+    currentVersionIds.length > 0
+      ? db
+          .select({
+            id: dbSchema.templateVersions.id,
+            templateId: dbSchema.templateVersions.templateId,
+            version: dbSchema.templateVersions.version,
+            sectionCount: sectionCountExpr,
+            slotCount: slotCountExpr,
+          })
+          .from(dbSchema.templateVersions)
+          .where(inArray(dbSchema.templateVersions.id, currentVersionIds))
+      : Promise.resolve<VersionStat[]>([]),
+    templateIdsWithoutCurrent.length > 0
+      ? db
+          .select({
+            id: dbSchema.templateVersions.id,
+            templateId: dbSchema.templateVersions.templateId,
+            version: dbSchema.templateVersions.version,
+            sectionCount: sectionCountExpr,
+            slotCount: slotCountExpr,
+          })
+          .from(dbSchema.templateVersions)
+          .where(inArray(dbSchema.templateVersions.templateId, templateIdsWithoutCurrent))
+          .orderBy(desc(dbSchema.templateVersions.createdAt))
+      : Promise.resolve<VersionStat[]>([]),
+    db
+      .select({ templateId: dbSchema.templateVersions.templateId, total: count() })
+      .from(dbSchema.projects)
+      .innerJoin(
+        dbSchema.templateVersions,
+        eq(dbSchema.projects.templateVersionId, dbSchema.templateVersions.id),
+      )
+      .groupBy(dbSchema.templateVersions.templateId),
+  ]);
+
+  const statByVersionId = new Map(currentStats.map((stat) => [stat.id, stat]));
+  const fallbackByTemplateId = new Map<string, VersionStat>();
+  for (const stat of fallbackStats) {
+    // rows are newest-first; keep the first (latest) version per template
+    if (!fallbackByTemplateId.has(stat.templateId)) {
+      fallbackByTemplateId.set(stat.templateId, stat);
+    }
   }
+  const projectCountByTemplate = new Map(
+    projectCountRows.map((row) => [row.templateId, Number(row.total)]),
+  );
 
   return rows.map(({ template, category }) => {
     const currentVer = template.currentVersionId
-      ? versionById.get(template.currentVersionId)
-      : allVersions.find((v) => v.templateId === template.id);
-
-    let sectionCount = 0;
-    let slotCount = 0;
-    if (currentVer?.data && typeof currentVer.data === "object") {
-      const rawDoc = currentVer.data as {
-        template?: { slots?: Record<string, unknown> };
-        puck?: { content?: unknown[] };
-      };
-      sectionCount = Array.isArray(rawDoc.puck?.content) ? rawDoc.puck.content.length : 0;
-      slotCount =
-        rawDoc.template?.slots && typeof rawDoc.template.slots === "object"
-          ? Object.keys(rawDoc.template.slots).length
-          : 0;
-    }
-
-    const tplVersionIds = versionIdsByTemplate.get(template.id) ?? [];
-    const projectCount = tplVersionIds.reduce(
-      (sum, vid) => sum + (projectCountByVersion.get(vid) ?? 0),
-      0,
-    );
+      ? statByVersionId.get(template.currentVersionId)
+      : fallbackByTemplateId.get(template.id);
 
     return {
       id: template.id,
@@ -414,9 +443,9 @@ export async function listAdminTemplates(): Promise<AdminTemplateSummary[]> {
       categoryName: category?.name ?? null,
       categorySlug: category?.slug ?? null,
       currentVersion: currentVer?.version ?? null,
-      sectionCount,
-      slotCount,
-      projectCount,
+      sectionCount: Number(currentVer?.sectionCount ?? 0),
+      slotCount: Number(currentVer?.slotCount ?? 0),
+      projectCount: projectCountByTemplate.get(template.id) ?? 0,
       updatedAtIso: template.updatedAt.toISOString(),
     };
   });
@@ -1057,6 +1086,9 @@ export async function listPublishedLibraryTemplates(
   if (filters.tier) {
     conditions.push(eq(dbSchema.templates.tier, filters.tier));
   }
+  if (filters.categorySlug) {
+    conditions.push(eq(dbSchema.categories.slug, filters.categorySlug));
+  }
 
   const rows = await db
     .select({
@@ -1075,10 +1107,6 @@ export async function listPublishedLibraryTemplates(
 
   const items: PublishedTemplateItem[] = [];
   for (const row of rows) {
-    if (filters.categorySlug && row.category?.slug !== filters.categorySlug) {
-      continue;
-    }
-
     const parsed = validateTemplateDocument(row.version.data);
     if (!parsed.ok) {
       continue;

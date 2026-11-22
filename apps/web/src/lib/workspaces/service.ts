@@ -390,10 +390,24 @@ export async function listWorkspaceSwitcherState(
     .where(eq(dbSchema.memberships.userId, userId))
     .orderBy(asc(dbSchema.organizations.createdAt));
 
-  for (const row of memberOrgs) {
-    const teamEnsured = await ensureTeamWorkspaceForOrganization(row.organization.id, userId);
-    const teamEnt = await resolveWorkspaceEntitlementState(teamEnsured.workspaceId, now);
-    if (!teamEnt) continue;
+  // Resolve every team workspace concurrently (was a sequential await-per-org loop on EVERY page load).
+  const entitlementByWorkspaceId = new Map<
+    string,
+    NonNullable<Awaited<ReturnType<typeof resolveWorkspaceEntitlementState>>>
+  >([[personal.workspaceId, personalEntitlement]]);
+
+  const teamResolved = await Promise.all(
+    memberOrgs.map(async (row) => {
+      const teamEnsured = await ensureTeamWorkspaceForOrganization(row.organization.id, userId);
+      const teamEnt = await resolveWorkspaceEntitlementState(teamEnsured.workspaceId, now);
+      return teamEnt ? { row, teamEnsured, teamEnt } : null;
+    }),
+  );
+
+  for (const resolved of teamResolved) {
+    if (!resolved) continue;
+    const { row, teamEnsured, teamEnt } = resolved;
+    entitlementByWorkspaceId.set(teamEnsured.workspaceId, teamEnt);
 
     options.push({
       workspaceId: teamEnsured.workspaceId,
@@ -412,7 +426,9 @@ export async function listWorkspaceSwitcherState(
       ? options.find((opt) => opt.organizationId === activeOrganizationId)
       : undefined) ?? options[0]!;
 
-  const activeEnt = (await resolveWorkspaceEntitlementState(activeOpt.workspaceId, now))!;
+  const activeEnt =
+    entitlementByWorkspaceId.get(activeOpt.workspaceId) ??
+    (await resolveWorkspaceEntitlementState(activeOpt.workspaceId, now))!;
   const [spaces, usage, [recoveryCountRow]] = await Promise.all([
     listVisibleSpacesForWorkspace(activeOpt.workspaceId, userId),
     getWorkspaceUsageSnapshot(activeOpt.workspaceId, now),
