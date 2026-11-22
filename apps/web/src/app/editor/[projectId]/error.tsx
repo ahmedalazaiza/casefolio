@@ -23,7 +23,7 @@ export default function EditorErrorBoundary({
         <BrandLogo href="/dashboard" subtitle="CASE STUDY EDITOR" />
       </header>
 
-      <main className="border-border/80 bg-elevated shadow-float mx-auto flex max-w-lg flex-col items-center gap-5 rounded-3xl border px-8 py-12 text-center sm:px-12">
+      <main className="border-border/80 bg-elevated shadow-float mx-auto flex max-w-lg flex-col items-center gap-5 rounded-xl border px-8 py-12 text-center sm:px-12">
         <Eyebrow className="w-fit font-mono">EDITOR</Eyebrow>
         <h1 className="text-foreground type-display-m">Editor paused</h1>
         <p className="text-muted-foreground type-body-m">

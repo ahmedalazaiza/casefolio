@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Badge, ProBadge } from "@/components/ui/badge";
+import { Badge, ProBadge, TeamsBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -102,6 +102,8 @@ export interface PaddleCheckoutModalProps {
   initialSeats?: number;
   orgId?: string | null;
   onCheckoutCompleted?: (plan: PaidPlanTier) => void;
+  /** Optional context headline, e.g. "Unlock the Meridian Pro template". */
+  contextTitle?: string;
 }
 
 export function PaddleCheckoutModal({
@@ -112,6 +114,7 @@ export function PaddleCheckoutModal({
   initialSeats = TEAMS_CALCULATOR_DEFAULT_SEATS,
   orgId = null,
   onCheckoutCompleted,
+  contextTitle,
 }: PaddleCheckoutModalProps) {
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState<PaidPlanTier>(initialPlan);
@@ -292,9 +295,15 @@ export function PaddleCheckoutModal({
         <DialogHeader>
           <div className="flex flex-wrap items-center gap-2">
             <DialogTitle>
-              {prepared ? "Paddle Sandbox Checkout" : `Upgrade to ${planDef.name}`}
+              {prepared
+                ? "Paddle Sandbox Checkout"
+                : (contextTitle ?? `Upgrade to ${planDef.name}`)}
             </DialogTitle>
-            <ProBadge />
+            {selectedPlan === "pro" ? (
+              <ProBadge />
+            ) : (
+              <TeamsBadge />
+            )}
             {!IS_PRODUCTION_BILLING && (
               <Badge tone="neutral" withDot={false}>
                 Sandbox
@@ -396,7 +405,9 @@ export function PaddleCheckoutModal({
                     Paid seats ({TEAMS_MIN_SEATS}–{TEAMS_MAX_SELF_SERVE_SEATS})
                   </span>
                   <span className="text-muted-foreground type-caption">
-                    $5.99/seat/mo · $4.99/seat/mo on annual (2 months free).
+                    {formatUsdFromCents(BILLING_PLAN_CATALOG.team.monthlyPriceCents)}/seat/mo ·{" "}
+                    {formatUsdFromCents(BILLING_PLAN_CATALOG.team.yearlyMonthlyEquivalentCents)}
+                    /seat/mo billed annually (2 months free).
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

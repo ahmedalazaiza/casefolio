@@ -194,9 +194,9 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
         /* Matches Figma 2:8745 "Analytics — Not published yet" */
         <section
           data-testid="analytics-unpublished-empty"
-          className="border-border/80 bg-elevated shadow-card flex flex-col items-start gap-4 rounded-3xl border p-8 sm:p-14"
+          className="border-border/80 bg-elevated shadow-card flex flex-col items-start gap-4 rounded-xl border p-8 sm:p-14"
         >
-          <div className="bg-accent text-primary flex size-14 items-center justify-center rounded-2xl">
+          <div className="bg-accent text-primary flex size-14 items-center justify-center rounded-xl">
             <Eye className="size-6" />
           </div>
           <div className="flex flex-col gap-2">
@@ -215,7 +215,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <article
               data-testid="analytics-kpi-views"
-              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-xl border p-6"
             >
               <span className="text-tertiary type-overline">VIEWS</span>
               <span
@@ -231,7 +231,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
 
             <article
               data-testid="analytics-kpi-visitors"
-              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-xl border p-6"
             >
               <span className="text-tertiary type-overline">UNIQUE VISITORS</span>
               <span
@@ -247,7 +247,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
 
             <article
               data-testid="analytics-kpi-engagement"
-              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-xl border p-6"
             >
               <span className="text-tertiary type-overline">VIEWS PER VISITOR</span>
               <span className="text-foreground type-display-m">
@@ -262,7 +262,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
 
             <article
               data-testid="analytics-kpi-exports"
-              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-3xl border p-6"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-2 rounded-xl border p-6"
             >
               <span className="text-tertiary type-overline">DOWNLOADS &amp; EXPORTS</span>
               <span className="text-foreground type-display-m">
@@ -278,7 +278,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
           <div className="grid gap-6 lg:grid-cols-12">
             <section
               data-testid="analytics-views-chart-card"
-              className="border-border/80 bg-elevated shadow-card flex flex-col justify-between gap-6 rounded-3xl border p-6 sm:p-8 lg:col-span-8"
+              className="border-border/80 bg-elevated shadow-card flex flex-col justify-between gap-6 rounded-xl border p-6 sm:p-8 lg:col-span-8"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-foreground type-heading-s">Views over time</h2>
@@ -363,7 +363,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
 
             <section
               data-testid="analytics-top-sources-card"
-              className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 sm:p-8 lg:col-span-4"
+              className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-xl border p-6 sm:p-8 lg:col-span-4"
             >
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-foreground type-heading-s">Top sources</h2>

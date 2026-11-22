@@ -153,7 +153,7 @@ export function AdminCmsPanel({
       <div
         role="tablist"
         aria-label="Site CMS sections"
-        className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5"
+        className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5"
       >
         {CMS_TABS.map((tab) => {
           const active = tab.key === activeTab;
@@ -181,7 +181,7 @@ export function AdminCmsPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-2xl border px-4 py-3"
+          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-xl border px-4 py-3"
         >
           {errorMessage}
         </div>
@@ -191,7 +191,7 @@ export function AdminCmsPanel({
         <div
           role="status"
           data-testid="cms-status-banner"
-          className="border-success/30 bg-success-soft text-foreground type-body-s flex items-center gap-2 rounded-2xl border px-4 py-3"
+          className="border-success/30 bg-success-soft text-foreground type-body-s flex items-center gap-2 rounded-xl border px-4 py-3"
         >
           <CheckCircle2 className="text-success size-4 shrink-0" />
           <span>{statusMessage}</span>

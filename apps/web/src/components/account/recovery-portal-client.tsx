@@ -151,7 +151,7 @@ export function RecoveryPortalClient({ recoverySpaces }: RecoveryPortalClientPro
 
       {recoverySpaces.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-3 p-10 text-center">
-          <div className="bg-surface border-border flex size-11 items-center justify-center rounded-2xl border">
+          <div className="bg-surface border-border flex size-11 items-center justify-center rounded-xl border">
             <ArchiveRestore className="text-muted-foreground size-5" />
           </div>
           <div className="flex flex-col gap-1">
@@ -189,7 +189,7 @@ export function RecoveryPortalClient({ recoverySpaces }: RecoveryPortalClientPro
                 This private space had no saved projects when your membership ended.
               </p>
             ) : (
-              <div className="divide-border/70 border-border/80 bg-surface/40 divide-y rounded-2xl border">
+              <div className="divide-border/70 border-border/80 bg-surface/40 divide-y rounded-xl border">
                 {space.projects.map((project) => {
                   const copiedId = copiedMap[project.id];
                   const isBusy = busyProjectId === project.id;

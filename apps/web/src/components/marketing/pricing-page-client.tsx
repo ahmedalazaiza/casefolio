@@ -189,7 +189,7 @@ export function PricingPageClient({
 
           {isAuthenticated && currentTier && (
             <div className="mt-6 flex justify-center">
-              <div className="inline-flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-4 py-2.5">
+              <div className="inline-flex flex-wrap items-center gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-4 py-2.5">
                 <span className="v3-body-s text-[var(--cf-text-secondary)]">
                   Signed in on{" "}
                   <strong className="text-[var(--cf-text-primary)] capitalize">
@@ -236,7 +236,7 @@ export function PricingPageClient({
                 data-pro-yearly={paddlePriceMap.pro_yearly}
                 data-team-monthly={paddlePriceMap.team_monthly}
                 data-team-yearly={paddlePriceMap.team_yearly}
-                className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-3 text-center text-[var(--cf-text-secondary)]"
+                className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-3 text-center text-[var(--cf-text-secondary)]"
               >
                 <ShieldCheck className="text-success size-4 shrink-0" aria-hidden="true" />
                 <span className="type-caption">
@@ -295,7 +295,7 @@ export function PricingPageClient({
             </div>
 
             {/* Desktop aligned 3-tier plan summary strip */}
-            <div className="hidden overflow-hidden rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] md:grid md:grid-cols-[37%_20%_21%_22%]">
+            <div className="hidden overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] md:grid md:grid-cols-[37%_20%_21%_22%]">
               <div className="flex flex-col justify-center py-4 pr-5 pl-6">
                 <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
                   Capability &amp; quota breakdown
@@ -383,7 +383,7 @@ export function PricingPageClient({
                   </div>
 
                   {/* Standalone 4-column comparison table card */}
-                  <div className="overflow-hidden rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
+                  <div className="overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
                     <table
                       aria-label={`${group.title} comparison`}
                       className="block w-full border-collapse text-left md:table md:table-fixed"
@@ -511,7 +511,7 @@ export function PricingPageClient({
                 {cmsPricing.faqs.map((item, idx) => (
                   <article
                     key={item.question}
-                    className="flex flex-col gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
+                    className="flex flex-col gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:border-[var(--cf-royal)]"
                   >
                     <span
                       className={cn(

@@ -272,7 +272,7 @@ export function ExportCaseStudyDialog({
                     setErrorMessage(null);
                   }}
                   className={cn(
-                    "flex flex-col gap-1.5 rounded-2xl border p-4 text-left transition-colors",
+                    "flex flex-col gap-1.5 rounded-xl border p-4 text-left transition-colors",
                     isSelected
                       ? "border-primary bg-accent/40"
                       : "border-border/80 bg-surface/50 hover:border-border-strong",

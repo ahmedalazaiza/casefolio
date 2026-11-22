@@ -31,12 +31,12 @@ export function ProjectCard({
         data-state="skeleton"
         aria-busy="true"
         className={cn(
-          "flex flex-col gap-3.5 rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4",
+          "flex flex-col gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4",
           className,
         )}
         {...props}
       >
-        <div className="bg-sunken h-48 w-full animate-pulse rounded-2xl" />
+        <div className="bg-sunken h-48 w-full animate-pulse rounded-xl" />
         <div className="flex flex-col gap-2 px-1 py-1">
           <div className="bg-sunken h-4 w-3/5 animate-pulse rounded-xs" />
           <div className="bg-sunken h-3.5 w-2/5 animate-pulse rounded-xs" />
@@ -50,12 +50,12 @@ export function ProjectCard({
       data-slot="project-card"
       data-state="default"
       className={cn(
-        "group flex min-w-0 flex-col gap-3.5 rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 text-card-foreground transition-all duration-200 hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
+        "group flex min-w-0 flex-col gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 text-card-foreground transition-all duration-200 hover:border-[var(--cf-royal)]",
         className,
       )}
       {...props}
     >
-      <div className="overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)]">
+      <div className="overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)]">
         <div
           aria-hidden="true"
           className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-2"
@@ -146,11 +146,11 @@ export function TemplateTypeCard({
       data-state={state}
       aria-disabled={isComingSoon ? true : undefined}
       className={cn(
-        "group relative flex flex-col justify-between gap-6 rounded-[1.5rem] border p-6 transition-all duration-200",
+        "group relative flex flex-col justify-between gap-4 rounded-xl border p-5 transition-colors duration-200",
         state === "default" &&
-          "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
+          "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:border-[var(--cf-royal)]",
         isSelected &&
-          "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)] -translate-y-0.5 hover:shadow-[var(--cf-shadow-hover)]",
+          "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
         isComingSoon &&
           "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-muted-foreground cursor-not-allowed border-dashed",
         className,
@@ -161,7 +161,7 @@ export function TemplateTypeCard({
         <span
           aria-hidden="true"
           className={cn(
-            "inline-flex size-12 items-center justify-center rounded-xl transition-colors",
+            "inline-flex size-10 items-center justify-center rounded-lg transition-colors",
             state === "default" &&
               "border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]",
             isSelected &&
@@ -303,10 +303,10 @@ export function PlanCard({
       data-slot="plan-card"
       data-highlighted={highlighted ? "true" : "false"}
       className={cn(
-        "relative flex h-full min-w-0 flex-col justify-between gap-6 rounded-[1.75rem] border p-6 transition-all duration-300 lg:p-6 xl:p-7",
+        "relative flex h-full min-w-0 flex-col justify-between gap-6 rounded-xl border p-6 transition-all duration-300 lg:p-6 xl:p-7",
         highlighted
-          ? "v3-pattern-dots-dark border-[var(--cf-royal)] hover:-translate-y-1 hover:shadow-[var(--cf-shadow-hover)]"
-          : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
+          ? "v3-pattern-dots-dark border-[var(--cf-royal)]"
+          : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:border-[var(--cf-royal)]",
         className,
       )}
       {...props}

@@ -109,7 +109,7 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
         <div
           role="alert"
           data-testid="theme-contrast-warning"
-          className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-xl border p-3.5"
+          className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex items-start gap-2.5 rounded-xl border p-3.5"
         >
           <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
           <div className="flex flex-col gap-1">

@@ -101,7 +101,7 @@ export default async function TeamPage() {
                 <article
                   key={member.id}
                   data-testid={`team-member-card-${member.id}`}
-                  className="group flex flex-col justify-between gap-5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] sm:p-7"
+                  className="group flex flex-col justify-between gap-5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:border-[var(--cf-royal)] sm:p-7"
                 >
                   <div className="flex flex-col gap-4">
                     {/* Top Spec Strip */}

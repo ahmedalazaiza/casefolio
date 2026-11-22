@@ -23,7 +23,7 @@ export default function RootErrorBoundary({
         <BrandLogo href="/" subtitle="CASE STUDY BUILDER" />
       </header>
 
-      <main className="border-border/80 bg-elevated shadow-float mx-auto flex max-w-lg flex-col items-center gap-5 rounded-3xl border px-8 py-12 text-center sm:px-12">
+      <main className="border-border/80 bg-elevated shadow-float mx-auto flex max-w-lg flex-col items-center gap-5 rounded-xl border px-8 py-12 text-center sm:px-12">
         <Eyebrow className="w-fit font-mono">ERROR</Eyebrow>
         <h1 className="text-foreground type-display-m">Something went wrong</h1>
         <p className="text-muted-foreground type-body-m">

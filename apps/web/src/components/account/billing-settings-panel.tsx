@@ -108,7 +108,7 @@ function KeepFreeProjectSelector({
 }) {
   if (projects.length <= 1) return null;
   return (
-    <div className="border-border/70 bg-surface/80 flex flex-col gap-1.5 rounded-2xl border p-3">
+    <div className="border-border/70 bg-surface/80 flex flex-col gap-1.5 rounded-xl border p-3">
       <Label htmlFor={id} className="type-caption text-foreground">
         {label}
       </Label>
@@ -683,10 +683,10 @@ export function BillingSettingsPanel({
         <div
           role="alert"
           data-testid="billing-payment-failed-banner"
-          className="border-destructive/30 bg-destructive-soft flex flex-wrap items-center justify-between gap-4 rounded-3xl border p-5 sm:p-6"
+          className="border-destructive/30 bg-destructive-soft flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5 sm:p-6"
         >
           <div className="flex items-start gap-3.5">
-            <div className="bg-elevated text-destructive flex size-10 shrink-0 items-center justify-center rounded-2xl">
+            <div className="bg-elevated text-destructive flex size-10 shrink-0 items-center justify-center rounded-xl">
               <AlertTriangle className="size-4" />
             </div>
             <div className="flex flex-col gap-1">
@@ -721,10 +721,10 @@ export function BillingSettingsPanel({
         <div
           role="status"
           data-testid="billing-cancelled-banner"
-          className="border-warning/30 bg-warning-soft flex flex-wrap items-center justify-between gap-4 rounded-3xl border p-5 sm:p-6"
+          className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5 sm:p-6"
         >
           <div className="flex items-start gap-3.5">
-            <div className="bg-elevated text-warning flex size-10 shrink-0 items-center justify-center rounded-2xl">
+            <div className="bg-elevated text-warning flex size-10 shrink-0 items-center justify-center rounded-xl">
               <AlertTriangle className="size-4" />
             </div>
             <div className="flex flex-col gap-1">
@@ -766,7 +766,7 @@ export function BillingSettingsPanel({
         {/* Current plan card */}
         <section
           data-testid="billing-current-plan-card"
-          className="border-border/80 bg-wash-panel flex flex-col justify-between gap-5 rounded-3xl border p-6 sm:p-7"
+          className="border-border/80 bg-wash-panel flex flex-col justify-between gap-5 rounded-xl border p-6 sm:p-7"
         >
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
@@ -809,7 +809,7 @@ export function BillingSettingsPanel({
             {personalPublished.length > 1 && !hasPaidAccess && (
               <div
                 data-testid="free-locked-summary-box"
-                className="border-warning/35 bg-warning-soft/50 flex items-start gap-2.5 rounded-2xl border p-3"
+                className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] flex items-start gap-2.5 rounded-xl border p-3"
               >
                 <Lock className="text-warning mt-0.5 size-4 shrink-0" />
                 <div className="flex flex-col gap-0.5">
@@ -913,7 +913,7 @@ export function BillingSettingsPanel({
         {/* Payment method card */}
         <section
           data-testid="billing-payment-method-card"
-          className="border-border/80 bg-elevated flex flex-col justify-between gap-5 rounded-3xl border p-6 sm:p-7"
+          className="border-border/80 bg-elevated flex flex-col justify-between gap-5 rounded-xl border p-6 sm:p-7"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground type-body-s-strong">
@@ -986,7 +986,7 @@ export function BillingSettingsPanel({
       {teamBilling && (
         <section
           data-testid="team-billing-seat-card"
-          className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
+          className="border-border/80 bg-elevated flex flex-col gap-5 rounded-xl border p-6 sm:p-8"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
@@ -1074,7 +1074,7 @@ export function BillingSettingsPanel({
             <div
               role="alert"
               data-testid="team-billing-past-due-banner"
-              className="border-destructive/30 bg-destructive-soft flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+              className="border-destructive/30 bg-destructive-soft flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3"
             >
               <p className="text-foreground type-body-s">
                 Team renewal failed —{" "}
@@ -1112,7 +1112,7 @@ export function BillingSettingsPanel({
             <div
               role="status"
               data-testid="team-billing-cancelled-banner"
-              className="border-warning/30 bg-warning-soft flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+              className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3"
             >
               <p className="text-foreground type-body-s">
                 Teams subscription ends on{" "}
@@ -1136,7 +1136,7 @@ export function BillingSettingsPanel({
           )}
 
           {/* 5 separate, unambiguous seat counters */}
-          <dl className="border-border bg-surface grid grid-cols-2 gap-3 rounded-2xl border p-4 sm:grid-cols-5">
+          <dl className="border-border bg-surface grid grid-cols-2 gap-3 rounded-xl border p-4 sm:grid-cols-5">
             <div className="flex flex-col gap-0.5">
               <dt className="text-muted-foreground type-caption">Paid seats (S)</dt>
               <dd
@@ -1187,7 +1187,7 @@ export function BillingSettingsPanel({
           {teamBilling.renewalSeats !== null && (
             <div
               data-testid="pending-seat-decrease-banner"
-              className="border-warning/30 bg-warning-soft flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+              className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3"
             >
               <p className="text-foreground type-body-s">
                 Scheduled to renew at{" "}
@@ -1330,7 +1330,7 @@ export function BillingSettingsPanel({
       {/* Billing details card */}
       <section
         data-testid="billing-details-card"
-        className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
+        className="border-border/80 bg-elevated flex flex-col gap-5 rounded-xl border p-6 sm:p-8"
       >
         <div className="flex flex-col gap-1">
           <h3 className="text-foreground type-heading-m">Billing details</h3>
@@ -1342,13 +1342,13 @@ export function BillingSettingsPanel({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <span className="text-foreground type-body-s-strong">Account name</span>
-            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-2xl border px-3.5 py-2">
+            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-xl border px-3.5 py-2">
               {accountName}
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="text-foreground type-body-s-strong">Billing email</span>
-            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-2xl border px-3.5 py-2 break-all">
+            <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-xl border px-3.5 py-2 break-all">
               {accountEmail}
             </div>
           </div>
@@ -1358,7 +1358,7 @@ export function BillingSettingsPanel({
           <span className="text-foreground type-body-s-strong">
             Tax &amp; VAT compliance
           </span>
-          <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-2xl border px-3.5 py-2">
+          <div className="border-border/80 bg-surface text-muted-foreground type-body-s flex min-h-11 items-center rounded-xl border px-3.5 py-2">
             Paddle.com Market Limited acts as Merchant of Record and calculates regional
             VAT/sales tax at checkout.
           </div>
@@ -1380,7 +1380,7 @@ export function BillingSettingsPanel({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="border-border bg-surface flex flex-col gap-2.5 rounded-2xl border p-4">
+            <div className="border-border bg-surface flex flex-col gap-2.5 rounded-xl border p-4">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground type-caption">
                   Prorated charge due today
@@ -1507,7 +1507,7 @@ export function BillingSettingsPanel({
                           setPickerTier(tier);
                         }
                       }}
-                      className={`focus-visible:ring-ring/40 flex cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-5 text-left transition-all outline-none focus-visible:ring-2 ${
+                      className={`focus-visible:ring-ring/40 flex cursor-pointer flex-col justify-between gap-4 rounded-xl border p-5 text-left transition-all outline-none focus-visible:ring-2 ${
                         selected
                           ? "border-primary bg-accent/50 ring-primary/15 ring-2"
                           : "border-border/80 bg-surface/70 hover:border-border-strong"

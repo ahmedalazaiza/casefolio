@@ -1257,7 +1257,7 @@ export function ConstrainedEditor({
             <div
               role="status"
               data-testid="editor-readonly-banner"
-              className="border-warning/40 bg-warning-soft text-foreground flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-2"
+              className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-2"
             >
               <div className="flex items-center gap-2">
                 <AlertTriangle className="text-warning size-4 shrink-0" />
@@ -1422,7 +1422,7 @@ export function ConstrainedEditor({
                               type="button"
                               data-testid={`insert-preset-${preset.key}`}
                               onClick={() => handleInsertSectionPreset(preset.key)}
-                              className="border-border/70 bg-elevated hover:border-primary/60 flex flex-col items-start gap-0.5 rounded-md border px-3 py-2.5 text-left transition-all hover:shadow-[var(--cf-shadow-hover)]"
+                              className="border-border/70 bg-elevated hover:border-primary/60 flex flex-col items-start gap-0.5 rounded-md border px-3 py-2.5 text-left transition-all"
                             >
                               <span className="text-foreground type-body-s-strong">
                                 {preset.label}
@@ -1938,7 +1938,7 @@ export function ConstrainedEditor({
                     </div>
 
                     {emptyRequiredSlots.length > 0 && (
-                      <div className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-xl border p-3.5">
+                      <div className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex items-start gap-2.5 rounded-xl border p-3.5">
                         <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
                         <span className="type-caption">
                           {emptyRequiredSlots.length} required{" "}
@@ -1954,7 +1954,7 @@ export function ConstrainedEditor({
                           key={slot.id}
                           type="button"
                           onClick={() => handleSelectSection(slot.sectionIndex)}
-                          className="border-border/70 bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-all hover:shadow-[var(--cf-shadow-hover)]"
+                          className="border-border/70 bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-all"
                         >
                           <div className="flex min-w-0 items-center gap-3">
                             <span className="bg-surface border-border/80 inline-flex h-11 w-8.5 shrink-0 items-center justify-center overflow-hidden rounded-md border">
@@ -2514,7 +2514,7 @@ export function ConstrainedEditor({
 
       {/* Full Clean Preview Modal */}
       <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
-        <DialogContent className="max-w-5xl rounded-2xl">
+        <DialogContent className="max-w-5xl rounded-xl">
           <DialogHeader>
             <DialogTitle>
               {puckData.root.props.title || initialPayload.project.name}

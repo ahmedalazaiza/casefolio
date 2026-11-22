@@ -53,7 +53,7 @@ export function CmsPricingEditor({
     <div className="flex flex-col gap-5">
       <div
         role="note"
-        className="border-warning/35 bg-warning-soft text-foreground flex items-start gap-3 rounded-2xl border p-4"
+        className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex items-start gap-3 rounded-xl border p-4"
       >
         <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
         <div className="type-caption flex flex-col gap-1">

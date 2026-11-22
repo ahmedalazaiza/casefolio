@@ -145,7 +145,7 @@ export default async function WorkspaceAnalyticsOverviewPage() {
       ) : (
         <section
           data-testid="overview-projects-table"
-          className="w-full max-w-full min-w-0 overflow-x-auto rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
+          className="w-full max-w-full min-w-0 overflow-x-auto rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
         >
           <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-6 py-3">
             <div className="flex items-center gap-2">

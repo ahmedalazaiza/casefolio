@@ -566,7 +566,7 @@
   --cf-shadow-soft: none;
   --cf-shadow-sheet: none;
   --cf-shadow-royal-sheet: none;
-  --cf-shadow-hover: 0 12px 28px -12px rgba(12, 13, 18, 0.16);
+  --cf-shadow-hover: none;
 
   /* Product mockup & template artwork tokens (pure neutral chrome + full-strength brand accents) */
   --cf-mock-chrome-bg: #ffffff;
@@ -656,7 +656,7 @@
   --cf-shadow-soft: none;
   --cf-shadow-sheet: none;
   --cf-shadow-royal-sheet: none;
-  --cf-shadow-hover: 0 14px 30px -12px rgba(0, 0, 0, 0.55);
+  --cf-shadow-hover: none;
 }
 
 @layer utilities {
@@ -1080,4 +1080,65 @@
     transform: translateY(0);
     box-shadow: none;
   }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Toasts — flat Casefolio notification surface (overrides Sonner defaults)
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-sonner-toaster] [data-sonner-toast].cf-toast[data-styled='true'] {
+  box-shadow: none;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border-width: 1px;
+  font-family: inherit;
+}
+
+[data-sonner-toaster] [data-sonner-toast].cf-toast [data-icon] {
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+[data-sonner-toaster] [data-sonner-toast].cf-toast [data-content] {
+  gap: 0.125rem;
+  padding-top: 0.0625rem;
+}
+
+[data-sonner-toaster] [data-sonner-toast].cf-toast .cf-toast-title {
+  color: var(--cf-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+[data-sonner-toaster] [data-sonner-toast].cf-toast .cf-toast-description {
+  color: var(--cf-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+[data-sonner-toaster] [data-sonner-toast].cf-toast .cf-toast-action {
+  margin-left: auto;
+  align-self: center;
+  border-radius: 0.5rem;
+  background: var(--cf-bg-action);
+  color: var(--cf-text-on-action);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+[data-sonner-toaster] [data-sonner-toast].cf-toast .cf-toast-cancel {
+  border-radius: 0.5rem;
+  background: var(--cf-bg-surface);
+  color: var(--cf-text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+[data-sonner-toaster] [data-sonner-toast].cf-toast [data-close-button] {
+  border: 1px solid var(--cf-border-subtle);
+  background: var(--cf-bg-elevated);
+  color: var(--cf-text-secondary);
 }

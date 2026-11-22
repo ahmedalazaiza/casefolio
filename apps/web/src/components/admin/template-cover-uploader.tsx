@@ -88,7 +88,7 @@ export function TemplateCoverUploader({
   return (
     <div
       data-testid="template-cover-uploader"
-      className="border-border/80 bg-surface/60 flex flex-col gap-4 rounded-2xl border p-4 sm:p-5"
+      className="border-border/80 bg-surface/60 flex flex-col gap-4 rounded-xl border p-4 sm:p-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
@@ -128,7 +128,7 @@ export function TemplateCoverUploader({
       {isLegacySample && (
         <div
           data-testid="cover-sample-placeholder-notice"
-          className="border-warning/35 bg-warning-soft text-foreground flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5"
+          className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5"
         >
           <span className="type-caption">
             Sample placeholder URL detected from JSON. Upload a real cover thumbnail for crisp cards
@@ -237,7 +237,7 @@ export function TemplateCoverUploader({
             void handleSelectedFile(dropped);
           }}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors",
+            "flex cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors",
             isDragging
               ? "border-primary bg-accent/40"
               : "border-border/80 bg-elevated/60 hover:border-border-strong hover:bg-elevated",
@@ -252,7 +252,7 @@ export function TemplateCoverUploader({
             </>
           ) : (
             <>
-              <div className="border-border/70 bg-surface inline-flex size-11 items-center justify-center rounded-2xl border">
+              <div className="border-border/70 bg-surface inline-flex size-11 items-center justify-center rounded-xl border">
                 <ImagePlus className="text-primary size-5" />
               </div>
               <div className="flex flex-col gap-0.5">

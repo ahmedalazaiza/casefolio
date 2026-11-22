@@ -218,7 +218,7 @@ export function TeamsSeatCalculator({
 
           {/* Pooled workspace quotas preview */}
           {seats <= TEAMS_MAX_SELF_SERVE_SEATS && (
-            <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-4 sm:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-4 sm:grid-cols-4">
               <div className="flex flex-col gap-0.5">
                 <dt className="type-caption text-[var(--cf-text-tertiary)]">Case Studies</dt>
                 <dd className="v3-body-s-strong text-[var(--cf-text-primary)]">Unlimited</dd>
@@ -246,7 +246,7 @@ export function TeamsSeatCalculator({
         </div>
 
         {/* Electric Royal Blue Studio Price Breakdown Card */}
-        <div className="v3-pattern-dots-dark flex flex-col justify-between gap-5 rounded-[1.75rem] border border-[var(--cf-border-on-royal)] p-5 text-[var(--cf-text-on-royal)] sm:p-6 lg:col-span-5">
+        <div className="v3-pattern-dots-dark flex flex-col justify-between gap-5 rounded-xl border border-[var(--cf-border-on-royal)] p-5 text-[var(--cf-text-on-royal)] sm:p-6 lg:col-span-5">
           {priceResult.ok ? (
             <>
               <div className="flex flex-col gap-2">

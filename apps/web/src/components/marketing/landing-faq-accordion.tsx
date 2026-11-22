@@ -30,10 +30,10 @@ export function LandingFaqAccordion({
           <div
             key={item.question}
             className={cn(
-              "rounded-2xl border transition-all duration-200",
+              "rounded-xl border transition-all duration-200",
               isOpen
                 ? "border-[var(--cf-border-strong)] bg-[var(--cf-bg-elevated)]"
-                : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
+                : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] hover:border-[var(--cf-royal)]",
             )}
           >
             <h3 className="m-0">
@@ -43,7 +43,7 @@ export function LandingFaqAccordion({
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 onClick={() => setOpenIndex(isOpen ? null : idx)}
-                className="v3-body-m-strong focus-visible:ring-ring/40 flex w-full items-center justify-between gap-4 rounded-2xl px-5 py-5 text-left text-[var(--cf-text-primary)] outline-none focus-visible:ring-2 lg:px-6"
+                className="v3-body-m-strong focus-visible:ring-ring/40 flex w-full items-center justify-between gap-4 rounded-xl px-5 py-5 text-left text-[var(--cf-text-primary)] outline-none focus-visible:ring-2 lg:px-6"
               >
                 <span>{item.question}</span>
                 <span

@@ -37,7 +37,7 @@ export function HelpCenterClient({
         </div>
       )}
       {/* Architectural Royal Grid Help Hero + Studio Command Search */}
-      <section className="flex flex-col items-center gap-8 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center text-[var(--cf-text-primary)] sm:py-20">
+      <section className="flex flex-col items-center gap-8 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center text-[var(--cf-text-primary)] sm:py-20">
         <div className="flex flex-col items-center gap-4">
           <Eyebrow icon={<LifeBuoy className="size-3.5" />}>
             {cmsIntro?.eyebrow || "Help center"}
@@ -64,7 +64,7 @@ export function HelpCenterClient({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search articles — e.g. “export PDF”"
-            className="focus-visible:ring-ring/40 type-body-m h-14 w-full rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] pr-12 pl-14 text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 type-body-m h-14 w-full rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] pr-12 pl-14 text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
           />
           {hasQuery && (
             <button
@@ -88,7 +88,7 @@ export function HelpCenterClient({
 
       {/* Articles + Electric Royal Blue Support Card */}
       {filtered.length === 0 ? (
-        <div className="v3-pattern-dots-light flex flex-col items-center justify-center gap-3.5 rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-10 text-center">
+        <div className="v3-pattern-dots-light flex flex-col items-center justify-center gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-10 text-center">
           <p className="v3-heading-s text-[var(--cf-text-primary)]">
             No articles match “{query.trim()}”
           </p>
@@ -115,7 +115,7 @@ export function HelpCenterClient({
             <Link
               key={article.slug}
               href={`/help/${article.slug}`}
-              className="focus-visible:ring-ring/40 group flex flex-col justify-between gap-5 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 outline-none hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 group flex flex-col justify-between gap-5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 outline-none hover:border-[var(--cf-royal)] focus-visible:ring-2"
             >
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">
@@ -150,12 +150,12 @@ export function HelpCenterClient({
           {/* Electric Royal Blue Still Stuck Card */}
           <aside
             id="contact"
-            className="v3-pattern-dots-dark flex flex-col justify-between gap-5 rounded-[1.75rem] border border-[var(--cf-border-on-royal)] p-6 text-[var(--cf-text-on-royal)]"
+            className="v3-pattern-dots-dark flex flex-col justify-between gap-5 rounded-xl border border-[var(--cf-border-on-royal)] p-6 text-[var(--cf-text-on-royal)]"
           >
             <div className="flex flex-col gap-3.5">
               <span
                 aria-hidden="true"
-                className="inline-flex size-11 items-center justify-center rounded-2xl bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+                className="inline-flex size-11 items-center justify-center rounded-xl bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
               >
                 <Send className="size-4" />
               </span>

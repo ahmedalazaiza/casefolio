@@ -809,7 +809,7 @@ export function AppShell({
             className={cn(
               "flex flex-wrap items-center justify-center gap-2 border-b px-4 py-2 text-center",
               renewalGraceBanner?.kind === "ending_soon"
-                ? "border-warning/30 bg-warning-soft text-foreground"
+                ? "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground"
                 : "border-destructive/30 bg-destructive-soft text-destructive",
             )}
           >

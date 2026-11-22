@@ -176,7 +176,7 @@ export function NotificationsPageClient({
       ) : (
         <section
           data-testid="notifications-page-list"
-          className="divide-y divide-[var(--cf-border-subtle)] overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
+          className="divide-y divide-[var(--cf-border-subtle)] overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
         >
           {visibleItems.map((item) => (
             <NotificationRow

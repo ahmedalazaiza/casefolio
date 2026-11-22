@@ -15,8 +15,8 @@ export default function GlobalError({
   return (
     <html lang="en">
       <body className="bg-background bg-wash-top text-foreground flex min-h-screen items-center justify-center p-6 antialiased">
-        <main className="border-border/80 bg-elevated shadow-card flex w-full max-w-md flex-col items-center gap-5 rounded-3xl border p-8 text-center">
-          <span className="bg-destructive-soft text-destructive inline-flex size-12 items-center justify-center rounded-2xl">
+        <main className="border-border/80 bg-elevated shadow-card flex w-full max-w-md flex-col items-center gap-5 rounded-xl border p-8 text-center">
+          <span className="bg-destructive-soft text-destructive inline-flex size-12 items-center justify-center rounded-xl">
             <AlertTriangle className="size-5" aria-hidden="true" />
           </span>
 

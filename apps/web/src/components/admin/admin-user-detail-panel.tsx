@@ -397,7 +397,7 @@ export function AdminUserDetailPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-2xl border px-4 py-3"
+          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-xl border px-4 py-3"
         >
           {errorMessage}
         </div>
@@ -406,7 +406,7 @@ export function AdminUserDetailPanel({
       {feedback && (
         <div
           role="status"
-          className="border-success/30 bg-success-soft text-foreground type-body-s rounded-2xl border px-4 py-3"
+          className="border-success/30 bg-success-soft text-foreground type-body-s rounded-xl border px-4 py-3"
         >
           {feedback}
         </div>

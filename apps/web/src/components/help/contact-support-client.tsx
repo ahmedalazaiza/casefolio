@@ -103,12 +103,12 @@ export function ContactSupportClient({
         data-testid="support-message-sent"
         role="status"
         aria-live="polite"
-        className="v3-pattern-dots-light flex flex-col items-start gap-6 rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-8 shadow-[var(--cf-shadow-card)] sm:p-12"
+        className="v3-pattern-dots-light flex flex-col items-start gap-6 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-8 shadow-[var(--cf-shadow-card)] sm:p-12"
       >
         <div className="flex items-center gap-3">
           <span
             aria-hidden="true"
-            className="inline-flex size-14 items-center justify-center rounded-2xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)] shadow-[var(--cf-shadow-royal)]"
+            className="inline-flex size-14 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)] shadow-[var(--cf-shadow-royal)]"
           >
             <Check className="size-7" />
           </span>
@@ -156,7 +156,7 @@ export function ContactSupportClient({
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="relative overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-10">
+      <header className="relative overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-10">
         <div className="flex flex-col gap-3">
           <Eyebrow className="w-fit">
             Support
@@ -174,7 +174,7 @@ export function ContactSupportClient({
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8 lg:col-span-8"
+          className="flex flex-col gap-5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8 lg:col-span-8"
         >
           <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] pb-4">
             <div className="flex items-center gap-2">
@@ -274,7 +274,7 @@ export function ContactSupportClient({
           <div className="flex flex-col gap-2">
             <label
               htmlFor="support-attachment"
-              className="flex max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-6 text-center transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)]"
+              className="flex max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-6 text-center transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)]"
             >
               <span className="inline-flex size-10 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]">
                 <Upload className="size-4" />
@@ -338,7 +338,7 @@ export function ContactSupportClient({
           </div>
         </form>
 
-        <aside className="v3-pattern-dots-dark v3-sheet-royal flex flex-col gap-4 rounded-2xl border border-[var(--cf-border-on-royal)] p-6 sm:p-7 lg:col-span-4">
+        <aside className="v3-pattern-dots-dark v3-sheet-royal flex flex-col gap-4 rounded-xl border border-[var(--cf-border-on-royal)] p-6 sm:p-7 lg:col-span-4">
           <div className="flex items-center justify-between">
             <span className="inline-flex size-10 items-center justify-center rounded-xl bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
               <Sparkles className="size-5" />

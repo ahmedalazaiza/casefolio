@@ -30,7 +30,7 @@ export function AdminOverviewPanel({ metrics }: { metrics: AdminOverviewMetrics 
   return (
     <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-8">
       {/* Page header */}
-      <header className="relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
+      <header className="relative flex flex-col gap-4 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
         <div className="flex min-w-0 flex-col gap-2.5">
           <Eyebrow className="w-fit">
             Platform Overview
@@ -226,7 +226,7 @@ export function AdminOverviewPanel({ metrics }: { metrics: AdminOverviewMetrics 
               <Link
                 key={item.id}
                 href={item.href}
-                className="hover:bg-surface/80 focus-visible:ring-ring/40 -mx-2 flex items-center justify-between gap-3 rounded-2xl px-3 py-3 transition-colors outline-none focus-visible:ring-2"
+                className="hover:bg-surface/80 focus-visible:ring-ring/40 -mx-2 flex items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors outline-none focus-visible:ring-2"
               >
                 <span className="text-foreground type-body-s min-w-0 truncate">{item.label}</span>
                 <Badge tone={item.tone}>{item.badgeLabel}</Badge>

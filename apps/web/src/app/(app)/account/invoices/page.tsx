@@ -19,14 +19,14 @@ export default async function AccountInvoicesPage() {
     <AccountSettingsShell activeTab="invoices">
       <section
         data-testid="invoices-settings-panel"
-        className="border-border/80 bg-elevated shadow-card overflow-hidden rounded-3xl border"
+        className="border-border/80 bg-elevated shadow-card overflow-hidden rounded-xl border"
       >
         {overview.invoices.length === 0 ? (
           <div
             data-testid="invoices-empty-state"
             className="flex flex-col items-center justify-center gap-3.5 px-6 py-18 text-center"
           >
-            <div className="bg-accent text-primary flex size-12 items-center justify-center rounded-2xl">
+            <div className="bg-accent text-primary flex size-12 items-center justify-center rounded-xl">
               <ReceiptText className="size-5" />
             </div>
             <div className="flex flex-col gap-1">

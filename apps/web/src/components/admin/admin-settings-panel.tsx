@@ -302,7 +302,7 @@ export function AdminSettingsPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive rounded-2xl border px-4 py-3 type-body-s"
+          className="border-destructive/30 bg-destructive-soft text-destructive rounded-xl border px-4 py-3 type-body-s"
         >
           {errorMessage}
         </div>
@@ -311,7 +311,7 @@ export function AdminSettingsPanel({
       {feedback && (
         <div
           role="status"
-          className="border-success/30 bg-success-soft text-success rounded-2xl border px-4 py-3 type-body-s"
+          className="border-success/30 bg-success-soft text-success rounded-xl border px-4 py-3 type-body-s"
         >
           {feedback}
         </div>

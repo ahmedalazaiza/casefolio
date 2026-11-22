@@ -9,20 +9,20 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-[var(--brand-primary-hover)] hover:-translate-y-0.5 hover:shadow-[var(--cf-shadow-hover)]",
+          "bg-primary text-primary-foreground hover:bg-[var(--brand-primary-hover)]",
         accent:
-          "bg-primary text-primary-foreground hover:bg-[var(--brand-primary-hover)] hover:-translate-y-0.5 hover:shadow-[var(--cf-shadow-hover)]",
+          "bg-primary text-primary-foreground hover:bg-[var(--brand-primary-hover)]",
         lime:
-          "bg-brand-lime text-brand-on-lime hover:brightness-105 hover:-translate-y-0.5 hover:shadow-[var(--cf-shadow-hover)]",
+          "bg-brand-lime text-brand-on-lime hover:brightness-105",
         secondary:
-          "border border-border bg-elevated text-foreground hover:border-foreground/50 hover:bg-surface hover:-translate-y-0.5 hover:shadow-[var(--cf-shadow-hover)]",
+          "border border-border bg-elevated text-foreground hover:border-foreground/50 hover:bg-surface",
         obsidian:
           "obsidian-surface obsidian-hairline border hover:opacity-90",
         outline:
-          "border border-border bg-elevated text-foreground hover:border-foreground/50 hover:bg-surface hover:-translate-y-0.5 hover:shadow-[var(--cf-shadow-hover)]",
+          "border border-border bg-elevated text-foreground hover:border-foreground/50 hover:bg-surface",
         ghost: "bg-transparent text-foreground hover:bg-sunken",
         inverse:
-          "bg-inverse text-inverse-foreground hover:bg-inverse/90 hover:-translate-y-0.5 hover:shadow-[var(--cf-shadow-hover)]",
+          "bg-inverse text-inverse-foreground hover:bg-inverse/90",
         destructive:
           "bg-destructive-soft text-destructive hover:bg-destructive-soft/80",
         link: "text-primary underline-offset-4 hover:underline",

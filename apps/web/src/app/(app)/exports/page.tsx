@@ -47,7 +47,7 @@ export default async function WorkspaceExportsHistoryPage() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
+        <div className="overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
           <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-5 py-2.5">
             <div className="flex items-center gap-2">
               <span className="rounded bg-[var(--cf-ink)] px-2 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-text-on-ink)] uppercase">
@@ -132,7 +132,7 @@ export default async function WorkspaceExportsHistoryPage() {
                       <a
                         href={downloadUrl}
                         download
-                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--cf-royal)] px-3.5 text-xs font-semibold text-[var(--cf-text-on-royal)] transition-all hover:-translate-y-0.5 hover:bg-[var(--cf-bg-action-hover)] hover:shadow-[var(--cf-shadow-hover)]"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--cf-royal)] px-3.5 text-xs font-semibold text-[var(--cf-text-on-royal)] transition-all hover:bg-[var(--cf-bg-action-hover)]"
                       >
                         <Download className="size-3.5 text-[var(--cf-bg-accent)]" />
                         <span>Download</span>

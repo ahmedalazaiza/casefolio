@@ -341,7 +341,7 @@ export function ProjectSharePanel({
             <div
               role="status"
               data-testid="shared-space-publish-restricted-notice"
-              className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-2xl border p-4"
+              className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex items-start gap-2.5 rounded-xl border p-4"
             >
               <Lock className="text-warning mt-0.5 size-4 shrink-0" />
               <span className="type-body-s">
@@ -356,7 +356,7 @@ export function ProjectSharePanel({
             <div
               role="alert"
               data-testid="publish-error-alert"
-              className="border-destructive/35 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-2xl border p-4"
+              className="border-destructive/35 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-xl border p-4"
             >
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <span className="type-body-s">{errorMessage}</span>
@@ -364,7 +364,7 @@ export function ProjectSharePanel({
           )}
 
           {/* Custom URL Slug Card */}
-          <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-7">
+          <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-xl border p-6 sm:p-7">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <h2 className="text-foreground type-heading-m">Public URL Slug</h2>
@@ -385,7 +385,7 @@ export function ProjectSharePanel({
             <div className="flex flex-col gap-2.5">
               <Label htmlFor="publish-slug-input">Case study URL</Label>
               <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                <div className="border-border/80 bg-surface/60 focus-within:bg-elevated focus-within:ring-ring/40 flex flex-1 items-center overflow-hidden rounded-2xl border transition-colors focus-within:ring-2">
+                <div className="border-border/80 bg-surface/60 focus-within:bg-elevated focus-within:ring-ring/40 flex flex-1 items-center overflow-hidden rounded-xl border transition-colors focus-within:ring-2">
                   <span className="bg-sunken/80 text-tertiary border-border/70 type-caption shrink-0 border-r px-3.5 py-2.5 font-mono select-none">
                     {initialSettings.appBaseUrl.replace(/^https?:\/\//, "")}/p/
                   </span>
@@ -421,7 +421,7 @@ export function ProjectSharePanel({
               </div>
 
               {!canCustomizeSlug ? (
-                <div className="border-border/70 bg-surface/70 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5">
+                <div className="border-border/70 bg-surface/70 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5">
                   <span className="text-muted-foreground type-caption inline-flex items-center gap-1.5">
                     <Lock className="text-primary size-3.5 shrink-0" />
                     <span>
@@ -475,7 +475,7 @@ export function ProjectSharePanel({
           </section>
 
           {/* Visibility Options Card */}
-          <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-7">
+          <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-xl border p-6 sm:p-7">
             <div className="flex flex-col gap-1">
               <h2 className="text-foreground type-heading-m">Access &amp; Discovery</h2>
               <p className="text-muted-foreground type-body-s">
@@ -496,7 +496,7 @@ export function ProjectSharePanel({
                 data-testid="visibility-option-public"
                 onClick={() => setVisibility("public")}
                 className={cn(
-                  "flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
+                  "flex flex-col items-start gap-2.5 rounded-xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
                   visibility === "public"
                     ? "border-primary bg-accent/40 ring-primary/15 ring-2"
                     : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
@@ -522,7 +522,7 @@ export function ProjectSharePanel({
                 data-testid="visibility-option-unlisted"
                 onClick={() => setVisibility("unlisted")}
                 className={cn(
-                  "flex flex-col items-start gap-2.5 rounded-2xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
+                  "flex flex-col items-start gap-2.5 rounded-xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
                   visibility === "unlisted"
                     ? "border-primary bg-accent/40 ring-primary/15 ring-2"
                     : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
@@ -545,7 +545,7 @@ export function ProjectSharePanel({
             {requiresPrivateAck && (
               <label
                 data-testid="team-private-publish-ack"
-                className="border-primary/30 bg-accent/35 text-foreground type-caption flex items-start gap-2.5 rounded-2xl border p-4"
+                className="border-primary/30 bg-accent/35 text-foreground type-caption flex items-start gap-2.5 rounded-xl border p-4"
               >
                 <input
                   type="checkbox"
@@ -615,7 +615,7 @@ export function ProjectSharePanel({
 
         {/* Right Column: Social OG Preview + Plan Branding Card */}
         <div className="flex flex-col gap-6 lg:col-span-5">
-          <section className="border-border/80 bg-elevated flex flex-col gap-4 rounded-3xl border p-6 sm:p-7">
+          <section className="border-border/80 bg-elevated flex flex-col gap-4 rounded-xl border p-6 sm:p-7">
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-col gap-0.5">
                 <h2 className="text-foreground type-heading-s">Social Share Preview</h2>
@@ -631,7 +631,7 @@ export function ProjectSharePanel({
             <div
               data-testid="og-card-preview"
               style={buildTemplateThemeStyle(initialSettings.theme)}
-              className="border-border/80 overflow-hidden rounded-2xl border"
+              className="border-border/80 overflow-hidden rounded-xl border"
             >
               <div
                 style={{
@@ -683,7 +683,7 @@ export function ProjectSharePanel({
             </div>
           </section>
 
-          <section className="border-border/70 bg-wash-panel flex flex-col gap-3 rounded-3xl border p-6 sm:p-7">
+          <section className="border-border/70 bg-wash-panel flex flex-col gap-3 rounded-xl border p-6 sm:p-7">
             <div className="flex items-center justify-between gap-2">
               <span className="text-foreground type-body-s-strong inline-flex items-center gap-2">
                 <Sparkles className="text-primary size-4" />

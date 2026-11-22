@@ -149,7 +149,7 @@ export function QuickFeedbackSurvey() {
       role="dialog"
       aria-label="Quick Casefolio experience survey"
       data-testid="quick-feedback-survey"
-      className="fixed right-4 bottom-4 z-50 w-[min(23rem,calc(100vw-2rem))] rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 shadow-2xl"
+      className="fixed right-4 bottom-4 z-50 w-[min(23rem,calc(100vw-2rem))] rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 shadow-2xl"
     >
       {submitted ? (
         <div className="flex flex-col items-center gap-2 py-4 text-center">

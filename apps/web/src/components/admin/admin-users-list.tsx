@@ -113,7 +113,7 @@ export function AdminUsersList({
       {errorMessage && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-2xl border px-4 py-3"
+          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-xl border px-4 py-3"
         >
           {errorMessage}
         </div>

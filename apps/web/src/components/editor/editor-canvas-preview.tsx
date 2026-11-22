@@ -207,7 +207,7 @@ export function EditorCanvasPreview({
           className={cn(
             "shadow-float mx-auto w-full shrink-0 overflow-hidden transition-[border-radius,box-shadow] duration-200",
             viewport === "mobile"
-              ? "border-border/60 max-w-[390px] rounded-2xl border"
+              ? "border-border/60 max-w-[390px] rounded-xl border"
               : "border-border/60 max-w-[1440px] rounded-xl border",
           )}
         >

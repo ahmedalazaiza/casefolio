@@ -250,7 +250,7 @@ export function AdminCategoriesPanel({
       {errorMessage && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-2xl border px-4 py-3"
+          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-xl border px-4 py-3"
         >
           {errorMessage}
         </div>
@@ -259,7 +259,7 @@ export function AdminCategoriesPanel({
       {successMessage && (
         <div
           role="status"
-          className="border-success/30 bg-success-soft text-foreground type-body-s rounded-2xl border px-4 py-3"
+          className="border-success/30 bg-success-soft text-foreground type-body-s rounded-xl border px-4 py-3"
         >
           {successMessage}
         </div>
@@ -331,7 +331,7 @@ export function AdminCategoriesPanel({
                       key={cat.id}
                       className={cn(
                         "flex flex-wrap items-center justify-between gap-3 py-3 transition-colors",
-                        isSelected && "bg-accent/25 -mx-3 rounded-2xl px-3",
+                        isSelected && "bg-accent/25 -mx-3 rounded-xl px-3",
                       )}
                     >
                       <div className="flex min-w-0 items-center gap-3">

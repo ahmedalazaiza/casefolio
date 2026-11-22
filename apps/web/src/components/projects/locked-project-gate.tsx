@@ -28,9 +28,9 @@ export function LockedProjectGate({
       data-testid="locked-project-gate"
       className="bg-surface flex min-h-screen items-center justify-center p-6"
     >
-      <div className="border-border bg-elevated flex w-full max-w-lg flex-col gap-6 rounded-3xl border p-8">
+      <div className="border-border bg-elevated flex w-full max-w-lg flex-col gap-6 rounded-xl border p-8">
         <div className="flex items-start gap-4">
-          <div className="bg-warning-soft text-warning flex size-12 shrink-0 items-center justify-center rounded-2xl">
+          <div className="bg-warning-soft text-warning flex size-12 shrink-0 items-center justify-center rounded-xl">
             <Lock className="size-6" />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -42,7 +42,7 @@ export function LockedProjectGate({
           </div>
         </div>
 
-        <div className="border-border bg-surface flex flex-col gap-2 rounded-2xl border p-4">
+        <div className="border-border bg-surface flex flex-col gap-2 rounded-xl border p-4">
           <p className="text-foreground type-body-s-strong">
             {isTeam
               ? isTeamOwner

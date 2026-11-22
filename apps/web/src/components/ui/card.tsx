@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-  "flex flex-col rounded-[1.5rem] border transition-all duration-200",
+  "flex flex-col rounded-xl border transition-all duration-200",
   {
     variants: {
       variant: {

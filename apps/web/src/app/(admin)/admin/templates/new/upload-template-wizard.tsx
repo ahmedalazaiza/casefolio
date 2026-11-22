@@ -276,7 +276,7 @@ export function UploadTemplateWizard({
       </nav>
 
       {currentStep === 1 && (
-        <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-6 rounded-3xl border p-6 sm:p-8">
+        <section className="border-border/80 bg-elevated shadow-card flex flex-col gap-6 rounded-xl border p-6 sm:p-8">
           <div className="flex flex-col gap-1.5">
             <h2 className="text-foreground type-heading-m">Template JSON source</h2>
             <p className="text-muted-foreground type-body-s">
@@ -287,9 +287,9 @@ export function UploadTemplateWizard({
 
           <label
             htmlFor="template-json-file"
-            className="border-border-strong/80 bg-surface/60 hover:border-primary/60 hover:bg-accent/20 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center transition-colors"
+            className="border-border-strong/80 bg-surface/60 hover:border-primary/60 hover:bg-accent/20 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-8 text-center transition-colors"
           >
-            <span className="bg-accent text-accent-foreground inline-flex size-12 items-center justify-center rounded-2xl">
+            <span className="bg-accent text-accent-foreground inline-flex size-12 items-center justify-center rounded-xl">
               <Upload className="size-5" />
             </span>
             <div className="flex flex-col gap-1">
@@ -327,7 +327,7 @@ export function UploadTemplateWizard({
               value={rawJson}
               onChange={(event) => setRawJson(event.target.value)}
               placeholder='{ "template": { ... }, "puck": { ... }, "warnings": [] }'
-              className="border-border/80 bg-surface/40 text-foreground type-body-s focus-visible:ring-ring/40 w-full rounded-2xl border p-4 font-mono outline-none focus-visible:ring-2"
+              className="border-border/80 bg-surface/40 text-foreground type-body-s focus-visible:ring-ring/40 w-full rounded-xl border p-4 font-mono outline-none focus-visible:ring-2"
             />
           </div>
 
@@ -357,7 +357,7 @@ export function UploadTemplateWizard({
             <div
               role="alert"
               data-testid="validation-error-panel"
-              className="border-destructive/30 bg-destructive-soft flex flex-col gap-4 rounded-3xl border p-6"
+              className="border-destructive/30 bg-destructive-soft flex flex-col gap-4 rounded-xl border p-6"
             >
               <div className="flex items-start gap-3">
                 <AlertCircle className="text-destructive mt-0.5 size-5 shrink-0" />
@@ -378,7 +378,7 @@ export function UploadTemplateWizard({
                   <li
                     key={`${issue.path}-${idx}`}
                     data-testid="validation-issue"
-                    className="border-border/80 bg-elevated flex flex-col gap-1 rounded-2xl border p-3.5 sm:flex-row sm:items-baseline sm:gap-3"
+                    className="border-border/80 bg-elevated flex flex-col gap-1 rounded-xl border p-3.5 sm:flex-row sm:items-baseline sm:gap-3"
                   >
                     <code className="bg-sunken text-foreground type-caption shrink-0 rounded-md px-2 py-0.5 font-mono">
                       {issue.path}
@@ -402,7 +402,7 @@ export function UploadTemplateWizard({
             <div className="flex flex-col gap-6">
               <div
                 data-testid="validation-success-panel"
-                className="border-success/30 bg-success-soft flex flex-col justify-between gap-4 rounded-3xl border p-5 sm:flex-row sm:items-center"
+                className="border-success/30 bg-success-soft flex flex-col justify-between gap-4 rounded-xl border p-5 sm:flex-row sm:items-center"
               >
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="text-success size-5 shrink-0" />
@@ -421,7 +421,7 @@ export function UploadTemplateWizard({
               </div>
 
               <div className="grid gap-6 lg:grid-cols-12">
-                <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-6 lg:col-span-7">
+                <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-xl border p-6 lg:col-span-7">
                   <div className="flex items-center justify-between">
                     <h2 className="text-foreground type-heading-s">
                       Sections in editor order ({validationResult.summary.sectionCount})
@@ -433,7 +433,7 @@ export function UploadTemplateWizard({
                     {validationResult.data.puck.content.map((section, idx) => (
                       <li
                         key={section.props.id}
-                        className="border-border/70 bg-surface/60 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+                        className="border-border/70 bg-surface/60 flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-tertiary type-caption font-mono">0{idx + 1}</span>
@@ -450,7 +450,7 @@ export function UploadTemplateWizard({
                   </ul>
                 </div>
 
-                <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-6 lg:col-span-5">
+                <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-xl border p-6 lg:col-span-5">
                   <h2 className="text-foreground type-heading-s">
                     Image slots ({validationResult.summary.slotCount})
                   </h2>
@@ -458,7 +458,7 @@ export function UploadTemplateWizard({
                     {Object.entries(validationResult.data.template.slots).map(([key, slot]) => (
                       <li
                         key={key}
-                        className="border-border/70 bg-surface/60 flex items-center justify-between gap-2 rounded-2xl border px-3.5 py-2.5"
+                        className="border-border/70 bg-surface/60 flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5"
                       >
                         <code className="text-foreground type-caption font-mono">{key}</code>
                         <div className="flex items-center gap-2">
@@ -476,7 +476,7 @@ export function UploadTemplateWizard({
                   </ul>
 
                   {validationResult.summary.warningCount > 0 && (
-                    <div className="border-warning/30 bg-warning-soft flex flex-col gap-2 rounded-2xl border p-3.5">
+                    <div className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] flex flex-col gap-2 rounded-xl border p-3.5">
                       <span className="text-warning type-caption">
                         Converter warnings ({validationResult.summary.warningCount})
                       </span>
@@ -507,7 +507,7 @@ export function UploadTemplateWizard({
 
       {currentStep === 3 && previewDocument && (
         <section className="flex flex-col gap-6">
-          <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-3xl border p-5 sm:p-6">
+          <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-4 rounded-xl border p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <Sparkles className="text-primary size-4" />
@@ -518,7 +518,7 @@ export function UploadTemplateWizard({
               <Badge tone="accent">{previewDocument.template.type}</Badge>
             </div>
 
-            <div className="border-border/80 max-h-[42rem] overflow-y-auto rounded-2xl border">
+            <div className="border-border/80 max-h-[42rem] overflow-y-auto rounded-xl border">
               <TemplatePuckRenderer document={previewDocument} />
             </div>
           </div>
@@ -541,7 +541,7 @@ export function UploadTemplateWizard({
           {serverError && (
             <div
               role="alert"
-              className="border-destructive/30 bg-destructive-soft flex flex-col gap-3 rounded-2xl border p-5"
+              className="border-destructive/30 bg-destructive-soft flex flex-col gap-3 rounded-xl border p-5"
             >
               <div className="flex items-center gap-2.5">
                 <AlertCircle className="text-destructive size-5 shrink-0" />
@@ -560,7 +560,7 @@ export function UploadTemplateWizard({
           )}
 
           <div className="grid gap-6 lg:grid-cols-12">
-            <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-3xl border p-6 lg:col-span-7">
+            <div className="border-border/80 bg-elevated shadow-card flex flex-col gap-5 rounded-xl border p-6 lg:col-span-7">
               <h2 className="text-foreground type-heading-s">Details</h2>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -700,7 +700,7 @@ export function UploadTemplateWizard({
               </div>
             </div>
 
-            <div className="border-border/80 bg-elevated shadow-card flex flex-col justify-between gap-5 rounded-3xl border p-6 lg:col-span-5">
+            <div className="border-border/80 bg-elevated shadow-card flex flex-col justify-between gap-5 rounded-xl border p-6 lg:col-span-5">
               <div className="flex flex-col gap-4">
                 <h2 className="text-foreground type-heading-s">Cover & thumbnail</h2>
 
@@ -717,7 +717,7 @@ export function UploadTemplateWizard({
                 />
               </div>
 
-              <div className="border-border/70 bg-wash-panel flex flex-col gap-2 rounded-2xl border p-4">
+              <div className="border-border/70 bg-wash-panel flex flex-col gap-2 rounded-xl border p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-tertiary type-overline">Initial release target</span>
                   <Badge tone="draft">Draft · v1.0.0</Badge>

@@ -302,7 +302,7 @@ export function CreateProjectWizard({
 
           <nav
             aria-label="Create project steps"
-            className="hidden shrink-0 items-center gap-1.5 justify-self-center rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1 md:flex"
+            className="hidden shrink-0 items-center gap-1.5 justify-self-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1 md:flex"
           >
             {WIZARD_STEPS.map((item, idx) => {
               const isCompleted = idx < stepIndex;
@@ -374,16 +374,16 @@ export function CreateProjectWizard({
       {/* Main Content */}
       <main
         id="main-content"
-        className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 sm:px-8 sm:py-12"
+        className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 sm:px-8 sm:py-10"
       >
         {isFreeQuotaReached && (
           <div
             role="alert"
             data-testid="plan-limit-banner"
-            className="border-warning/40 bg-warning-soft text-foreground mb-8 flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center"
+            className="mb-6 flex flex-col justify-between gap-4 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3.5 text-foreground sm:flex-row sm:items-center"
           >
             <div className="flex items-start gap-3">
-              <AlertCircle className="text-warning mt-0.5 size-5 shrink-0" />
+              <span className="bg-warning-soft text-warning inline-flex size-7 shrink-0 items-center justify-center rounded-md"><AlertCircle className="size-4" /></span>
               <div className="flex flex-col gap-0.5">
                 <p className="type-body-s-strong">
                   {userPlan === "free"
@@ -466,7 +466,7 @@ export function CreateProjectWizard({
                   aria-checked={selectedType === "mobile"}
                   data-testid="type-card-mobile"
                   onClick={() => handleSelectType("mobile")}
-                  className="focus-visible:ring-ring/40 rounded-[1.5rem] text-left outline-none focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 rounded-xl text-left outline-none focus-visible:ring-2"
                 >
                   <TemplateTypeCard
                     title="Mobile app"
@@ -484,7 +484,7 @@ export function CreateProjectWizard({
                   aria-checked={selectedType === "web"}
                   data-testid="type-card-web"
                   onClick={() => handleSelectType("web")}
-                  className="focus-visible:ring-ring/40 rounded-[1.5rem] text-left outline-none focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 rounded-xl text-left outline-none focus-visible:ring-2"
                 >
                   <TemplateTypeCard
                     title="Website"
@@ -502,7 +502,7 @@ export function CreateProjectWizard({
                   aria-checked={selectedType === "both"}
                   data-testid="type-card-both"
                   onClick={() => handleSelectType("both")}
-                  className="focus-visible:ring-ring/40 rounded-[1.5rem] text-left outline-none focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 rounded-xl text-left outline-none focus-visible:ring-2"
                 >
                   <TemplateTypeCard
                     title="Mobile & Web"
@@ -525,23 +525,6 @@ export function CreateProjectWizard({
               </div>
             </div>
 
-            <div className="flex flex-col-reverse items-stretch justify-between gap-3 rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 sm:flex-row sm:items-center sm:px-6">
-              <Link href="/dashboard" className="v3-btn-secondary py-2.5 text-sm">
-                Cancel
-              </Link>
-
-              <button
-                type="button"
-                data-testid="wizard-next-to-template"
-                onClick={() => setStep("template")}
-                className="v3-btn-primary py-2.5 pr-3 pl-5 text-sm"
-              >
-                <span>Continue to templates</span>
-                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                  <ArrowRight className="size-3.5" />
-                </span>
-              </button>
-            </div>
           </div>
         )}
 
@@ -596,13 +579,12 @@ export function CreateProjectWizard({
                 <div
                   role="radiogroup"
                   aria-label="Choose template"
-                  className="grid gap-6 lg:grid-cols-2"
+                  className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
                 >
-                  {compatibleTemplates.map((item, idx) => {
+                  {compatibleTemplates.map((item) => {
                     const isLocked = item.tier === "pro" && !canUseProTemplates;
                     const isSelected = selectedTemplateId === item.id;
                     const themeColors = item.document.template.theme.colors;
-                    const indexBadge = String(idx + 1).padStart(2, "0");
 
                     return (
                       <article
@@ -612,10 +594,10 @@ export function CreateProjectWizard({
                         data-selected={isSelected ? "true" : "false"}
                         data-locked={isLocked ? "true" : "false"}
                         className={cn(
-                          "group flex flex-col justify-between overflow-hidden rounded-[2rem] border bg-[var(--cf-bg-elevated)] transition-all duration-300",
+                          "group flex flex-col overflow-hidden rounded-xl border bg-[var(--cf-bg-elevated)] transition-colors",
                           isSelected
-                            ? "border-2 border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
-                            : "border-[var(--cf-border-subtle)] hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
+                            ? "border-[var(--cf-royal)] ring-1 ring-[var(--cf-royal)]"
+                            : "border-[var(--cf-border-subtle)] hover:border-[var(--cf-royal)]",
                         )}
                       >
                         <button
@@ -634,96 +616,74 @@ export function CreateProjectWizard({
                               });
                             }
                           }}
-                          className="focus-visible:ring-ring/40 flex flex-col text-left outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
+                          className="focus-visible:ring-ring/40 flex flex-col p-2.5 pb-0 text-left outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
                         >
-                          {/* Architectural Spec Bar */}
-                          <div className="flex w-full items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex h-5 items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2 font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
-                                {indexBadge}
-                              </span>
-                              <span className="font-mono text-[0.6875rem] font-medium text-[var(--cf-text-tertiary)]">
-                                casefolio.app/t/{item.slug}
-                              </span>
-                            </div>
-                            <span className="font-mono text-[0.6875rem] font-semibold text-[var(--cf-text-secondary)]">
-                              v{item.version}
-                            </span>
-                          </div>
+                          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg border border-[var(--cf-border-subtle)]">
+                            <TemplateThumbnail
+                              testId={`wizard-template-thumb-${item.slug}`}
+                              coverUrl={item.coverUrl}
+                              slug={item.slug}
+                              name={item.name}
+                              theme={{
+                                bg: themeColors.background,
+                                fg: themeColors.text,
+                                accent: themeColors.primary,
+                              }}
+                              className="size-full"
+                              imageClassName="group-hover:scale-[1.03]"
+                            />
 
-                          <div className="p-3.5 pb-0">
-                            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)]">
-                              <TemplateThumbnail
-                                testId={`wizard-template-thumb-${item.slug}`}
-                                coverUrl={item.coverUrl}
-                                slug={item.slug}
-                                name={item.name}
-                                theme={{
-                                  bg: themeColors.background,
-                                  fg: themeColors.text,
-                                  accent: themeColors.primary,
-                                }}
-                                className="size-full"
-                                imageClassName="group-hover:scale-[1.03]"
-                              />
-
-                              <div className="pointer-events-none absolute top-3 right-3 z-10 flex items-center gap-1.5">
-                                {item.tier === "pro" ? (
-                                  <ProBadge />
-                                ) : (
-                                  <Badge tone="published">Free</Badge>
-                                )}
-                                {isSelected && (
-                                  <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--cf-bg-accent)] px-2 py-1 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-                                    <Check className="size-3" />
-                                    Selected
-                                  </span>
-                                )}
-                              </div>
-
-                              {isLocked && (
-                                <div className="bg-inverse/90 text-inverse-foreground type-caption absolute right-3 bottom-3 z-10 inline-flex items-center gap-1.5 rounded-lg px-3 py-1">
-                                  <Lock className="size-3" />
-                                  <span>Pro required</span>
-                                </div>
+                            <div className="pointer-events-none absolute top-2 right-2 z-10 flex items-center gap-1.5">
+                              {item.tier === "pro" ? (
+                                <ProBadge />
+                              ) : (
+                                <Badge tone="published">Free</Badge>
+                              )}
+                              {isSelected && (
+                                <span className="inline-flex size-5 items-center justify-center rounded-full bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                                  <Check className="size-3 stroke-[3]" />
+                                </span>
                               )}
                             </div>
+
+                            {isLocked && (
+                              <div className="bg-inverse/90 text-inverse-foreground type-caption absolute right-2 bottom-2 z-10 inline-flex items-center gap-1 rounded-md px-2 py-0.5">
+                                <Lock className="size-3" />
+                                <span>Pro required</span>
+                              </div>
+                            )}
                           </div>
 
-                          <div className="flex flex-col gap-3 p-5 pb-4">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex flex-col gap-0.5">
-                                <span className="v3-heading-s text-[var(--cf-text-primary)]">
-                                  {item.name}
-                                </span>
-                                <span className="v3-body-s text-[var(--cf-text-secondary)]">
-                                  {item.categoryName} · {item.sectionCount} sections ·{" "}
-                                  {item.slotCount} screen slots
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  aria-hidden="true"
-                                  className="flex items-center -space-x-1 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1"
-                                >
-                                  <span
-                                    className="size-3 rounded-full border border-white/50"
-                                    style={{ backgroundColor: themeColors.background }}
-                                  />
-                                  <span
-                                    className="size-3 rounded-full border border-white/50"
-                                    style={{ backgroundColor: themeColors.primary }}
-                                  />
-                                </div>
-                              </div>
+                          <div className="flex items-center justify-between gap-2 px-0.5 py-3">
+                            <div className="flex min-w-0 flex-col gap-0.5">
+                              <span className="v3-heading-s truncate text-[var(--cf-text-primary)]">
+                                {item.name}
+                              </span>
+                              <span className="v3-body-s truncate text-[var(--cf-text-secondary)]">
+                                {item.categoryName} · {item.sectionCount} sections · {item.slotCount}{" "}
+                                screen slots
+                              </span>
+                            </div>
+                            <div
+                              aria-hidden="true"
+                              className="flex shrink-0 items-center -space-x-1"
+                            >
+                              <span
+                                className="size-3.5 rounded-full border border-[var(--cf-border-subtle)]"
+                                style={{ backgroundColor: themeColors.background }}
+                              />
+                              <span
+                                className="size-3.5 rounded-full border border-[var(--cf-border-subtle)]"
+                                style={{ backgroundColor: themeColors.primary }}
+                              />
                             </div>
                           </div>
                         </button>
 
-                        <div className="flex items-center gap-2.5 border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]/55 px-5 py-3.5">
+                        <div className="flex items-center gap-2 px-2.5 pb-2.5">
                           <button
                             type="button"
-                            className="v3-btn-secondary flex-1 py-2 text-xs font-semibold"
+                            className="v3-btn-secondary flex-1 py-1.5 text-xs font-semibold"
                             onClick={() => setPreviewItem(item)}
                           >
                             <Eye className="size-3.5" />
@@ -733,7 +693,7 @@ export function CreateProjectWizard({
                           {isLocked ? (
                             <button
                               type="button"
-                              className="v3-btn-lime flex-1 py-2 text-xs font-bold"
+                              className="v3-btn-lime flex-1 py-1.5 text-xs font-bold"
                               onClick={() =>
                                 setUpgradePrompt({
                                   requiredPlan: "pro",
@@ -750,7 +710,7 @@ export function CreateProjectWizard({
                             <button
                               type="button"
                               className={cn(
-                                "flex-1 py-2 text-xs font-semibold",
+                                "flex-1 py-1.5 text-xs font-semibold",
                                 isSelected ? "v3-btn-primary" : "v3-btn-secondary",
                               )}
                               onClick={() => {
@@ -781,46 +741,6 @@ export function CreateProjectWizard({
               )}
             </div>
 
-            <div className="flex flex-col-reverse items-stretch justify-between gap-4 rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 sm:flex-row sm:items-center sm:px-6">
-              <button
-                type="button"
-                data-testid="wizard-back-to-type"
-                onClick={() => setStep("type")}
-                className="v3-btn-secondary py-2.5 text-sm"
-              >
-                Back
-              </button>
-
-              <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-                {selectedTemplate && (
-                  <span className="rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3.5 py-2 text-center text-xs font-semibold text-[var(--cf-text-primary)] sm:text-right">
-                    Selected: {formatProjectTypeLabel(selectedType)} · {selectedTemplate.name}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  disabled={!selectedTemplate}
-                  data-testid="wizard-next-to-details"
-                  onClick={() => {
-                    if (selectedTemplate) {
-                      trackClientProductEvent("template_selected", {
-                        templateSlug: selectedTemplate.slug,
-                        templateTier: selectedTemplate.tier,
-                        projectType: selectedType,
-                        surface: "wizard_confirm",
-                      });
-                    }
-                    setStep("details");
-                  }}
-                  className="v3-btn-primary py-2.5 pr-3 pl-5 text-sm disabled:pointer-events-none disabled:opacity-50"
-                >
-                  <span>Use this template</span>
-                  <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                    <ArrowRight className="size-3.5" />
-                  </span>
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
@@ -830,7 +750,7 @@ export function CreateProjectWizard({
             data-testid="wizard-step-details"
             className="grid items-start gap-8 lg:grid-cols-[minmax(0,640px)_minmax(0,420px)] lg:justify-between"
           >
-            <Card className="rounded-2xl border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
+            <Card className="rounded-xl border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8">
               <form onSubmit={handleSubmitCreate} noValidate className="flex flex-col gap-5">
                 <div className="flex flex-col items-start gap-1.5">
                   <Eyebrow className="px-2.5 py-0.5 text-[0.6875rem]">Step 3 of 3</Eyebrow>
@@ -974,7 +894,7 @@ export function CreateProjectWizard({
                   </div>
                 )}
 
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-4 py-3 text-xs text-[var(--cf-text-secondary)]">
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-4 py-3 text-xs text-[var(--cf-text-secondary)]">
                   <div className="flex items-center gap-3">
                     {selectedTemplate && (
                       <TemplateThumbnail
@@ -1040,7 +960,7 @@ export function CreateProjectWizard({
                 </span>
               </div>
 
-              <div className="overflow-hidden rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
+              <div className="overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
                 {/* Architectural Spec Chrome */}
                 <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-3">
                   <div className="flex min-w-0 items-center gap-2">
@@ -1106,6 +1026,79 @@ export function CreateProjectWizard({
           </div>
         )}
       </main>
+
+      {step === "type" && (
+        <div
+          data-testid="wizard-sticky-bar"
+          className="sticky bottom-0 z-30 border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
+        >
+          <div className="mx-auto flex w-full max-w-6xl flex-col-reverse items-stretch justify-between gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-8">
+            <Link href="/dashboard" className="v3-btn-secondary py-2 text-sm">
+              Cancel
+            </Link>
+
+            <button
+              type="button"
+              data-testid="wizard-next-to-template"
+              onClick={() => setStep("template")}
+              className="v3-btn-primary py-2 pr-3 pl-5 text-sm"
+            >
+              <span>Continue to templates</span>
+              <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                <ArrowRight className="size-3.5" />
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "template" && (
+        <div
+          data-testid="wizard-sticky-bar"
+          className="sticky bottom-0 z-30 border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
+        >
+          <div className="mx-auto flex w-full max-w-6xl flex-col-reverse items-stretch justify-between gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-8">
+            <button
+              type="button"
+              data-testid="wizard-back-to-type"
+              onClick={() => setStep("type")}
+              className="v3-btn-secondary py-2 text-sm"
+            >
+              Back
+            </button>
+
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+              {selectedTemplate && (
+                <span className="rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3 py-1.5 text-center text-xs font-semibold text-[var(--cf-text-primary)] sm:text-right">
+                  Selected: {formatProjectTypeLabel(selectedType)} · {selectedTemplate.name}
+                </span>
+              )}
+              <button
+                type="button"
+                disabled={!selectedTemplate}
+                data-testid="wizard-next-to-details"
+                onClick={() => {
+                  if (selectedTemplate) {
+                    trackClientProductEvent("template_selected", {
+                      templateSlug: selectedTemplate.slug,
+                      templateTier: selectedTemplate.tier,
+                      projectType: selectedType,
+                      surface: "wizard_confirm",
+                    });
+                  }
+                  setStep("details");
+                }}
+                className="v3-btn-primary py-2 pr-3 pl-5 text-sm disabled:pointer-events-none disabled:opacity-50"
+              >
+                <span>Use this template</span>
+                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
+                  <ArrowRight className="size-3.5" />
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Template Preview Modal */}
       <Dialog

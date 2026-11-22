@@ -65,7 +65,7 @@ export function HeroDevice({
       <div className="pointer-events-none absolute top-14 -left-10 z-20 hidden xl:block">
         <Parallax distance={-30}>
           <Float amplitude={6} duration={5.4}>
-            <div className="obsidian-surface obsidian-hairline w-44 -rotate-6 overflow-hidden rounded-2xl border p-2">
+            <div className="obsidian-surface obsidian-hairline w-44 -rotate-6 overflow-hidden rounded-xl border p-2">
               <div className="bg-inverse overflow-hidden rounded-xl border border-border/30">
                 <img
                   src="/templates/cinema/screen-seats.svg"
@@ -89,7 +89,7 @@ export function HeroDevice({
       <div className="pointer-events-none absolute top-24 -right-10 z-20 hidden xl:block">
         <Parallax distance={32}>
           <Float amplitude={7} duration={6.1}>
-            <div className="obsidian-surface obsidian-hairline w-56 rotate-3 overflow-hidden rounded-2xl border p-2.5">
+            <div className="obsidian-surface obsidian-hairline w-56 rotate-3 overflow-hidden rounded-xl border p-2.5">
               <div className="overflow-hidden rounded-xl border border-border/30">
                 <img
                   src="/templates/atlas/hero-planner.svg"
@@ -111,7 +111,7 @@ export function HeroDevice({
       </div>
 
       {/* Main Dark Studio Workbench Frame */}
-      <div className="obsidian-card obsidian-hairline relative overflow-hidden rounded-2xl border sm:rounded-[1.75rem]">
+      <div className="obsidian-card obsidian-hairline relative overflow-hidden rounded-xl border sm:rounded-xl">
         {/* Interactive Top Studio Control Bar */}
         <div className="obsidian-hairline flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
@@ -128,7 +128,7 @@ export function HeroDevice({
           <div
             role="tablist"
             aria-label="Hero showcase view"
-            className="obsidian-hairline flex flex-wrap items-center gap-1 rounded-2xl border p-1 sm:rounded-full"
+            className="obsidian-hairline flex flex-wrap items-center gap-1 rounded-xl border p-1 sm:rounded-full"
           >
             {STUDIO_STAGE_MODES.map((mode) => {
               const active = stageMode === mode.id;
@@ -198,7 +198,7 @@ export function HeroDevice({
               ].map((screen) => (
                 <div
                   key={screen.title}
-                  className="obsidian-hairline flex flex-col gap-3 rounded-2xl border p-3"
+                  className="obsidian-hairline flex flex-col gap-3 rounded-xl border p-3"
                 >
                   <img
                     src={screen.src}
@@ -329,7 +329,7 @@ export function WorkMarquee({ templates }: { templates: LandingTemplateShowcaseI
                 key={`${dup}-${item.slug}`}
                 href={`/templates/${item.slug}`}
                 tabIndex={dup === 1 ? -1 : undefined}
-                className="obsidian-card obsidian-hairline group relative flex w-64 shrink-0 flex-col overflow-hidden rounded-2xl border transition-transform duration-300 hover:-translate-y-1 sm:w-72"
+                className="obsidian-card obsidian-hairline group relative flex w-64 shrink-0 flex-col overflow-hidden rounded-xl border transition-transform duration-300 sm:w-72"
               >
                 <div className="aspect-4/3 overflow-hidden">
                   <img
@@ -495,7 +495,7 @@ export function ObsidianWorkflowStage({
   return (
     <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
       {/* Left 8 cols: Framer-inspired live interactive stage canvas */}
-      <div className="obsidian-card obsidian-hairline flex flex-col justify-between gap-6 rounded-[1.75rem] border p-5 sm:p-8 lg:col-span-8">
+      <div className="obsidian-card obsidian-hairline flex flex-col justify-between gap-6 rounded-xl border p-5 sm:p-8 lg:col-span-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-1.5">
             {WORKBENCH_MODES.map((mode) => {
@@ -526,24 +526,24 @@ export function ObsidianWorkflowStage({
         </div>
 
         {/* Dynamic Stage Visual matching Framer interactive ImageWheel / Sandbox feel */}
-        <div className="obsidian-hairline relative flex min-h-80 items-center justify-center overflow-hidden rounded-2xl border bg-background/5 p-6 sm:min-h-[24rem]">
+        <div className="obsidian-hairline relative flex min-h-80 items-center justify-center overflow-hidden rounded-xl border bg-background/5 p-6 sm:min-h-[24rem]">
           {active.id === "wheel" ? (
             <div className="grid w-full grid-cols-1 items-center gap-4 sm:grid-cols-3">
-              <div className="hidden -rotate-6 overflow-hidden rounded-2xl border obsidian-hairline shadow-card transition-transform duration-500 hover:rotate-0 sm:block">
+              <div className="hidden -rotate-6 overflow-hidden rounded-xl border obsidian-hairline shadow-card transition-transform duration-500 hover:rotate-0 sm:block">
                 <img
                   src="/templates/cinema/screen-showtimes.svg"
                   alt="Cinema showtimes mobile frame"
                   className="aspect-9/16 max-h-64 w-full object-cover"
                 />
               </div>
-              <div className="z-10 overflow-hidden rounded-2xl border-2 border-primary shadow-overlay transition-transform duration-500 hover:scale-[1.03]">
+              <div className="z-10 overflow-hidden rounded-xl border-2 border-primary shadow-overlay transition-transform duration-500 hover:scale-[1.03]">
                 <img
                   src="/templates/cinema/screen-seats.svg"
                   alt="Cinema active iPhone 16 Pro seat picker screen"
                   className="aspect-9/16 max-h-72 w-full object-cover"
                 />
               </div>
-              <div className="hidden rotate-6 overflow-hidden rounded-2xl border obsidian-hairline shadow-card transition-transform duration-500 hover:rotate-0 sm:block">
+              <div className="hidden rotate-6 overflow-hidden rounded-xl border obsidian-hairline shadow-card transition-transform duration-500 hover:rotate-0 sm:block">
                 <img
                   src="/landing/orbit-home.svg"
                   alt="Orbit fintech home frame"
@@ -672,7 +672,7 @@ export function ObsidianWorkflowStage({
       </div>
 
       {/* Right 4 cols: Framer-inspired live telemetry & quick-jump Inspector */}
-      <aside className="obsidian-card obsidian-hairline flex flex-col justify-between gap-6 rounded-[1.75rem] border p-5 sm:p-7 lg:col-span-4">
+      <aside className="obsidian-card obsidian-hairline flex flex-col justify-between gap-6 rounded-xl border p-5 sm:p-7 lg:col-span-4">
         <div className="flex flex-col gap-5">
           <div className="obsidian-hairline flex items-center justify-between border-b pb-4">
             <div className="flex items-center gap-2">
@@ -686,7 +686,7 @@ export function ObsidianWorkflowStage({
             </span>
           </div>
 
-          <div className="obsidian-hairline rounded-2xl border p-4">
+          <div className="obsidian-hairline rounded-xl border p-4">
             <p className="obsidian-muted font-mono text-xs uppercase">
               {active.statLabel}
             </p>
@@ -762,7 +762,7 @@ export function TemplateStack({
           >
             <div className="flex flex-col gap-4">
                 {/* Minimalist browser artboard frame */}
-              <div className="border-border bg-elevated hover:border-primary hover:shadow-[var(--cf-shadow-hover)] relative overflow-hidden rounded-2xl border transition-all duration-300">
+              <div className="border-border bg-elevated hover:border-primary relative overflow-hidden rounded-xl border transition-all duration-300">
                 <div className="border-border bg-surface/80 flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="hidden gap-1 sm:flex" aria-hidden="true">
@@ -882,7 +882,7 @@ export function FeatureColumns({
     <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-12">
       {/* Left sticky Pixpa-inspired editorial anchor */}
       <div className="flex flex-col items-start gap-5 lg:sticky lg:top-24 lg:col-span-5">
-        <div className="border-border bg-surface w-full overflow-hidden rounded-2xl border p-3">
+        <div className="border-border bg-surface w-full overflow-hidden rounded-xl border p-3">
           <img
             src="/templates/meridian-pro/cover.svg"
             alt="Meridian dashboard case study composition"
@@ -1067,7 +1067,7 @@ export function CtaStage({
 }) {
   return (
     <ScrollRise y={18}>
-      <div className="bg-studio-matrix relative overflow-hidden rounded-[2rem] border obsidian-hairline p-7 sm:rounded-[2.75rem] sm:p-12 lg:p-14">
+      <div className="bg-studio-matrix relative overflow-hidden rounded-xl border obsidian-hairline p-7 sm:rounded-[2.75rem] sm:p-12 lg:p-14">
         <div className="relative z-10">{children}</div>
       </div>
     </ScrollRise>

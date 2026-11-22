@@ -71,7 +71,7 @@ export function LandingExperience({
         <LandingHeroMotion
           visual={
             cms.heroMockupImageUrl ? (
-              <div className="mx-auto mt-10 max-w-5xl overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2 shadow-xl sm:p-3 lg:mt-14">
+              <div className="mx-auto mt-10 max-w-5xl overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2 shadow-xl sm:p-3 lg:mt-14">
                 <img
                   src={cms.heroMockupImageUrl}
                   alt="Casefolio hero showcase preview"
@@ -162,7 +162,7 @@ export function LandingExperience({
               const isSecondaryAccent = panelIdx % 2 === 1;
               return (
                 <DepthStackPanel key={`${panel.step}-${panel.title}`} recede={panelIdx === 0}>
-                  <div className="group overflow-hidden rounded-[1.5rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all duration-300 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] lg:grid lg:min-h-[29rem] lg:grid-cols-2 lg:rounded-[2rem]">
+                  <div className="group overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all duration-300 hover:border-[var(--cf-royal)] lg:grid lg:min-h-[29rem] lg:grid-cols-2 lg:rounded-xl">
                     <div className="flex flex-col items-start justify-between gap-8 border-b border-[var(--cf-border-subtle)] p-6 sm:p-10 lg:border-r lg:border-b-0 lg:p-12">
                       <div className="flex w-full items-center justify-between gap-3">
                         <span
@@ -269,7 +269,7 @@ export function LandingExperience({
                   <article
                     key={`${card.title}-${index}`}
                     className={cn(
-                      "group relative flex flex-col justify-between gap-8 overflow-hidden rounded-[1.5rem] border p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--cf-shadow-hover)] sm:p-8 lg:rounded-[1.75rem]",
+                      "group relative flex flex-col justify-between gap-8 overflow-hidden rounded-xl border p-6 transition-all duration-200 sm:p-8 lg:rounded-xl",
                       isRoyal
                         ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
                         : isInk
@@ -531,7 +531,7 @@ export function LandingExperience({
                           href={`/new?template=${encodeURIComponent(tpl.slug)}`}
                           tabIndex={loopIndex === 1 ? -1 : undefined}
                           aria-hidden={loopIndex === 1 ? true : undefined}
-                          className="focus-visible:ring-ring/40 group flex w-[18.5rem] shrink-0 flex-col rounded-[1.25rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 transition-all duration-200 outline-none hover:-translate-y-1.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] focus-visible:ring-2 sm:w-[23rem] lg:w-[25.25rem] lg:rounded-[1.5rem]"
+                          className="focus-visible:ring-ring/40 group flex w-[18.5rem] shrink-0 flex-col rounded-[1.25rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 transition-all duration-200 outline-none hover:border-[var(--cf-royal)] focus-visible:ring-2 sm:w-[23rem] lg:w-[25.25rem] lg:rounded-xl"
                         >
                           <div className="h-52 sm:h-64 lg:h-72">
                             <TemplateThumbnail
@@ -577,7 +577,7 @@ export function LandingExperience({
                           href={card.href}
                           tabIndex={loopIndex === 1 ? -1 : undefined}
                           aria-hidden={loopIndex === 1 ? true : undefined}
-                          className="focus-visible:ring-ring/40 group flex w-[18.5rem] shrink-0 flex-col rounded-[1.25rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 transition-all duration-200 outline-none hover:-translate-y-1.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] focus-visible:ring-2 sm:w-[23rem] lg:w-[25.25rem] lg:rounded-[1.5rem]"
+                          className="focus-visible:ring-ring/40 group flex w-[18.5rem] shrink-0 flex-col rounded-[1.25rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 transition-all duration-200 outline-none hover:border-[var(--cf-royal)] focus-visible:ring-2 sm:w-[23rem] lg:w-[25.25rem] lg:rounded-xl"
                         >
                           <div className="h-52 sm:h-64 lg:h-72">
                             <V3TemplateArtwork variant={card.variant} />

@@ -82,7 +82,7 @@ export function HelpArticleView({
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <article className="flex flex-col gap-6 rounded-[2rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-card)] sm:p-9 lg:col-span-8">
+        <article className="flex flex-col gap-6 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-card)] sm:p-9 lg:col-span-8">
           <header className="flex flex-col gap-3 border-b border-[var(--cf-border-subtle)] pb-6">
             <div className="flex flex-wrap items-center gap-2.5">
               <Badge tone="accent" withDot={false}>
@@ -149,7 +149,7 @@ export function HelpArticleView({
         </article>
 
         <aside className="flex flex-col gap-5 lg:col-span-4">
-          <div className="flex flex-col gap-3 rounded-[1.75rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-soft)]">
+          <div className="flex flex-col gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 shadow-[var(--cf-shadow-soft)]">
             <h2 className="v3-heading-s text-[var(--cf-text-primary)]">More guides</h2>
             <ul className="flex flex-col gap-2">
               {relatedArticles.map((related) => (
@@ -165,7 +165,7 @@ export function HelpArticleView({
             </ul>
           </div>
 
-          <div className="v3-pattern-dots-dark flex flex-col gap-3.5 rounded-[1.75rem] border border-[var(--cf-border-on-royal)] p-6 text-[var(--cf-text-on-royal)] shadow-[var(--cf-shadow-soft)]">
+          <div className="v3-pattern-dots-dark flex flex-col gap-3.5 rounded-xl border border-[var(--cf-border-on-royal)] p-6 text-[var(--cf-text-on-royal)] shadow-[var(--cf-shadow-soft)]">
             <h2 className="v3-heading-s text-[var(--cf-text-on-royal)]">Need a hand?</h2>
             <p className="v3-body-s text-[var(--cf-text-on-royal-muted)]">
               Send us your project name and question — we’ll reply by email.

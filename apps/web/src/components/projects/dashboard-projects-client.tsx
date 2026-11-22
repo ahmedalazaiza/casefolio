@@ -604,7 +604,7 @@ export function DashboardProjectsClient({
       {workspaceContext.recoverySpacesCount > 0 && (
         <div
           data-testid="dashboard-recovery-banner"
-          className="border-primary/30 bg-accent/40 flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"
+          className="border-primary/30 bg-accent/40 flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center"
         >
           <div className="flex items-center gap-2.5">
             <ArchiveRestore className="text-primary size-4 shrink-0" />
@@ -626,7 +626,7 @@ export function DashboardProjectsClient({
         <div
           role="alert"
           data-testid="dashboard-frozen-banner"
-          className="border-destructive/40 bg-destructive-soft text-foreground flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"
+          className="border-destructive/40 bg-destructive-soft text-foreground flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center"
         >
           <div className="flex items-start gap-2.5">
             <Lock className="text-destructive mt-0.5 size-4 shrink-0" />
@@ -994,7 +994,7 @@ export function DashboardProjectsClient({
           <div
             role="status"
             data-testid="dashboard-free-lifetime-used-banner"
-            className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-4 rounded-xl border p-3.5 sm:flex-row sm:items-center"
+            className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex flex-col justify-between gap-4 rounded-xl border p-3.5 sm:flex-row sm:items-center"
           >
             <div className="flex items-start gap-3">
               <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
@@ -1154,7 +1154,7 @@ export function DashboardProjectsClient({
         <div
           role="status"
           data-testid="dashboard-downgrade-lock-banner"
-          className="border-warning/40 bg-warning-soft text-foreground flex flex-col justify-between gap-4 rounded-xl border p-3.5 sm:flex-row sm:items-center"
+          className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex flex-col justify-between gap-4 rounded-xl border p-3.5 sm:flex-row sm:items-center"
         >
           <div className="flex items-start gap-3">
             <Lock className="text-warning mt-0.5 size-4 shrink-0" />
@@ -1365,8 +1365,6 @@ export function DashboardProjectsClient({
             );
             const canDeleteLocked =
               project.workspaceKind !== "team" || activeWorkspace?.role === "owner";
-            const indexLabel = String(idx + 1).padStart(2, "0");
-            const windowPath = project.slug ? `p/${project.slug}` : `draft/${project.templateName.toLowerCase()}`;
 
             function handleLockedProjectClick() {
               if (project.isLockedByTeamSubscription) {
@@ -1389,24 +1387,12 @@ export function DashboardProjectsClient({
                 data-slot="project-card"
                 data-project-id={project.id}
                 className={cn(
-                  "group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground transition-all duration-200",
+                  "group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground transition-all duration-200",
                   isProjectLocked
                     ? "opacity-90"
-                    : "hover:-translate-y-0.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]",
+                    : "hover:border-[var(--cf-royal)]",
                 )}
               >
-                {/* Architectural Spec Bar */}
-                <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 py-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="inline-flex h-5 shrink-0 items-center rounded border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-1.5 font-mono text-[0.65rem] font-bold tracking-wider text-[var(--cf-text-primary)] uppercase">
-                      {indexLabel}
-                    </span>
-                    <span className="truncate font-mono text-[0.6875rem] text-[var(--cf-text-tertiary)]">
-                      {windowPath}
-                    </span>
-                  </div>
-                </div>
-
                 <div className="p-3 pb-0">
                   {isProjectLocked ? (
                     <button
@@ -1737,7 +1723,7 @@ export function DashboardProjectsClient({
             <div
               role="note"
               data-testid="free-delete-lifetime-warning"
-              className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2.5 rounded-xl border p-3.5"
+              className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex items-start gap-2.5 rounded-xl border p-3.5"
             >
               <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
               <div className="type-body-s flex flex-col gap-0.5">

@@ -1031,7 +1031,7 @@ export function TeamWorkspaceClient({
         <Card
           role="alert"
           data-testid="team-invitation-status-banner"
-          className="border-warning/40 bg-warning-soft flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"
+          className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"
         >
           <div className="flex items-start gap-3">
             <AlertTriangle className="text-warning mt-0.5 size-5 shrink-0" />
@@ -1365,7 +1365,7 @@ export function TeamWorkspaceClient({
           {isOwner && (
             <div
               data-testid="team-inline-seat-controls"
-              className="border-border/80 bg-surface/40 flex flex-col gap-3 rounded-2xl border p-4"
+              className="border-border/80 bg-surface/40 flex flex-col gap-3 rounded-xl border p-4"
             >
               {currentOrg.hasActiveTeamPlan ? (
                 <>
@@ -1557,7 +1557,7 @@ export function TeamWorkspaceClient({
               )}
             </div>
 
-            <div className="divide-border/70 border-border/80 bg-surface/40 divide-y rounded-2xl border">
+            <div className="divide-border/70 border-border/80 bg-surface/40 divide-y rounded-xl border">
               {currentOrg.members.map((member) => {
                 const memberRole = toCanonicalRole(member.role);
                 const isMemberOwner = memberRole === "owner";

@@ -504,7 +504,7 @@ export function TemplateDetailClient({
       {feedbackError && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft flex items-center gap-2.5 rounded-2xl border p-4"
+          className="border-destructive/30 bg-destructive-soft flex items-center gap-2.5 rounded-xl border p-4"
         >
           <AlertCircle className="text-destructive size-5 shrink-0" />
           <span className="text-destructive type-body-s-strong">{feedbackError}</span>
@@ -514,7 +514,7 @@ export function TemplateDetailClient({
       {feedbackSuccess && (
         <div
           role="status"
-          className="border-success/30 bg-success-soft flex items-center gap-2.5 rounded-2xl border p-4"
+          className="border-success/30 bg-success-soft flex items-center gap-2.5 rounded-xl border p-4"
         >
           <CheckCircle2 className="text-success size-5 shrink-0" />
           <span className="text-foreground type-body-s-strong">{feedbackSuccess}</span>
@@ -535,7 +535,7 @@ export function TemplateDetailClient({
                 </span>
               </div>
 
-              <div className="border-border/80 max-h-176 overflow-y-auto rounded-2xl border">
+              <div className="border-border/80 max-h-176 overflow-y-auto rounded-xl border">
                 {doc ? (
                   <TemplatePuckRenderer document={doc} />
                 ) : (
@@ -829,7 +829,7 @@ export function TemplateDetailClient({
                     }
                   : null
               }
-              className="border-border/80 aspect-[4/3] w-full rounded-2xl border"
+              className="border-border/80 aspect-[4/3] w-full rounded-xl border"
             />
           </Card>
 
@@ -845,7 +845,7 @@ export function TemplateDetailClient({
                   <li
                     key={ver.id}
                     className={cn(
-                      "flex flex-col gap-2 rounded-2xl border p-4 transition-all",
+                      "flex flex-col gap-2 rounded-xl border p-4 transition-all",
                       isSelected
                         ? "border-primary/50 bg-accent/25"
                         : "border-border/70 bg-surface/40 hover:border-border-strong",

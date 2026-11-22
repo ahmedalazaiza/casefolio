@@ -18,7 +18,7 @@ export default function AdminErrorBoundary({
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
-      <div className="border-border/80 bg-elevated shadow-float flex max-w-lg flex-col items-center gap-4 rounded-3xl border px-8 py-10 text-center sm:px-12">
+      <div className="border-border/80 bg-elevated shadow-float flex max-w-lg flex-col items-center gap-4 rounded-xl border px-8 py-10 text-center sm:px-12">
         <Eyebrow className="w-fit font-mono">ADMIN</Eyebrow>
         <h2 className="text-foreground type-heading-l">Admin panel error</h2>
         <p className="text-muted-foreground type-body-m">

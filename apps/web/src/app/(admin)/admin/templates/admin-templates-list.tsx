@@ -237,7 +237,7 @@ export function AdminTemplatesList({
           data-testid="admin-templates-empty-state"
           className="items-center justify-center gap-4 px-6 py-20 text-center"
         >
-          <div className="bg-accent/70 text-primary flex size-14 items-center justify-center rounded-2xl">
+          <div className="bg-accent/70 text-primary flex size-14 items-center justify-center rounded-xl">
             <LayoutTemplate className="size-6" />
           </div>
           <div className="flex max-w-md flex-col gap-1.5">
@@ -279,7 +279,7 @@ export function AdminTemplatesList({
       {actionError && !deleteTarget && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-2xl border px-4 py-3"
+          className="border-destructive/30 bg-destructive-soft text-destructive type-body-s rounded-xl border px-4 py-3"
         >
           {actionError}
         </div>

@@ -381,7 +381,7 @@ export function ProjectExportsPanel({
         <div
           role="alert"
           data-testid="exports-error-alert"
-          className="border-destructive/35 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-2xl border p-4"
+          className="border-destructive/35 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-xl border p-4"
         >
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
           <span className="type-body-s">{errorMessage}</span>
@@ -389,7 +389,7 @@ export function ProjectExportsPanel({
       )}
 
       {/* Preset Cards + Plan Quota Banner */}
-      <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-8">
+      <section className="border-border/80 bg-elevated flex flex-col gap-5 rounded-xl border p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
             <h2 className="text-foreground type-heading-m">Export Presets</h2>
@@ -435,7 +435,7 @@ export function ProjectExportsPanel({
                   setErrorMessage(null);
                 }}
                 className={cn(
-                  "flex flex-col justify-between gap-4 rounded-2xl border p-5 text-left transition-all",
+                  "flex flex-col justify-between gap-4 rounded-xl border p-5 text-left transition-all",
                   isSelected
                     ? "border-primary bg-accent/40 ring-primary/15 -translate-y-0.5 ring-2"
                     : "border-border/80 bg-surface/60 hover:border-border-strong hover:bg-surface",
@@ -477,7 +477,7 @@ export function ProjectExportsPanel({
 
         {/* PNG Resolution Selector (`1x` 1,440 px vs `2x` 2,880 px — Spec §5.3) */}
         {selectedFormat === "png_long" && (
-          <div className="border-border/70 bg-surface/60 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4">
+          <div className="border-border/70 bg-surface/60 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
             <div className="flex flex-col gap-0.5">
               <span className="text-foreground type-body-s-strong">PNG Output Resolution</span>
               <span className="text-muted-foreground type-caption">
@@ -575,7 +575,7 @@ export function ProjectExportsPanel({
       {/* Download History */}
       <section
         aria-label="Export download history"
-        className="border-border/80 bg-elevated flex flex-col gap-5 rounded-3xl border p-6 sm:p-8"
+        className="border-border/80 bg-elevated flex flex-col gap-5 rounded-xl border p-6 sm:p-8"
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col gap-0.5">
@@ -593,7 +593,7 @@ export function ProjectExportsPanel({
         {overview.exports.length === 0 ? (
           <div
             data-testid="exports-empty-state"
-            className="border-border/80 bg-surface/60 flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-dashed py-14 text-center"
+            className="border-border/80 bg-surface/60 flex flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed py-14 text-center"
           >
             <Clock className="text-tertiary size-6" />
             <p className="text-foreground type-body-s-strong">No exports generated yet</p>
@@ -613,7 +613,7 @@ export function ProjectExportsPanel({
                 className="flex flex-wrap items-center justify-between gap-4 py-4 first:pt-1 last:pb-1"
               >
                 <div className="flex min-w-0 items-center gap-3.5">
-                  <div className="border-border/80 bg-surface flex size-11 shrink-0 items-center justify-center rounded-2xl border">
+                  <div className="border-border/80 bg-surface flex size-11 shrink-0 items-center justify-center rounded-xl border">
                     <PresetBadgeIcon format={item.format} />
                   </div>
 

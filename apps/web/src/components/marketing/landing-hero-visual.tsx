@@ -228,7 +228,7 @@ export function LandingHeroVisual({
           data-hero-card-left=""
           className="pointer-events-none absolute -bottom-4 left-0 z-0 w-[44%] max-w-[26rem] will-change-transform sm:-bottom-6 lg:left-4"
         >
-          <div className="-translate-x-6 -rotate-6 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2.5 sm:translate-x-2 sm:p-3.5">
+          <div className="-translate-x-6 -rotate-6 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2.5 sm:translate-x-2 sm:p-3.5">
             <div className="h-44 sm:h-64 lg:h-72">
               {leftTemplate ? (
                 <TemplateThumbnail
@@ -251,7 +251,7 @@ export function LandingHeroVisual({
           data-hero-card-right=""
           className="pointer-events-none absolute -bottom-4 right-0 z-0 w-[44%] max-w-[26rem] will-change-transform sm:-bottom-6 lg:right-4"
         >
-          <div className="translate-x-6 rotate-6 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2.5 sm:-translate-x-2 sm:p-3.5">
+          <div className="translate-x-6 rotate-6 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2.5 sm:-translate-x-2 sm:p-3.5">
             <div className="h-44 sm:h-64 lg:h-72">
               {rightTemplate ? (
                 <TemplateThumbnail
@@ -772,7 +772,7 @@ export function V3ShowcaseEditorPreview({
   return (
     <div
       aria-hidden="true"
-      className="overflow-hidden rounded-[1.25rem] border border-[var(--cf-border-inverse)] bg-[var(--cf-mock-chrome-bg)] text-[var(--cf-mock-chrome-ink)] shadow-[var(--cf-shadow-card)] lg:rounded-[1.75rem]"
+      className="overflow-hidden rounded-[1.25rem] border border-[var(--cf-border-inverse)] bg-[var(--cf-mock-chrome-bg)] text-[var(--cf-mock-chrome-ink)] shadow-[var(--cf-shadow-card)] lg:rounded-xl"
     >
       {/* Editor bar */}
       <div className="flex items-center justify-between border-b border-[var(--cf-mock-chrome-border)] px-4 py-2.5">

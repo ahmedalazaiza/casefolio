@@ -69,7 +69,7 @@ export default async function AboutPage() {
             {about.metrics.map((item, idx) => (
               <div
                 key={`${item.label}-${idx}`}
-                className="flex flex-col justify-between gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
+                className="flex flex-col justify-between gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 transition-all duration-200 hover:border-[var(--cf-royal)]"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="rounded-xs border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-2 py-0.5 font-mono text-xs font-semibold text-[var(--cf-text-tertiary)]">
@@ -118,7 +118,7 @@ export default async function AboutPage() {
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
               {about.pillars.map((pillar) => (
                 <DepthStackPanel key={`${pillar.step}-${pillar.title}`}>
-                  <article className="flex h-full flex-col justify-between gap-6 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)] sm:p-7">
+                  <article className="flex h-full flex-col justify-between gap-6 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:border-[var(--cf-royal)] sm:p-7">
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center justify-between gap-3">
                         <span className="inline-flex size-10 items-center justify-center rounded-md bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">

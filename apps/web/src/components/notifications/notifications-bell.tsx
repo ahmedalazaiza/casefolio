@@ -151,7 +151,7 @@ export function NotificationsBell({
         align="end"
         sideOffset={8}
         data-testid="notifications-dropdown-panel"
-        className="border-border bg-popover text-popover-foreground shadow-overlay w-96 max-w-[calc(100vw-2rem)] rounded-2xl border p-4"
+        className="border-border bg-popover text-popover-foreground shadow-overlay w-96 max-w-[calc(100vw-2rem)] rounded-xl border p-4"
       >
         <div className="flex items-center justify-between gap-2 px-1.5 pb-3">
           <span className="text-foreground type-heading-s">Notifications</span>

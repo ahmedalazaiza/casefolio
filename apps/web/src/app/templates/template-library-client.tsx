@@ -360,12 +360,11 @@ export function TemplateLibraryClient({
       </div>
     ) : (
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredTemplates.map((item, idx) => {
+        {filteredTemplates.map((item) => {
           const isLocked = item.tier === "pro" && !canUseProTemplates;
           const useHref = isAuthenticated
             ? `/new?template=${encodeURIComponent(item.slug)}`
             : `/sign-up?template=${encodeURIComponent(item.slug)}`;
-          const indexLabel = String(idx + 1).padStart(2, "0");
           const themeColors = item.document.template.theme.colors;
 
           return (
@@ -375,95 +374,73 @@ export function TemplateLibraryClient({
               data-template-slug={item.slug}
               data-tier={item.tier}
               data-locked={isLocked ? "true" : "false"}
-              className="group flex flex-col justify-between gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--cf-border-strong)] hover:shadow-[var(--cf-shadow-hover)]"
+              className="group flex flex-col justify-between gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3 transition-colors duration-200 hover:border-[var(--cf-royal)]"
             >
               <div className="flex flex-col gap-3.5">
-                {/* Architectural Spec Frame */}
-                <div className="overflow-hidden rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)]">
-                  <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2.5 py-1.5">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="inline-flex shrink-0 items-center rounded-xs border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-1.5 py-0.5 font-mono text-[0.625rem] font-semibold text-[var(--cf-text-primary)]">
-                        {indexLabel}
-                      </span>
-                      <span className="inline-flex items-center gap-1 truncate text-[0.6875rem] font-medium text-[var(--cf-text-secondary)]">
-                        <TypeIcon type={item.type} />
-                        <span className="truncate">{formatTypeLabel(item.type)}</span>
-                      </span>
-                    </div>
+                {/* Thumbnail */}
+                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)]">
+                  <TemplateThumbnail
+                    testId={`library-template-thumb-${item.slug}`}
+                    coverUrl={item.coverUrl}
+                    slug={item.slug}
+                    name={item.name}
+                    theme={{
+                      bg: themeColors.background,
+                      fg: themeColors.text,
+                      accent: themeColors.primary,
+                    }}
+                    className="size-full"
+                    imageClassName="group-hover:scale-[1.03]"
+                  />
 
-                    <div className="flex shrink-0 items-center">
-                      {item.tier === "pro" ? (
-                        <ProBadge />
-                      ) : (
-                        <Badge tone="published">Free</Badge>
-                      )}
-                    </div>
+                  <div className="pointer-events-none absolute top-2 right-2 z-10 flex items-center">
+                    {item.tier === "pro" ? <ProBadge /> : <Badge tone="published">Free</Badge>}
                   </div>
 
-                  <div className="relative aspect-[16/10] w-full overflow-hidden">
-                    <TemplateThumbnail
-                      testId={`library-template-thumb-${item.slug}`}
-                      coverUrl={item.coverUrl}
-                      slug={item.slug}
-                      name={item.name}
-                      theme={{
-                        bg: themeColors.background,
-                        fg: themeColors.text,
-                        accent: themeColors.primary,
-                      }}
-                      className="size-full"
-                      imageClassName="group-hover:scale-[1.03]"
-                    />
-
-                    {isLocked && (
-                      <div
-                        data-testid={`pro-lock-badge-${item.slug}`}
-                        className="bg-inverse/90 text-inverse-foreground type-caption absolute right-2.5 bottom-2.5 z-10 inline-flex items-center gap-1 rounded-md px-2.5 py-1"
-                      >
-                        <Lock className="size-3" />
-                        <span>Locked on Free</span>
-                      </div>
-                    )}
-                  </div>
+                  {isLocked && (
+                    <div
+                      data-testid={`pro-lock-badge-${item.slug}`}
+                      className="bg-inverse/90 text-inverse-foreground type-caption absolute right-2 bottom-2 z-10 inline-flex items-center gap-1 rounded-md px-2 py-0.5"
+                    >
+                      <Lock className="size-3" />
+                      <span>Locked on Free</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Metadata & Palette Strip */}
-                <div className="flex flex-col gap-1.5 px-0.5">
+                {/* Metadata */}
+                <div className="flex flex-col gap-1 px-0.5">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="v3-dashboard-card-title truncate text-[var(--cf-text-primary)]">
                       {item.name}
                     </h2>
 
-                    <div className="flex shrink-0 items-center gap-1.5">
+                    <div aria-hidden="true" className="flex shrink-0 items-center -space-x-1">
                       <span
-                        aria-hidden="true"
-                        className="size-3 rounded-full border border-[var(--cf-border-subtle)]"
+                        className="size-3.5 rounded-full border border-[var(--cf-border-subtle)]"
                         style={{ backgroundColor: themeColors.background }}
                       />
                       <span
-                        aria-hidden="true"
-                        className="size-3 rounded-full border border-[var(--cf-border-subtle)]"
+                        className="size-3.5 rounded-full border border-[var(--cf-border-subtle)]"
                         style={{ backgroundColor: themeColors.primary }}
                       />
-                      <span className="rounded-xs border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-1.5 py-0.5 font-mono text-[0.625rem] font-semibold text-[var(--cf-text-secondary)]">
-                        v{item.version}
-                      </span>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--cf-text-secondary)]">
-                    <span className="font-medium text-[var(--cf-text-primary)]">
-                      {item.categoryName ?? "General"}
+                    <span className="inline-flex items-center gap-1 font-medium text-[var(--cf-text-primary)]">
+                      <TypeIcon type={item.type} />
+                      {formatTypeLabel(item.type)}
                     </span>
                     <span aria-hidden="true">·</span>
-                    <span>{item.sectionCount} sections</span>
+                    <span>{item.categoryName ?? "General"}</span>
                     <span aria-hidden="true">·</span>
                     <span>{item.slotCount} slots</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 border-t border-[var(--cf-border-subtle)] pt-3">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setPreviewItem(item)}
@@ -580,7 +557,7 @@ export function TemplateLibraryClient({
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="max-h-[72vh] overflow-y-auto rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)]">
+              <div className="max-h-[72vh] overflow-y-auto rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)]">
                 <div
                   className={cn(
                     "mx-auto",

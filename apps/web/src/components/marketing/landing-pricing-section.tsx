@@ -106,7 +106,7 @@ export function LandingPricingSection({
       <div
         role="group"
         aria-label="Billing interval"
-        className="inline-flex items-center gap-1.5 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5"
       >
         <button
           type="button"
@@ -250,7 +250,7 @@ export function LandingPricingSection({
             isTeams && teamCalc.ok ? (
               <div
                 data-testid="team-card-seat-stepper"
-                className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 py-2.5"
+                className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 py-2.5"
               >
                 <div className="flex flex-col">
                   <span className="type-caption font-bold text-[var(--cf-text-primary)] tabular-nums">
@@ -332,7 +332,7 @@ export function LandingPricingSection({
       </ScrollRise>
 
       {showComparisonLink && (
-        <div className="flex w-full flex-col items-center justify-between gap-4 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 sm:flex-row sm:px-6">
+        <div className="flex w-full flex-col items-center justify-between gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 sm:flex-row sm:px-6">
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-center sm:justify-start sm:text-left">
             <span className="v3-body-s-strong inline-flex items-center gap-2 text-[var(--cf-text-primary)]">
               <ShieldCheck className="text-success size-4 shrink-0" />

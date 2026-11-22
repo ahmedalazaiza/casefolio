@@ -75,7 +75,7 @@ export default async function WorkspacePublishedPagesList() {
             return (
               <article
                 key={project.id}
-                className="flex flex-col overflow-hidden rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all hover:-translate-y-0.5 hover:border-[var(--cf-royal)] hover:shadow-[var(--cf-shadow-hover)]"
+                className="flex flex-col overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all hover:border-[var(--cf-royal)]"
               >
                 <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2">
                   <div className="flex min-w-0 items-center gap-2">
@@ -131,7 +131,7 @@ export default async function WorkspacePublishedPagesList() {
                       href={`/p/${project.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--cf-royal)] px-3.5 text-xs font-semibold text-[var(--cf-text-on-royal)] transition-all hover:-translate-y-0.5 hover:bg-[var(--cf-bg-action-hover)] hover:shadow-[var(--cf-shadow-hover)]"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--cf-royal)] px-3.5 text-xs font-semibold text-[var(--cf-text-on-royal)] transition-all hover:bg-[var(--cf-bg-action-hover)]"
                     >
                       <ExternalLink className="size-3.5 text-[var(--cf-bg-accent)]" />
                       <span>Open Live</span>

@@ -371,7 +371,7 @@ export function ImageSlotFrame({
         style={{
           borderColor: `var(--tpl-color-${safeAccent}, var(--primary))`,
         }}
-        className="pointer-events-none absolute -inset-2 z-0 rounded-3xl border opacity-20"
+        className="pointer-events-none absolute -inset-2 z-0 rounded-xl border opacity-20"
       />
       <div className="relative z-10">{frameElement}</div>
     </div>

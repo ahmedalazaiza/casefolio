@@ -498,7 +498,7 @@ export function ImageSlotField({
           )}
 
           {belowMinWidth && slotDefinition?.minWidth && (
-            <div className="border-warning/40 bg-warning-soft text-foreground flex items-start gap-2 rounded-lg border px-2.5 py-2">
+            <div className="border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground flex items-start gap-2 rounded-lg border px-2.5 py-2">
               <AlertTriangle className="text-warning mt-0.5 size-3.5 shrink-0" />
               <span className="type-caption">
                 Recommended minimum width is {slotDefinition.minWidth}px for sharp exports.
