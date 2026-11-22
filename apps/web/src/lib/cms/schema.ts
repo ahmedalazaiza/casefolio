@@ -434,11 +434,18 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       },
     ],
     socialLinks: [
-      { platform: "x", label: "Casefolio on X", href: "https://x.com/casefolio", customIconUrl: "" },
-      { platform: "linkedin", label: "Casefolio on LinkedIn", href: "https://linkedin.com/company/casefolio", customIconUrl: "" },
-      { platform: "dribbble", label: "Casefolio on Dribbble", href: "https://dribbble.com/casefolio", customIconUrl: "" },
-      { platform: "behance", label: "Casefolio on Behance", href: "https://behance.net/casefolio", customIconUrl: "" },
-      { platform: "github", label: "Casefolio on GitHub", href: "https://github.com/casefolio", customIconUrl: "" },
+      {
+        platform: "instagram",
+        label: "Casefolio on Instagram",
+        href: "https://www.instagram.com/layerat.portfolio/",
+        customIconUrl: "",
+      },
+      {
+        platform: "linkedin",
+        label: "Casefolio on LinkedIn",
+        href: "https://www.linkedin.com/company/layerat",
+        customIconUrl: "",
+      },
     ],
   },
   landing: {

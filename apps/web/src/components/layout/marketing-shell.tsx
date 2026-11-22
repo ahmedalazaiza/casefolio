@@ -23,6 +23,13 @@ export const MARKETING_NAV_ITEMS: readonly MarketingNavItem[] = [
 ];
 
 const BUILTIN_SOCIAL_ICONS: Record<string, ReactNode> = {
+  instagram: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
+      <rect width="18" height="18" x="3" y="3" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  ),
   x: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="size-4" aria-hidden="true">
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -355,22 +362,21 @@ export function MarketingShell({
                 </li>
               ))}
             </ul>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1">
+            <div className="flex flex-col gap-2 pt-1">
               <p className="v3-body-s text-[var(--cf-text-tertiary)]">
                 {brand.copyrightText}
               </p>
-              <span className="v3-body-s text-[var(--cf-text-tertiary)]">
-                ·{" "}
+              <div className="flex items-center gap-3">
                 <a
                   href="https://www.layerat.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[var(--cf-royal-text)] underline-offset-4 hover:underline"
+                  className="v3-body-s text-[var(--cf-text-tertiary)] underline-offset-4 hover:text-[var(--cf-royal-text)] hover:underline"
                 >
                   www.layerat.com
                 </a>
-              </span>
-              <ThemeToggle />
+                <ThemeToggle />
+              </div>
             </div>
           </div>
 

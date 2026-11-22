@@ -60,6 +60,18 @@ describe("Route group shells: MarketingShell, AppShell, AdminShell (C-103)", () 
       expect(screen.getAllByRole("link", { name: item.label }).length).toBeGreaterThanOrEqual(1);
     }
 
+    const socialList = screen.getByRole("list", { name: "Casefolio social media links" });
+    const socialAnchors = Array.from(socialList.querySelectorAll("a"));
+    expect(socialAnchors).toHaveLength(2);
+    expect(socialAnchors[0]).toHaveAttribute(
+      "href",
+      "https://www.instagram.com/layerat.portfolio/",
+    );
+    expect(socialAnchors[1]).toHaveAttribute(
+      "href",
+      "https://www.linkedin.com/company/layerat",
+    );
+
     const menuButton = screen.getByRole("button", { name: "Open navigation menu" });
     menuButton.focus();
     await user.keyboard("{Enter}");

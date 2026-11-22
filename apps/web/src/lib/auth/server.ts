@@ -46,6 +46,9 @@ export const auth = betterAuth({
         env.NEXT_PUBLIC_APP_URL,
         process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
         process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : "",
+        process.env.VERCEL_PROJECT_PRODUCTION_URL
+          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+          : "",
         ...(process.env.NODE_ENV !== "production"
           ? ["http://127.0.0.1:3000", "http://localhost:3000"]
           : []),
