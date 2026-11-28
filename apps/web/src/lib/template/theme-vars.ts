@@ -13,7 +13,7 @@ export function buildTemplateThemeStyle(theme?: TemplateTheme): CSSProperties {
 
   if (!vars["--tpl-color-surfaceAlt"]) {
     vars["--tpl-color-surfaceAlt"] =
-      theme.colors.secondary || theme.colors.surface || "#22222D";
+      "color-mix(in oklab, var(--tpl-color-surface, #F5F5F7) 88%, var(--tpl-color-text, #111827))";
   }
   if (!vars["--tpl-color-line"]) {
     vars["--tpl-color-line"] =
@@ -31,6 +31,16 @@ export function buildTemplateThemeStyle(theme?: TemplateTheme): CSSProperties {
   }
 
   return vars as CSSProperties;
+}
+
+export function buildSlotMiniGradientStyle(theme?: TemplateTheme): CSSProperties {
+  const primary = theme?.colors.primary || "#4F46E5";
+  const secondary = theme?.colors.secondary || theme?.colors.accent || primary;
+  const surface = theme?.colors.surface || "#F5F5F7";
+  return {
+    backgroundImage: `radial-gradient(circle at 25% 20%, color-mix(in oklab, ${secondary} 45%, transparent), transparent 65%), linear-gradient(135deg, color-mix(in oklab, ${primary} 38%, ${surface}), ${surface})`,
+    color: theme?.colors.textMuted || theme?.colors.text || undefined,
+  };
 }
 
 export function extractRichTextParagraphs(value: RichTextValue | undefined | null): string[] {

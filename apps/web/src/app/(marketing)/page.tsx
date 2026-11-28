@@ -47,5 +47,11 @@ export default async function HomePage() {
     getLandingPlatformSnapshot(),
     getSiteCmsContent(),
   ]);
-  return <LandingExperience snapshot={snapshot} cms={cms.landing} />;
+  return (
+    <LandingExperience
+      snapshot={snapshot}
+      cms={cms.landing}
+      cmsPricing={cms.pricing}
+    />
+  );
 }

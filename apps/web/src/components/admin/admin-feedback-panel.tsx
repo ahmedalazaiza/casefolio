@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { Select } from "@/components/ui/select";
 import { formatRelativeActivity } from "@/lib/admin/users-types";
 import type { AdminFeedbackOverview } from "@/lib/feedback/types";
 import { cn } from "@/lib/utils";
@@ -140,18 +141,18 @@ export function AdminFeedbackPanel({
             ))}
           </div>
 
-          <select
+          <Select
             aria-label="Filter by trigger moment"
             value={triggerFilter}
             onChange={(e) => setTriggerFilter(e.target.value)}
-            className="border-input bg-background h-9 rounded-md border px-2 text-xs font-medium"
+            className="h-9 w-auto text-xs font-medium"
           >
             <option value="all">All trigger moments</option>
             <option value="first_publish">First publish</option>
             <option value="first_export">First export</option>
             <option value="milestone_usage">Milestone usage</option>
             <option value="manual">Manual sidebar button</option>
-          </select>
+          </Select>
         </div>
 
         <div className="w-full overflow-x-auto">

@@ -3,6 +3,7 @@
 import { LogOut, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ThemeModeSelector } from "@/components/theme-toggle";
 import { AvatarBadge } from "@/components/ui/avatar-badge";
 import {
   DropdownMenu,
@@ -41,7 +42,7 @@ export function UserAccountMenu({ initials, name, email, image }: UserAccountMen
           <AvatarBadge initials={initials} src={image} alt={name ?? initials} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5">
+      <DropdownMenuContent align="end" className="w-64 rounded-xl p-1.5">
         <DropdownMenuLabel className="flex flex-col gap-0.5">
           <span className="text-foreground type-body-s-strong truncate">
             {name ?? "Casefolio User"}
@@ -50,6 +51,10 @@ export function UserAccountMenu({ initials, name, email, image }: UserAccountMen
             <span className="text-tertiary type-caption truncate font-normal">{email}</span>
           )}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <div className="px-2 py-1.5">
+          <ThemeModeSelector />
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/account">

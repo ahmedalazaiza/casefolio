@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeActivity, type AdminUserDetail } from "@/lib/admin/users-types";
 import { cn } from "@/lib/utils";
@@ -661,16 +662,16 @@ export function AdminUserDetailPanel({
             </div>
 
             <div className="flex items-center gap-2">
-              <select
+              <Select
                 aria-label="Override user plan"
                 value={overridePlan}
                 onChange={(e) => setOverridePlan(e.target.value as "free" | "pro" | "team")}
-                className="border-input bg-background h-9 flex-1 rounded-md border px-2 text-xs font-medium"
+                className="flex-1"
               >
                 <option value="free">Free (1 credit)</option>
                 <option value="pro">Pro (10 projects + custom URL)</option>
                 <option value="team">Team (Unlimited shared)</option>
-              </select>
+              </Select>
               <Button
                 type="button"
                 variant="secondary"

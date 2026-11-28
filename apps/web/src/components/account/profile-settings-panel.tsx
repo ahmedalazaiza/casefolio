@@ -1,9 +1,9 @@
 "use client";
 
 import type { PlanTier } from "@casefolio/db";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition, type ChangeEvent, type FormEvent } from "react";
 import { toast } from "sonner";
 import { AvatarBadge } from "@/components/ui/avatar-badge";
 import { Badge, ProBadge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InputField } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { updateAccountProfileAction } from "@/lib/account/actions";
 import { can } from "@/lib/entitlements";
 
@@ -31,6 +32,7 @@ export interface ProfileSettingsPanelProps {
 export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [name, setName] = useState(initialProfile.name);
   const [jobTitle, setJobTitle] = useState(initialProfile.jobTitle ?? "");
@@ -38,10 +40,48 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
     initialProfile.designFocus ?? "both",
   );
   const [imageUrl, setImageUrl] = useState(initialProfile.image ?? "");
-  const [editingAvatarUrl, setEditingAvatarUrl] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isPaid = can(initialProfile.effectivePlan, "pro_templates");
+
+  async function handleAvatarUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("Please choose a PNG, JPG, or WebP photo up to 5 MB.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/account/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      const json = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        avatarUrl?: string;
+        error?: string;
+      };
+      if (!response.ok || !json.ok || !json.avatarUrl) {
+        setErrorMessage(json.error ?? "Could not upload profile photo.");
+        return;
+      }
+      setImageUrl(json.avatarUrl);
+      toast.success("Profile photo uploaded.");
+      router.refresh();
+    } catch {
+      setErrorMessage("Network error while uploading profile photo.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +100,6 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
         return;
       }
 
-      setEditingAvatarUrl(false);
       toast.success("Profile changes saved.");
       router.refresh();
     });
@@ -85,7 +124,7 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
         </div>
       </div>
 
-      {/* Avatar Row (Figma 2:10445) */}
+      {/* Avatar Upload Row */}
       <div className="flex flex-wrap items-center gap-4">
         <AvatarBadge
           initials={initialProfile.initials}
@@ -93,42 +132,55 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
           alt={name || initialProfile.name}
           size="lg"
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setEditingAvatarUrl((prev) => !prev)}
-          >
-            Change avatar
-          </Button>
-          {imageUrl.trim().length > 0 && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          aria-label="Upload profile photo"
+          onChange={handleAvatarUpload}
+          className="sr-only"
+          data-testid="profile-avatar-file-input"
+        />
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              onClick={() => {
-                setImageUrl("");
-                setEditingAvatarUrl(false);
-              }}
+              disabled={uploadingAvatar || isPending}
+              onClick={() => fileInputRef.current?.click()}
             >
-              Remove
+              {uploadingAvatar ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  <span>Uploading…</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="size-3.5" />
+                  <span>Change avatar</span>
+                </>
+              )}
             </Button>
-          )}
+            {imageUrl.trim().length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={uploadingAvatar || isPending}
+                onClick={() => {
+                  setImageUrl("");
+                }}
+              >
+                Remove
+              </Button>
+            )}
+          </div>
+          <span className="text-tertiary type-caption">PNG, JPG, or WebP · up to 5 MB</span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-5">
-        {editingAvatarUrl && (
-          <InputField
-            label="Avatar image URL"
-            type="url"
-            placeholder="https://images.example.com/avatar.jpg"
-            value={imageUrl}
-            onChange={(event) => setImageUrl(event.target.value)}
-          />
-        )}
-
         <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
           <InputField
             label="Full name"
@@ -148,18 +200,17 @@ export function ProfileSettingsPanel({ initialProfile }: ProfileSettingsPanelPro
         <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="profile-design-focus">Design focus</Label>
-            <select
+            <Select
               id="profile-design-focus"
               value={designFocus}
               onChange={(event) =>
                 setDesignFocus(event.target.value as "mobile" | "web" | "both")
               }
-              className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 type-body-m h-11 w-full min-w-0 rounded-xl border px-3.5 outline-none focus-visible:ring-2"
             >
               <option value="mobile">Mobile app</option>
               <option value="web">Website</option>
               <option value="both">Mobile &amp; Web</option>
-            </select>
+            </Select>
           </div>
 
           <div className="flex min-w-0 flex-col gap-1.5">

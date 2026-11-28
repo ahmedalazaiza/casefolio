@@ -96,7 +96,6 @@ test.describe("Phase 11 Core E2E Journeys (C-1102)", () => {
     const stamp = Date.now();
     const email = `e2e-core-designer-${stamp}@casefolio.test`;
     const password = "CasefolioJourney2026!";
-    const publicSlug = `core-orbit-${stamp}`;
     let createdUserId: string | null = null;
     let createdProjectId: string | null = null;
     const pageErrors: string[] = [];
@@ -203,8 +202,12 @@ test.describe("Phase 11 Core E2E Journeys (C-1102)", () => {
       // 6. Publish public case study & verify live SSR + watermark on Free
       await page.getByRole("link", { name: /Publish/i }).click();
       await expect(page).toHaveURL(new RegExp(`/projects/${createdProjectId}/share`));
-      await page.getByTestId("publish-slug-input").fill(publicSlug);
-      await expect(page.getByTestId("slug-availability-status")).toContainText("Available");
+      // Custom URL slugs are Pro/Teams-only: Free publishes with the auto-generated share link.
+      const slugInput = page.getByTestId("publish-slug-input");
+      await expect(slugInput).toHaveAttribute("readonly", "");
+      await expect(page.getByTestId("unlock-custom-url-button")).toBeVisible();
+      await expect(slugInput).not.toHaveValue("");
+      const publicSlug = await slugInput.inputValue();
       await page.getByTestId("publish-project-button").click();
       await expect(page.getByTestId("share-status-badge")).toContainText("Published · Public");
 
@@ -223,8 +226,8 @@ test.describe("Phase 11 Core E2E Journeys (C-1102)", () => {
       ).toBeVisible();
       await expect(anonPage.getByTestId("casefolio-watermark-badge")).toBeVisible();
 
-      // 7. Export PNG on Free (Behance gated on Free)
-      await page.getByRole("link", { name: /Exports \(PNG \/ PDF \/ Behance\)/i }).click();
+      // 7. Export PNG on Free (Layerat gated on Free)
+      await page.getByRole("link", { name: /Exports \(Layerat \/ PNG \/ PDF\)/i }).click();
       await expect(page).toHaveURL(new RegExp(`/projects/${createdProjectId}/exports`));
 
       await page.getByTestId("export-preset-behance").click();
@@ -327,6 +330,7 @@ test.describe("Phase 11 Core E2E Journeys (C-1102)", () => {
     const uniqueName = `Orbit Core ${stamp}`;
     const orbitJsonPath = resolve(process.cwd(), "reference/template.example.json");
     let adminUserId: string | null = null;
+    let uploadedCoverUrl: string | null = null;
 
     try {
       await page.setViewportSize({ width: 1440, height: 920 });
@@ -376,6 +380,19 @@ test.describe("Phase 11 Core E2E Journeys (C-1102)", () => {
 
       await page.getByLabel("Template name *").fill(uniqueName);
       await page.getByLabel("Slug *").fill(uniqueSlug);
+
+      // A real cover / thumbnail image is mandatory when adding a template
+      await page.getByTestId("template-cover-file-input").setInputFiles({
+        name: "orbit-core-cover.png",
+        mimeType: "image/png",
+        buffer: generateMockupPng(800, 600),
+      });
+      const coverImg = page.getByTestId("template-cover-live-preview").locator("img").first();
+      await expect(coverImg).toHaveAttribute("src", /^\/cdn\/covers\/[0-9a-f-]+\.png$/, {
+        timeout: 15_000,
+      });
+      uploadedCoverUrl = (await coverImg.getAttribute("src")) ?? null;
+
       await page.getByRole("button", { name: /Save as draft \(v1\.0\.0\)/i }).click();
 
       await expect(page).toHaveURL(/\/admin\/templates\/[0-9a-f-]+/);
@@ -410,6 +427,12 @@ test.describe("Phase 11 Core E2E Journeys (C-1102)", () => {
         .set({ currentVersionId: null })
         .where(eq(templates.slug, uniqueSlug));
       await db.delete(templates).where(eq(templates.slug, uniqueSlug));
+      const coverFileName = uploadedCoverUrl?.split("/").pop();
+      if (coverFileName) {
+        rmSync(resolve(process.cwd(), ".data/uploads/templates/covers", coverFileName), {
+          force: true,
+        });
+      }
       if (adminUserId) {
         await db.delete(auditLogs).where(eq(auditLogs.actorId, adminUserId));
         await db.delete(users).where(eq(users.id, adminUserId));

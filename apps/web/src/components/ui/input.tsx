@@ -7,8 +7,8 @@ function Input({ className, type = "text", ...props }: ComponentProps<"input">) 
       type={type}
       data-slot="input"
       className={cn(
-        "border-input bg-elevated text-foreground placeholder:text-tertiary selection:bg-primary selection:text-primary-foreground flex h-11 w-full min-w-0 rounded-lg border px-4 py-2.5 type-body-m transition-colors outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-surface disabled:text-tertiary disabled:opacity-70",
-        "focus-visible:border-ring focus-visible:ring-ring/20 focus-visible:ring-2",
+        "border-[var(--cf-lp-input-border)] bg-[var(--cf-lp-input-bg)] text-foreground placeholder:text-[var(--cf-text-tertiary)] selection:bg-primary selection:text-primary-foreground flex h-[2.5625rem] w-full min-w-0 rounded-[0.375rem] border px-3.5 py-2 text-[0.8125rem] transition-colors outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-surface disabled:text-tertiary disabled:opacity-70",
+        "focus-visible:border-[var(--cf-lp-ink)] focus-visible:ring-ring/20 focus-visible:ring-2",
         "aria-invalid:border-destructive aria-invalid:ring-destructive/15",
         className,
       )}

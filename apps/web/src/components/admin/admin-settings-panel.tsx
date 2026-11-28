@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   AUDIT_ACTION_CATEGORIES,
   filterAuditLogs,
@@ -645,17 +646,16 @@ export function AdminSettingsPanel({
               <label htmlFor="promote-admin-role" className="text-foreground type-body-s-strong">
                 Role
               </label>
-              <select
+              <Select
                 id="promote-admin-role"
                 value={promoteRole}
                 onChange={(e) => setPromoteRole(e.target.value as "admin" | "superadmin")}
-                className="border-border bg-background text-foreground focus-visible:ring-ring/40 h-10 rounded-xl border px-3 outline-none type-body-s focus-visible:ring-2"
               >
                 <option value="admin">Admin</option>
                 {currentAdminRole === "superadmin" && (
                   <option value="superadmin">Superadmin</option>
                 )}
-              </select>
+              </Select>
             </div>
 
             <DialogFooter>

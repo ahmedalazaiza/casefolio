@@ -157,6 +157,9 @@ export function normalizeReferrerSource(
   if (host.includes("linkedin.com") || host === "lnkd.in") {
     return "LinkedIn";
   }
+  if (host.includes("layerat.com")) {
+    return "Layerat";
+  }
   if (host.includes("dribbble.com")) {
     return "Dribbble";
   }

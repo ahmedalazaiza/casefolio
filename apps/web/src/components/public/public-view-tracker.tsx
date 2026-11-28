@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function PublicViewTracker({ projectId }: { projectId: string }) {
+  const trackedProjectIdRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (trackedProjectIdRef.current === projectId) {
+      return;
+    }
+    trackedProjectIdRef.current = projectId;
+
     const payload = JSON.stringify({
       projectId,
       referrer: typeof document !== "undefined" ? document.referrer || null : null,

@@ -1,27 +1,26 @@
 "use client";
 
-import type { ProjectType, SpaceVisibility } from "@casefolio/db";
+import type { ProjectType } from "@casefolio/db";
 import {
   AlertTriangle,
   Archive,
   ArchiveRestore,
+  ArrowRight,
+  ArrowUpRight,
   Copy,
   Download,
   ExternalLink,
   FolderInput,
-  FolderPlus,
+  Lightbulb,
   Loader2,
   Lock,
-  Monitor,
   MoreHorizontal,
   Pencil,
   Plus,
   Search,
   Share2,
-  Smartphone,
   Sparkles,
   Trash2,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,9 +45,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   deleteProjectAction,
   duplicateProjectAction,
@@ -56,7 +55,7 @@ import {
 } from "@/lib/projects/actions";
 import type { DashboardProjectItem } from "@/lib/projects/dashboard-types";
 import { cn } from "@/lib/utils";
-import type { SpaceSummaryItem, WorkspaceSwitcherState } from "@/lib/workspaces/service";
+import type { WorkspaceSwitcherState } from "@/lib/workspaces/service";
 
 type StatusFilter = "all" | "draft" | "published" | "archived";
 type TypeFilter = "all" | ProjectType;
@@ -76,30 +75,34 @@ const EMPTY_STATE_HINTS = [
   {
     step: "03",
     title: "Publish or export",
-    description: "Share a live link on Casefolio or download PNG, Behance, and PDF files.",
+    description: "Share a live link on Casefolio or export your full case study to Layerat, PNG, and PDF.",
   },
 ] as const;
 
 const ARTWORK_PALETTES = [
   {
-    surface: "bg-accent",
-    glyph: "text-accent-foreground",
-    leftBar: "bg-primary",
+    surface: "bg-[var(--cf-lp-lime)] text-[var(--cf-lp-on-lime)]",
+    glyph: "text-[var(--cf-lp-on-lime)]",
+    frameBg: "bg-[var(--cf-lp-card)] border-[var(--cf-lp-ink)] text-[var(--cf-lp-ink)]",
+    tagline: "Tell the story behind the work.",
   },
   {
-    surface: "bg-warning-soft",
-    glyph: "text-warning",
-    leftBar: "bg-warning",
+    surface: "bg-[var(--cf-lp-mauve)] text-[var(--cf-lp-mauve-ink)]",
+    glyph: "text-[var(--cf-lp-mauve-ink)]",
+    frameBg: "bg-[var(--cf-lp-dark)] border-[var(--cf-lp-dark-rule)] text-[var(--cf-lp-dark-ink)]",
+    tagline: "Every decision, made clear.",
   },
   {
-    surface: "bg-[var(--tmpl-bg)]",
-    glyph: "text-[var(--tmpl-primary)]",
-    leftBar: "bg-[var(--tmpl-primary)]",
+    surface: "bg-[var(--cf-lp-cobalt)] text-[var(--cf-lp-cream-elevated)]",
+    glyph: "text-[var(--cf-lp-cream-elevated)]",
+    frameBg: "bg-[var(--cf-lp-cobalt-tile)] border-[var(--cf-lp-cobalt-tile-border)] text-[var(--cf-lp-cream-elevated)]",
+    tagline: "Built for mobile clarity.",
   },
   {
-    surface: "bg-success-soft",
-    glyph: "text-success",
-    leftBar: "bg-success",
+    surface: "bg-[var(--cf-lp-peach)] text-[var(--cf-lp-ink)]",
+    glyph: "text-[var(--cf-lp-ink)]",
+    frameBg: "bg-[var(--cf-lp-cream-elevated)] border-[var(--cf-lp-ink)] text-[var(--cf-lp-ink)]",
+    tagline: "Objects for quiet focus.",
   },
 ] as const;
 
@@ -158,18 +161,20 @@ export interface DashboardProjectsClientProps {
   initialProjects: DashboardProjectItem[];
   workspaceContext?: WorkspaceSwitcherState;
   lifetimeProjectsCreated?: number;
+  initialSpaceId?: string;
 }
 
 export function DashboardProjectsClient({
   initialProjects,
   workspaceContext,
   lifetimeProjectsCreated,
+  initialSpaceId = "all",
 }: DashboardProjectsClientProps) {
   const router = useRouter();
   const [projects, setProjects] = useState<DashboardProjectItem[]>(initialProjects);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [spaceFilter, setSpaceFilter] = useState<string>("all");
+  const [spaceFilter, setSpaceFilter] = useState<string>(initialSpaceId || "all");
   const [sortMode, setSortMode] = useState<SortMode>("updated");
   const [searchQuery, setSearchQuery] = useState("");
   const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
@@ -177,6 +182,10 @@ export function DashboardProjectsClient({
   useEffect(() => {
     setProjects(initialProjects);
   }, [initialProjects]);
+
+  useEffect(() => {
+    setSpaceFilter(initialSpaceId || "all");
+  }, [initialSpaceId]);
 
   // Rename modal state (Figma 2:2783)
   const [renameTarget, setRenameTarget] = useState<DashboardProjectItem | null>(null);
@@ -190,19 +199,6 @@ export function DashboardProjectsClient({
   const [deleteExportsChecked, setDeleteExportsChecked] = useState(true);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  // Create Space modal state
-  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
-  const [newSpaceName, setNewSpaceName] = useState("");
-  const [newSpaceVisibility, setNewSpaceVisibility] = useState<SpaceVisibility>("private");
-  const [createSpaceBusy, setCreateSpaceBusy] = useState(false);
-  const [createSpaceError, setCreateSpaceError] = useState<string | null>(null);
-
-  // Transition Space Visibility modal state
-  const [transitionSpaceTarget, setTransitionSpaceTarget] = useState<SpaceSummaryItem | null>(null);
-  const [transitionConfirmed, setTransitionConfirmed] = useState(false);
-  const [transitionBusy, setTransitionBusy] = useState(false);
-  const [transitionError, setTransitionError] = useState<string | null>(null);
 
   // Move Project between spaces modal state
   const [moveTarget, setMoveTarget] = useState<DashboardProjectItem | null>(null);
@@ -302,83 +298,6 @@ export function DashboardProjectsClient({
       toast.error("Network error while switching workspace.");
     } finally {
       setSwitchingWorkspace(false);
-    }
-  }
-
-  async function handleCreateSpaceSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!activeWorkspace) return;
-    setCreateSpaceBusy(true);
-    setCreateSpaceError(null);
-    try {
-      const response = await fetch("/api/spaces", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create",
-          workspaceId: activeWorkspace.workspaceId,
-          name: newSpaceName.trim(),
-          visibility: activeWorkspace.kind === "team" ? newSpaceVisibility : "private",
-        }),
-      });
-      const json = (await response.json()) as {
-        ok: boolean;
-        space?: SpaceSummaryItem;
-        error?: string;
-      };
-      if (!response.ok || !json.ok) {
-        setCreateSpaceError(json.error ?? "Could not create space.");
-        return;
-      }
-      toast.success(`Created space “${newSpaceName.trim()}”`);
-      setNewSpaceName("");
-      setCreateSpaceOpen(false);
-      if (json.space?.id) {
-        setSpaceFilter(json.space.id);
-      }
-      router.refresh();
-    } catch {
-      setCreateSpaceError("Network error while creating space.");
-    } finally {
-      setCreateSpaceBusy(false);
-    }
-  }
-
-  async function handleTransitionSpaceVisibilitySubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!transitionSpaceTarget) return;
-    const targetVis: SpaceVisibility =
-      transitionSpaceTarget.visibility === "private" ? "shared" : "private";
-    setTransitionBusy(true);
-    setTransitionError(null);
-    try {
-      const response = await fetch("/api/spaces", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "transition_visibility",
-          spaceId: transitionSpaceTarget.id,
-          targetVisibility: targetVis,
-          confirmed: transitionConfirmed,
-        }),
-      });
-      const json = (await response.json()) as { ok: boolean; error?: string };
-      if (!response.ok || !json.ok) {
-        setTransitionError(json.error ?? "Could not update space visibility.");
-        return;
-      }
-      toast.success(
-        targetVis === "shared"
-          ? `“${transitionSpaceTarget.name}” is now Shared with teammates`
-          : `“${transitionSpaceTarget.name}” is now Private (projects unpublished & collaborator sessions revoked)`,
-      );
-      setTransitionSpaceTarget(null);
-      setTransitionConfirmed(false);
-      router.refresh();
-    } catch {
-      setTransitionError("Network error while updating space visibility.");
-    } finally {
-      setTransitionBusy(false);
     }
   }
 
@@ -596,79 +515,32 @@ export function DashboardProjectsClient({
     setSearchQuery("");
     setStatusFilter("all");
     setTypeFilter("all");
-    setSpaceFilter("all");
+    if (spaceFilter !== "all") {
+      setSpaceFilter("all");
+      void fetch("/api/spaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "select_space", spaceId: "all" }),
+      })
+        .then(() => router.refresh())
+        .catch(() => {});
+    }
   }
 
   const workspaceBar = workspaceContext && activeWorkspace && (
-    <div className="flex flex-col gap-3">
-      {workspaceContext.recoverySpacesCount > 0 && (
-        <div
-          data-testid="dashboard-recovery-banner"
-          className="border-primary/30 bg-accent/40 flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center"
-        >
-          <div className="flex items-center gap-2.5">
-            <ArchiveRestore className="text-primary size-4 shrink-0" />
-            <p className="text-foreground type-body-s">
-              You have{" "}
-              <span className="font-semibold">{workspaceContext.recoverySpacesCount}</span>{" "}
-              departed-team private{" "}
-              {workspaceContext.recoverySpacesCount === 1 ? "space" : "spaces"} available in your
-              90-day Recovery Portal.
-            </p>
-          </div>
-          <Button asChild size="sm" variant="secondary">
-            <Link href="/account/recovery">Open Recovery Portal</Link>
-          </Button>
-        </div>
-      )}
-
-      {activeWorkspace.isFrozen && (
-        <div
-          role="alert"
-          data-testid="dashboard-frozen-banner"
-          className="border-destructive/40 bg-destructive-soft text-foreground flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center"
-        >
-          <div className="flex items-start gap-2.5">
-            <Lock className="text-destructive mt-0.5 size-4 shrink-0" />
-            <div className="flex flex-col gap-0.5">
-              <p className="type-body-s-strong">
-                Team workspace locked (
-                {activeWorkspace.frozenReason === "past_due_over_10_days" ||
-                activeWorkspace.frozenReason === "past_due_over_7_days" ||
-                activeWorkspace.frozenReason === "past_due_expired"
-                  ? "10-day renewal grace ended"
-                  : "Team subscription ended"}
-                )
-              </p>
-              <p className="text-muted-foreground type-caption">
-                Opening, editing, publishing, and exporting Team projects is locked until the Team
-                Owner renews Teams. Each member still keeps 1 Case Study in their Personal Workspace.
-              </p>
-            </div>
-          </div>
-          <Button asChild size="sm" variant="secondary">
-            <Link href="/account/billing">Manage billing</Link>
-          </Button>
-        </div>
-      )}
-
-      <div
-        data-testid="dashboard-workspace-bar"
-        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-2.5"
-      >
-        {/* Visually hidden select retained for E2E automation while UI workspace switcher + quotas live in Top Navbar */}
-        <label htmlFor="dashboard-workspace-select" className="sr-only">
-          Active workspace
-        </label>
+    <>
+      {/* Visually hidden select retained for E2E automation while UI workspace & space switcher live in Top Navbar */}
+      <div className="sr-only top-0 left-0">
+        <label htmlFor="dashboard-workspace-select">Active workspace</label>
         <select
           id="dashboard-workspace-select"
           data-testid="dashboard-workspace-select"
-          disabled={switchingWorkspace}
+          className="sr-only"
+          disabled={switchingWorkspace || mountedNowMs === null}
           value={activeWorkspace.organizationId ?? "personal"}
           onChange={(e) =>
             handleSwitchWorkspace(e.target.value === "personal" ? null : e.target.value)
           }
-          className="sr-only"
         >
           {workspaceContext.workspaces.map((ws) => (
             <option key={ws.workspaceId} value={ws.organizationId ?? "personal"}>
@@ -680,301 +552,137 @@ export function DashboardProjectsClient({
             </option>
           ))}
         </select>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-            Spaces
-          </span>
-          {spaces.length > 0 && (
+      {(workspaceContext.recoverySpacesCount > 0 || activeWorkspace.isFrozen) && (
+        <div className="flex flex-col gap-3">
+          {workspaceContext.recoverySpacesCount > 0 && (
             <div
-              role="group"
-              aria-label="Filter by space"
-              className="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
+              data-testid="dashboard-recovery-banner"
+              className="border-primary/30 bg-accent/40 flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center"
             >
-              <button
-                type="button"
-                onClick={() => setSpaceFilter("all")}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
-                  spaceFilter === "all"
-                    ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
-                    : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                )}
-              >
-                All visible spaces
-              </button>
-              {spaces.map((sp) => (
-                <button
-                  key={sp.id}
-                  type="button"
-                  onClick={() => setSpaceFilter(sp.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
-                    spaceFilter === sp.id
-                      ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
-                      : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                  )}
-                >
-                  {sp.visibility === "private" ? (
-                    <Lock className="size-3" />
-                  ) : (
-                    <Users className="size-3" />
-                  )}
-                  <span>{sp.name}</span>
-                </button>
-              ))}
+              <div className="flex items-center gap-2.5">
+                <ArchiveRestore className="text-primary size-4 shrink-0" />
+                <p className="text-foreground type-body-s">
+                  You have{" "}
+                  <span className="font-semibold">{workspaceContext.recoverySpacesCount}</span>{" "}
+                  departed-team private{" "}
+                  {workspaceContext.recoverySpacesCount === 1 ? "space" : "spaces"} available in
+                  your 90-day Recovery Portal.
+                </p>
+              </div>
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/account/recovery">Open Recovery Portal</Link>
+              </Button>
+            </div>
+          )}
+
+          {activeWorkspace.isFrozen && (
+            <div
+              role="alert"
+              data-testid="dashboard-frozen-banner"
+              className="border-destructive/40 bg-destructive-soft text-foreground flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center"
+            >
+              <div className="flex items-start gap-2.5">
+                <Lock className="text-destructive mt-0.5 size-4 shrink-0" />
+                <div className="flex flex-col gap-0.5">
+                  <p className="type-body-s-strong">
+                    Team workspace locked (
+                    {activeWorkspace.frozenReason === "past_due_over_10_days" ||
+                    activeWorkspace.frozenReason === "past_due_over_7_days" ||
+                    activeWorkspace.frozenReason === "past_due_expired"
+                      ? "10-day renewal grace ended"
+                      : "Team subscription ended"}
+                    )
+                  </p>
+                  <p className="text-muted-foreground type-caption">
+                    Opening, editing, publishing, and exporting Team projects is locked until the
+                    Team Owner renews Teams. Each member still keeps 1 Case Study in their Personal
+                    Workspace.
+                  </p>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/account/billing">Manage billing</Link>
+              </Button>
             </div>
           )}
         </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          {activeWorkspace.kind === "team" &&
-            selectedSpaceObj &&
-            (selectedSpaceObj.isMine ||
-              activeWorkspace.role === "owner" ||
-              activeWorkspace.role === "admin") && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                data-testid="dashboard-transition-space-button"
-                className="h-7 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs"
-                onClick={() => {
-                  setTransitionSpaceTarget(selectedSpaceObj);
-                  setTransitionConfirmed(false);
-                  setTransitionError(null);
-                }}
-              >
-                {selectedSpaceObj.visibility === "private" ? (
-                  <>
-                    <Users className="size-3" />
-                    Make Shared
-                  </>
-                ) : (
-                  <>
-                    <Lock className="size-3" />
-                    Make Private
-                  </>
-                )}
-              </Button>
-            )}
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            data-testid="dashboard-create-space-button"
-            className="h-7 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs"
-            onClick={() => {
-              setNewSpaceVisibility("private");
-              setCreateSpaceError(null);
-              setCreateSpaceOpen(true);
-            }}
-          >
-            <FolderPlus className="size-3" />
-            New space
-          </Button>
-        </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 
   const createProjectHref =
     spaceFilter !== "all" ? `/new?spaceId=${encodeURIComponent(spaceFilter)}` : "/new";
 
   const spaceDialogs = (
-    <>
-      {/* Create Space Dialog */}
-      <Dialog open={createSpaceOpen} onOpenChange={setCreateSpaceOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create a space</DialogTitle>
-            <DialogDescription>
-              {activeWorkspace?.kind === "team"
-                ? "Private Spaces are strictly invisible to teammates, Admins, and Owners. Shared Spaces let your team co-edit drafts."
-                : "Organize projects into dedicated spaces inside your Personal Workspace."}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateSpaceSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="new-space-name-input">Space name</Label>
-              <Input
-                id="new-space-name-input"
-                value={newSpaceName}
-                onChange={(e) => setNewSpaceName(e.target.value)}
-                placeholder="Q4 Portfolio Explorations"
-                minLength={2}
-                maxLength={60}
-                required
-              />
-            </div>
+    <Dialog
+      open={Boolean(moveTarget)}
+      onOpenChange={(open) => {
+        if (!open) setMoveTarget(null);
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Move “{moveTarget?.name ?? "project"}”</DialogTitle>
+          <DialogDescription>
+            Choose a destination space in this workspace. Moving between Private and Shared spaces
+            updates teammate visibility immediately.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleMoveProjectSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="move-destination-space-select">Destination space</Label>
+            <Select
+              id="move-destination-space-select"
+              value={destinationSpaceId}
+              onChange={(e) => setDestinationSpaceId(e.target.value)}
+            >
+              {spaces
+                .filter((sp) => sp.id !== moveTarget?.spaceId)
+                .map((sp) => (
+                  <option key={sp.id} value={sp.id}>
+                    {sp.name} ({sp.visibility === "private" ? "Private" : "Shared"})
+                  </option>
+                ))}
+            </Select>
+          </div>
 
-            {activeWorkspace?.kind === "team" && (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="new-space-visibility-select">Visibility</Label>
-                <select
-                  id="new-space-visibility-select"
-                  value={newSpaceVisibility}
-                  onChange={(e) => setNewSpaceVisibility(e.target.value as SpaceVisibility)}
-                  className="border-input bg-elevated text-foreground type-body-s h-10 rounded-xl border px-3"
-                >
-                  <option value="private">Private Space (only you — 404 to teammates)</option>
-                  {(activeWorkspace.role === "owner" || activeWorkspace.role === "admin") && (
-                    <option value="shared">Shared Team Space (visible to all members)</option>
-                  )}
-                </select>
-              </div>
-            )}
+          <label className="text-foreground type-body-s flex items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={moveConfirmed}
+              onChange={(e) => setMoveConfirmed(e.target.checked)}
+              className="accent-primary mt-1 size-4 rounded-xs"
+            />
+            <span>Confirm moving this project and updating its space permissions.</span>
+          </label>
 
-            {createSpaceError && (
-              <p role="alert" className="text-destructive type-caption">
-                {createSpaceError}
-              </p>
-            )}
+          {moveError && (
+            <p role="alert" className="text-destructive type-caption">
+              {moveError}
+            </p>
+          )}
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setCreateSpaceOpen(false)}
-                disabled={createSpaceBusy}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createSpaceBusy}>
-                {createSpaceBusy ? "Creating…" : "Create space"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Transition Space Visibility Dialog (`Spec §10.4 & §10.5`) */}
-      <Dialog
-        open={Boolean(transitionSpaceTarget)}
-        onOpenChange={(open) => {
-          if (!open) setTransitionSpaceTarget(null);
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {transitionSpaceTarget?.visibility === "private"
-                ? `Make “${transitionSpaceTarget.name}” Shared?`
-                : `Make “${transitionSpaceTarget?.name ?? "space"}” Private?`}
-            </DialogTitle>
-            <DialogDescription>
-              {transitionSpaceTarget?.visibility === "private"
-                ? "All workspace Owners, Admins, and Members will gain access to projects, drafts, and assets inside this space."
-                : "Projects in this space will become invisible (404) to teammates, active collaborator edit leases will be revoked immediately, and any published projects in this space will be unpublished."}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleTransitionSpaceVisibilitySubmit} className="flex flex-col gap-4">
-            <label className="text-foreground type-body-s flex items-start gap-2.5">
-              <input
-                type="checkbox"
-                checked={transitionConfirmed}
-                onChange={(e) => setTransitionConfirmed(e.target.checked)}
-                className="accent-primary mt-1 size-4 rounded-xs"
-              />
-              <span>
-                I understand the visibility and publishing changes for all projects in this space.
-              </span>
-            </label>
-
-            {transitionError && (
-              <p role="alert" className="text-destructive type-caption">
-                {transitionError}
-              </p>
-            )}
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setTransitionSpaceTarget(null)}
-                disabled={transitionBusy}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={transitionBusy || !transitionConfirmed}>
-                {transitionBusy ? "Updating…" : "Confirm visibility change"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Move Project Between Spaces Dialog */}
-      <Dialog
-        open={Boolean(moveTarget)}
-        onOpenChange={(open) => {
-          if (!open) setMoveTarget(null);
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Move “{moveTarget?.name ?? "project"}”</DialogTitle>
-            <DialogDescription>
-              Choose a destination space in this workspace. Moving between Private and Shared spaces
-              updates teammate visibility immediately.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleMoveProjectSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="move-destination-space-select">Destination space</Label>
-              <select
-                id="move-destination-space-select"
-                value={destinationSpaceId}
-                onChange={(e) => setDestinationSpaceId(e.target.value)}
-                className="border-input bg-elevated text-foreground type-body-s h-10 rounded-xl border px-3"
-              >
-                {spaces
-                  .filter((sp) => sp.id !== moveTarget?.spaceId)
-                  .map((sp) => (
-                    <option key={sp.id} value={sp.id}>
-                      {sp.name} ({sp.visibility === "private" ? "Private" : "Shared"})
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <label className="text-foreground type-body-s flex items-start gap-2.5">
-              <input
-                type="checkbox"
-                checked={moveConfirmed}
-                onChange={(e) => setMoveConfirmed(e.target.checked)}
-                className="accent-primary mt-1 size-4 rounded-xs"
-              />
-              <span>Confirm moving this project and updating its space permissions.</span>
-            </label>
-
-            {moveError && (
-              <p role="alert" className="text-destructive type-caption">
-                {moveError}
-              </p>
-            )}
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setMoveTarget(null)}
-                disabled={moveBusy}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={moveBusy || !destinationSpaceId || !moveConfirmed}
-              >
-                {moveBusy ? "Moving…" : "Move project"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setMoveTarget(null)}
+              disabled={moveBusy}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={moveBusy || !destinationSpaceId || !moveConfirmed}
+            >
+              {moveBusy ? "Moving…" : "Move project"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 
   const effectiveLifetimeProjectsCreated = Math.max(
@@ -987,7 +695,7 @@ export function DashboardProjectsClient({
   // Empty state — Studio Stage + Numbered Bento Steps
   if (projects.length === 0) {
     return (
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:gap-5">
+      <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 sm:gap-5">
         {workspaceBar}
 
         {isFreeLifetimeCreditExhausted && (
@@ -1021,53 +729,55 @@ export function DashboardProjectsClient({
           </div>
         )}
 
-        <header className="relative flex flex-col gap-1 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
-          <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
-            Case Study Builder
-          </Eyebrow>
-          <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
-            Your case studies
+        <header className="flex flex-col gap-2 py-2">
+          <p className="cf-lp-kicker text-[var(--cf-lp-kicker-muted)]">
+            YOUR STUDIO &nbsp;/&nbsp; CASEFOLIO
+          </p>
+          <h1 className="font-editorial text-[2.25rem] leading-[0.96] font-normal tracking-[-0.045em] text-[var(--cf-lp-ink)] sm:text-[3.25rem]">
+            Make your work <span className="italic">worth remembering.</span>
           </h1>
-          <p className="text-xs text-[var(--cf-text-secondary)] sm:text-sm">
-            Turn finished projects into polished, publishable stories.
+          <p className="max-w-lg text-[0.875rem] text-[var(--cf-lp-subtle)]">
+            Turn finished products into polished, publishable stories.
           </p>
         </header>
 
         <section
           data-testid="dashboard-empty-state"
           aria-labelledby="empty-dashboard-heading"
-          className="v3-pattern-dots-light flex flex-col items-center justify-between gap-7 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-8 text-center sm:px-10 sm:py-10"
+          className="flex flex-col items-center justify-between gap-7 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-9 text-center sm:px-10 sm:py-11"
         >
           <div className="flex flex-col items-center gap-4">
             <div aria-hidden="true" className="grid w-full max-w-64 grid-cols-3 gap-2">
-              <div className="flex h-20 flex-col justify-between rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-2.5 text-left">
-                <span className="font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+              <div className="flex h-20 flex-col justify-between rounded-[0.5rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-surface)] p-2.5 text-left">
+                <span className="font-mono text-[0.6875rem] font-medium text-[var(--cf-lp-subtle)]">
                   01
                 </span>
-                <span className="font-display text-xs font-bold text-[var(--cf-text-primary)]">
+                <span className="font-editorial text-[0.875rem] text-[var(--cf-lp-ink)]">
                   Template
                 </span>
               </div>
-              <div className="flex h-20 flex-col justify-between rounded-xl bg-[var(--cf-royal)] p-2.5 text-left text-[var(--cf-text-on-royal)]">
-                <span className="font-mono text-[0.6875rem] font-bold text-[var(--cf-bg-accent)]">
+              <div className="flex h-20 flex-col justify-between rounded-[0.5rem] bg-[var(--cf-lp-lime)] p-2.5 text-left text-[var(--cf-lp-on-lime)]">
+                <span className="font-mono text-[0.6875rem] font-medium opacity-75">
                   02
                 </span>
-                <span className="font-display text-xs font-bold">Screens</span>
+                <span className="font-editorial text-[0.875rem]">Screens</span>
               </div>
-              <div className="flex h-20 flex-col justify-between rounded-xl bg-[var(--cf-bg-accent)] p-2.5 text-left text-[var(--cf-text-on-accent)]">
-                <span className="font-mono text-[0.6875rem] font-bold">03</span>
-                <span className="font-display text-xs font-bold">Publish</span>
+              <div className="flex h-20 flex-col justify-between rounded-[0.5rem] bg-[var(--cf-lp-dark)] p-2.5 text-left text-[var(--cf-lp-dark-ink)]">
+                <span className="font-mono text-[0.6875rem] font-medium text-[var(--cf-lp-lime)]">
+                  03
+                </span>
+                <span className="font-editorial text-[0.875rem]">Publish</span>
               </div>
             </div>
 
             <div className="flex max-w-md flex-col gap-1.5">
               <h2
                 id="empty-dashboard-heading"
-                className="v3-dashboard-section-title text-[var(--cf-text-primary)]"
+                className="v3-dashboard-section-title text-[var(--cf-lp-ink)]"
               >
                 Your first case study starts here
               </h2>
-              <p className="text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
+              <p className="text-[0.8125rem] leading-relaxed text-[var(--cf-lp-subtle)]">
                 Create a project, pick a curated Casefolio template, and drop in your screens.
                 Publish a live link or export high-resolution PNG and PDF files.
               </p>
@@ -1076,16 +786,14 @@ export function DashboardProjectsClient({
             <div className="flex flex-wrap items-center justify-center gap-2.5 pt-0.5">
               <Link
                 href={createProjectHref}
-                className="v3-btn-primary h-9 px-4 py-2 text-xs font-semibold"
+                className="v3-btn-primary h-10 px-4 py-2 text-xs font-semibold"
               >
+                <Plus className="size-3.5" />
                 <span>Create your first project</span>
-                <span className="inline-flex size-5 items-center justify-center rounded bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                  <Plus className="size-3" />
-                </span>
               </Link>
               <Link
                 href="/templates"
-                className="v3-btn-secondary h-9 px-4 py-2 text-xs font-semibold"
+                className="v3-btn-secondary h-10 px-4 py-2 text-xs font-semibold"
               >
                 Browse templates
               </Link>
@@ -1093,31 +801,50 @@ export function DashboardProjectsClient({
           </div>
 
           <div className="grid w-full max-w-4xl grid-cols-1 gap-3 text-left sm:grid-cols-3">
-            {EMPTY_STATE_HINTS.map((hint, index) => (
+            {EMPTY_STATE_HINTS.map((hint) => (
               <div
                 key={hint.step}
-                className="flex flex-col gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-4"
+                className="flex flex-col gap-2 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-canvas)] p-4"
               >
-                <span
-                  className={cn(
-                    "inline-flex w-fit items-center rounded-md px-2 py-0.5 text-[0.6875rem] font-bold tracking-wider uppercase",
-                    index === 1
-                      ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
-                      : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
-                  )}
-                >
+                <span className="inline-flex w-fit items-center rounded-[0.25rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-2 py-0.5 font-mono text-[0.625rem] font-medium text-[var(--cf-lp-subtle)]">
                   {hint.step}
                 </span>
-                <h3 className="v3-dashboard-card-title text-[var(--cf-text-primary)]">
+                <h3 className="font-editorial text-[1.0625rem] font-normal text-[var(--cf-lp-ink)]">
                   {hint.title}
                 </h3>
-                <p className="text-xs leading-relaxed text-[var(--cf-text-secondary)]">
+                <p className="text-[0.75rem] leading-relaxed text-[var(--cf-lp-subtle)]">
                   {hint.description}
                 </p>
               </div>
             ))}
           </div>
         </section>
+
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-4">
+          <div className="flex items-center gap-3.5">
+            <span
+              aria-hidden="true"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--cf-lp-lime)] text-[var(--cf-lp-on-lime)]"
+            >
+              <Lightbulb className="size-4" />
+            </span>
+            <div>
+              <p className="font-editorial text-[0.9375rem] text-[var(--cf-lp-ink)]">
+                Make the process visible.
+              </p>
+              <p className="text-[0.75rem] text-[var(--cf-lp-subtle)]">
+                Stories with clear structure and rationale stand out across live links and exports.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/help"
+            className="inline-flex items-center gap-1.5 border-b border-[var(--cf-lp-border-strong)] pb-0.5 text-[0.75rem] font-medium text-[var(--cf-lp-ink)] hover:opacity-75"
+          >
+            <span>Read the studio guide</span>
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
 
         {spaceDialogs}
 
@@ -1182,83 +909,101 @@ export function DashboardProjectsClient({
         </div>
       )}
 
-      {/* Compact Studio Header Banner + Quick Create + New Project CTA */}
-      <header className="relative flex flex-col gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div className="flex flex-col gap-1">
-          <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
-            Case Study Builder
-          </Eyebrow>
-          <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">
-            Your case studies
+      {/* Studio Welcome Row + KPI Summary + Primary CTA */}
+      <header className="grid gap-5 py-1 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="flex flex-col gap-2">
+          <p className="cf-lp-kicker text-[var(--cf-lp-kicker-muted)]">
+            YOUR STUDIO &nbsp;/&nbsp; CASEFOLIO
+          </p>
+          <h1 className="font-editorial text-[2.25rem] leading-[0.95] font-normal tracking-[-0.045em] text-[var(--cf-lp-ink)] sm:text-[3.5rem]">
+            Make your work <span className="italic">worth remembering.</span>
           </h1>
-          <p className="text-xs text-[var(--cf-text-secondary)] sm:text-sm">
-            Turn finished projects into polished, publishable stories.
+          <p className="text-[0.875rem] text-[var(--cf-lp-subtle)]">
+            Pick up where you left off, or turn something new into a story.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="hidden items-center gap-1.5 sm:flex">
-            <Link
-              href="/new?type=mobile"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-xs font-semibold text-[var(--cf-text-secondary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] hover:text-[var(--cf-royal-text)]"
-            >
-              <Smartphone className="size-3.5 text-[var(--cf-royal-text)]" />
-              <span>Mobile</span>
-            </Link>
-            <Link
-              href="/new?type=web"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-xs font-semibold text-[var(--cf-text-secondary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] hover:text-[var(--cf-royal-text)]"
-            >
-              <Monitor className="size-3.5 text-[var(--cf-royal-text)]" />
-              <span>Website</span>
-            </Link>
+        <div className="flex flex-wrap items-stretch gap-3 sm:items-end">
+          <div className="flex min-w-[13rem] flex-col justify-between rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-4 py-3.5">
+            <span className="font-mono text-[0.625rem] font-medium tracking-[0.1em] text-[var(--cf-lp-kicker-muted)] uppercase">
+              PORTFOLIO STORIES
+            </span>
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <strong className="v3-dashboard-stat text-[var(--cf-lp-ink)] tabular-nums">
+                {counts.all}
+              </strong>
+              <span className="inline-flex items-center rounded-full bg-[var(--cf-lp-green-pill-bg)] px-2 py-0.5 text-[0.6875rem] font-semibold text-[var(--cf-lp-green-pill-fg)]">
+                {counts.published} live
+              </span>
+            </div>
+            <span className="mt-0.5 text-[0.6875rem] text-[var(--cf-lp-subtle)]">
+              Across active workspace projects
+            </span>
           </div>
 
           <Link
             href={createProjectHref}
-            className="v3-btn-primary h-9 px-3.5 py-2 text-xs font-semibold"
+            className="v3-btn-primary h-[2.625rem] self-end px-4 py-2 text-[0.8125rem] font-semibold"
           >
+            <Plus className="size-4" />
             <span>New project</span>
-            <span className="inline-flex size-5 items-center justify-center rounded bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-              <Plus className="size-3" />
-            </span>
           </Link>
         </div>
       </header>
 
-      {/* Unified Filter & Search Toolbar (Status Tabs + Search + Type + Sort) */}
+      {/* Case Studies Toolbar (Segmented Tabs + Search + Type + Sort) */}
       <div
         data-testid="dashboard-filter-toolbar"
-        className="flex flex-col gap-2.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3 lg:flex-row lg:items-center lg:justify-between"
+        className="flex flex-col gap-3 pt-1 lg:flex-row lg:items-center lg:justify-between"
       >
-        <div
-          role="group"
-          aria-label="Filter projects by status"
-          className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-0.5"
-        >
-          {statusTabs.map((tab) => {
-            const active = statusFilter === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setStatusFilter(tab.id)}
-                className={cn(
-                  "focus-visible:ring-ring/40 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors outline-none focus-visible:ring-2",
-                  active
-                    ? "bg-[var(--cf-ink)] text-[var(--cf-text-on-ink)]"
-                    : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
-                )}
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="font-mono text-[0.75rem] font-medium tracking-[0.11em] text-[var(--cf-lp-ink)] uppercase">
+            YOUR CASE STUDIES
+          </h2>
+          <span className="font-mono text-[0.6875rem] text-[var(--cf-lp-kicker-muted)]">
+            {visibleProjects.length} {visibleProjects.length === 1 ? "story" : "stories"}
+          </span>
+          {selectedSpaceObj && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-surface)] px-2.5 py-0.5 text-[0.6875rem] font-medium text-[var(--cf-lp-ink)]">
+              <span>Space: {selectedSpaceObj.name}</span>
+              <Link
+                href="/spaces"
+                className="text-[var(--cf-lp-subtle)] underline underline-offset-2 hover:text-[var(--cf-lp-ink)]"
               >
-                {tab.label}
-              </button>
-            );
-          })}
+                Manage
+              </Link>
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-44 flex-1 sm:w-56 sm:flex-initial">
+          <div
+            role="group"
+            aria-label="Filter projects by status"
+            className="inline-flex flex-wrap items-center gap-1 rounded-[0.375rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-tab-track)] p-1"
+          >
+            {statusTabs.map((tab) => {
+              const active = statusFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={cn(
+                    "focus-visible:ring-ring/40 cursor-pointer rounded-[0.25rem] px-3 py-1 text-[0.75rem] font-medium transition-colors outline-none focus-visible:ring-2",
+                    active
+                      ? "bg-[var(--cf-lp-tab-active-bg)] font-semibold text-[var(--cf-lp-ink)]"
+                      : "text-[var(--cf-lp-subtle)] hover:text-[var(--cf-lp-ink)]",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="relative min-w-44 flex-1 sm:w-52 sm:flex-initial">
             <Search
               aria-hidden="true"
               className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-[var(--cf-text-tertiary)]"
@@ -1268,45 +1013,45 @@ export function DashboardProjectsClient({
               aria-label="Search projects"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search projects…"
-              className="focus-visible:ring-ring/40 h-9 w-full rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pr-3 pl-8 text-xs text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-royal)] focus-visible:bg-[var(--cf-bg-elevated)] focus-visible:ring-2"
+              placeholder="Search cases…"
+              className="focus-visible:ring-ring/40 h-9 w-full rounded-[0.375rem] border border-[var(--cf-lp-input-border)] bg-[var(--cf-lp-input-bg)] pr-3 pl-8 text-xs text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] transition-colors outline-none focus-visible:border-[var(--cf-lp-ink)] focus-visible:ring-2"
             />
           </div>
 
           <label className="sr-only" htmlFor="dashboard-type-filter">
             Filter by project type
           </label>
-          <select
+          <Select
             id="dashboard-type-filter"
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
-            className="focus-visible:ring-ring/40 h-9 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-medium text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
+            className="h-9 w-auto px-2.5 text-xs font-medium"
           >
             <option value="all">Type: Any</option>
             <option value="mobile">Type: Mobile app</option>
             <option value="web">Type: Website</option>
             <option value="both">Type: Mobile + Web</option>
-          </select>
+          </Select>
 
           <label className="sr-only" htmlFor="dashboard-sort-select">
             Sort projects
           </label>
-          <select
+          <Select
             id="dashboard-sort-select"
             value={sortMode}
             onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className="focus-visible:ring-ring/40 h-9 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-medium text-[var(--cf-text-primary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
+            className="h-9 w-auto px-2.5 text-xs font-medium"
           >
             <option value="updated">Sort: Last edited</option>
             <option value="created">Sort: Newest</option>
             <option value="name">Sort: Name (A–Z)</option>
-          </select>
+          </Select>
 
           {hasFilters && (
             <button
               type="button"
               onClick={handleClearFilters}
-              className="focus-visible:ring-ring/40 inline-flex h-9 items-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2.5 text-xs font-semibold text-[var(--cf-royal-text)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 inline-flex h-9 items-center rounded-[0.375rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-2.5 text-xs font-semibold text-[var(--cf-lp-ink)] transition-colors outline-none hover:border-[var(--cf-lp-ink)] focus-visible:ring-2"
             >
               Reset
             </button>
@@ -1315,7 +1060,7 @@ export function DashboardProjectsClient({
       </div>
 
       {searchQuery.trim() && visibleProjects.length > 0 && (
-        <p className="text-muted-foreground type-body-s -mt-2">
+        <p className="text-muted-foreground type-body-s -mt-1">
           {visibleProjects.length} {visibleProjects.length === 1 ? "result" : "results"} for “
           {searchQuery.trim()}”
         </p>
@@ -1325,20 +1070,20 @@ export function DashboardProjectsClient({
       {visibleProjects.length === 0 && hasFilters ? (
         <div
           data-testid="dashboard-no-results"
-          className="v3-pattern-dots-light flex flex-col items-center justify-center gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-12 text-center"
+          className="flex flex-col items-center justify-center gap-3 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-6 py-12 text-center"
         >
           <span
             aria-hidden="true"
-            className="inline-flex size-11 items-center justify-center rounded-xl bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]"
+            className="inline-flex size-11 items-center justify-center rounded-[0.5rem] bg-[var(--cf-bg-surface)] text-[var(--cf-lp-ink)]"
           >
             <Search className="size-5" />
           </span>
-          <h2 className="v3-dashboard-section-title text-[var(--cf-text-primary)]">
+          <h2 className="v3-dashboard-section-title text-[var(--cf-lp-ink)]">
             {searchQuery.trim()
               ? `No projects match “${searchQuery.trim()}”`
               : "No matching projects"}
           </h2>
-          <p className="text-xs text-[var(--cf-text-secondary)]">
+          <p className="text-xs text-[var(--cf-lp-subtle)]">
             Try another name, or clear filters.
           </p>
           <button
@@ -1351,6 +1096,26 @@ export function DashboardProjectsClient({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {!hasFilters && !activeWorkspace?.isFrozen && (
+            <Link
+              href={createProjectHref}
+              className="group flex min-h-[19.5rem] flex-col items-center justify-center gap-2.5 rounded-[0.5625rem] border border-dashed border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] p-6 text-center transition-colors hover:border-[var(--cf-lp-ink)]"
+            >
+              <span
+                aria-hidden="true"
+                className="inline-flex size-10 items-center justify-center rounded-full border border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-canvas)] text-[var(--cf-lp-ink)] transition-colors group-hover:bg-[var(--cf-lp-dark)] group-hover:text-[var(--cf-lp-lime)]"
+              >
+                <Plus className="size-4" />
+              </span>
+              <span className="font-editorial text-[1.125rem] text-[var(--cf-lp-ink)]">
+                Begin a new story
+              </span>
+              <span className="max-w-[14rem] text-[0.75rem] leading-relaxed text-[var(--cf-lp-subtle)]">
+                Start from a story-first template or blank canvas
+              </span>
+            </Link>
+          )}
+
           {visibleProjects.map((project, idx) => {
             const palette = ARTWORK_PALETTES[idx % ARTWORK_PALETTES.length]!;
             const badge = resolveProjectStatusBadge(project);
@@ -1358,7 +1123,7 @@ export function DashboardProjectsClient({
               project.spaceName && (spaces.length > 1 || project.workspaceKind === "team")
                 ? ` · ${project.spaceVisibility === "shared" ? "Shared" : "Private"}: ${project.spaceName}`
                 : "";
-            const subtitle = `${formatProjectTypeLabel(project.type)} · ${formatRelativeEdited(project.updatedAtIso, mountedNowMs)}${spaceLabel}`;
+            const subtitle = `${formatRelativeEdited(project.updatedAtIso, mountedNowMs)}${spaceLabel}`;
             const isBusy = busyProjectId === project.id;
             const isProjectLocked = Boolean(
               project.isLockedByDowngrade || project.isLockedByTeamSubscription,
@@ -1387,101 +1152,129 @@ export function DashboardProjectsClient({
                 data-slot="project-card"
                 data-project-id={project.id}
                 className={cn(
-                  "group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground transition-all duration-200",
+                  "group relative flex min-h-[19.5rem] min-w-0 flex-col overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] text-card-foreground transition-colors duration-200",
                   isProjectLocked
                     ? "opacity-90"
-                    : "hover:border-[var(--cf-royal)]",
+                    : "hover:border-[var(--cf-lp-ink)]",
                 )}
               >
-                <div className="p-3 pb-0">
-                  {isProjectLocked ? (
-                    <button
-                      type="button"
-                      onClick={handleLockedProjectClick}
-                      aria-label={`${project.name} is locked — click to renew or upgrade`}
-                      className="focus-visible:ring-ring/40 relative block w-full cursor-pointer overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] text-left outline-none focus-visible:ring-2"
-                    >
-                      {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
-                        <TemplateThumbnail
-                          testId={`dashboard-project-thumb-${project.id}`}
-                          coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
-                          slug={project.templateSlug}
-                          name={project.name}
-                          className="aspect-[16/10] w-full grayscale-[35%] opacity-75"
-                        />
-                      ) : (
-                        <div
-                          className={`relative aspect-[16/10] w-full overflow-hidden opacity-75 grayscale-[35%] ${palette.surface}`}
-                        />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[1px]">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--cf-bg-elevated)] px-3 py-1.5 text-xs font-bold text-[var(--cf-text-primary)] shadow-sm">
-                          <Lock className="size-3.5 text-warning" />
-                          <span>Locked · Renew to open</span>
-                        </span>
-                      </div>
-                    </button>
-                  ) : (
-                    <Link
-                      href={`/editor/${project.id}`}
-                      aria-label={`Open ${project.name} in editor`}
-                      className="focus-visible:ring-ring/40 block overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] outline-none focus-visible:ring-2"
-                    >
-                      {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
-                        <TemplateThumbnail
-                          testId={`dashboard-project-thumb-${project.id}`}
-                          coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
-                          slug={project.templateSlug}
-                          name={project.name}
-                          className="aspect-[16/10] w-full"
-                          imageClassName="group-hover:scale-[1.03]"
-                        />
-                      ) : (
-                        <div
-                          className={`relative aspect-[16/10] w-full overflow-hidden ${palette.surface}`}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={`type-heading-l absolute top-5 left-5 select-none ${palette.glyph}`}
-                          >
-                            Aa
-                          </span>
-                          <div
-                            aria-hidden="true"
-                            className="absolute right-30 bottom-0 h-32 w-24 rounded-t-xl bg-[var(--cf-royal)] transition-transform duration-300 group-hover:-translate-y-1"
-                          />
-                          <div
-                            aria-hidden="true"
-                            className="absolute right-20 bottom-0 h-22 w-14 rounded-t-xl bg-[var(--cf-bg-accent)] transition-transform duration-300 group-hover:-translate-y-2"
-                          />
-                          <div
-                            aria-hidden="true"
-                            className="bg-elevated border-border/60 absolute right-4 bottom-0 h-36 w-26 rounded-t-xl border border-b-0 transition-transform duration-300 group-hover:-translate-y-1.5"
-                          />
-                        </div>
-                      )}
-                    </Link>
-                  )}
-                </div>
-
-                <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 p-3.5 pt-3">
-                  <div className="flex min-w-0 items-center justify-between gap-2">
-                    {isProjectLocked ? (
-                      <button
-                        type="button"
-                        onClick={handleLockedProjectClick}
-                        className="v3-dashboard-card-title min-w-0 truncate text-left text-[var(--cf-text-secondary)] transition-colors hover:text-[var(--cf-royal)]"
-                      >
-                        {project.name}
-                      </button>
+                {isProjectLocked ? (
+                  <button
+                    type="button"
+                    onClick={handleLockedProjectClick}
+                    aria-label={`${project.name} is locked — click to renew or upgrade`}
+                    className="focus-visible:ring-ring/40 relative block aspect-[16/10] w-full cursor-pointer overflow-hidden border-b border-[var(--cf-lp-card-border)] text-left outline-none focus-visible:ring-2"
+                  >
+                    {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
+                      <TemplateThumbnail
+                        testId={`dashboard-project-thumb-${project.id}`}
+                        coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
+                        slug={project.templateSlug}
+                        name={project.name}
+                        className="size-full grayscale-[35%] opacity-75"
+                      />
                     ) : (
-                      <Link
-                        href={`/editor/${project.id}`}
-                        className="v3-dashboard-card-title min-w-0 truncate text-[var(--cf-text-primary)] transition-colors hover:text-[var(--cf-royal)]"
-                      >
-                        {project.name}
-                      </Link>
+                      <div
+                        className={`relative size-full overflow-hidden opacity-75 grayscale-[35%] ${palette.surface}`}
+                      />
                     )}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[1px]">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--cf-lp-card)] px-3 py-1.5 text-xs font-bold text-[var(--cf-lp-ink)]">
+                        <Lock className="size-3.5 text-warning" />
+                        <span>Locked · Renew to open</span>
+                      </span>
+                    </div>
+                  </button>
+                ) : (
+                  <Link
+                    href={`/editor/${project.id}`}
+                    aria-label={`Open ${project.name} in editor`}
+                    className="focus-visible:ring-ring/40 block aspect-[16/10] w-full overflow-hidden border-b border-[var(--cf-lp-card-border)] outline-none focus-visible:ring-2"
+                  >
+                    {project.thumbnailUrl || project.templateCoverUrl || project.templateSlug ? (
+                      <TemplateThumbnail
+                        testId={`dashboard-project-thumb-${project.id}`}
+                        coverUrl={project.thumbnailUrl ?? project.templateCoverUrl}
+                        slug={project.templateSlug}
+                        name={project.name}
+                        className="size-full"
+                        imageClassName="group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div
+                        aria-hidden="true"
+                        className={`relative flex size-full items-center justify-between gap-3 overflow-hidden p-5 ${palette.surface}`}
+                      >
+                        <div className="flex flex-col justify-between self-stretch">
+                          <span className="font-mono text-[0.5625rem] font-medium tracking-[0.1em] uppercase opacity-75">
+                            CASE STUDY
+                          </span>
+                          <p
+                            className={`font-editorial max-w-[11rem] text-[1.4375rem] leading-[1.02] tracking-[-0.03em] ${palette.glyph}`}
+                          >
+                            {palette.tagline}
+                          </p>
+                        </div>
+                        <div
+                          aria-hidden="true"
+                          className={`flex h-36 w-24 shrink-0 rotate-3 flex-col justify-between rounded-[0.5rem] border p-2.5 transition-transform duration-300 group-hover:-translate-y-1 ${palette.frameBg}`}
+                        >
+                          <span className="font-mono text-[0.5rem] uppercase opacity-70">
+                            STORY
+                          </span>
+                          <span className="h-2 w-10 rounded-full bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-full bg-current opacity-25" />
+                          <span className="h-6 w-full rounded-[0.25rem] bg-current opacity-80" />
+                        </div>
+                      </div>
+                    )}
+                  </Link>
+                )}
+
+                <div className="flex min-w-0 flex-1 flex-col justify-between gap-2.5 p-4">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[0.625rem] font-medium tracking-[0.1em] text-[var(--cf-lp-kicker-muted)] uppercase">
+                        {formatProjectTypeLabel(project.type)}
+                      </span>
+                      <span className="font-mono text-[0.625rem] text-[var(--cf-lp-kicker-muted)]">
+                        {project.templateName}
+                      </span>
+                    </div>
+
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      {isProjectLocked ? (
+                        <button
+                          type="button"
+                          onClick={handleLockedProjectClick}
+                          className="v3-dashboard-card-title min-w-0 truncate text-left text-[var(--cf-text-secondary)] transition-colors hover:text-[var(--cf-lp-ink)]"
+                        >
+                          {project.name}
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/editor/${project.id}`}
+                          className="v3-dashboard-card-title min-w-0 truncate text-[var(--cf-lp-ink)] transition-colors hover:underline"
+                        >
+                          {project.name}
+                        </Link>
+                      )}
+
+                      {!isProjectLocked && (
+                        <Link
+                          href={`/editor/${project.id}`}
+                          aria-hidden="true"
+                          tabIndex={-1}
+                          className="text-[var(--cf-lp-kicker-muted)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[var(--cf-lp-ink)]"
+                        >
+                          <ArrowUpRight className="size-3.5" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 border-t border-[var(--cf-lp-card-border)]/70 pt-2.5">
+                    <p className="truncate text-[0.75rem] text-[var(--cf-lp-subtle)]">{subtitle}</p>
 
                     <div className="flex shrink-0 items-center gap-1.5">
                       {isProjectLocked ? (
@@ -1500,12 +1293,12 @@ export function DashboardProjectsClient({
                             type="button"
                             aria-label={`Actions for ${project.name}`}
                             disabled={isBusy}
-                            className="focus-visible:ring-ring/40 inline-flex size-8 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-royal-soft)] hover:text-[var(--cf-royal-text)] focus-visible:ring-2"
+                            className="focus-visible:ring-ring/40 inline-flex size-7 cursor-pointer items-center justify-center rounded-[0.3125rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] transition-colors outline-none hover:border-[var(--cf-lp-ink)] hover:text-[var(--cf-lp-ink)] focus-visible:ring-2"
                           >
                             {isBusy ? (
-                              <Loader2 className="size-4 animate-spin" />
+                              <Loader2 className="size-3.5 animate-spin" />
                             ) : (
-                              <MoreHorizontal className="size-4" />
+                              <MoreHorizontal className="size-3.5" />
                             )}
                           </button>
                         </DropdownMenuTrigger>
@@ -1616,19 +1409,39 @@ export function DashboardProjectsClient({
                       </DropdownMenu>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between gap-2 border-t border-[var(--cf-border-subtle)]/70 pt-2">
-                    <p className="v3-body-s truncate text-[var(--cf-text-secondary)]">{subtitle}</p>
-                    <span className="shrink-0 rounded-md bg-[var(--cf-bg-canvas)] px-2 py-0.5 text-[0.6875rem] font-semibold text-[var(--cf-text-tertiary)]">
-                      {project.templateName}
-                    </span>
-                  </div>
                 </div>
               </article>
             );
           })}
         </div>
       )}
+
+      {/* Bottom Studio Tip Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-4">
+        <div className="flex items-center gap-3.5">
+          <span
+            aria-hidden="true"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--cf-lp-lime)] text-[var(--cf-lp-on-lime)]"
+          >
+            <Lightbulb className="size-4" />
+          </span>
+          <div>
+            <p className="font-editorial text-[0.9375rem] text-[var(--cf-lp-ink)]">
+              Make the process visible.
+            </p>
+            <p className="text-[0.75rem] text-[var(--cf-lp-subtle)]">
+              Stories with clear structure and rationale stand out across live links and exports.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/help"
+          className="inline-flex items-center gap-1.5 border-b border-[var(--cf-lp-border-strong)] pb-0.5 text-[0.75rem] font-medium text-[var(--cf-lp-ink)] hover:opacity-75"
+        >
+          <span>Read the studio guide</span>
+          <ArrowRight className="size-3.5" />
+        </Link>
+      </div>
 
       {spaceDialogs}
 

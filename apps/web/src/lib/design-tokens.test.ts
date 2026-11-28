@@ -1,79 +1,80 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { COLOR_TOKENS, RADIUS_TOKENS, TYPE_SCALE_TOKENS } from "./design-tokens";
 
+const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
+
 const EXPECTED_LIGHT_FIGMA_VARS: Record<string, string> = {
-  "--bg-canvas": "#fafafa",
-  "--bg-surface": "#f3f3f5",
-  "--bg-elevated": "#ffffff",
-  "--bg-sunken": "#ebebee",
-  "--bg-inverse": "#0c0d12",
-  "--text-primary": "#0c0d12",
-  "--text-secondary": "#474a54",
-  "--text-tertiary": "#5a5e6b",
-  "--text-inverse": "#ffffff",
-  "--border-default": "#e2e2e7",
-  "--border-strong": "#c4c5ce",
-  "--accent-primary": "#2650f2",
+  "--bg-canvas": "#f4f1ea",
+  "--bg-surface": "#ece8de",
+  "--bg-elevated": "#faf8f4",
+  "--bg-sunken": "#e4e0d5",
+  "--bg-inverse": "#20211d",
+  "--text-primary": "#20211d",
+  "--text-secondary": "#505246",
+  "--text-tertiary": "#77756f",
+  "--text-inverse": "#f4f1ea",
+  "--border-default": "#d5d2c9",
+  "--border-strong": "#b9b5aa",
+  "--accent-primary": "#20211d",
   "--accent-on-primary": "#ffffff",
-  "--accent-soft": "#f3f3f5",
-  "--accent-secondary": "#0c0d12",
-  "--accent-secondary-soft": "#ebebee",
+  "--accent-soft": "#e7e4de",
+  "--accent-secondary": "#20211d",
+  "--accent-secondary-soft": "#e4e0d5",
   "--status-success": "#15803d",
-  "--status-success-soft": "#ecfdf3",
-  "--status-warning": "#b45309",
-  "--status-warning-soft": "#fffbeb",
+  "--status-success-soft": "#e4f3e8",
+  "--status-warning": "#9a4708",
+  "--status-warning-soft": "#f6ecd7",
   "--status-danger": "#c81e1e",
-  "--status-danger-soft": "#fef2f2",
+  "--status-danger-soft": "#fae5e5",
 };
 
 const EXPECTED_DARK_FIGMA_VARS: Record<string, string> = {
-  "--bg-canvas": "#070b19",
-  "--bg-surface": "#0e152c",
-  "--bg-elevated": "#141e3b",
-  "--bg-sunken": "#050813",
-  "--bg-inverse": "#f5f7ff",
-  "--text-primary": "#f5f7ff",
-  "--text-secondary": "#b4c0df",
-  "--text-tertiary": "#8e9ec7",
-  "--text-inverse": "#070b19",
-  "--border-default": "#1f2c52",
-  "--border-strong": "#354982",
-  "--accent-primary": "#85a3ff",
-  "--accent-on-primary": "#070b19",
-  "--accent-soft": "#16244f",
-  "--accent-secondary": "#e6ecff",
-  "--accent-secondary-soft": "#1c2951",
+  "--bg-canvas": "#161713",
+  "--bg-surface": "#20211d",
+  "--bg-elevated": "#282923",
+  "--bg-sunken": "#11120e",
+  "--bg-inverse": "#f4f1ea",
+  "--text-primary": "#f4f1ea",
+  "--text-secondary": "#b0b1aa",
+  "--text-tertiary": "#8b8d84",
+  "--text-inverse": "#20211d",
+  "--border-default": "#363730",
+  "--border-strong": "#484943",
+  "--accent-primary": "#e7ff68",
+  "--accent-on-primary": "#20211d",
+  "--accent-soft": "#2c2d26",
+  "--accent-secondary": "#f4f1ea",
+  "--accent-secondary-soft": "#2c2d26",
   "--status-success": "#4ade80",
-  "--status-success-soft": "#052e16",
+  "--status-success-soft": "#0e2c1a",
   "--status-warning": "#fbbf24",
-  "--status-warning-soft": "#2d1f05",
+  "--status-warning-soft": "#2d220a",
   "--status-danger": "#f87171",
-  "--status-danger-soft": "#2a0a0a",
+  "--status-danger-soft": "#2e1212",
 };
 
 describe("Figma design tokens 1:1 sync (C-101)", () => {
-  const tokensCss = readFileSync(
-    resolve(process.cwd(), "apps/web/src/styles/tokens.css"),
-    "utf-8",
-  );
+  const tokensCss = readFileSync(resolve(CURRENT_DIR, "../styles/tokens.css"), "utf8");
+  const layoutTsx = readFileSync(resolve(CURRENT_DIR, "../app/layout.tsx"), "utf8");
   const [rootBlock = "", darkBlock = ""] = tokensCss.split(".dark {");
 
-  it("matches all 22 Figma Light mode color variables 1:1", () => {
+  it("matches all 22 Light mode color variables 1:1", () => {
     expect(COLOR_TOKENS).toHaveLength(22);
     for (const [cssVar, hex] of Object.entries(EXPECTED_LIGHT_FIGMA_VARS)) {
       expect(rootBlock).toContain(`${cssVar}: ${hex};`);
     }
   });
 
-  it("matches all 22 Figma Dark mode color variables 1:1", () => {
+  it("matches all 22 Dark mode color variables 1:1", () => {
     for (const [cssVar, hex] of Object.entries(EXPECTED_DARK_FIGMA_VARS)) {
       expect(darkBlock).toContain(`${cssVar}: ${hex};`);
     }
   });
 
-  it("defines all Figma typography and radius scale tokens and self-hosts Geist + JetBrains Mono", () => {
+  it("defines typography and radius scale tokens and loads Manrope + DM Mono + Instrument Serif", () => {
     expect(TYPE_SCALE_TOKENS).toHaveLength(11);
     expect(RADIUS_TOKENS).toHaveLength(6);
 
@@ -84,13 +85,12 @@ describe("Figma design tokens 1:1 sync (C-101)", () => {
       expect(rootBlock).toContain(`${r.cssVar}:`);
     }
 
-    const layoutTsx = readFileSync(
-      resolve(process.cwd(), "apps/web/src/app/layout.tsx"),
-      "utf-8",
-    );
-    expect(layoutTsx).toContain("Geist");
-    expect(layoutTsx).toContain("JetBrains_Mono");
+    expect(rootBlock).toContain("--font-editorial: Georgia");
+    expect(rootBlock).toContain("--font-ui: var(--font-manrope)");
+    expect(rootBlock).toContain("--font-code: var(--font-dm-mono)");
+    expect(layoutTsx).toContain("Manrope");
+    expect(layoutTsx).toContain("DM_Mono");
+    expect(layoutTsx).toContain("Instrument_Serif");
     expect(layoutTsx).toContain("next/font/google");
   });
 });
-

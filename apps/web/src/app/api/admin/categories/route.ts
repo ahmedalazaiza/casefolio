@@ -8,6 +8,7 @@ import {
   reorderAdminCategories,
   updateAdminCategory,
 } from "@/lib/admin/categories";
+import { deleteCategorySchema } from "@/lib/admin/categories-types";
 import { hasAdminRole } from "@/lib/auth/guards";
 import { getServerSession } from "@/lib/auth/session";
 
@@ -31,11 +32,9 @@ const postBodySchema = z.object({
   sort: z.number().int().min(0).max(9999).optional(),
 });
 
-const deleteBodySchema = z.object({
-  id: z.string().uuid("Invalid category ID."),
-});
-
 function revalidateCategoryConsumers() {
+  revalidatePath("/");
+  revalidatePath("/showcase");
   revalidatePath("/admin/categories");
   revalidatePath("/admin/templates");
   revalidatePath("/templates");
@@ -127,7 +126,7 @@ export async function DELETE(request: Request) {
   if ("error" in auth) return auth.error;
 
   const json = await request.json().catch(() => null);
-  const parsed = deleteBodySchema.safeParse(json);
+  const parsed = deleteCategorySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Invalid delete payload." },
@@ -138,12 +137,18 @@ export async function DELETE(request: Request) {
   const res = await deleteAdminCategory({
     actorId: auth.user.id,
     id: parsed.data.id,
+    reassignToCategoryId: parsed.data.reassignToCategoryId,
+    allowPublishedReassign: parsed.data.allowPublishedReassign,
   });
   if (!res.ok) {
-    return NextResponse.json({ error: res.error }, { status: 400 });
+    const status = res.code === "DEPLOYED_CATEGORY_PROTECTED" ? 409 : 400;
+    return NextResponse.json({ error: res.error, code: res.code }, { status });
   }
 
   revalidateCategoryConsumers();
   const overview = await getAdminCategoriesOverview();
-  return NextResponse.json({ ok: true, overview });
+  return NextResponse.json(
+    { ok: true, reassignedCount: res.reassignedCount ?? 0, overview },
+    { status: 200 },
+  );
 }

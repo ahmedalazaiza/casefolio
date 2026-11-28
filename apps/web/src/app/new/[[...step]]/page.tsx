@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
 import { createProjectAction } from "@/lib/projects/actions";
 import { getCachedPublishedTemplates } from "@/lib/template/cached-catalog";
+import { getActiveSpaceCookie, resolveActiveSpaceFilter } from "@/lib/workspaces/active-space";
 import { listWorkspaceSwitcherState } from "@/lib/workspaces/service";
 
 export const metadata: Metadata = {
@@ -48,10 +49,17 @@ export default async function NewProjectWizardPage({
       .where(eq(dbSchema.users.id, user.id));
   }
 
-  const [templates, workspaceContext] = await Promise.all([
+  const [templates, workspaceContext, activeSpaceCookie] = await Promise.all([
     getCachedPublishedTemplates(),
     listWorkspaceSwitcherState(user.id, session.activeOrganizationId ?? null),
+    getActiveSpaceCookie(),
   ]);
+  const resolvedSpaceId =
+    spaceId ??
+    (() => {
+      const candidate = resolveActiveSpaceFilter(workspaceContext.spaces, activeSpaceCookie);
+      return candidate === "all" ? undefined : candidate;
+    })();
 
   const lifetimeProjectsCreated = Math.max(
     workspaceContext.activeWorkspace.usage.lifetimeProjectsCreated,
@@ -68,7 +76,7 @@ export default async function NewProjectWizardPage({
       spaces={workspaceContext.spaces}
       workspaceName={workspaceContext.activeWorkspace.name}
       workspaceKind={workspaceContext.activeWorkspace.kind}
-      initialSpaceId={spaceId}
+      initialSpaceId={resolvedSpaceId}
       initialStep={initialStep}
       initialTemplateSlug={template}
       initialDesignFocus={user.designFocus}

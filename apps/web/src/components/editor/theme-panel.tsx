@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { evaluateThemeContrastIssues, normalizeHexColor } from "@/lib/template/contrast";
 import {
+  applyCuratedPalettePreset,
   CURATED_COLOR_PRESETS,
   CURATED_FONT_CATALOG,
   CURATED_FONT_PAIRS,
@@ -65,16 +67,10 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
   };
 
   const handleApplyPalettePreset = (presetColors: Record<string, string>) => {
-    const mergedColors: Record<string, string> = { ...theme.colors };
-    for (const [token, value] of Object.entries(presetColors)) {
-      if (token in mergedColors || token === "secondary" || token === "textMuted" || token === "accent") {
-        mergedColors[token] = value;
-      }
-    }
     setHexDrafts({});
     onChangeTheme({
       ...theme,
-      colors: mergedColors,
+      colors: applyCuratedPalettePreset(theme.colors, presetColors),
     });
   };
 
@@ -300,12 +296,11 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
           <Label htmlFor="theme-font-pair" className="text-muted-foreground type-caption">
             Curated pairing
           </Label>
-          <select
+          <Select
             id="theme-font-pair"
             aria-label="Font pair"
             value={activeFontPairId}
             onChange={(e) => handleApplyFontPair(e.target.value)}
-            className="border-border bg-surface/60 text-foreground type-body-s focus-visible:ring-ring/40 h-10 w-full rounded-md border px-3 outline-none focus-visible:ring-2"
           >
             {CURATED_FONT_PAIRS.map((pair) => (
               <option key={pair.id} value={pair.id}>
@@ -313,7 +308,7 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
               </option>
             ))}
             {activeFontPairId === "custom" && <option value="custom">Custom pair</option>}
-          </select>
+          </Select>
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
@@ -321,38 +316,36 @@ export function ThemePanel({ theme, onChangeTheme, onResetToDefaults }: ThemePan
             <Label htmlFor="theme-heading-font" className="text-muted-foreground type-caption">
               Heading
             </Label>
-            <select
+            <Select
               id="theme-heading-font"
               aria-label="Heading font"
               value={theme.fonts.heading.family}
               onChange={(e) => handleUpdateFontFamily("heading", e.target.value)}
-              className="border-border bg-surface/60 text-foreground type-body-s-strong focus-visible:ring-ring/40 h-9.5 w-full rounded-md border px-2.5 outline-none focus-visible:ring-2"
             >
               {availableFontFamilies.map((family) => (
                 <option key={family} value={family}>
                   {family}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="theme-body-font" className="text-muted-foreground type-caption">
               Body
             </Label>
-            <select
+            <Select
               id="theme-body-font"
               aria-label="Body font"
               value={theme.fonts.body.family}
               onChange={(e) => handleUpdateFontFamily("body", e.target.value)}
-              className="border-border bg-surface/60 text-foreground type-body-s-strong focus-visible:ring-ring/40 h-9.5 w-full rounded-md border px-2.5 outline-none focus-visible:ring-2"
             >
               {availableFontFamilies.map((family) => (
                 <option key={family} value={family}>
                   {family}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       </section>

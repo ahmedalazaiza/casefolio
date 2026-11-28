@@ -34,7 +34,7 @@ function concatUint8Arrays(chunks: readonly Uint8Array[]): Uint8Array {
 }
 
 /**
- * Pure browser-safe PKZIP (`STORE` method 0) builder for Behance 1400px PNG slices.
+ * Pure browser-safe PKZIP (`STORE` method 0) builder for Layerat 1400px PNG case study slices.
  */
 export function buildBrowserZipArchive(
   entries: ReadonlyArray<{ name: string; data: Uint8Array }>,
@@ -352,7 +352,7 @@ async function encodeRenderedCanvasArtifact(
       const sliceBytes = await canvasToBytes(slices[idx]!, "image/png");
       const paddedIdx = String(idx + 1).padStart(2, "0");
       entries.push({
-        name: `${paddedIdx}-behance-1400px.png`,
+        name: `${paddedIdx}-layerat-1400px.png`,
         data: sliceBytes,
       });
     }
@@ -390,7 +390,7 @@ interface PresignCompleteApiResponse {
   ok: boolean;
   code?: string;
   error?: string;
-  mode?: "r2" | "direct" | "already_completed";
+  mode?: "r2" | "direct" | "already_completed" | "deferred_to_worker";
   uploadUrl?: string;
   r2Key?: string;
   uploadHeaders?: Record<string, string>;
@@ -437,6 +437,12 @@ async function uploadCompletedExportBytes(
 
   if (presignRes.ok) {
     const presignJson = (await presignRes.json()) as PresignCompleteApiResponse;
+    if (
+      presignJson.mode === "deferred_to_worker" ||
+      presignJson.code === "EXPORT_IN_PROGRESS"
+    ) {
+      return { status: "deferred_to_worker" };
+    }
     if (presignJson.ok && presignJson.mode === "already_completed" && presignJson.exportJob) {
       return { status: "completed", exportJob: presignJson.exportJob };
     }
@@ -585,7 +591,7 @@ const inFlightClientExportIds = new Set<string>();
 
 /**
  * Renders `/export/<jobId>?token=...` inside a hidden same-origin iframe, captures high-DPI
- * PNG / PDF / Behance ZIP, and uploads via presigned R2 PUT (or direct fallback) with structured
+ * PNG / PDF / Layerat ZIP, and uploads via presigned R2 PUT (or direct fallback) with structured
  * error diagnostics so exports never hang silently on Queued.
  */
 export async function runBrowserAssistedExportDetailed(

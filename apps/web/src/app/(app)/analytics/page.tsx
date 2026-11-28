@@ -36,7 +36,7 @@ export default async function WorkspaceAnalyticsOverviewPage() {
       data-testid="workspace-analytics-overview"
       className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-4 sm:gap-5"
     >
-      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-1">
           <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             {overview.workspaceKind === "team" && overview.workspaceName
@@ -58,36 +58,36 @@ export default async function WorkspaceAnalyticsOverviewPage() {
       <div className="grid gap-3.5 md:grid-cols-3">
         <article
           data-testid="overview-kpi-total-views"
-          className="v3-pattern-dots-dark v3-sheet-royal flex flex-col justify-between gap-2 rounded-xl border border-[var(--cf-border-on-royal)] p-4 sm:p-5"
+          className="flex flex-col justify-between gap-2 rounded-[0.5625rem] border border-[var(--cf-lp-dark)] bg-[var(--cf-lp-dark)] p-4 text-[var(--cf-lp-dark-ink)] sm:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-royal-muted)] uppercase">
+            <span className="font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-lp-dark-muted)] uppercase">
               TOTAL VIEWS
             </span>
-            <span className="rounded bg-[var(--cf-bg-accent)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-text-on-accent)]">
+            <span className="rounded-[0.25rem] bg-[var(--cf-lp-lime)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-lp-on-lime)]">
               01
             </span>
           </div>
           <span
             data-testid="overview-total-views-value"
-            className="v3-dashboard-stat text-[var(--cf-text-on-royal)]"
+            className="v3-dashboard-stat text-[var(--cf-lp-dark-ink)]"
           >
             {overview.totalViews30d.toLocaleString()}
           </span>
-          <span className="text-xs font-medium text-[var(--cf-text-on-royal-muted)]">
+          <span className="text-xs font-medium text-[var(--cf-lp-dark-muted)]">
             Last 30 days
           </span>
         </article>
 
         <article
           data-testid="overview-kpi-published"
-          className="flex flex-col justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 shadow-[var(--cf-shadow-soft)] sm:p-5"
+          className="flex flex-col justify-between gap-2 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] p-4 sm:p-5"
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
               PUBLISHED
             </span>
-            <span className="rounded bg-[var(--cf-royal-soft)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-royal-text)]">
+            <span className="rounded-[0.25rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-surface)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-text-primary)]">
               02
             </span>
           </div>
@@ -102,13 +102,13 @@ export default async function WorkspaceAnalyticsOverviewPage() {
 
         <article
           data-testid="overview-kpi-top-page"
-          className="flex min-w-0 flex-col justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 shadow-[var(--cf-shadow-soft)] sm:p-5"
+          className="flex min-w-0 flex-col justify-between gap-2 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] p-4 sm:p-5"
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-secondary)] uppercase">
               TOP PAGE
             </span>
-            <span className="rounded bg-[var(--cf-royal-soft)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-royal-text)]">
+            <span className="rounded-[0.25rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-surface)] px-1.5 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-text-primary)]">
               03
             </span>
           </div>
@@ -147,15 +147,11 @@ export default async function WorkspaceAnalyticsOverviewPage() {
           data-testid="overview-projects-table"
           className="w-full max-w-full min-w-0 overflow-x-auto rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]"
         >
-          <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-6 py-3">
-            <div className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full bg-[var(--cf-royal)]" />
-              <span className="size-2.5 rounded-full bg-[var(--cf-bg-accent)]" />
-              <span className="ml-1 font-mono text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-                analytics.casefolio.app/projects
-              </span>
-            </div>
-            <span className="rounded-md bg-[var(--cf-royal-soft)] px-2.5 py-0.5 font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
+          <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-6 py-3">
+            <span className="font-mono text-[0.6875rem] font-medium tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+              analytics.casefolio.app/projects
+            </span>
+            <span className="rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-2.5 py-0.5 font-mono text-[0.6875rem] font-medium text-[var(--cf-text-secondary)]">
               30-day window
             </span>
           </div>

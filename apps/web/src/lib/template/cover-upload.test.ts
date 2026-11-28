@@ -231,12 +231,12 @@ describe("Template cover upload, CDN resolution & browser export helpers", () =>
 
   it("packages valid PKZIP archives and multi-page PDF 1.4 documents for client-assisted exports", () => {
     const zipBytes = buildBrowserZipArchive([
-      { name: "01-behance-1400px.png", data: TINY_PNG_BYTES },
-      { name: "02-behance-1400px.png", data: TINY_PNG_BYTES },
+      { name: "01-layerat-1400px.png", data: TINY_PNG_BYTES },
+      { name: "02-layerat-1400px.png", data: TINY_PNG_BYTES },
     ]);
     expect(listZipEntryNames(zipBytes)).toEqual([
-      "01-behance-1400px.png",
-      "02-behance-1400px.png",
+      "01-layerat-1400px.png",
+      "02-layerat-1400px.png",
     ]);
 
     const fakeJpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]);

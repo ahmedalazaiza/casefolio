@@ -91,7 +91,7 @@ export function NotificationsPageClient({
       data-testid="notifications-page"
       className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5"
     >
-      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-1">
           <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             Inbox
@@ -131,7 +131,7 @@ export function NotificationsPageClient({
           role="group"
           aria-label="Filter notifications"
           data-testid="notifications-filter-bar"
-          className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1"
+          className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-[0.375rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-tab-track)] p-1"
         >
           {FILTER_TABS.map((tab) => {
             const isActive = activeFilter === tab.key;
@@ -143,10 +143,10 @@ export function NotificationsPageClient({
                 aria-pressed={isActive}
                 onClick={() => setActiveFilter(tab.key)}
                 className={cn(
-                  "shrink-0 rounded-lg px-3 py-1.5 text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/40",
+                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                   isActive
-                    ? "bg-[var(--cf-royal)] font-semibold text-[var(--cf-text-on-royal)]"
-                    : "font-medium text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
+                    ? "bg-[var(--cf-lp-action)] font-medium text-[var(--cf-lp-on-action)]"
+                    : "font-medium text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                 )}
               >
                 {tab.label}

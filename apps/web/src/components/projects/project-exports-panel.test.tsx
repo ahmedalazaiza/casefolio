@@ -29,7 +29,7 @@ const FREE_OVERVIEW: ProjectExportsOverviewPayload = {
 };
 
 describe("ProjectExportsPanel & ExportCaseStudyDialog (C-603)", () => {
-  it("shows past export re-download links and locks PDF/Behance on Free plan with upgrade CTA", async () => {
+  it("shows past export re-download links and locks PDF/Layerat pack on Free plan with upgrade CTA", async () => {
     const user = userEvent.setup();
 
     render(<ProjectExportsPanel initialOverview={FREE_OVERVIEW} />);
@@ -51,7 +51,7 @@ describe("ProjectExportsPanel & ExportCaseStudyDialog (C-603)", () => {
     await user.click(screen.getByTestId("export-preset-pdf"));
     expect(screen.getByTestId("start-export-button")).toBeInTheDocument();
 
-    // Selecting Behance on Free plan replaces export button with Upgrade CTA
+    // Selecting Layerat full case study pack on Free plan replaces export button with Upgrade CTA
     await user.click(screen.getByTestId("export-preset-behance"));
     expect(screen.getByTestId("upgrade-export-cta")).toHaveAttribute("href", "/account");
 

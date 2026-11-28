@@ -13,8 +13,8 @@ import { db, dbSchema } from "@/lib/db";
 import { recordAdminAuditLog } from "@/lib/template/service";
 
 export type CategoryMutationResult =
-  | { ok: true; category?: AdminCategoryItem }
-  | { ok: false; error: string };
+  | { ok: true; category?: AdminCategoryItem; reassignedCount?: number }
+  | { ok: false; code?: string; error: string };
 
 export async function getAdminCategoriesOverview(): Promise<AdminCategoriesOverview> {
   const [categoryRows, templateRows, projectRows] = await Promise.all([
@@ -296,10 +296,19 @@ function andNotEmpty(id: string) {
 export async function deleteAdminCategory(args: {
   actorId: string | null;
   id: string;
+  reassignToCategoryId?: string | null;
+  allowPublishedReassign?: boolean;
 }): Promise<CategoryMutationResult> {
-  const parsed = deleteCategorySchema.safeParse({ id: args.id });
+  const parsed = deleteCategorySchema.safeParse({
+    id: args.id,
+    reassignToCategoryId: args.reassignToCategoryId,
+    allowPublishedReassign: args.allowPublishedReassign,
+  });
   if (!parsed.success) {
-    return { ok: false, error: "Invalid category ID." };
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid category delete input.",
+    };
   }
 
   const [target] = await db
@@ -318,11 +327,57 @@ export async function deleteAdminCategory(args: {
     .where(eq(dbSchema.templates.categoryId, parsed.data.id));
 
   const activeTemplates = linkedTemplates.filter((t) => t.status !== "archived");
-  if (activeTemplates.length > 0) {
+  const publishedTemplates = linkedTemplates.filter((t) => t.status === "published");
+
+  if (activeTemplates.length > 0 && parsed.data.reassignToCategoryId === undefined) {
     return {
       ok: false,
       error: `Cannot delete "${target.name}" while ${activeTemplates.length} active template(s) reference it.`,
     };
+  }
+
+  if (publishedTemplates.length > 0 && !parsed.data.allowPublishedReassign) {
+    return {
+      ok: false,
+      code: "DEPLOYED_CATEGORY_PROTECTED",
+      error: `Category "${target.name}" is used by ${publishedTemplates.length} published (deployed) template(s). Confirm reassignment before removing a deployed category.`,
+    };
+  }
+
+  let nextCategoryId: string | null = null;
+  const requestedDestination = parsed.data.reassignToCategoryId;
+  if (
+    requestedDestination !== undefined &&
+    requestedDestination !== null &&
+    requestedDestination !== "__uncategorized__"
+  ) {
+    if (requestedDestination === target.id) {
+      return {
+        ok: false,
+        error: "Destination category must differ from the category being deleted.",
+      };
+    }
+
+    const [dest] = await db
+      .select({ id: dbSchema.categories.id })
+      .from(dbSchema.categories)
+      .where(eq(dbSchema.categories.id, requestedDestination))
+      .limit(1);
+
+    if (!dest) {
+      return { ok: false, error: "Destination category not found." };
+    }
+    nextCategoryId = dest.id;
+  }
+
+  if (linkedTemplates.length > 0) {
+    await db
+      .update(dbSchema.templates)
+      .set({
+        categoryId: nextCategoryId,
+        updatedAt: new Date(),
+      })
+      .where(eq(dbSchema.templates.categoryId, parsed.data.id));
   }
 
   await db
@@ -336,7 +391,9 @@ export async function deleteAdminCategory(args: {
     categoryId: target.id,
     name: target.name,
     slug: target.slug,
+    reassignedTemplateCount: linkedTemplates.length,
+    reassignedToCategoryId: nextCategoryId,
   });
 
-  return { ok: true };
+  return { ok: true, reassignedCount: linkedTemplates.length };
 }

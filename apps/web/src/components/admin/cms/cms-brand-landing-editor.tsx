@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { SiteCmsContent } from "@/lib/cms/schema";
 
@@ -243,7 +244,7 @@ export function CmsBrandEditor({
               key={idx}
               className="grid items-center gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3 sm:grid-cols-[8rem_1fr_1fr_auto]"
             >
-              <select
+              <Select
                 value={soc.platform}
                 onChange={(e) => {
                   const socialLinks = [...value.socialLinks];
@@ -253,7 +254,6 @@ export function CmsBrandEditor({
                   };
                   onChange({ ...value, socialLinks });
                 }}
-                className="border-input bg-background h-9 rounded-md border px-2 text-xs"
               >
                 <option value="x">X</option>
                 <option value="linkedin">LinkedIn</option>
@@ -263,7 +263,7 @@ export function CmsBrandEditor({
                 <option value="instagram">Instagram</option>
                 <option value="youtube">YouTube</option>
                 <option value="custom">Custom</option>
-              </select>
+              </Select>
               <Input
                 value={soc.label}
                 placeholder="Accessible label"
@@ -387,8 +387,8 @@ export function CmsLandingEditor({
           />
         </div>
         <CmsAssetUploader
-          label="Custom Hero Stage Image (optional)"
-          hint="Leave blank to show the live interactive fanned template cards"
+          label="Hero Frame Image (optional)"
+          hint="Upload a custom image to replace the hero frame with a pure image, or leave blank to display the live interactive Studio Builder powered by a real Casefolio template."
           value={value.heroMockupImageUrl}
           onChange={(heroMockupImageUrl) => onChange({ ...value, heroMockupImageUrl })}
           testId="cms-landing-hero-uploader"

@@ -439,7 +439,11 @@ export async function prepareCheckoutSessionForUser(
 
   const amountCents = getChargeAmountCents(valid.plan, valid.interval, seats);
   const amountUsd = getChargeAmountUsd(valid.plan, valid.interval, seats);
-  const mode = overlayReady ? "paddle" : "sandbox_simulated";
+  const mode = isSimulatedBillingAllowed(process.env)
+    ? "sandbox_simulated"
+    : overlayReady
+      ? "paddle"
+      : "sandbox_simulated";
 
   // Server-side checkout intent: the ONLY thing that ties a brand-new Paddle subscription to a
   // Casefolio user/organization when the webhook arrives (custom_data identity is browser-controlled).
@@ -645,12 +649,21 @@ export async function completeSandboxCheckoutForUser(
       error: string;
     }
 > {
+  const rawApiKey = (process.env.PADDLE_API_KEY ?? env.PADDLE_API_KEY).trim().toLowerCase();
+  const rawToken = (
+    process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN
+  )
+    .trim()
+    .toLowerCase();
+  const hasLivePaddleCredentials =
+    rawApiKey.includes("_live_") || rawToken.startsWith("live_");
+
   if (
     process.env.VERCEL_ENV === "production" ||
     process.env.ALLOW_SIMULATED_BILLING !== "1" ||
     !isSimulatedBillingAllowed(process.env) ||
     env.PADDLE_ENV !== "sandbox" ||
-    isRealPaddleApiKeyConfigured()
+    hasLivePaddleCredentials
   ) {
     return {
       ok: false,

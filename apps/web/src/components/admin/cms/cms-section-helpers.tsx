@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CMS_ICON_NAMES, type CmsIconName } from "@/lib/cms/schema";
 
@@ -94,18 +95,17 @@ export function CmsIconAndUploadPicker({
           <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
             <CmsIcon iconName={iconName} customIconUrl={customIconUrl} className="size-4" />
           </span>
-          <select
+          <Select
             aria-label="Select built-in icon"
             value={iconName}
             onChange={(e) => onIconNameChange(e.target.value as CmsIconName)}
-            className="border-input bg-background text-foreground h-9 w-full rounded-md border px-2 text-xs"
           >
             {CMS_ICON_NAMES.map((name) => (
               <option key={name} value={name}>
                 {name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

@@ -21,54 +21,54 @@ export interface V3ShowcaseTabItem {
 
 export const V3_DEFAULT_TOKENS: readonly V3EditorTokenItem[] = [
   {
-    label: "Primary",
-    hex: "#E6C36A",
-    swatchClass: "bg-[var(--cf-mock-orbit-gold)]",
+    label: "Accent",
+    hex: "#E7FF68",
+    swatchClass: "bg-[var(--cf-lp-lime)]",
   },
   {
-    label: "Secondary",
-    hex: "#6C5CE7",
-    swatchClass: "bg-[var(--cf-mock-orbit-indigo)]",
+    label: "Cobalt",
+    hex: "#283FD6",
+    swatchClass: "bg-[var(--cf-lp-cobalt)]",
   },
   {
     label: "Background",
-    hex: "#121110",
-    swatchClass: "bg-[var(--cf-mock-orbit-bg)]",
+    hex: "#20211D",
+    swatchClass: "bg-[var(--cf-lp-dark)]",
   },
   {
-    label: "Text",
-    hex: "#F5F0E6",
-    swatchClass: "bg-[var(--cf-mock-orbit-fg)] border border-[var(--cf-mock-chrome-border)]",
+    label: "Paper",
+    hex: "#F4F1EA",
+    swatchClass: "bg-[var(--cf-lp-cream)] border border-[var(--cf-mock-chrome-border)]",
   },
 ];
 
 export const V3_ALT_TOKENS: readonly V3EditorTokenItem[] = [
   {
-    label: "Primary",
-    hex: "#5EEAD4",
-    swatchClass: "bg-[var(--cf-mock-teal-accent)]",
+    label: "Accent",
+    hex: "#E7FF68",
+    swatchClass: "bg-[var(--cf-lp-lime)]",
   },
   {
-    label: "Secondary",
-    hex: "#38BDF8",
-    swatchClass: "bg-[var(--cf-mock-teal-secondary)]",
+    label: "Terracotta",
+    hex: "#B9441E",
+    swatchClass: "bg-[var(--cf-lp-terracotta)]",
   },
   {
     label: "Background",
-    hex: "#0D1918",
-    swatchClass: "bg-[var(--cf-mock-teal-bg)]",
+    hex: "#241D21",
+    swatchClass: "bg-[var(--cf-lp-mauve-ink)]",
   },
   {
-    label: "Text",
-    hex: "#F5F0E6",
-    swatchClass: "bg-[var(--cf-mock-orbit-fg)] border border-[var(--cf-mock-chrome-border)]",
+    label: "Mauve",
+    hex: "#D8AEB8",
+    swatchClass: "bg-[var(--cf-lp-mauve)] border border-[var(--cf-mock-chrome-border)]",
   },
 ];
 
 export const V3_EDITOR_FONTS = {
-  defaultHeading: "Instrument Serif",
-  altHeading: "Bricolage Grotesque",
-  body: "Geist",
+  defaultHeading: "Georgia",
+  altHeading: "Instrument Serif",
+  body: "Manrope",
   caption: "Curated, licensed list",
 } as const;
 
@@ -130,43 +130,34 @@ export const V3_SHOWCASE_TABS: readonly V3ShowcaseTabItem[] = [
 
 export const V3_FEATURE_CARDS = [
   {
-    title: "Publish a public page",
-    body: "Share one link to a responsive case study page.",
+    title: "Structure that guides",
+    body: "Proven narrative flows help you frame the problem, process, and impact without staring at a blank page.",
   },
   {
-    title: "Export PNG & PDF",
-    body: "Download the finished case study as image or document files.",
+    title: "Screens that behave",
+    body: "Drop in your work. We handle ratios, device frames, alignment, and rhythm across every screen.",
   },
   {
-    title: "Versioned templates",
-    body: "Your project stays pinned to the template version it started with.",
+    title: "Publish it anywhere",
+    body: "Export your full case study directly to Layerat, share a live link, or export PDF and 2× PNG. One story, every channel.",
   },
 ] as const;
 
 export const V3_FAQ_ITEMS = [
   {
-    question: "Who designs the templates?",
-    answer: "The Casefolio team designs, versions and uploads every template.",
-  },
-  {
-    question: "Can I use my own colors and fonts?",
+    question: "Can I use my own brand styles?",
     answer:
-      "Yes. Every template includes editable color tokens and curated font pairs so you can match your project’s brand while keeping spacing and contrast intact.",
+      "Yes. Control color, typography, cover art, and optional sections while the template preserves layout rhythm and contrast discipline.",
   },
   {
     question: "What can I export?",
     answer:
-      "Publish a responsive public case study URL or export high-resolution PNG images (including 1400px Behance slices) and print-ready PDF documents.",
+      "Export your full case study to Layerat (1,400px seamless pack), publish a live responsive link, or download selectable-text PDF and full-length 2× Retina PNG files.",
   },
   {
-    question: "Do you support Mobile + Web in one case study?",
+    question: "Is Casefolio only for individuals?",
     answer:
-      "Yes. Pick a Mobile, Website, or combined multi-platform template with ratio-locked phone, tablet, and desktop browser slots in one flow.",
-  },
-  {
-    question: "What happens to published pages if I cancel?",
-    answer:
-      "Nothing is deleted. Free ($0) includes 1 lifetime Case Study credit, Pro ($7.99/mo · $79.90/yr with 2 months free) includes up to 10 rotatable Case Studies and custom Case Study URLs (/p/your-custom-slug), and Teams ($5.99/seat/mo · 2 months free on annual, 2–25 seats) includes unlimited shared Case Studies. If you cancel, 1 project stays live on Free while extra projects remain safely locked until you upgrade again.",
+      "No. Start free with 1 lifetime Case Study ($0 forever), upgrade to Pro ($7.99/mo) for up to 10 rotatable stories and custom /p/ URLs, or scale with Team workspaces featuring shared libraries and multi-seat collaboration.",
   },
 ] as const;
 

@@ -71,31 +71,31 @@ test.describe("Phase 13 Business Model, Teams Seat Billing, Private Spaces & Rec
     try {
       await page.setViewportSize({ width: 1440, height: 920 });
 
-      // 1. Public /pricing page + interactive Teams Seat Calculator + 375/393/1440 + axe-core
+      // 1. Public /pricing page + Teams card seat stepper (the standalone per-seat calculator
+      //    section was intentionally removed from /pricing) + 375/393/1440 + axe-core
       await page.goto("/pricing");
-      await expect(page.getByTestId("teams-seat-calculator")).toBeVisible();
-      await expect(page.getByTestId("teams-calc-seat-count")).toHaveText("3");
-      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$17.97");
+      const teamCard = page.getByTestId("plan-card-team");
+      const teamSeats = teamCard.getByTestId("team-card-seats-value");
+      const teamPrice = teamCard.getByTestId("plan-card-price");
+      await expect(teamCard.getByTestId("team-card-seat-stepper")).toBeVisible();
+      await expect(teamSeats).toHaveText("3");
+      await expect(teamPrice).toHaveText("$17.97");
 
       await expect(async () => {
-        await page.getByTestId("teams-calc-preset-5").click();
-        await expect(page.getByTestId("teams-calc-seat-count")).toHaveText("5", {
-          timeout: 1_000,
-        });
+        await teamCard.getByTestId("team-card-seats-increment").click();
+        await expect(teamSeats).toHaveText("4", { timeout: 1_000 });
       }).toPass({ timeout: 10_000 });
-      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$29.95");
-
-      await page.getByTestId("teams-calc-preset-15").click();
-      await expect(page.getByTestId("teams-calc-seat-count")).toHaveText("15");
-      await expect(page.getByTestId("teams-calc-headline-price")).toHaveText("$89.85");
-
-      await page.getByTestId("teams-calc-preset-26").click();
-      await expect(page.getByTestId("teams-calc-capacity-review")).toBeVisible();
-      await expect(page.getByTestId("teams-calc-disclaimer")).toContainText(
-        "this calculator saves nothing and charges nothing",
+      await teamCard.getByTestId("team-card-seats-increment").click();
+      await expect(teamSeats).toHaveText("5");
+      await expect(teamPrice).toHaveText("$29.95");
+      await expect(teamCard.getByRole("link", { name: /\(5 seats\)/ })).toHaveAttribute(
+        "href",
+        /seats=5/,
       );
 
-      await page.getByTestId("teams-calc-preset-3").click();
+      await teamCard.getByTestId("team-card-seats-decrement").click();
+      await teamCard.getByTestId("team-card-seats-decrement").click();
+      await expect(teamSeats).toHaveText("3");
       await assertCleanA11yAndResponsive(page, "/pricing");
 
       // 2. Public /help/billing-and-plans article + 375/393/1440 + axe-core
@@ -162,7 +162,7 @@ test.describe("Phase 13 Business Model, Teams Seat Billing, Private Spaces & Rec
           seats: 3,
         },
       });
-      expect(checkoutRes.status()).toBe(200);
+      expect(checkoutRes.status(), await checkoutRes.text()).toBe(200);
       const checkoutJson = (await checkoutRes.json()) as { ok: boolean };
       expect(checkoutJson.ok).toBe(true);
 
@@ -207,7 +207,14 @@ test.describe("Phase 13 Business Model, Teams Seat Billing, Private Spaces & Rec
       // Switch Member's active workspace to the Team workspace on /dashboard
       await memberPage.goto("/dashboard");
       await memberPage.getByTestId("dashboard-workspace-select").selectOption(orgId);
-      await expect(memberPage.getByRole("button", { name: /My Private Space/i })).toBeVisible();
+      await expect(memberPage.getByTestId("shell-workspace-switcher")).toContainText(teamName);
+      await memberPage.getByTestId("shell-workspace-switcher").click();
+      await expect(
+        memberPage
+          .getByTestId("shell-workspace-dropdown-content")
+          .getByText(/My Private Space/i),
+      ).toBeVisible();
+      await memberPage.keyboard.press("Escape");
 
       // Member creates a project inside Team workspace (defaults to Member's Private Space!)
       await memberPage.goto("/new");

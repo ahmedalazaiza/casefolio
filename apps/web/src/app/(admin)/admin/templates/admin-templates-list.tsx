@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import type { TemplateProjectType, TemplateStatus, TemplateTier } from "@/lib/template/schema";
 import {
   filterAdminTemplates,
@@ -396,12 +397,12 @@ export function AdminTemplatesList({
               <label htmlFor="admin-template-category" className="text-foreground type-caption">
                 Category
               </label>
-              <select
+              <Select
                 id="admin-template-category"
                 aria-label="Filter by category"
                 value={categoryFilter}
                 onChange={(event) => setCategoryFilter(event.target.value)}
-                className="border-border/80 bg-elevated text-foreground type-caption focus-visible:ring-ring/40 h-9 rounded-full border px-3.5 outline-none focus-visible:ring-2"
+                className="h-9 rounded-full px-3.5 text-xs"
               >
                 <option value="all">All categories</option>
                 {categoryOptions.map((cat) => (
@@ -409,7 +410,7 @@ export function AdminTemplatesList({
                     {cat.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
         </div>

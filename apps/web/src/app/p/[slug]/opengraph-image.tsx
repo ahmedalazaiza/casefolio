@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { CASEFOLIO_MARK_PATH, CASEFOLIO_MARK_VIEWBOX } from "@/lib/brand/logo-paths";
 import { getPublishedProjectBySlug } from "@/lib/projects/publish";
 import { CURATED_COLOR_PRESETS } from "@/lib/template/curated-themes";
 
@@ -147,31 +148,19 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps): P
             {!published.project.whiteLabelEnabled ? (
               <div
                 style={{
-                  width: 38,
-                  height: 38,
+                  width: 40,
+                  height: 40,
                   borderRadius: 10,
-                  backgroundColor: "#2650F2",
+                  backgroundColor: "#20211D",
+                  border: "1px solid #484943",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  position: "relative",
-                  color: "#FFFFFF",
-                  fontSize: 19,
-                  fontWeight: 800,
                 }}
               >
-                <span>C</span>
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 6,
-                    width: 7,
-                    height: 7,
-                    borderRadius: 999,
-                    backgroundColor: "#D1F800",
-                  }}
-                />
+                <svg width={24} height={24} viewBox={CASEFOLIO_MARK_VIEWBOX} fill="none">
+                  <path d={CASEFOLIO_MARK_PATH} fill="#D9F233" />
+                </svg>
               </div>
             ) : null}
             <span

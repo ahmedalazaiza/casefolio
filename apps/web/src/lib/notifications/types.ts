@@ -113,6 +113,6 @@ export function formatRelativeNotificationTime(
 
 export function formatExportFormatShortLabel(format: string): string {
   if (format === "pdf") return "PDF";
-  if (format === "behance") return "Behance slices";
+  if (format === "behance") return "Layerat pack";
   return "PNG";
 }

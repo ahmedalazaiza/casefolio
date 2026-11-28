@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import type { SiteCmsContent } from "@/lib/cms/schema";
 
 export function CmsTeamEditor({
@@ -160,7 +161,7 @@ export function CmsTeamEditor({
                 />
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-semibold">Badge Accent</Label>
-                  <select
+                  <Select
                     value={member.tone}
                     onChange={(e) => {
                       const members = [...value.members];
@@ -170,12 +171,11 @@ export function CmsTeamEditor({
                       };
                       onChange({ ...value, members });
                     }}
-                    className="border-input bg-background h-9 rounded-md border px-2 text-xs"
                   >
                     <option value="royal">Royal Blue</option>
                     <option value="lime">Acid Lime</option>
                     <option value="ink">Carbon Ink</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -238,7 +238,7 @@ export function CmsTeamEditor({
 
               <CmsAssetUploader
                 label="Profile Photo (optional)"
-                hint="Replaces monogram badge if uploaded"
+                hint="Upload an image file to replace monogram badge"
                 value={member.avatarImageUrl}
                 onChange={(avatarImageUrl) => {
                   const members = [...value.members];
@@ -246,6 +246,7 @@ export function CmsTeamEditor({
                   onChange({ ...value, members });
                 }}
                 compact
+                allowUrlFallback={false}
               />
 
               <CmsStringListEditor

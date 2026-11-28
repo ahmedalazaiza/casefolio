@@ -264,7 +264,7 @@ const TEAMS_CATALOG_DEFINITION: BillingPlanDefinition = {
     "Unlimited shared Case Studies across your studio",
     "Team Dashboard: invite by email, track invite status & manage roles",
     "Custom Case Study URLs (/p/your-custom-slug) on all live links",
-    "Shared Brand Kit, 10 GB/seat pooled storage & 365-day analytics",
+    "Shared Brand Kit, 75 exports/seat/mo, 10 GB/seat pooled storage & 365-day analytics",
   ],
 };
 
@@ -295,8 +295,8 @@ export const BILLING_PLAN_CATALOG: Record<PlanTier, BillingPlanDefinition> = {
       "1 user (Personal workspace)",
       "1 complete Case Study credit (one-time lifetime allowance)",
       "Full A-to-Z builder with starter templates, colors & typography",
-      "1× PNG & PDF exports (includes subtle Casefolio watermark)",
-      "Shareable auto-generated public link (custom URL requires Pro)",
+      "5 exports/mo (1× PNG & PDF exports with subtle watermark)",
+      "250 MB cloud storage & shareable auto-generated link",
     ],
   },
   pro: {
@@ -328,8 +328,8 @@ export const BILLING_PLAN_CATALOG: Record<PlanTier, BillingPlanDefinition> = {
       `Up to ${PRO_MAX_PROJECTS} active Case Studies (delete & replace anytime)`,
       "Custom Case Study URL (/p/your-custom-slug) for every live project",
       "Full access to all Pro & Premium templates and custom styling",
-      "Watermark-free 2× Retina PNG, PDF & Behance 1400px exports",
-      "90-day live portfolio view analytics",
+      "60 exports/mo · Watermark-free 2× PNG, PDF & full Layerat export",
+      "5 GB cloud storage & 90-day live portfolio view analytics",
     ],
   },
   team: TEAMS_CATALOG_DEFINITION,

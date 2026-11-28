@@ -1,52 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1080" fill="none">
-  <!-- Background -->
-  <rect width="1440" height="1080" fill="#FBF7F1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none">
+  <defs>
+    <radialGradient id="a-glow-a" cx="26%" cy="24%" r="60%">
+      <stop offset="0%" stop-color="#0F5C4D" stop-opacity="0.26"/>
+      <stop offset="100%" stop-color="#FBF7F1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="a-glow-b" cx="80%" cy="76%" r="55%">
+      <stop offset="0%" stop-color="#E8743B" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#FBF7F1" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="a-web-stage" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F5C4D" stop-opacity="0.2"/>
+      <stop offset="55%" stop-color="#F1EADF"/>
+      <stop offset="100%" stop-color="#E8743B" stop-opacity="0.18"/>
+    </linearGradient>
+    <linearGradient id="a-phone-fill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F5C4D" stop-opacity="0.32"/>
+      <stop offset="52%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E8743B" stop-opacity="0.28"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Logo slot (72x72, rounded 18px) -->
-  <rect x="684" y="64" width="72" height="72" rx="18" fill="#F1EADF"/>
-  <g transform="translate(710, 90)" stroke="#6F675C" stroke-opacity="0.55" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="1.5" y="1.5" width="17" height="17" rx="2.5"/>
-    <circle cx="6.5" cy="6.5" r="1.5"/>
-    <path d="M18.5 13L14.2 8.7L4.5 18.5"/>
+  <rect width="1200" height="900" fill="#FBF7F1"/>
+  <rect width="1200" height="900" fill="url(#a-glow-a)"/>
+  <rect width="1200" height="900" fill="url(#a-glow-b)"/>
+
+  <!-- Editorial Light Web Frame -->
+  <g transform="translate(88, 120)">
+    <rect x="0" y="10" width="780" height="580" rx="28" fill="#1D1A16" opacity="0.06"/>
+    <rect width="780" height="580" rx="28" fill="#FFFFFF" stroke="#E6DDCF" stroke-width="2"/>
+    <line x1="0" y1="58" x2="780" y2="58" stroke="#EFE8DC" stroke-width="1.5"/>
+    <circle cx="34" cy="29" r="6" fill="#D9CEBC"/>
+    <circle cx="56" cy="29" r="6" fill="#D9CEBC"/>
+    <circle cx="78" cy="29" r="6" fill="#D9CEBC"/>
+
+    <rect x="36" y="92" width="220" height="16" rx="8" fill="#0F5C4D" fill-opacity="0.32"/>
+    <rect x="36" y="124" width="380" height="22" rx="11" fill="#1D1A16" fill-opacity="0.12"/>
+    <rect x="36" y="176" width="708" height="356" rx="20" fill="url(#a-web-stage)" stroke="#E6DDCF" stroke-width="1.5"/>
   </g>
 
-  <!-- Eyebrow -->
-  <text x="720" y="172" text-anchor="middle" fill="#E8743B" font-family="Manrope, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" letter-spacing="1.68">CASE STUDY · WEB + MOBILE</text>
-
-  <!-- Title -->
-  <text x="720" y="244" text-anchor="middle" fill="#1D1A16" font-family="Fraunces, Georgia, serif" font-size="64" font-weight="600">Atlas: plan on your laptop, live it</text>
-  <text x="720" y="314" text-anchor="middle" fill="#1D1A16" font-family="Fraunces, Georgia, serif" font-size="64" font-weight="600">on your phone</text>
-
-  <!-- Subtitle -->
-  <text x="720" y="368" text-anchor="middle" fill="#6F675C" font-family="Manrope, system-ui, -apple-system, sans-serif" font-size="20" font-weight="400">A cross-platform travel planner that keeps itineraries, bookings and maps in</text>
-  <text x="720" y="398" text-anchor="middle" fill="#6F675C" font-family="Manrope, system-ui, -apple-system, sans-serif" font-size="20" font-weight="400">sync — from first idea to final boarding pass.</text>
-
-  <!-- Tags -->
-  <g transform="translate(442, 424)">
-    <rect x="0" y="0" width="135" height="36" rx="18" fill="none" stroke="#E6DDCF"/>
-    <text x="67.5" y="23" text-anchor="middle" fill="#1D1A16" font-family="Manrope, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Product Design</text>
-
-    <rect x="143" y="0" width="143" height="36" rx="18" fill="none" stroke="#E6DDCF"/>
-    <text x="214.5" y="23" text-anchor="middle" fill="#1D1A16" font-family="Manrope, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Responsive Web</text>
-
-    <rect x="294" y="0" width="123" height="36" rx="18" fill="none" stroke="#E6DDCF"/>
-    <text x="355.5" y="23" text-anchor="middle" fill="#1D1A16" font-family="Manrope, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">iOS &amp; Android</text>
-
-    <rect x="425" y="0" width="132" height="36" rx="18" fill="none" stroke="#E6DDCF"/>
-    <text x="491" y="23" text-anchor="middle" fill="#1D1A16" font-family="Manrope, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Design System</text>
-  </g>
-
-  <!-- Browser Mockup Frame (1200w) -->
-  <g transform="translate(120, 504)">
-    <rect width="1200" height="540" rx="14" fill="#FFFFFF" stroke="#E6DDCF"/>
-    <circle cx="21" cy="17" r="5" fill="#E6DDCF"/>
-    <circle cx="39" cy="17" r="5" fill="#E6DDCF"/>
-    <circle cx="57" cy="17" r="5" fill="#E6DDCF"/>
-    <rect x="1" y="34" width="1198" height="505" rx="0" fill="#F1EADF"/>
-    <g transform="translate(572, 258)" stroke="#6F675C" stroke-opacity="0.55" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="4" width="48" height="48" rx="6"/>
-      <circle cx="18" cy="18" r="4"/>
-      <path d="M52 36L40 24L12 52"/>
-    </g>
+  <!-- Matching Companion Mobile Frame -->
+  <g transform="translate(768, 148) rotate(3)">
+    <rect x="-8" y="12" width="320" height="628" rx="48" fill="#1D1A16" opacity="0.08"/>
+    <rect width="316" height="624" rx="46" fill="#F1EADF" stroke="#DED2C0" stroke-width="2.5"/>
+    <rect x="14" y="14" width="288" height="596" rx="34" fill="url(#a-phone-fill)"/>
+    <rect x="116" y="28" width="84" height="18" rx="9" fill="#1D1A16" fill-opacity="0.16"/>
+    <rect x="38" y="88" width="240" height="220" rx="22" fill="#0F5C4D" fill-opacity="0.12" stroke="#0F5C4D" stroke-opacity="0.18"/>
+    <rect x="38" y="332" width="240" height="120" rx="18" fill="#E8743B" fill-opacity="0.12"/>
+    <rect x="38" y="476" width="160" height="16" rx="8" fill="#1D1A16" fill-opacity="0.16"/>
+    <rect x="38" y="508" width="210" height="12" rx="6" fill="#1D1A16" fill-opacity="0.09"/>
   </g>
 </svg>

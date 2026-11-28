@@ -170,8 +170,11 @@ export function VerifyEmailForm({
         <Send className="size-5" />
       </span>
 
-      <div className="flex flex-col gap-1.5">
-        <h1 className="type-heading-l text-foreground">Verify your email</h1>
+      <div className="flex flex-col gap-2">
+        <p className="cf-lp-kicker text-[var(--cf-lp-kicker-muted)]">VERIFICATION</p>
+        <h1 className="font-editorial text-[2.375rem] leading-[1.04] font-normal tracking-[-0.04em] text-[var(--cf-lp-ink)]">
+          Verify your email
+        </h1>
         <p className="text-muted-foreground type-body-m">
           Enter the 6-digit code we sent to{" "}
           <span className="text-foreground font-medium">

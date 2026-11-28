@@ -8,6 +8,30 @@ export interface CuratedColorPalettePreset {
   colors: Record<string, string>;
 }
 
+/** Applies a curated preset while clearing stale derived surface tokens from the previous theme. */
+export function applyCuratedPalettePreset(
+  currentColors: Record<string, string>,
+  presetColors: Record<string, string>,
+): Record<string, string> {
+  const mergedColors: Record<string, string> = { ...currentColors };
+  for (const derivedToken of ["surfaceAlt", "line", "onPrimary"] as const) {
+    if (!(derivedToken in presetColors)) {
+      delete mergedColors[derivedToken];
+    }
+  }
+  for (const [token, value] of Object.entries(presetColors)) {
+    if (
+      token in mergedColors ||
+      token === "secondary" ||
+      token === "textMuted" ||
+      token === "accent"
+    ) {
+      mergedColors[token] = value;
+    }
+  }
+  return mergedColors;
+}
+
 export interface CuratedFontOption {
   family: string;
   category: "sans" | "serif" | "display";

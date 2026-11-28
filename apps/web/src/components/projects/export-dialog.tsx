@@ -419,7 +419,7 @@ export function ExportCaseStudyDialog({
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         featureTitle={`Unlock ${selectedPreset.label}`}
-        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual, up to 10 projects) or Teams ($5.99/seat/mo · 2 months free on annual) for watermark-free PDF & 2× PNG exports and Behance 1,400px image packs."
+        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual, up to 10 projects) or Teams ($5.99/seat/mo · 2 months free on annual) to export your full case study to Layerat and unlock watermark-free PDF & 2× PNG exports."
       />
     </Dialog>
   );

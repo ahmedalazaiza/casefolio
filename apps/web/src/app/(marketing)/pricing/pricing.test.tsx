@@ -94,6 +94,15 @@ describe("PricingPageClient (3 Cards: Free Left · Pro Most Popular · Teams Dyn
     const proUpgradeLink = screen.getByRole("link", { name: "Upgrade to Pro" });
     expect(proUpgradeLink).toHaveAttribute("href", "/sign-up?plan=pro&interval=monthly");
 
+    const freeStartLink = within(freeCard).getByRole("link", { name: /Start free/i });
+    const teamStartLink = within(teamCard).getByRole("link", { name: /Start Teams plan/i });
+    expect(proUpgradeLink.className).toContain("bg-[var(--cf-lp-lime)]");
+    expect(freeStartLink.className).not.toContain("bg-[var(--cf-lp-lime)]");
+    expect(teamStartLink.className).not.toContain("bg-[var(--cf-lp-lime)]");
+    expect(freeStartLink.className).toContain("bg-[var(--cf-lp-plan-btn-bg)]");
+    expect(teamStartLink.className).toContain("bg-[var(--cf-lp-plan-btn-bg)]");
+    expect(proCard.className).toContain("lg:grid-rows-subgrid");
+
     // Switching to Annual displays the annual subscription total right in the big headline prices
     await user.click(screen.getAllByRole("button", { name: /^Annual/i })[0]!);
     expect(within(proCard).getByTestId("plan-card-price")).toHaveTextContent(
@@ -125,7 +134,7 @@ describe("PricingPageClient (3 Cards: Free Left · Pro Most Popular · Teams Dyn
     expect(screen.getAllByText("Not included").length).toBeGreaterThanOrEqual(4);
   });
 
-  it("computes Teams per-seat math (2..25 seats at $5.99/mo · $59.90/yr = 2 months free) and 26+ enterprise capacity with zero network calls", async () => {
+  it("removes the standalone seat calculator & pricing FAQ section while supporting Teams stepper in-card with zero network calls", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const user = userEvent.setup();
 
@@ -138,29 +147,24 @@ describe("PricingPageClient (3 Cards: Free Left · Pro Most Popular · Teams Dyn
       />,
     );
 
-    expect(screen.getByTestId("teams-calc-seat-count")).toHaveTextContent("3");
-    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$17.97");
-    expect(screen.getByTestId("teams-calc-disclaimer")).toHaveTextContent(
-      "Before tax; this calculator saves nothing and charges nothing.",
-    );
+    expect(screen.queryByTestId("teams-calc-seat-count")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Plans, seats &/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Billing FAQ/i })).toHaveAttribute("href", "/faq");
 
-    await user.click(screen.getByTestId("teams-calc-preset-5"));
-    expect(screen.getByTestId("teams-calc-seat-count")).toHaveTextContent("5");
-    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$29.95");
-    expect(screen.getByTestId("teams-calc-billing-detail")).toHaveTextContent("$299.50/yr");
+    const cardsGrid = screen.getByTestId("paid-plan-cards-grid");
+    const teamCard = within(cardsGrid).getByTestId("plan-card-team");
 
-    // Switching calculator interval to Annual puts the annual total ($299.50 / year) in the big headline price
+    expect(within(teamCard).getByTestId("team-card-seats-value")).toHaveTextContent("3");
+    expect(within(teamCard).getByTestId("plan-card-price")).toHaveTextContent("$17.97");
+
+    await user.click(within(teamCard).getByTestId("team-card-seats-increment"));
+    await user.click(within(teamCard).getByTestId("team-card-seats-increment"));
+    expect(within(teamCard).getByTestId("team-card-seats-value")).toHaveTextContent("5");
+    expect(within(teamCard).getByTestId("plan-card-price")).toHaveTextContent("$29.95");
+
+    // Switching interval to Annual puts the annual total ($299.50 / year) in the big headline price
     await user.click(screen.getAllByRole("button", { name: /^Annual/i })[0]!);
-    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$299.50");
-
-    await user.click(screen.getByTestId("teams-calc-preset-15"));
-    expect(screen.getByTestId("teams-calc-seat-count")).toHaveTextContent("15");
-    expect(screen.getByTestId("teams-calc-headline-price")).toHaveTextContent("$898.50");
-
-    await user.click(screen.getByTestId("teams-calc-preset-26"));
-    expect(screen.getByTestId("teams-calc-capacity-review")).toHaveTextContent(
-      /Enterprise capacity \(26\+ seats\)/i,
-    );
+    expect(within(teamCard).getByTestId("plan-card-price")).toHaveTextContent("$299.50");
 
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();

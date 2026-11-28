@@ -137,11 +137,12 @@ export async function POST(
         if (presignRes.status === "conflict") {
           return NextResponse.json(
             {
-              ok: false,
+              ok: true,
+              mode: "deferred_to_worker" as const,
               code: "EXPORT_IN_PROGRESS",
               error: `Export is already ${presignRes.jobStatus}.`,
             },
-            { status: 409 },
+            { status: 200 },
           );
         }
         if (presignRes.status === "already_completed") {

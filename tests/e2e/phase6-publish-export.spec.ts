@@ -98,7 +98,7 @@ function generateMockupPng(width: number, height: number): Buffer {
   ]);
 }
 
-test("Phase 6 E2E: publish Orbit project, open public link logged out (<2s + OG + 404 on unpublish), export PNG + PDF + Behance, re-download history, and verify fonts match editor", async ({
+test("Phase 6 E2E: publish Orbit project, open public link logged out (<2s + OG + 404 on unpublish), export Layerat + PNG + PDF, re-download history, and verify fonts match editor", async ({
   page,
   browser,
 }) => {
@@ -110,7 +110,6 @@ test("Phase 6 E2E: publish Orbit project, open public link logged out (<2s + OG 
   const stamp = Date.now();
   const userEmail = `e2e-publish-p6-${stamp}@casefolio.test`;
   const password = "CasefolioPublish2026!";
-  const customSlug = `orbit-fintech-${stamp}`;
   let createdUserId: string | null = null;
   let createdProjectId: string | null = null;
   const pageErrors: string[] = [];
@@ -244,9 +243,12 @@ test("Phase 6 E2E: publish Orbit project, open public link logged out (<2s + OG 
     await page.getByRole("link", { name: /Publish/i }).click();
     await expect(page).toHaveURL(new RegExp(`/projects/${createdProjectId}/share`));
 
+    // Custom URL slugs are Pro/Teams-only: Free publishes with the auto-generated share link.
     const slugInput = page.getByTestId("publish-slug-input");
-    await slugInput.fill(customSlug);
-    await expect(page.getByTestId("slug-availability-status")).toContainText("Available");
+    await expect(slugInput).toHaveAttribute("readonly", "");
+    await expect(page.getByTestId("unlock-custom-url-button")).toBeVisible();
+    await expect(slugInput).not.toHaveValue("");
+    const customSlug = await slugInput.inputValue();
 
     await page.getByTestId("publish-project-button").click();
     await expect(page.getByTestId("share-status-badge")).toContainText("Published · Public");
@@ -313,8 +315,8 @@ test("Phase 6 E2E: publish Orbit project, open public link logged out (<2s + OG 
     await page.getByTestId("publish-project-button").click();
     await expect(page.getByTestId("share-status-badge")).toContainText("Published · Public");
 
-    // 7. Navigate to Exports: Free user exports PNG Long (with watermark), Behance locked on Free
-    await page.getByRole("link", { name: /Exports \(PNG \/ PDF \/ Behance\)/i }).click();
+    // 7. Navigate to Exports: Free user exports PNG Long (with watermark), Layerat locked on Free
+    await page.getByRole("link", { name: /Exports \(Layerat \/ PNG \/ PDF\)/i }).click();
     await expect(page).toHaveURL(new RegExp(`/projects/${createdProjectId}/exports`));
 
     await page.getByTestId("export-preset-behance").click();
@@ -340,7 +342,7 @@ test("Phase 6 E2E: publish Orbit project, open public link logged out (<2s + OG 
     expect(Array.from(pngBytes.subarray(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
     expect(pngBytes.byteLength).toBeGreaterThan(5_000);
 
-    // 8. Upgrade user to Pro -> export PDF + Behance slices, verify fonts match editor, and re-download past PNG
+    // 8. Upgrade user to Pro -> export PDF + Layerat slices, verify fonts match editor, and re-download past PNG
     await db.update(users).set({ plan: "pro" }).where(eq(users.id, createdUserId!));
     await page.reload();
 

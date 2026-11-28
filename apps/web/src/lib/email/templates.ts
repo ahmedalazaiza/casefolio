@@ -172,7 +172,7 @@ export function buildWelcomeNewUserEmail(args: {
       greeting: `Hi ${firstName},`,
       paragraphs: [
         "Your personal Casefolio workspace is active and ready. We built Casefolio so product designers and studios can turn raw screens and decisions into crisp, architectural case studies — without fighting brittle layouts.",
-        "Start from any curated template, drop screenshots into ratio-locked frames, customize your typography and color tokens, and publish a fast public link or export pixel-sharp PDFs and Behance slices.",
+        "Start from any curated template, drop screenshots into ratio-locked frames, customize your typography and color tokens, and publish a fast public link or export your full case study to Layerat, selectable PDFs, and 2× PNGs.",
       ],
       specs: [
         { label: "Workspace", value: "Personal Studio (Active)" },
@@ -190,7 +190,7 @@ export function buildWelcomeNewUserEmail(args: {
         },
         {
           title: "Publish live or export",
-          description: "Share a clean /p/slug URL or export presentation-ready PNG, PDF, and Behance assets.",
+          description: "Share a clean /p/slug URL or export your full case study to Layerat, PDF, and PNG.",
         },
       ],
       ctaLabel: "Create your first case study",
@@ -1031,7 +1031,7 @@ export function buildSubscriptionActivatedEmail(args: {
       heading: `${planTitle} is now active`,
       greeting: args.name ? `Hi ${args.name.trim()},` : undefined,
       paragraphs: [
-        `Thank you for subscribing to ${planTitle}. Your workspace entitlements — including unwatermarked public links, high-resolution PDF/PNG/Behance exports, and full template access — are unlocked immediately.`,
+        `Thank you for subscribing to ${planTitle}. Your workspace entitlements — including unwatermarked public links, full Layerat case study packs, high-resolution PDF/PNG exports, and full template access — are unlocked immediately.`,
       ],
       specs: [
         { label: "Active Plan", value: planTitle },
@@ -2061,7 +2061,7 @@ export const EMAIL_TEMPLATE_CATALOG: readonly EmailCatalogEntry[] = [
   },
   {
     key: "export.ready",
-    title: "Export Ready (PDF / PNG / Behance)",
+    title: "Export Ready (Layerat / PDF / PNG)",
     audience: "existing_user",
     audienceLabel: "Existing User",
     department: "notifications",
@@ -2084,7 +2084,7 @@ export const EMAIL_TEMPLATE_CATALOG: readonly EmailCatalogEntry[] = [
     buildSample: (base) =>
       buildExportFailedEmail({
         projectName: "Mosaed — Calm Personal Debt App",
-        formatLabel: "Behance slices",
+        formatLabel: "Layerat pack",
         exportsUrl: `${resolveAppBase(base)}/projects/00000000-0000-4000-8000-000000000101/exports`,
         appBaseUrl: base,
       }),

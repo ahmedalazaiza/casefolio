@@ -15,6 +15,7 @@ import {
   getWorkspaceLifetimeProjectsCreated,
 } from "@/lib/entitlements/team-invitations";
 import { listNotificationsForUser } from "@/lib/notifications/service";
+import { resolveActiveSpaceFilter } from "@/lib/workspaces/active-space";
 import { listWorkspaceSwitcherState } from "@/lib/workspaces/service";
 
 export interface WorkspaceShellUserInput {
@@ -45,6 +46,7 @@ export async function buildWorkspaceShellProps(
   user: WorkspaceShellUserInput,
   activeOrganizationId: string | null = null,
   now: Date = new Date(),
+  activeSpaceCandidate: string | null = null,
 ): Promise<ComputedWorkspaceShellResult> {
   const [switcher, billing, notificationsSummary] = await Promise.all([
     listWorkspaceSwitcherState(user.id, activeOrganizationId, now),
@@ -208,6 +210,10 @@ export async function buildWorkspaceShellProps(
   const isPaid = can(activeWs.plan, "pro_templates");
   const headerPlanTier: "free" | "pro" | "team" =
     canonicalPlan === "team" ? "team" : canonicalPlan === "pro" ? "pro" : "free";
+  const resolvedActiveSpaceId = resolveActiveSpaceFilter(
+    switcher.spaces,
+    activeSpaceCandidate,
+  );
 
   return {
     activePlan: activeWs.plan,
@@ -228,6 +234,14 @@ export async function buildWorkspaceShellProps(
       failedPaymentPauseDateLabel,
       renewalGraceBanner,
       activeOrganizationId: activeOrgId,
+      activeSpaceId: resolvedActiveSpaceId,
+      spaces: switcher.spaces.map((sp) => ({
+        id: sp.id,
+        name: sp.name,
+        visibility: sp.visibility,
+        isDefault: sp.isDefault,
+        isMine: sp.isMine,
+      })),
       activeWorkspaceName:
         activeWs.kind === "personal" ? "Personal Workspace" : activeWs.name,
       activeWorkspaceOverview: {

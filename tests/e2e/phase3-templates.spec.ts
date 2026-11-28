@@ -1,11 +1,54 @@
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
+import { deflateSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
 import { createDbConnection, eq, templates, users } from "../../packages/db/src/index";
 
 const envPath = resolve(process.cwd(), ".env");
 if (existsSync(envPath)) {
   process.loadEnvFile(envPath);
+}
+
+function crc32(buf: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i += 1) {
+    crc ^= buf[i] ?? 0;
+    for (let k = 0; k < 8; k += 1) {
+      crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const chunk = Buffer.alloc(12 + data.length);
+  chunk.writeUInt32BE(data.length, 0);
+  chunk.write(type, 4, 4, "ascii");
+  data.copy(chunk, 8);
+  chunk.writeUInt32BE(crc32(chunk.subarray(4, 8 + data.length)), 8 + data.length);
+  return chunk;
+}
+
+/** Solid-colour RGB PNG used as the mandatory template cover image. */
+function solidPng(width: number, height: number): Buffer {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  const row = Buffer.alloc(1 + width * 3);
+  for (let x = 0; x < width; x += 1) {
+    row[1 + x * 3] = 58;
+    row[2 + x * 3] = 76;
+    row[3 + x * 3] = 245;
+  }
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(raw)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
 }
 
 test("Phase 3 E2E: admin uploads reference/template.example.json via wizard, publishes Orbit, and user sees Orbit rendered in /templates", async ({
@@ -20,6 +63,7 @@ test("Phase 3 E2E: admin uploads reference/template.example.json via wizard, pub
   const uniqueSlug = `orbit-e2e-${stamp}`;
   const uniqueName = `Orbit ${stamp}`;
   const orbitJsonPath = resolve(process.cwd(), "reference/template.example.json");
+  let uploadedCoverSrc = "";
 
   try {
     // 1. Register user via /sign-up, then elevate to verified admin in DB
@@ -68,6 +112,20 @@ test("Phase 3 E2E: admin uploads reference/template.example.json via wizard, pub
     await expect(page.getByLabel("Template name *")).toHaveValue("Orbit");
     await page.getByLabel("Template name *").fill(uniqueName);
     await page.getByLabel("Slug *").fill(uniqueSlug);
+
+    // A cover / thumbnail is mandatory; the reference JSON only carries a legacy
+    // cdn.casefolio.app placeholder URL, which the wizard intentionally rejects.
+    await page.getByTestId("template-cover-file-input").setInputFiles({
+      name: "orbit-cover.png",
+      mimeType: "image/png",
+      buffer: solidPng(800, 600),
+    });
+    const coverImg = page.getByTestId("template-cover-live-preview").locator("img").first();
+    await expect(coverImg).toHaveAttribute("src", /^\/cdn\/covers\/[0-9a-f-]+\.png$/, {
+      timeout: 15_000,
+    });
+    uploadedCoverSrc = (await coverImg.getAttribute("src")) ?? "";
+
     await page.getByRole("button", { name: /Save as draft \(v1\.0\.0\)/i }).click();
 
     // 3. Lands on /admin/templates/[id] as Draft -> Publish v1.0.0
@@ -95,6 +153,10 @@ test("Phase 3 E2E: admin uploads reference/template.example.json via wizard, pub
     await expect(dialog.getByText("Lead Product Designer")).toBeVisible();
     await expect(dialog.getByText("+42%")).toBeVisible();
   } finally {
+    const coverFile = uploadedCoverSrc.replace("/cdn/covers/", "");
+    if (coverFile) {
+      rmSync(resolve(process.cwd(), ".data/uploads/templates/covers", coverFile), { force: true });
+    }
     await db
       .update(templates)
       .set({ currentVersionId: null })

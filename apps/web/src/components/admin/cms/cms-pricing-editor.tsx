@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { SiteCmsContent } from "@/lib/cms/schema";
 
@@ -81,7 +82,7 @@ export function CmsPricingEditor({
           />
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-semibold">Most Popular Tier</Label>
-            <select
+            <Select
               aria-label="Most Popular Tier"
               value={value.popularTier}
               onChange={(e) =>
@@ -90,12 +91,11 @@ export function CmsPricingEditor({
                   popularTier: e.target.value as SiteCmsContent["pricing"]["popularTier"],
                 })
               }
-              className="border-input bg-background h-9 rounded-md border px-2 text-xs"
             >
               <option value="free">Free</option>
               <option value="pro">Pro (Recommended)</option>
               <option value="team">Teams</option>
-            </select>
+            </Select>
           </div>
         </div>
 

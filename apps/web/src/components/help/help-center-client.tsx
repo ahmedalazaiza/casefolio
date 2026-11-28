@@ -36,9 +36,9 @@ export function HelpCenterClient({
           {cmsIntro.noticeBanner}
         </div>
       )}
-      {/* Architectural Royal Grid Help Hero + Studio Command Search */}
-      <section className="flex flex-col items-center gap-8 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-16 text-center text-[var(--cf-text-primary)] sm:py-20">
-        <div className="flex flex-col items-center gap-4">
+      {/* Editorial Help Hero + Search */}
+      <section className="flex flex-col items-center gap-7 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-6 py-14 text-center text-[var(--cf-text-primary)] sm:py-18">
+        <div className="flex flex-col items-center gap-3.5">
           <Eyebrow icon={<LifeBuoy className="size-3.5" />}>
             {cmsIntro?.eyebrow || "Help center"}
           </Eyebrow>
@@ -47,14 +47,14 @@ export function HelpCenterClient({
           </h1>
           <p className="v3-body-m max-w-lg text-[var(--cf-text-secondary)]">
             {cmsIntro?.subtitle ||
-              "Guides on templates, ratio-locked screen slots, custom domains, exports, and billing."}
+              "Guides on templates, ratio-locked screen slots, custom links, exports, and billing."}
           </p>
         </div>
 
         <div className="relative w-full max-w-xl text-left">
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
+            className="pointer-events-none absolute top-1/2 left-4 inline-flex -translate-y-1/2 items-center justify-center text-[var(--cf-text-tertiary)]"
           >
             <Search className="size-4" />
           </span>
@@ -64,14 +64,14 @@ export function HelpCenterClient({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search articles — e.g. “export PDF”"
-            className="focus-visible:ring-ring/40 type-body-m h-14 w-full rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] pr-12 pl-14 text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] outline-none focus-visible:border-[var(--cf-royal)] focus-visible:ring-2"
+            className="focus-visible:ring-ring/40 type-body-m h-13 w-full rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] pr-12 pl-11 text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] outline-none focus-visible:border-[var(--cf-lp-ink)] focus-visible:ring-2"
           />
           {hasQuery && (
             <button
               type="button"
               aria-label="Clear search query"
               onClick={() => setQuery("")}
-              className="absolute top-1/2 right-3.5 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-lg bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]"
+              className="absolute top-1/2 right-3 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--cf-bg-surface)] text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]"
             >
               <X className="size-3.5" />
             </button>
@@ -115,7 +115,7 @@ export function HelpCenterClient({
             <Link
               key={article.slug}
               href={`/help/${article.slug}`}
-              className="focus-visible:ring-ring/40 group flex flex-col justify-between gap-5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 outline-none hover:border-[var(--cf-royal)] focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 group flex flex-col justify-between gap-5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 outline-none hover:border-[var(--cf-lp-ink)] focus-visible:ring-2"
             >
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">
@@ -129,7 +129,7 @@ export function HelpCenterClient({
                       </span>
                     )}
                 </div>
-                <h2 className="v3-heading-s text-[var(--cf-text-primary)] transition-colors group-hover:text-[var(--cf-royal)]">
+                <h2 className="v3-heading-s text-[var(--cf-text-primary)] transition-colors group-hover:text-[var(--cf-lp-ink)] group-hover:underline decoration-[var(--cf-lp-lime)] decoration-2 underline-offset-4">
                   {article.title}
                 </h2>
                 <p className="v3-body-s text-[var(--cf-text-secondary)]">{article.summary}</p>

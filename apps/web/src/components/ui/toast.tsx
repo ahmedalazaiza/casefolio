@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils";
 type ToastTone = "success" | "error" | "warning" | "info" | "loading";
 
 const TONE_STYLES: Record<ToastTone, string> = {
-  success: "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]",
+  success: "bg-success-soft text-success",
   error: "bg-destructive-soft text-destructive",
   warning: "bg-warning-soft text-warning",
-  info: "bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]",
+  info: "bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]",
   loading: "bg-[var(--cf-bg-surface)] text-[var(--cf-text-secondary)]",
 };
 

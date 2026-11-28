@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Mail } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -113,11 +113,14 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="type-heading-l text-foreground">Welcome back</h1>
-        <p className="text-muted-foreground type-body-m">
-          Log in to edit, publish, and export your UI/UX case studies.
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <p className="cf-lp-kicker text-[var(--cf-lp-kicker-muted)]">WELCOME BACK</p>
+        <h1 className="font-editorial text-[2.375rem] leading-[1.04] font-normal tracking-[-0.04em] text-[var(--cf-lp-ink)]">
+          Continue your story.
+        </h1>
+        <p className="text-[0.8125rem] leading-relaxed text-[var(--cf-lp-subtle)]">
+          Sign in to edit, publish, and share your case studies.
         </p>
       </div>
 
@@ -125,7 +128,7 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
         type="button"
         variant="secondary"
         size="lg"
-        className="w-full"
+        className="h-11 w-full rounded-[0.375rem] border-[var(--cf-lp-input-border)] bg-[var(--cf-lp-google-bg)] text-[0.8125rem] font-medium text-[var(--cf-lp-ink)] hover:bg-[var(--cf-lp-card)]"
         disabled={submitting}
         onClick={handleGoogleSignIn}
       >
@@ -134,15 +137,15 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
       </Button>
 
       <div className="flex items-center gap-3">
-        <div className="bg-border h-px flex-1" />
-        <span className="text-tertiary type-caption">or</span>
-        <div className="bg-border h-px flex-1" />
+        <div className="h-px flex-1 bg-[var(--cf-lp-card-border)]" />
+        <span className="font-mono text-[0.6875rem] text-[var(--cf-lp-kicker-muted)]">or</span>
+        <div className="h-px flex-1 bg-[var(--cf-lp-card-border)]" />
       </div>
 
       {formError && (
         <div
           role="alert"
-          className="border-destructive/30 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-md border p-3.5"
+          className="border-destructive/30 bg-destructive-soft text-destructive flex items-start gap-2.5 rounded-[0.375rem] border p-3.5"
         >
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
           <p className="type-caption">{formError}</p>
@@ -160,13 +163,13 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
         </TabsList>
 
         <TabsContent value="password" className="pt-2">
-          <form onSubmit={handlePasswordSubmit} noValidate className="flex flex-col gap-4">
+          <form onSubmit={handlePasswordSubmit} noValidate className="flex flex-col gap-3.5">
             <InputField
               label="Email"
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="you@studio.com"
+              placeholder="alex@casefol.io"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={fieldErrors.email}
@@ -185,32 +188,36 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
               disabled={submitting}
             />
 
-            <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="flex items-center justify-between gap-2 pt-0.5">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   disabled={submitting}
-                  className="accent-primary border-input size-4 rounded-xs"
+                  className="accent-primary border-[var(--cf-lp-input-border)] size-4 rounded-xs"
                 />
-                <span className="text-foreground type-caption">Remember me</span>
+                <span className="text-[0.75rem] text-[var(--cf-lp-ink)]">Remember me</span>
               </label>
 
-              <Link href="/reset" className="text-primary type-caption hover:underline">
+              <Link
+                href="/reset"
+                className="text-[0.75rem] font-medium text-[var(--cf-lp-ink)] underline underline-offset-4 hover:opacity-75"
+              >
                 Forgot password?
               </Link>
             </div>
 
             <Button type="submit" size="lg" className="mt-2 w-full" disabled={submitting}>
-              {submitting ? "Logging in..." : "Log in"}
+              <span>{submitting ? "Logging in..." : "Log in to your studio"}</span>
+              <ArrowRight className="size-4" />
             </Button>
           </form>
         </TabsContent>
 
         <TabsContent value="magic-link" className="pt-2">
           {magicSent ? (
-            <div className="border-border bg-surface flex flex-col gap-3 rounded-lg border p-5">
+            <div className="flex flex-col gap-3 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] p-5">
               <div className="text-success flex items-center gap-2">
                 <CheckCircle2 className="size-5 shrink-0" />
                 <p className="type-body-s-strong">Check your inbox</p>
@@ -236,7 +243,7 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
                 name="magicEmail"
                 type="email"
                 autoComplete="email"
-                placeholder="you@studio.com"
+                placeholder="alex@casefol.io"
                 value={magicEmail}
                 onChange={(e) => setMagicEmail(e.target.value)}
                 helperText="We’ll email you a one-click, passwordless sign-in link."
@@ -253,7 +260,7 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
         </TabsContent>
       </Tabs>
 
-      <p className="text-muted-foreground type-caption">
+      <p className="text-[0.75rem] text-[var(--cf-lp-subtle)]">
         New to Casefolio?{" "}
         <Link
           href={
@@ -261,9 +268,9 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
               ? `/sign-up?callbackUrl=${encodeURIComponent(safeCallback)}`
               : "/sign-up"
           }
-          className="text-primary font-medium underline underline-offset-4"
+          className="font-semibold text-[var(--cf-lp-ink)] underline underline-offset-4 hover:opacity-75"
         >
-          Create an account
+          Create a free account
         </Link>
       </p>
     </div>

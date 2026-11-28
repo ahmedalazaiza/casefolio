@@ -41,11 +41,43 @@ function deepMergeWithDefaults<T>(defaults: T, incoming: unknown): T {
   return incoming as T;
 }
 
+function migrateLegacyCmsExportBrand(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value
+      .replace(/\bPNG, PDF & Behance 1400px\b/g, "PNG, PDF & full Layerat export")
+      .replace(/\bBehance 1,400 px slice pack\b/g, "Full case study Layerat export (1,400 px pack)")
+      .replace(/\bPNG, Behance & A4 PDF Exports\b/g, "Layerat, PNG & A4 PDF Exports")
+      .replace(/\bBehance 1400px\b/g, "Layerat 1400px")
+      .replace(/\bBehance boards\b/g, "Layerat packs")
+      .replace(/\bBehance vertical presentations\b/g, "Layerat full case study packs")
+      .replace(/\bBehance showcases\b/g, "Layerat portfolios")
+      .replace(/\bBehance\b/g, "Layerat");
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => migrateLegacyCmsExportBrand(item));
+  }
+  if (isPlainObject(value)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (k === "platform") {
+        out[k] = v;
+      } else {
+        out[k] = migrateLegacyCmsExportBrand(v);
+      }
+    }
+    return out;
+  }
+  return value;
+}
+
 export function normalizeStoredCmsDocument(raw: unknown): SiteCmsContent {
   if (!isPlainObject(raw)) {
     return cloneDefaultCms();
   }
-  const merged = deepMergeWithDefaults(DEFAULT_SITE_CMS_CONTENT, raw);
+  const merged = deepMergeWithDefaults(
+    DEFAULT_SITE_CMS_CONTENT,
+    migrateLegacyCmsExportBrand(raw),
+  );
   const parsed = siteCmsContentSchema.safeParse(merged);
   if (parsed.success) {
     return parsed.data;
@@ -94,7 +126,7 @@ export async function getUncachedSiteCmsContent(): Promise<SiteCmsContent> {
 
 const getCachedCmsInternal = unstable_cache(
   async () => getUncachedSiteCmsContent(),
-  ["site-cms-content-v1"],
+  ["site-cms-content-v2"],
   { revalidate: 300, tags: [SITE_CMS_CACHE_TAG] },
 );
 

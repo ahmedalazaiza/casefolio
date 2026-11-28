@@ -66,7 +66,6 @@ export const inviteTeamMemberSchema = z.object({
 export const DESIGNER_ROLE_IDS = [
   "ui-ux",
   "web",
-  "exhibition",
   "brand",
   "student",
   "other",

@@ -90,12 +90,13 @@ describe("Casefolio V3 Transactional Email System & Departmental Routing", () =>
       expect(rendered.senderAddress).toBe(expectedSender.address);
       expect(rendered.subject.length).toBeGreaterThan(5);
 
-      // V3 Brand & Flat-Editorial Checks
-      expect(rendered.html).toContain("CASEFOLIO");
+      // Official Casefolio Brand & Editorial Checks
+      expect(rendered.html).toContain('alt="Casefolio"');
+      expect(rendered.html).toContain("/brand/logo-dark-transparent.png");
       expect(rendered.html).toContain(expectedSender.address);
-      expect(rendered.html).toContain("#2650F2");
-      expect(rendered.html).toContain("#D1F800");
-      expect(rendered.html).toContain("#0C0D12");
+      expect(rendered.html).toContain("#20211D");
+      expect(rendered.html).toContain("#D9F233");
+      expect(rendered.html).toContain("#F3F1E9");
       expect(rendered.html).not.toContain("box-shadow");
       expect(rendered.html).not.toContain("undefined");
       expect(rendered.text.length).toBeGreaterThan(40);

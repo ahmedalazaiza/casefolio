@@ -176,6 +176,8 @@ test.describe("Phase 11 Performance, Accessibility & Responsive QA (C-1103)", ()
         .set({
           emailVerified: true,
           role: "superadmin",
+          // Custom /p/ slugs are a Pro/Teams entitlement; the share step below edits the slug.
+          plan: "pro",
           onboardingCompletedAt: new Date(),
         })
         .where(eq(users.email, email))

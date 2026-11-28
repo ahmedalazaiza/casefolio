@@ -321,7 +321,7 @@ export function ProjectSharePanel({
             className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors"
           >
             <Download className="size-3.5" />
-            <span>Exports (PNG / PDF / Behance)</span>
+            <span>Exports (Layerat / PNG / PDF)</span>
           </Link>
           <Link
             href={`/projects/${initialSettings.projectId}/analytics`}
@@ -697,7 +697,7 @@ export function ProjectSharePanel({
                 <p className="text-muted-foreground type-body-s">
                   Free plan live shareable links and PNG/PDF exports include subtle &ldquo;Made with
                   Casefolio&rdquo; branding. Upgrade to Pro ($7.99/mo · 2 months free on annual) to
-                  remove watermarks and unlock custom URLs, 2× PNG &amp; Behance exports.
+                  remove watermarks and unlock custom URLs, 2× PNG &amp; full Layerat exports.
                 </p>
                 <div>
                   <Button
@@ -747,7 +747,7 @@ export function ProjectSharePanel({
         featureDescription={
           upgradeTopic === "custom_slug"
             ? "Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) or Teams to customize /p/your-custom-slug, rotate up to 10 active Case Studies, and export without watermarks."
-            : "Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) to publish unbranded custom URLs and export watermark-free PDFs, 2× PNGs, and Behance image packs."
+            : "Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) to publish unbranded custom URLs and export your full case study to Layerat alongside watermark-free PDFs and 2× PNGs."
         }
       />
     </div>

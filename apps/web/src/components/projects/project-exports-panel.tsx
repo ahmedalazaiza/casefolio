@@ -365,7 +365,7 @@ export function ProjectExportsPanel({
             className="border-border/70 bg-elevated text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full border px-4 py-2"
           >
             <Download className="text-primary size-3.5" />
-            <span>Exports (PNG / PDF / Behance)</span>
+            <span>Exports (Layerat / PNG / PDF)</span>
           </Link>
           <Link
             href={`/projects/${overview.projectId}/analytics`}
@@ -598,8 +598,8 @@ export function ProjectExportsPanel({
             <Clock className="text-tertiary size-6" />
             <p className="text-foreground type-body-s-strong">No exports generated yet</p>
             <p className="text-tertiary type-caption max-w-md">
-              Select PNG Long, PDF, or Behance Image Pack above to render your first high-resolution
-              export.
+              Select Layerat Full Case Study Pack, PNG Long, or PDF above to render your first
+              high-resolution export.
             </p>
           </div>
         ) : (
@@ -678,7 +678,7 @@ export function ProjectExportsPanel({
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         featureTitle={`Unlock ${selectedFormat === "png_long" ? "2× Retina PNG Exports" : selectedPreset.label}`}
-        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual, up to 10 projects) or Teams ($5.99/seat/mo · 2 months free on annual) for watermark-free PDF & 2× 2,880px PNG exports and Behance 1,400px image packs."
+        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual, up to 10 projects) or Teams ($5.99/seat/mo · 2 months free on annual) to export your full case study to Layerat plus unlock watermark-free PDF & 2× 2,880px PNG exports."
       />
     </div>
   );

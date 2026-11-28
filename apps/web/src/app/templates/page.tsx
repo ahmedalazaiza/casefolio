@@ -15,7 +15,7 @@ const getCachedTemplateCatalog = unstable_cache(
     ]);
     return { publishedTemplates, categories };
   },
-  ["public-template-catalog"],
+  ["public-template-catalog-v2"],
   { revalidate: 300, tags: ["templates"] },
 );
 
@@ -28,14 +28,33 @@ export const metadata: Metadata = {
 export default async function TemplatesLibraryPage() {
   const [session, { publishedTemplates, categories }] = await Promise.all([
     getServerSession(),
-    getCachedTemplateCatalog(),
+    process.env.NODE_ENV === "production"
+      ? getCachedTemplateCatalog()
+      : Promise.all([listPublishedLibraryTemplates(), listTemplateCategories()]).then(
+          ([tpls, cats]) => ({ publishedTemplates: tpls, categories: cats }),
+        ),
   ]);
 
-  const categoryOptions = categories.map((cat) => ({
-    id: cat.id,
-    name: cat.name,
-    slug: cat.slug,
-  }));
+  const activeCategorySlugs = new Set(
+    publishedTemplates
+      .map((tpl) => tpl.categorySlug)
+      .filter((slug): slug is string => Boolean(slug)),
+  );
+
+  const seenCategoryNames = new Set<string>();
+  const categoryOptions = categories
+    .filter((cat) => {
+      if (!activeCategorySlugs.has(cat.slug)) return false;
+      const key = cat.name.trim().toLowerCase();
+      if (seenCategoryNames.has(key)) return false;
+      seenCategoryNames.add(key);
+      return true;
+    })
+    .map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+    }));
 
   if (session) {
     const { shellProps, activePlan } = await buildWorkspaceShellProps(

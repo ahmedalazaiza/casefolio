@@ -1,45 +1,45 @@
-/* Casefolio Brand Design System Tokens — Electric Royal Blue (#2650F2) + Acid Lime (#D1F800) + Bricolage Grotesque */
+/* Casefolio Brand Design System Tokens — Warm Cream (#F4F1EA) + Charcoal (#20211D) + Acid Lime (#E7FF68) */
 :root {
-  /* Semantic color tokens — Light mode (Pure Neutral Gallery + Electric Royal & Acid Lime) */
-  --bg-canvas: #fafafa;
-  --bg-surface: #f3f3f5;
-  --bg-elevated: #ffffff;
-  --bg-sunken: #ebebee;
-  --bg-inverse: #0c0d12;
+  /* Semantic color tokens — Light mode (Warm Stone Cream + Elevated Paper + Deep Charcoal + Acid Lime) */
+  --bg-canvas: #f4f1ea;
+  --bg-surface: #ece8de;
+  --bg-elevated: #faf8f4;
+  --bg-sunken: #e4e0d5;
+  --bg-inverse: #20211d;
 
-  --text-primary: #0c0d12;
-  --text-secondary: #474a54;
-  --text-tertiary: #5a5e6b;
-  --text-inverse: #ffffff;
+  --text-primary: #20211d;
+  --text-secondary: #505246;
+  --text-tertiary: #77756f;
+  --text-inverse: #f4f1ea;
 
-  --border-default: #e2e2e7;
-  --border-strong: #c4c5ce;
+  --border-default: #d5d2c9;
+  --border-strong: #b9b5aa;
 
-  --accent-primary: #2650f2;
+  --accent-primary: #20211d;
   --accent-on-primary: #ffffff;
-  --accent-soft: #f3f3f5;
-  --accent-secondary: #0c0d12;
-  --accent-secondary-soft: #ebebee;
+  --accent-soft: #e7e4de;
+  --accent-secondary: #20211d;
+  --accent-secondary-soft: #e4e0d5;
 
   --status-success: #15803d;
-  --status-success-soft: #ecfdf3;
-  --status-warning: #b45309;
-  --status-warning-soft: #fffbeb;
+  --status-success-soft: #e4f3e8;
+  --status-warning: #9a4708;
+  --status-warning-soft: #f6ecd7;
   --status-danger: #c81e1e;
-  --status-danger-soft: #fef2f2;
+  --status-danger-soft: #fae5e5;
 
-  /* Signature Brand Palette — 01 Electric Royal Blue & 02 Lime Green */
-  --brand-royal: #2650f2;
-  --brand-royal-deep: #1b3fd6;
-  --brand-on-royal: #ffffff;
-  --brand-lime: #d1f800;
-  --brand-on-lime: #090d16;
-  --brand-primary-hover: #1b3fd6;
-  --brand-primary-soft: #f3f3f5;
+  /* Editorial Charcoal & Electric Acid Lime Tokens */
+  --brand-royal: #20211d;
+  --brand-royal-deep: #32342d;
+  --brand-on-royal: #f4f1ea;
+  --brand-lime: #e7ff68;
+  --brand-on-lime: #20211d;
+  --brand-primary-hover: #32342d;
+  --brand-primary-soft: #e7e4de;
 
-  /* Radius tokens — crisp architectural studio scale (4px -> 6px -> 8px -> 10px -> 12px) */
+  /* Radius tokens — architectural neo-editorial scale */
   --radius-xs: 0.25rem;
-  --radius-sm: 0.375rem;
+  --radius-sm: 0.3125rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.625rem;
   --radius-xl: 0.75rem;
@@ -62,11 +62,11 @@
   --space-80: 5rem;
   --space-120: 7.5rem;
 
-  /* Type scale tokens — Bricolage Grotesque display + Geist UI + JetBrains Mono */
-  --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-editorial: var(--font-instrument-serif), Georgia, serif;
-  --font-ui: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-code: var(--font-geist-mono), ui-monospace, monospace;
+  /* Type scale tokens — Georgia Editorial Serif + Manrope UI + DM Mono */
+  --font-display: var(--font-manrope), var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-editorial: Georgia, var(--font-instrument-serif), serif;
+  --font-ui: var(--font-manrope), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-code: var(--font-dm-mono), var(--font-geist-mono), ui-monospace, monospace;
 
   --size-display-xl: 4.5rem;
   --size-display-l: 3.25rem;
@@ -149,39 +149,39 @@
 }
 
 .dark {
-  /* Semantic color tokens — Dark mode (Midnight Cobalt + Luminous Royal & Lime) */
-  --bg-canvas: #070b19;
-  --bg-surface: #0e152c;
-  --bg-elevated: #141e3b;
-  --bg-sunken: #050813;
-  --bg-inverse: #f5f7ff;
+  /* Semantic color tokens — Dark mode (Deep Charcoal #161713 + Warm Cream Ink + Acid Lime Actions) */
+  --bg-canvas: #161713;
+  --bg-surface: #20211d;
+  --bg-elevated: #282923;
+  --bg-sunken: #11120e;
+  --bg-inverse: #f4f1ea;
 
-  --text-primary: #f5f7ff;
-  --text-secondary: #b4c0df;
-  --text-tertiary: #8e9ec7;
-  --text-inverse: #070b19;
+  --text-primary: #f4f1ea;
+  --text-secondary: #b0b1aa;
+  --text-tertiary: #8b8d84;
+  --text-inverse: #20211d;
 
-  --border-default: #1f2c52;
-  --border-strong: #354982;
+  --border-default: #363730;
+  --border-strong: #484943;
 
-  --accent-primary: #85a3ff;
-  --accent-on-primary: #070b19;
-  --accent-soft: #16244f;
-  --accent-secondary: #e6ecff;
-  --accent-secondary-soft: #1c2951;
+  --accent-primary: #e7ff68;
+  --accent-on-primary: #20211d;
+  --accent-soft: #2c2d26;
+  --accent-secondary: #f4f1ea;
+  --accent-secondary-soft: #2c2d26;
 
   --status-success: #4ade80;
-  --status-success-soft: #052e16;
+  --status-success-soft: #0e2c1a;
   --status-warning: #fbbf24;
-  --status-warning-soft: #2d1f05;
+  --status-warning-soft: #2d220a;
   --status-danger: #f87171;
-  --status-danger-soft: #2a0a0a;
+  --status-danger-soft: #2e1212;
 
-  --brand-royal: #2650f2;
-  --brand-royal-deep: #1b3fd6;
-  --brand-on-royal: #ffffff;
-  --brand-lime: #d1f800;
-  --brand-on-lime: #090d16;
-  --brand-primary-hover: #9db5ff;
-  --brand-primary-soft: #16244f;
+  --brand-royal: #282923;
+  --brand-royal-deep: #34362e;
+  --brand-on-royal: #f4f1ea;
+  --brand-lime: #e7ff68;
+  --brand-on-lime: #20211d;
+  --brand-primary-hover: #d8f24d;
+  --brand-primary-soft: #2c2d26;
 }

@@ -257,19 +257,24 @@ test("Phase 9 E2E: Full Admin Panel (31:6665) — 403 RBAC guard, overview, anal
       page.getByTestId("admin-categories-list").getByText(tempCatName),
     ).toBeVisible();
 
-    // Verify new category appears in /templates library filter bar
-    await page.goto("/templates");
-    await expect(page.getByRole("button", { name: tempCatName })).toBeVisible();
+    // New category syncs to the admin template catalog filter immediately...
+    await page.goto("/admin/templates");
+    await expect(
+      page.locator("#admin-template-category").locator("option", { hasText: tempCatName }),
+    ).toHaveCount(1);
 
-    // Return to /admin/categories and delete temporary category
+    // ...while the public /templates filter bar intentionally lists only categories that
+    // contain published templates, so the still-empty category stays hidden there.
+    await page.goto("/templates");
+    await expect(page.getByRole("group", { name: "Filter by category" })).toBeVisible();
+    await expect(page.getByRole("button", { name: tempCatName })).toHaveCount(0);
+
+    // Return to /admin/categories and delete temporary category (row-level delete action)
     await page.goto("/admin/categories");
     await page
       .getByTestId("admin-categories-list")
-      .locator("li")
-      .filter({ hasText: tempCatName })
-      .getByRole("button", { name: "Edit" })
+      .getByRole("button", { name: `Delete ${tempCatName}`, exact: true })
       .click();
-    await page.getByRole("button", { name: "Delete" }).click();
     await expect(
       page.getByTestId("admin-categories-list").getByText(tempCatName),
     ).toHaveCount(0);

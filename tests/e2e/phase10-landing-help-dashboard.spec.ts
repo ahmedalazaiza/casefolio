@@ -5,6 +5,7 @@ import {
   createDbConnection,
   eq,
   projects,
+  supportTickets,
   templateVersions,
   templates,
   users,
@@ -95,7 +96,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await page.goto("/");
     await expect(
       page.getByRole("heading", {
-        name: /Turn finished projects into publishable case studies/i,
+        name: /Great work deserves a great story\./i,
       }),
     ).toBeVisible();
     await expect
@@ -109,17 +110,28 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await maybeSaveScreenshot(page, "landing-hero-1440.png", false);
     await maybeSaveScreenshot(page, "landing-1440.png", true);
 
-    // Verify Final CTA replaces home-page pricing cards & open an FAQ item
-    await expect(page.getByTestId("landing-start-cta")).toBeVisible();
-    await expect(page.getByTestId("paid-plan-cards-grid")).toHaveCount(0);
-    await page
-      .getByRole("button", {
-        name: /Can I use my own colors and fonts\?/i,
-      })
-      .click();
+    // Final CTA band now carries the plan cards, followed by the "Test the canvas" CTA
     await expect(
-      page.getByText(/editable color tokens and curated font pairs/i),
+      page.getByRole("heading", { name: /Your next case study could be live today\./i }),
     ).toBeVisible();
+    await expect(page.getByTestId("paid-plan-cards-grid")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Test the canvas before paying/i }),
+    ).toBeVisible();
+
+    // FAQ lives on its own /faq page
+    await page.goto("/faq");
+    // First item is expanded by default; open another one.
+    await expect(
+      page.getByRole("button", { name: /Can I use my own brand styles\?/i }),
+    ).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByText(/Control color, typography, cover art/i)).toBeVisible();
+    const exportFaq = page.getByRole("button", { name: /What can I export\?/i });
+    await expect(async () => {
+      await exportFaq.click();
+      await expect(exportFaq).toHaveAttribute("aria-expanded", "true", { timeout: 1_000 });
+    }).toPass({ timeout: 10_000 });
+    await expect(page.getByText(/selectable-text PDF and full-length 2× Retina PNG/i)).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
@@ -129,7 +141,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await page.goto("/");
     await expect(
       page.getByRole("heading", {
-        name: /Turn finished projects into publishable case studies/i,
+        name: /Great work deserves a great story\./i,
       }),
     ).toBeVisible();
     await expect
@@ -157,7 +169,8 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
       .getByRole("button", { name: /^Annual/i })
       .first()
       .click();
-    await expect(page.getByText("$7.99").first()).toBeVisible();
+    // Annual billing shows the yearly Pro total (per-card stat boxes were removed)
+    await expect(page.getByText("$79.90").first()).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /See exactly what's included & what's not/i }),
     ).toBeVisible();
@@ -179,7 +192,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     await expect(page).toHaveURL(/\/help\/exports/);
     await expect(
       page.getByRole("heading", {
-        name: /Pixel-identical PNG, PDF and Behance exports/i,
+        name: /Export your full case study to Layerat, PNG & PDF/i,
       }),
     ).toBeVisible();
     await assertNoHorizontalOverflow(page, "/help/exports at 1440px");
@@ -227,9 +240,15 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
         name: "Your first case study starts here",
       }),
     ).toBeVisible();
-    await expect(page.getByText("Pick a template")).toBeVisible();
-    await expect(page.getByText("Fill the slots")).toBeVisible();
-    await expect(page.getByText("Publish or export")).toBeVisible();
+    await expect(
+      page.getByText("Pick a template").filter({ visible: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Fill the slots").filter({ visible: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Publish or export").filter({ visible: true }),
+    ).toBeVisible();
     await assertNoHorizontalOverflow(page, "/dashboard empty at 1440px");
     await maybeSaveScreenshot(page, "dashboard-empty-1440.png", false);
 
@@ -286,9 +305,15 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
 
     await page.setViewportSize({ width: 1440, height: 920 });
     await page.goto("/dashboard");
-    await expect(page.getByText("Mosaed — Debt app")).toBeVisible();
-    await expect(page.getByText("Kayan — Architecture studio")).toBeVisible();
-    await expect(page.getByText("Tadawul — Investor onboarding")).toBeVisible();
+    await expect(
+      page.getByText("Mosaed — Debt app").filter({ visible: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Kayan — Architecture studio").filter({ visible: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Tadawul — Investor onboarding").filter({ visible: true }),
+    ).toBeVisible();
     await assertNoHorizontalOverflow(page, "/dashboard grid at 1440px");
     await maybeSaveScreenshot(page, "dashboard-projects-1440.png", false);
 
@@ -336,7 +361,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
     // =========================================================================
     await page.setViewportSize({ width: 1440, height: 920 });
     await page.goto("/help");
-    await expect(page.getByRole("heading", { name: "How can we help?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /How can we help/i })).toBeVisible();
     await assertNoHorizontalOverflow(page, "/help signed-in at 1440px");
     await maybeSaveScreenshot(page, "help-center-1440.png", false);
 
@@ -363,6 +388,7 @@ test("Phase 10 E2E: Marketing landing (27:6665), Pricing (2:8841), Help center +
 
     expect(pageErrors).toEqual([]);
   } finally {
+    await db.delete(supportTickets).where(eq(supportTickets.email, userEmail));
     if (createdUserId) {
       await db.delete(users).where(eq(users.id, createdUserId));
     }

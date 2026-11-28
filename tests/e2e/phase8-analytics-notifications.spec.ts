@@ -51,7 +51,6 @@ test("Phase 8 E2E: PostHog zero-PII events -> unpublished analytics empty state 
   const userName = "Rami Al-Khatib";
   const userEmail = `e2e-analytics-p8-${stamp}@casefolio.test`;
   const password = "CasefolioAnalytics2026!";
-  const customSlug = `orbit-analytics-${stamp}`;
   const projectName = "Orbit — Analytics & Alerts";
 
   let createdUserId: string | null = null;
@@ -132,7 +131,9 @@ test("Phase 8 E2E: PostHog zero-PII events -> unpublished analytics empty state 
 
     // 3. Before publishing, /projects/[id]/analytics shows Figma 2:8745 "No data yet" empty state
     await page.goto(`/projects/${createdProjectId}/analytics`);
-    await expect(page.getByTestId("analytics-unpublished-empty")).toBeVisible();
+    await expect(
+      page.getByTestId("analytics-unpublished-empty").filter({ visible: true }),
+    ).toBeVisible();
     await expect(page.getByRole("heading", { name: "No data yet" })).toBeVisible();
     await maybeSaveScreenshot(page, "analytics-unpublished-1440.png");
 
@@ -140,8 +141,12 @@ test("Phase 8 E2E: PostHog zero-PII events -> unpublished analytics empty state 
     await page.getByRole("link", { name: "Publish case study" }).click();
     await expect(page).toHaveURL(new RegExp(`/projects/${createdProjectId}/share`));
 
-    await page.getByTestId("publish-slug-input").fill(customSlug);
-    await expect(page.getByTestId("slug-availability-status")).toContainText("Available");
+    // Custom URL slugs are Pro/Teams-only: Free publishes with the auto-generated share link.
+    const slugInput = page.getByTestId("publish-slug-input");
+    await expect(slugInput).toHaveAttribute("readonly", "");
+    await expect(page.getByTestId("unlock-custom-url-button")).toBeVisible();
+    await expect(slugInput).not.toHaveValue("");
+    const customSlug = await slugInput.inputValue();
     await page.getByTestId("publish-project-button").click();
     await expect(page.getByTestId("share-status-badge")).toContainText("Published · Public");
 
@@ -196,20 +201,22 @@ test("Phase 8 E2E: PostHog zero-PII events -> unpublished analytics empty state 
     await expect(page.getByTestId("analytics-total-views-value")).toHaveText("3");
     await expect(page.getByTestId("analytics-unique-visitors-value")).toHaveText("1");
 
-    const activeChartBar = page.locator('[data-testid="analytics-chart-bar"][data-views="3"]');
+    const activeChartBar = page
+      .locator('[data-testid="analytics-chart-bar"][data-views="3"]')
+      .filter({ visible: true });
     await expect(activeChartBar).toHaveCount(1);
 
-    const directSourceRow = page.locator(
-      '[data-testid="analytics-source-row"][data-source="Direct / link"]',
-    );
-    const linkedInSourceRow = page.locator(
-      '[data-testid="analytics-source-row"][data-source="LinkedIn"]',
-    );
+    const directSourceRow = page
+      .locator('[data-testid="analytics-source-row"][data-source="Direct / link"]')
+      .filter({ visible: true });
+    const linkedInSourceRow = page
+      .locator('[data-testid="analytics-source-row"][data-source="LinkedIn"]')
+      .filter({ visible: true });
     await expect(directSourceRow).toContainText("67%");
     await expect(linkedInSourceRow).toContainText("33%");
 
     // Free plan gating on 90d range opens UpgradePromptDialog
-    await page.getByTestId("analytics-range-90d").click();
+    await page.getByTestId("analytics-range-90d").filter({ visible: true }).click();
     await expect(
       page.getByRole("heading", { name: "Unlock 90-day & all-time analytics" }),
     ).toBeVisible();

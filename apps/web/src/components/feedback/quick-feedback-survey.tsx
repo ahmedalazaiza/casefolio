@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CRITICAL_SENTIMENT_TAGS,
@@ -247,11 +248,11 @@ export function QuickFeedbackSurvey() {
                   <Label className="text-[0.6875rem] font-semibold">
                     Main goal with Casefolio
                   </Label>
-                  <select
+                  <Select
                     aria-label="Main goal with Casefolio"
                     value={primaryUseCase}
                     onChange={(e) => setPrimaryUseCase(e.target.value)}
-                    className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+                    className="h-9 text-xs"
                   >
                     <option value="">Select (optional)...</option>
                     {PRIMARY_USE_CASE_OPTIONS.map((opt) => (
@@ -259,18 +260,18 @@ export function QuickFeedbackSurvey() {
                         {opt}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <Label className="text-[0.6875rem] font-semibold">
                     What should we build next?
                   </Label>
-                  <select
+                  <Select
                     aria-label="What should we build next?"
                     value={topFeatureRequest}
                     onChange={(e) => setTopFeatureRequest(e.target.value)}
-                    className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+                    className="h-9 text-xs"
                   >
                     <option value="">Pick top priority (optional)...</option>
                     {FEATURE_REQUEST_OPTIONS.map((opt) => (
@@ -278,7 +279,7 @@ export function QuickFeedbackSurvey() {
                         {opt}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 <Textarea

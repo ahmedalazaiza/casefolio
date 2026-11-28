@@ -35,7 +35,7 @@ export function AccountSettingsShell({ activeTab, children }: AccountSettingsShe
       data-testid="account-settings-shell"
       className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-4 sm:gap-5"
     >
-      <header className="relative overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+      <header className="relative overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-1">
           <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             Settings
@@ -53,7 +53,7 @@ export function AccountSettingsShell({ activeTab, children }: AccountSettingsShe
       <div className="grid min-w-0 grid-cols-1 gap-5 md:grid-cols-[215px_minmax(0,1fr)] md:gap-6">
         <nav
           aria-label="Account sections"
-          className="flex min-w-0 flex-wrap gap-1 self-start rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5 md:flex-col"
+          className="flex min-w-0 flex-wrap gap-1 self-start rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] p-1.5 md:flex-col"
         >
           {ACCOUNT_TABS.map((tab, index) => {
             const isActive = tab.key === activeTab;
@@ -64,19 +64,19 @@ export function AccountSettingsShell({ activeTab, children }: AccountSettingsShe
                 aria-current={isActive ? "page" : undefined}
                 data-testid={`account-tab-${tab.key}`}
                 className={cn(
-                  "inline-flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/40",
+                  "inline-flex items-center justify-between gap-2 rounded-[0.3125rem] px-3 py-2 text-xs transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                   isActive
-                    ? "bg-[var(--cf-royal)] font-semibold text-[var(--cf-text-on-royal)]"
-                    : "font-medium text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
+                    ? "bg-[var(--cf-lp-action)] font-semibold text-[var(--cf-lp-on-action)]"
+                    : "font-medium text-[var(--cf-text-secondary)] hover:bg-[var(--cf-bg-surface)] hover:text-[var(--cf-text-primary)]",
                 )}
               >
                 <span>{tab.label}</span>
                 <span
                   className={cn(
-                    "rounded-md px-1.5 py-0.5 font-mono text-[0.6875rem] font-bold",
+                    "rounded-full px-1.5 py-0.5 font-mono text-[0.6875rem] font-medium",
                     isActive
-                      ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
-                      : "bg-[var(--cf-bg-sunken)] text-[var(--cf-text-tertiary)]",
+                      ? "bg-white/15 text-[var(--cf-lp-on-action)]"
+                      : "bg-[var(--cf-bg-surface)] text-[var(--cf-text-tertiary)]",
                   )}
                 >
                   {String(index + 1).padStart(2, "0")}

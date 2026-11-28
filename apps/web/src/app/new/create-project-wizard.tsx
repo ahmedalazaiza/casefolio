@@ -11,7 +11,6 @@ import {
   Layers,
   Lock,
   Smartphone,
-  Store,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,6 +34,7 @@ import { TemplateTypeCard } from "@/components/ui/domain-cards";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { isUnlimitedProjectsLimit } from "@/lib/billing/plans";
 import { can } from "@/lib/entitlements";
 import {
@@ -302,7 +302,7 @@ export function CreateProjectWizard({
 
           <nav
             aria-label="Create project steps"
-            className="hidden shrink-0 items-center gap-1.5 justify-self-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1 md:flex"
+            className="hidden shrink-0 items-center gap-1 justify-self-center rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] p-1 md:flex"
           >
             {WIZARD_STEPS.map((item, idx) => {
               const isCompleted = idx < stepIndex;
@@ -313,16 +313,16 @@ export function CreateProjectWizard({
                 (item.key === "details" && Boolean(selectedTemplate));
 
               return (
-                <div key={item.key} className="flex items-center gap-1.5">
+                <div key={item.key} className="flex items-center gap-1">
                   <button
                     type="button"
                     disabled={!canJump}
                     onClick={() => canJump && setStep(item.key)}
                     aria-current={isCurrent ? "step" : undefined}
                     className={cn(
-                      "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-2 disabled:cursor-not-allowed",
+                      "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 disabled:cursor-not-allowed",
                       isCurrent
-                        ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                        ? "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
                         : isCompleted
                           ? "text-[var(--cf-text-primary)] hover:bg-[var(--cf-bg-elevated)]"
                           : "text-[var(--cf-text-tertiary)]",
@@ -330,14 +330,14 @@ export function CreateProjectWizard({
                   >
                     <span
                       className={cn(
-                        "inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-md px-1 text-[0.6875rem] font-bold tracking-wider",
+                        "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[0.6875rem] font-medium",
                         isCompleted &&
-                          "bg-[var(--cf-bg-surface)] text-[var(--cf-royal-text)]",
+                          "bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)]",
                         isCurrent &&
-                          "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]",
+                          "bg-white/15 text-[var(--cf-lp-on-action)]",
                         !isCompleted &&
                           !isCurrent &&
-                          "bg-[var(--cf-bg-surface)] text-[var(--cf-text-tertiary)]",
+                          "bg-[var(--cf-bg-elevated)] text-[var(--cf-text-tertiary)]",
                       )}
                     >
                       {isCompleted ? <Check className="size-3.5" /> : item.number}
@@ -348,9 +348,9 @@ export function CreateProjectWizard({
                     <span
                       aria-hidden="true"
                       className={cn(
-                        "h-px w-4",
+                        "h-px w-3",
                         idx < stepIndex
-                          ? "bg-[var(--cf-royal)]"
+                          ? "bg-[var(--cf-lp-ink)]"
                           : "bg-[var(--cf-border-subtle)]",
                       )}
                     />
@@ -411,7 +411,7 @@ export function CreateProjectWizard({
                   setUpgradePrompt({
                     requiredPlan: "pro",
                     title: "Upgrade to Casefolio Pro",
-                    description: `Free includes ${FREE_PROJECT_LIMIT} lifetime Case Study credit. Upgrade to Casefolio Pro ($7.99/mo · $79.90/yr with 2 months free) for up to 10 rotatable Case Studies, custom Case Study URLs, all Pro templates, and watermark-free high-res PNG, PDF & Behance exports.`,
+                    description: `Free includes ${FREE_PROJECT_LIMIT} lifetime Case Study credit. Upgrade to Casefolio Pro ($7.99/mo · $79.90/yr with 2 months free) for up to 10 rotatable Case Studies, custom Case Study URLs, all Pro templates, full case study Layerat packs, and watermark-free high-res PNG & PDF exports.`,
                   })
                 }
               >
@@ -458,7 +458,7 @@ export function CreateProjectWizard({
               <div
                 role="radiogroup"
                 aria-label="Project type"
-                className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
+                className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
               >
                 <button
                   type="button"
@@ -513,15 +513,6 @@ export function CreateProjectWizard({
                     className="h-full"
                   />
                 </button>
-
-                <TemplateTypeCard
-                  title="Booth / Exhibition"
-                  description="Spatial and event design: renders, floor plans and build photos."
-                  footerLabel="Coming soon"
-                  state="coming-soon"
-                  icon={<Store className="size-5" />}
-                  className="h-full"
-                />
               </div>
             </div>
 
@@ -871,12 +862,11 @@ export function CreateProjectWizard({
                     <Label htmlFor="wizard-project-space">
                       Destination space{workspaceName ? ` (${workspaceName})` : ""}
                     </Label>
-                    <select
+                    <Select
                       id="wizard-project-space"
                       data-testid="wizard-space-select"
                       value={selectedSpaceId}
                       onChange={(e) => setSelectedSpaceId(e.target.value)}
-                      className="focus-visible:ring-ring/40 type-body-s h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-[var(--cf-text-primary)] outline-none focus-visible:ring-2"
                     >
                       {spaces.map((sp) => (
                         <option key={sp.id} value={sp.id}>
@@ -886,7 +876,7 @@ export function CreateProjectWizard({
                             : "Shared Team Space (visible to teammates)"}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                     <p className="text-tertiary type-caption">
                       Defaults to your Private Space so drafts stay invisible to teammates until you
                       move them to a Shared Space.
@@ -938,14 +928,10 @@ export function CreateProjectWizard({
                     type="submit"
                     disabled={isPending || isFreeQuotaReached || !selectedTemplate}
                     data-testid="wizard-submit-create"
-                    className="v3-btn-primary py-2.5 pr-3 pl-5 text-sm disabled:pointer-events-none disabled:opacity-50"
+                    className="v3-btn-primary py-2.5 px-6 text-sm disabled:pointer-events-none disabled:opacity-50"
                   >
                     <span>{isPending ? "Creating project..." : "Create case study"}</span>
-                    {!isPending && (
-                      <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                        <ArrowRight className="size-3.5" />
-                      </span>
-                    )}
+                    {!isPending && <ArrowRight className="size-4" />}
                   </button>
                 </div>
               </form>
@@ -1041,12 +1027,10 @@ export function CreateProjectWizard({
               type="button"
               data-testid="wizard-next-to-template"
               onClick={() => setStep("template")}
-              className="v3-btn-primary py-2 pr-3 pl-5 text-sm"
+              className="v3-btn-primary py-2.5 px-6 text-sm"
             >
               <span>Continue to templates</span>
-              <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                <ArrowRight className="size-3.5" />
-              </span>
+              <ArrowRight className="size-4" />
             </button>
           </div>
         </div>
@@ -1069,7 +1053,7 @@ export function CreateProjectWizard({
 
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               {selectedTemplate && (
-                <span className="rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3 py-1.5 text-center text-xs font-semibold text-[var(--cf-text-primary)] sm:text-right">
+                <span className="rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3.5 py-1.5 text-center text-xs font-medium text-[var(--cf-text-primary)] sm:text-right">
                   Selected: {formatProjectTypeLabel(selectedType)} · {selectedTemplate.name}
                 </span>
               )}
@@ -1088,12 +1072,10 @@ export function CreateProjectWizard({
                   }
                   setStep("details");
                 }}
-                className="v3-btn-primary py-2 pr-3 pl-5 text-sm disabled:pointer-events-none disabled:opacity-50"
+                className="v3-btn-primary py-2.5 px-6 text-sm disabled:pointer-events-none disabled:opacity-50"
               >
                 <span>Use this template</span>
-                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                  <ArrowRight className="size-3.5" />
-                </span>
+                <ArrowRight className="size-4" />
               </button>
             </div>
           </div>

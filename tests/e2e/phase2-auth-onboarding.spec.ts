@@ -29,7 +29,7 @@ test("Phase 2 E2E: sign up -> verify OTP -> 3-step onboarding -> dashboard, onbo
     // 1. Unauthenticated /dashboard redirects to /sign-in
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/sign-in/);
-    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Continue your story." })).toBeVisible();
 
     // 2. Sign up on /sign-up
     await page.goto("/sign-up");

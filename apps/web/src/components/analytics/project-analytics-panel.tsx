@@ -177,7 +177,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
             className="text-muted-foreground hover:text-foreground type-body-s-strong inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors"
           >
             <Download className="size-3.5" />
-            <span>Exports (PNG / PDF / Behance)</span>
+            <span>Exports (Layerat / PNG / PDF)</span>
           </Link>
           <Link
             href={`/projects/${analytics.projectId}/analytics`}
@@ -269,7 +269,7 @@ export function ProjectAnalyticsPanel({ analytics }: ProjectAnalyticsPanelProps)
                 {analytics.kpis.completedExports.toLocaleString()}
               </span>
               <span className="text-muted-foreground type-caption">
-                Completed PNG / PDF / Behance
+                Completed Layerat / PNG / PDF
               </span>
             </article>
           </div>

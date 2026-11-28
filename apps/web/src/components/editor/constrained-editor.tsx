@@ -104,6 +104,7 @@ import {
   templateThemeSchema,
   type PuckDocument,
 } from "@/lib/template/schema";
+import { buildSlotMiniGradientStyle } from "@/lib/template/theme-vars";
 import { cn } from "@/lib/utils";
 import {
   createEditorStore,
@@ -1957,7 +1958,10 @@ export function ConstrainedEditor({
                           className="border-border/70 bg-elevated hover:border-border-strong flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-all"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="bg-surface border-border/80 inline-flex h-11 w-8.5 shrink-0 items-center justify-center overflow-hidden rounded-md border">
+                            <span
+                              style={!slot.filled ? buildSlotMiniGradientStyle(theme) : undefined}
+                              className="bg-surface border-border/80 inline-flex h-11 w-8.5 shrink-0 items-center justify-center overflow-hidden rounded-md border"
+                            >
                               {slot.filled && slot.src ? (
                                 <img
                                   src={slot.src}
@@ -1967,7 +1971,7 @@ export function ConstrainedEditor({
                               ) : slot.filled ? (
                                 <Check className="text-success size-3.5" />
                               ) : (
-                                <span className="bg-border-strong size-2 rounded-full" />
+                                <ImageIcon className="size-3.5 opacity-80" />
                               )}
                             </span>
                             <div className="flex min-w-0 flex-col">

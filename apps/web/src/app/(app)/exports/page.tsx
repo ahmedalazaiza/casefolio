@@ -16,12 +16,12 @@ export default async function WorkspaceExportsHistoryPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
-      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-1">
           <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">Render Archive</Eyebrow>
           <h1 className="v3-dashboard-title text-[var(--cf-text-primary)]">Studio exports</h1>
           <p className="max-w-xl text-xs text-[var(--cf-text-secondary)] sm:text-sm">
-            Download past PNG, PDF, and Behance 1,400px exports across your active workspace.
+            Download past Layerat full case study packs, PNG, and PDF exports across your active workspace.
           </p>
         </div>
         <Link href="/dashboard" className="v3-btn-secondary h-9 px-3.5 py-2 text-xs font-semibold">
@@ -30,15 +30,15 @@ export default async function WorkspaceExportsHistoryPage() {
       </header>
 
       {rows.length === 0 ? (
-        <div className="v3-pattern-dots-light flex flex-col items-center justify-center gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-12 text-center">
-          <span className="inline-flex size-12 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-6 py-12 text-center">
+          <span className="inline-flex size-12 items-center justify-center rounded-[0.5rem] bg-[var(--cf-lp-dark)] text-[var(--cf-lp-lime)]">
             <Download className="size-5" />
           </span>
           <div className="flex flex-col gap-1.5">
             <p className="v3-dashboard-section-title text-[var(--cf-text-primary)]">No exports yet</p>
             <p className="max-w-md text-xs leading-relaxed text-[var(--cf-text-secondary)] sm:text-sm">
-              Open any project in the editor and click Export to generate PNG, PDF, or Behance
-              presentations.
+              Open any project in the editor and click Export to package your full case study for
+              Layerat or generate PNG and PDF presentations.
             </p>
           </div>
           <Link href="/dashboard" className="v3-btn-primary mt-0.5 h-9 px-4 py-2 text-xs font-semibold">
@@ -47,7 +47,7 @@ export default async function WorkspaceExportsHistoryPage() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
+        <div className="overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)]">
           <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-5 py-2.5">
             <div className="flex items-center gap-2">
               <span className="rounded bg-[var(--cf-ink)] px-2 py-0.5 font-mono text-[0.65rem] font-bold text-[var(--cf-text-on-ink)] uppercase">
@@ -123,18 +123,18 @@ export default async function WorkspaceExportsHistoryPage() {
                   <div className="flex items-center gap-2">
                     <Link
                       href={`/projects/${projectId}/exports`}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal-border)] hover:bg-[var(--cf-royal-soft)]"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--cf-border-strong)] bg-[var(--cf-bg-elevated)] px-3.5 text-xs font-medium text-[var(--cf-text-primary)] transition-colors hover:bg-[var(--cf-bg-surface)]"
                     >
-                      <ExternalLink className="size-3.5 text-[var(--cf-royal-text)]" />
+                      <ExternalLink className="size-3.5 text-[var(--cf-text-secondary)]" />
                       <span>Project Exports</span>
                     </Link>
                     {downloadUrl && (
                       <a
                         href={downloadUrl}
                         download
-                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--cf-royal)] px-3.5 text-xs font-semibold text-[var(--cf-text-on-royal)] transition-all hover:bg-[var(--cf-bg-action-hover)]"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--cf-lp-action)] px-4 text-xs font-medium text-[var(--cf-lp-on-action)] transition-all hover:bg-[var(--cf-lp-action-hover)]"
                       >
-                        <Download className="size-3.5 text-[var(--cf-bg-accent)]" />
+                        <Download className="size-3.5" />
                         <span>Download</span>
                       </a>
                     )}

@@ -7,7 +7,7 @@ export interface EyebrowProps extends ComponentProps<"span"> {
   tone?: "default" | "accent" | "obsidian";
 }
 
-/** Signature Studio pill label shared across marketing and product headers. */
+/** Editorial mono kicker label shared across marketing and product headers. */
 export function Eyebrow({
   icon,
   step,
@@ -20,13 +20,13 @@ export function Eyebrow({
     <span
       data-slot="eyebrow"
       className={cn(
-        "v3-label inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 uppercase [&_svg]:size-3.5",
+        "inline-flex items-center gap-2 rounded-[0.3125rem] border px-3 py-1 font-mono text-[0.6875rem] font-medium tracking-[0.11em] uppercase [&_svg]:size-3.5",
         tone === "default" &&
-          "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)]",
+          "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-secondary)]",
         tone === "accent" &&
-          "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]",
+          "border-[var(--cf-lp-ink)]/15 bg-[var(--cf-lp-lime)] text-[var(--cf-lp-on-lime)]",
         tone === "obsidian" &&
-          "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)] text-[var(--cf-bg-accent)] [&_svg]:text-[var(--cf-bg-accent)]",
+          "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)] text-[var(--cf-text-inverse)]",
         className,
       )}
       {...props}
@@ -34,7 +34,12 @@ export function Eyebrow({
       {step ? (
         <span
           aria-hidden="true"
-          className="rounded-full bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] leading-none font-bold text-[var(--cf-text-on-accent)]"
+          className={cn(
+            "rounded-[0.1875rem] px-1.5 py-0.5 font-mono text-[0.625rem] leading-none font-medium",
+            tone === "obsidian"
+              ? "bg-[var(--cf-lp-lime)] text-[var(--cf-lp-on-lime)]"
+              : "bg-[var(--cf-lp-dark)] text-[var(--cf-lp-lime)]",
+          )}
         >
           {step}
         </span>
@@ -45,7 +50,9 @@ export function Eyebrow({
           aria-hidden="true"
           className={cn(
             "size-1.5 shrink-0 rounded-full",
-            tone === "obsidian" ? "bg-[var(--cf-bg-accent)]" : "bg-[var(--cf-royal)]",
+            tone === "obsidian"
+              ? "bg-[var(--cf-lp-lime)]"
+              : "bg-[var(--cf-lp-ink)]",
           )}
         />
       )}

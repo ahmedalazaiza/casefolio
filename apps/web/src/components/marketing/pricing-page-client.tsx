@@ -4,11 +4,8 @@ import type { PlanTier } from "@casefolio/db";
 import {
   ArrowDown,
   ArrowRight,
-  Calculator,
   Check,
   FolderKanban,
-  MessageCircleQuestion,
-  Rocket,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -17,12 +14,11 @@ import { useState } from "react";
 import { PaddleCheckoutModal } from "@/components/billing/paddle-checkout-modal";
 import { CmsIcon } from "@/components/cms/cms-icon";
 import { LandingPricingSection } from "@/components/marketing/landing-pricing-section";
-import { ScrollRise, SectionStackSheet } from "@/components/marketing/motion";
-import { TeamsSeatCalculator } from "@/components/marketing/teams-seat-calculator";
+import { ScrollRise } from "@/components/marketing/motion";
+import { TestCanvasCtaSection } from "@/components/marketing/test-canvas-cta";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   formatUsdFromCents,
-  FREE_LIFETIME_PROJECT_LIMIT,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
   type BillingInterval,
   type PaidPlanTier,
@@ -64,13 +60,13 @@ type PlanCellValue =
 function renderCellValue(val: PlanCellValue) {
   if (typeof val === "boolean") {
     return val ? (
-      <span className="bg-success-soft text-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium">
-        <Check className="text-success size-3.5 shrink-0" aria-hidden="true" />
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cf-lp-green-pill-bg)] bg-[var(--cf-lp-green-pill-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--cf-lp-green-pill-fg)]">
+        <Check className="size-3.5 shrink-0" aria-hidden="true" />
         <span>Included</span>
       </span>
     ) : (
-      <span className="bg-sunken text-muted-foreground type-caption inline-flex items-center gap-1.5 rounded-full px-2.5 py-1">
-        <X className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-2.5 py-1 text-xs font-medium text-[var(--cf-text-secondary)]">
+        <X className="size-3.5 shrink-0" aria-hidden="true" />
         <span>Not included</span>
       </span>
     );
@@ -78,28 +74,34 @@ function renderCellValue(val: PlanCellValue) {
 
   if (typeof val === "object") {
     return (
-      <div className="flex flex-wrap items-center justify-end gap-1.5 md:justify-start">
+      <div className="flex flex-wrap items-center justify-end gap-2 md:justify-start">
         <span
           className={cn(
-            "type-caption inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium",
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold",
             val.included
-              ? "bg-success-soft text-foreground"
-              : "bg-sunken text-muted-foreground",
+              ? "border-[var(--cf-lp-green-pill-bg)] bg-[var(--cf-lp-green-pill-bg)] text-[var(--cf-lp-green-pill-fg)]"
+              : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-secondary)]",
           )}
         >
           {val.included ? (
-            <Check className="text-success size-3.5 shrink-0" aria-hidden="true" />
+            <Check className="size-3.5 shrink-0" aria-hidden="true" />
           ) : (
-            <X className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+            <X className="size-3.5 shrink-0" aria-hidden="true" />
           )}
           <span>{val.included ? "Included" : "Not included"}</span>
         </span>
-        <span className="text-muted-foreground type-caption">{val.detail}</span>
+        <span className="text-[0.8125rem] font-medium text-[var(--cf-text-primary)]">
+          {val.detail}
+        </span>
       </div>
     );
   }
 
-  return <span className="text-foreground type-body-s text-right md:text-left">{val}</span>;
+  return (
+    <span className="text-[0.875rem] font-medium text-right text-[var(--cf-text-primary)] md:text-left">
+      {val}
+    </span>
+  );
 }
 
 export function PricingPageClient({
@@ -133,13 +135,6 @@ export function PricingPageClient({
     setCheckoutOpen(true);
   }
 
-  function handleStartCalculatorCheckout(seats: number, interval: BillingInterval) {
-    setSelectedPlan("team");
-    setSelectedInterval(interval);
-    setSelectedSeats(seats);
-    setCheckoutOpen(true);
-  }
-
   const proDisplayedLabel = formatUsdFromCents(
     selectedInterval === "yearly"
       ? catalog.pro.yearlyTotalCents
@@ -152,44 +147,42 @@ export function PricingPageClient({
   );
 
   return (
-    <div className="relative flex min-w-0 flex-col overflow-x-clip">
-      {/* 1. Landing v3 Architectural Grid Pricing Hero */}
-      <div className="v3-pattern-grid relative z-10 overflow-hidden pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24">
+    <div className="relative flex min-w-0 flex-col overflow-x-clip bg-[var(--cf-bg-canvas)]">
+      {/* 1. Editorial Serif Pricing Hero */}
+      <div className="relative z-10 overflow-hidden pt-12 pb-10 sm:pt-16 sm:pb-14 lg:pt-20">
         <div className="v3-container">
           <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
-            <Eyebrow step={cmsPricing.heroEyebrowStep}>{cmsPricing.heroEyebrowText}</Eyebrow>
+            <Eyebrow>{cmsPricing.heroEyebrowText}</Eyebrow>
             <h1 className="v3-display-xl text-balance text-[var(--cf-text-primary)]">
               {cmsPricing.heroTitleLead}{" "}
               <span className="v3-sticker-lime">{cmsPricing.heroTitleHighlight}</span>
             </h1>
 
-            <p className="v3-body-l max-w-2xl text-[var(--cf-text-secondary)]">
+            <p className="v3-body-l max-w-xl text-[var(--cf-text-secondary)]">
               {cmsPricing.heroSubtitle}
             </p>
 
             <div className="mt-1 flex flex-wrap items-center justify-center gap-3">
               <a
                 href="#plan-comparison"
-                className="v3-btn-secondary focus-visible:ring-ring/40 py-3 px-5 text-sm outline-none focus-visible:ring-2"
+                className="v3-btn-secondary focus-visible:ring-ring/40 py-3 px-6 text-sm outline-none focus-visible:ring-2"
               >
-                <span>Compare all plans &amp; features</span>
+                <span>Compare plans</span>
                 <ArrowDown className="size-4" />
               </a>
-              <a
-                href="#seat-calculator"
-                className="v3-btn-primary focus-visible:ring-ring/40 py-3 pr-3.5 pl-5 text-sm outline-none focus-visible:ring-2"
+              <Link
+                href="/faq"
+                className="v3-btn-secondary focus-visible:ring-ring/40 py-3 px-6 text-sm outline-none focus-visible:ring-2"
               >
-                <span>Seat calculator</span>
-                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                  <Calculator className="size-3.5" />
-                </span>
-              </a>
+                <span>Billing FAQ</span>
+                <ArrowRight className="size-4" />
+              </Link>
             </div>
           </header>
 
           {isAuthenticated && currentTier && (
             <div className="mt-6 flex justify-center">
-              <div className="inline-flex flex-wrap items-center gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-4 py-2.5">
+              <div className="inline-flex flex-wrap items-center gap-3 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-4 py-2">
                 <span className="v3-body-s text-[var(--cf-text-secondary)]">
                   Signed in on{" "}
                   <strong className="text-[var(--cf-text-primary)] capitalize">
@@ -199,7 +192,7 @@ export function PricingPageClient({
                 </span>
                 <Link
                   href="/account/billing"
-                  className="v3-btn-secondary py-1.5 text-xs"
+                  className="v3-btn-secondary py-1.5 px-3.5 text-xs"
                 >
                   <span>Manage billing &amp; seats</span>
                   <ArrowRight className="size-3.5" />
@@ -210,371 +203,250 @@ export function PricingPageClient({
         </div>
       </div>
 
-      {/* 2. Overlapping Studio Tiers + Free Admission Sheet */}
-      <SectionStackSheet
-        overlapY={48}
-        startScale={0.982}
-        className="z-20 -mt-8 lg:-mt-12"
-      >
-        <div className="v3-sheet-elevated rounded-t-[2rem] border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pt-10 pb-20 sm:rounded-t-[2.75rem] sm:pt-14 sm:pb-24 lg:rounded-t-[3.5rem]">
-          <div className="v3-container flex min-w-0 flex-col gap-8">
-            <section aria-label="Subscription plans" className="flex flex-col gap-7">
-              <LandingPricingSection
-                interval={selectedInterval}
-                onIntervalChange={setSelectedInterval}
-                teamSeats={selectedSeats}
-                onTeamSeatsChange={setSelectedSeats}
-                currentTier={currentTier}
-                onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
-                cmsPricing={cmsPricing}
-              />
+      {/* 2. Studio Tiers + Free Admission */}
+      <div className="py-8 sm:py-12">
+        <div className="v3-container flex min-w-0 flex-col gap-8">
+          <section aria-label="Subscription plans" className="flex flex-col gap-7">
+            <LandingPricingSection
+              interval={selectedInterval}
+              onIntervalChange={setSelectedInterval}
+              teamSeats={selectedSeats}
+              onTeamSeatsChange={setSelectedSeats}
+              currentTier={currentTier}
+              onSelectPaidPlan={isAuthenticated ? handleSelectPaidPlan : undefined}
+              cmsPricing={cmsPricing}
+            />
 
-              {/* Merchant of Record note */}
+            {/* Merchant of Record note — single-line icon + text */}
+            <div className="flex justify-center">
               <div
                 data-testid="paddle-config-summary"
                 data-pro-monthly={paddlePriceMap.pro_monthly}
                 data-pro-yearly={paddlePriceMap.pro_yearly}
                 data-team-monthly={paddlePriceMap.team_monthly}
                 data-team-yearly={paddlePriceMap.team_yearly}
-                className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-3 text-center text-[var(--cf-text-secondary)]"
+                className="inline-flex max-w-full flex-nowrap items-center justify-center gap-2.5 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-5 py-2.5 text-[var(--cf-text-primary)]"
               >
                 <ShieldCheck className="text-success size-4 shrink-0" aria-hidden="true" />
-                <span className="type-caption">
+                <span className="text-xs font-medium leading-snug lg:whitespace-nowrap">
                   Secure checkout powered by Paddle ({paddlePriceMap.environment} environment) ·{" "}
-                  {cmsPricing.annualBadgeLabel} on annual plans · Instant tax &amp; VAT receipts · Cancel anytime.
-                </span>
-              </div>
-            </section>
-          </div>
-        </div>
-      </SectionStackSheet>
-
-      {/* 3. Overlapping Plan Comparison Matrix Sheet */}
-      <SectionStackSheet
-        overlapY={44}
-        startScale={0.985}
-        className="z-30 -mt-8 lg:-mt-12"
-      >
-        <section
-          id="plan-comparison"
-          data-testid="plan-comparison-matrix"
-          aria-labelledby="plan-comparison-heading"
-          className="v3-sheet-elevated scroll-mt-20 rounded-t-[2rem] border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] pt-16 pb-20 sm:rounded-t-[2.75rem] sm:pt-20 sm:pb-24 lg:rounded-t-[3.5rem] lg:pt-24"
-        >
-          <div className="v3-container flex min-w-0 flex-col gap-8">
-            <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-              <Eyebrow step="02" icon={<FolderKanban className="size-3.5" />}>
-                Plan comparison
-              </Eyebrow>
-              <h2
-                id="plan-comparison-heading"
-                className="v3-display-l text-balance text-[var(--cf-text-primary)]"
-              >
-                See exactly what&apos;s{" "}
-                <span className="v3-sticker-lime">included</span> &amp; what&apos;s not
-              </h2>
-              <p className="v3-body-l max-w-xl text-pretty text-[var(--cf-text-secondary)]">
-                Every feature, monthly quota, seat allowance, and export capability across{" "}
-                {catalog.free.name}, {catalog.pro.name}, and {catalog.team.name}—mapped side by side with zero hidden footnotes.
-              </p>
-
-              {/* Included vs Not Included Legend */}
-              <div className="mt-1 flex flex-wrap items-center justify-center gap-2.5">
-                <span className="bg-success-soft text-foreground type-caption inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 font-semibold">
-                  <Check className="text-success size-3.5 shrink-0" aria-hidden="true" />
-                  <span>Included in plan</span>
-                </span>
-                <span className="type-caption inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 text-[var(--cf-text-secondary)]">
-                  <X className="size-3.5 shrink-0" aria-hidden="true" />
-                  <span>Not included</span>
-                </span>
-                <span className="type-caption inline-flex items-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 font-mono font-semibold text-[var(--cf-text-primary)]">
-                  {cmsPricing.annualPillText}
+                  {cmsPricing.annualBadgeLabel} on annual plans · Instant tax &amp; VAT receipts ·
+                  Cancel anytime.
                 </span>
               </div>
             </div>
-
-            {/* Desktop aligned 3-tier plan summary strip */}
-            <div className="hidden overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] md:grid md:grid-cols-[37%_20%_21%_22%]">
-              <div className="flex flex-col justify-center py-4 pr-5 pl-6">
-                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
-                  Capability &amp; quota breakdown
-                </p>
-                <p className="type-caption text-[var(--cf-text-secondary)]">
-                  Showing{" "}
-                  {selectedInterval === "yearly"
-                    ? `annual rates (${cmsPricing.annualBadgeLabel})`
-                    : "monthly billing rates"}
-                </p>
-              </div>
-              <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)]/70 px-5 py-4">
-                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
-                  {catalog.free.name}
-                </p>
-                <p className="type-caption text-[var(--cf-text-secondary)]">
-                  {formatUsdFromCents(catalog.free.monthlyPriceCents)} / forever
-                </p>
-              </div>
-              <div className="flex items-center border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 p-2.5 px-3">
-                <div className="flex w-full flex-col gap-0.5 rounded-xl bg-[var(--cf-royal)] px-3.5 py-2.5 text-[var(--cf-text-on-royal)]">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-bold">{catalog.pro.name}</span>
-                    {cmsPricing.popularTier === "pro" && (
-                      <span className="rounded-md bg-[var(--cf-bg-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-                        {cmsPricing.popularBadgeText}
-                      </span>
-                    )}
-                  </div>
-                  <p className="type-caption text-[var(--cf-text-on-royal-muted)] tabular-nums">
-                    {proDisplayedLabel}
-                    {selectedInterval === "yearly" ? "/yr" : "/mo"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)]/70 py-4 pr-6 pl-5">
-                <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
-                  {catalog.team.name}
-                </p>
-                <p className="type-caption text-[var(--cf-text-secondary)] tabular-nums">
-                  {teamDisplayedLabel}
-                  {selectedInterval === "yearly" ? "/seat/yr" : "/seat/mo"}
-                </p>
-              </div>
-            </div>
-
-            {/* Categorized Comparison Tables (Title outside card + aligned columns) */}
-            <ScrollRise stagger y={18} className="flex flex-col gap-10">
-              {cmsPricing.comparisonGroups.map((group, groupIdx) => (
-                <section
-                  key={group.id}
-                  aria-labelledby={`comparison-group-${group.id}`}
-                  className="flex flex-col gap-3.5"
-                >
-                  {/* Group heading outside the table card */}
-                  <div className="flex flex-col gap-2.5 px-1 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="flex items-start gap-3.5">
-                      <span
-                        aria-hidden="true"
-                        className="mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
-                      >
-                        <CmsIcon iconName={group.iconName} className="size-4" />
-                      </span>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <div className="flex flex-wrap items-center gap-2.5">
-                          <span className="v3-label inline-flex items-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-2 py-0.5 text-[var(--cf-royal-text)]">
-                            0{groupIdx + 1}
-                          </span>
-                          <h3
-                            id={`comparison-group-${group.id}`}
-                            className="v3-heading-m text-[var(--cf-text-primary)]"
-                          >
-                            {group.title}
-                          </h3>
-                        </div>
-                        <p className="v3-body-s max-w-2xl text-[var(--cf-text-secondary)]">
-                          {group.description}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="type-caption hidden shrink-0 font-mono text-[var(--cf-text-tertiary)] sm:inline-block">
-                      {group.rows.length}{" "}
-                      {group.rows.length === 1 ? "capability" : "capabilities"}
-                    </span>
-                  </div>
-
-                  {/* Standalone 4-column comparison table card */}
-                  <div className="overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]">
-                    <table
-                      aria-label={`${group.title} comparison`}
-                      className="block w-full border-collapse text-left md:table md:table-fixed"
-                    >
-                      <colgroup className="hidden md:table-column-group">
-                        <col className="w-[37%]" />
-                        <col className="w-[20%]" />
-                        <col className="w-[21%]" />
-                        <col className="w-[22%]" />
-                      </colgroup>
-                      <thead className="hidden border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]/80 md:table-header-group">
-                        <tr>
-                          <th
-                            scope="col"
-                            className="type-overline py-3 pr-5 pl-6 text-left text-[var(--cf-text-tertiary)]"
-                          >
-                            Capability
-                          </th>
-                          <th
-                            scope="col"
-                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 px-5 py-3 text-left text-[var(--cf-text-tertiary)]"
-                          >
-                            {catalog.free.name}
-                          </th>
-                          <th
-                            scope="col"
-                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 bg-[var(--cf-bg-surface)]/75 px-5 py-3 text-left text-[var(--cf-royal-text)]"
-                          >
-                            {catalog.pro.name}
-                          </th>
-                          <th
-                            scope="col"
-                            className="type-overline border-l border-[var(--cf-border-subtle)]/70 py-3 pr-6 pl-5 text-left text-[var(--cf-text-tertiary)]"
-                          >
-                            {catalog.team.name}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="flex flex-col divide-y divide-[var(--cf-border-subtle)] md:table-row-group">
-                        {group.rows.map((row) => (
-                          <tr
-                            key={row.feature}
-                            className="flex flex-col gap-3 p-4 transition-colors sm:p-5 md:table-row md:p-0 md:hover:bg-[var(--cf-bg-canvas)]/55"
-                          >
-                            <td className="min-w-0 md:py-4.5 md:pr-5 md:pl-6 md:align-top">
-                              <p className="v3-body-s-strong text-[var(--cf-text-primary)]">
-                                {row.feature}
-                              </p>
-                              {row.hint && (
-                                <p className="type-caption mt-1 text-[var(--cf-text-secondary)]">
-                                  {row.hint}
-                                </p>
-                              )}
-                            </td>
-                            <td
-                              data-label={catalog.free.name}
-                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
-                            >
-                              {renderCellValue(row.free)}
-                            </td>
-                            <td
-                              data-label={catalog.pro.name}
-                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-royal-text)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:bg-[var(--cf-bg-surface)]/75 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
-                            >
-                              {renderCellValue(row.pro)}
-                            </td>
-                            <td
-                              data-label={catalog.team.name}
-                              className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-medium before:text-[var(--cf-text-tertiary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)]/70 md:py-4.5 md:pr-6 md:pl-5 md:align-middle md:before:content-none"
-                            >
-                              {renderCellValue(row.team)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              ))}
-            </ScrollRise>
-          </div>
-        </section>
-      </SectionStackSheet>
-
-      {/* 4. Overlapping Seat Calculator + Billing FAQ Sheet */}
-      <SectionStackSheet
-        overlapY={40}
-        startScale={0.986}
-        className="z-40 -mt-8 lg:-mt-12"
-      >
-        <div className="v3-sheet-elevated rounded-t-[2rem] border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pt-16 pb-20 sm:rounded-t-[2.75rem] sm:pt-20 sm:pb-24 lg:rounded-t-[3.5rem]">
-          <div className="v3-container flex flex-col gap-16">
-            <section id="seat-calculator" aria-label="Teams seat calculator" className="scroll-mt-20">
-              <TeamsSeatCalculator
-                interval={selectedInterval}
-                onIntervalChange={setSelectedInterval}
-                seats={selectedSeats}
-                onSeatsChange={setSelectedSeats}
-                onStartTeamsCheckout={
-                  isAuthenticated ? handleStartCalculatorCheckout : undefined
-                }
-                cmsTeamPricing={cmsPricing.tiers.team}
-                annualBadgeLabel={cmsPricing.annualBadgeLabel}
-              />
-            </section>
-
-            <section aria-label="Billing questions" className="flex flex-col gap-8">
-              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
-                <div className="flex flex-col items-start gap-2.5">
-                  <Eyebrow step="04" icon={<MessageCircleQuestion className="size-3.5" />}>
-                    Billing FAQ
-                  </Eyebrow>
-                  <h2 className="v3-display-l text-balance text-[var(--cf-text-primary)]">
-                    Answers on plans, seats &amp;{" "}
-                    <span className="v3-sticker-lime">downgrades</span>
-                  </h2>
-                </div>
-                <Link href="/help/billing-and-plans" className="v3-btn-secondary py-2.5 px-4 text-xs">
-                  <span>Read full billing FAQ</span>
-                  <ArrowRight className="size-3.5" />
-                </Link>
-              </div>
-
-              <ScrollRise stagger y={14} className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                {cmsPricing.faqs.map((item, idx) => (
-                  <article
-                    key={item.question}
-                    className="flex flex-col gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 transition-all duration-200 hover:border-[var(--cf-royal)]"
-                  >
-                    <span
-                      className={cn(
-                        "inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-xs font-bold tracking-wider uppercase",
-                        idx === 1
-                          ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
-                          : "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
-                      )}
-                    >
-                      0{idx + 1}
-                    </span>
-                    <h3 className="v3-heading-s text-[var(--cf-text-primary)]">{item.question}</h3>
-                    <p className="v3-body-s leading-relaxed text-[var(--cf-text-secondary)]">
-                      {item.answer}
-                    </p>
-                  </article>
-                ))}
-              </ScrollRise>
-            </section>
-          </div>
+          </section>
         </div>
-      </SectionStackSheet>
+      </div>
 
-      {/* 5. Overlapping Electric Royal Blue Launch Sheet + Dual Signature Ribbon */}
-      <SectionStackSheet
-        overlapY={40}
-        startScale={0.988}
-        className="z-50 -mt-8 lg:-mt-12"
+      {/* 3. Plan Comparison Matrix — High Contrast */}
+      <section
+        id="plan-comparison"
+        data-testid="plan-comparison-matrix"
+        aria-labelledby="plan-comparison-heading"
+        className="scroll-mt-20 border-b border-[var(--cf-lp-cream-divider)] py-16 sm:py-24"
       >
-        <section className="v3-pattern-dots-dark v3-sheet-royal overflow-hidden rounded-t-[2rem] pt-14 sm:rounded-t-[2.75rem] lg:rounded-t-[3.5rem] lg:pt-20">
-          <div className="v3-container flex flex-col items-center pb-14 text-center lg:pb-20">
-            <span className="v3-label mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)] px-3.5 py-1 text-[var(--cf-bg-accent)] uppercase">
-              <Rocket className="size-3.5" />
-              <span>05 · Start Free Forever</span>
-            </span>
-            <h2 className="v3-display-l max-w-2xl text-[var(--cf-text-inverse)]">
-              Test the canvas before paying{" "}
-              <span className="v3-sticker-lime">a single cent</span>
+        <div className="v3-container flex min-w-0 flex-col gap-10">
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+            <Eyebrow icon={<FolderKanban className="size-3.5" />}>
+              Plan comparison
+            </Eyebrow>
+            <h2
+              id="plan-comparison-heading"
+              className="v3-display-l text-balance text-[var(--cf-text-primary)]"
+            >
+              See exactly what&apos;s{" "}
+              <span className="v3-sticker-lime">included</span> &amp; what&apos;s not
             </h2>
-            <p className="v3-body-l mt-4 max-w-xl text-[var(--cf-text-inverse-muted)]">
-              Build and publish {FREE_LIFETIME_PROJECT_LIMIT} complete Case Study free — no credit
-              card required. Upgrade to Pro or Teams whenever you need custom URLs, rotatable slots,
-              or studio seats.
+            <p className="v3-body-m max-w-lg text-pretty text-[var(--cf-text-secondary)]">
+              Side-by-side quotas, seats, and export formats across {catalog.free.name},{" "}
+              {catalog.pro.name}, and {catalog.team.name}.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/sign-up" className="v3-btn-lime py-3.5 px-6 text-base">
-                <span>Start free</span>
-                <ArrowRight className="size-4" />
-              </Link>
-              <Link
-                href="/help/billing-and-plans"
-                className="inline-flex items-center justify-center gap-2 rounded-[0.625rem] border border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)] px-5 py-3.5 text-base font-semibold text-[var(--cf-text-inverse)] transition-colors hover:bg-[var(--cf-bg-elevated)]/15"
-              >
-                <span>Billing guide</span>
-              </Link>
+
+            {/* Included vs Not Included Legend */}
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cf-lp-green-pill-bg)] bg-[var(--cf-lp-green-pill-bg)] px-3.5 py-1.5 text-xs font-semibold text-[var(--cf-lp-green-pill-fg)]">
+                <Check className="size-3.5 shrink-0" aria-hidden="true" />
+                <span>Included in plan</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3.5 py-1.5 text-xs font-medium text-[var(--cf-text-secondary)]">
+                <X className="size-3.5 shrink-0" aria-hidden="true" />
+                <span>Not included</span>
+              </span>
+              <span className="inline-flex items-center rounded-full border border-[var(--cf-border-strong)]/40 bg-[var(--cf-bg-surface)] px-3.5 py-1.5 font-mono text-xs font-semibold text-[var(--cf-text-primary)]">
+                {cmsPricing.annualPillText}
+              </span>
             </div>
           </div>
-          <div aria-hidden="true" className="grid h-2.5 w-full grid-cols-12">
-            <div className="col-span-8 bg-[var(--cf-royal-deep)]" />
-            <div className="col-span-4 bg-[var(--cf-bg-accent)]" />
+
+          {/* Desktop aligned 3-tier plan summary strip */}
+          <div className="hidden overflow-hidden rounded-2xl border border-[var(--cf-border-strong)]/40 bg-[var(--cf-bg-surface)] md:grid md:grid-cols-[37%_20%_21%_22%]">
+            <div className="flex flex-col justify-center py-4 pr-5 pl-6">
+              <p className="text-[0.9375rem] font-semibold text-[var(--cf-text-primary)]">
+                Capability &amp; quota breakdown
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-[var(--cf-text-secondary)]">
+                Showing{" "}
+                {selectedInterval === "yearly"
+                  ? `annual rates (${cmsPricing.annualBadgeLabel})`
+                  : "monthly billing rates"}
+              </p>
+            </div>
+            <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)] px-5 py-4">
+              <p className="text-[0.9375rem] font-semibold text-[var(--cf-text-primary)]">
+                {catalog.free.name}
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-[var(--cf-text-secondary)]">
+                {formatUsdFromCents(catalog.free.monthlyPriceCents)} / forever
+              </p>
+            </div>
+            <div className="flex items-center border-l border-[var(--cf-border-subtle)] p-2.5 px-3">
+              <div className="flex w-full flex-col gap-0.5 rounded-xl bg-[var(--cf-lp-dark)] px-3.5 py-2.5 text-[var(--cf-lp-dark-ink)]">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-sm font-semibold">{catalog.pro.name}</span>
+                  {cmsPricing.popularTier === "pro" && (
+                    <span className="rounded-full bg-[var(--cf-lp-lime)] px-2 py-0.5 text-[0.625rem] font-bold tracking-wide text-[var(--cf-lp-on-lime)] uppercase">
+                      {cmsPricing.popularBadgeText}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-medium text-[var(--cf-lp-dark-ink)]/85 tabular-nums">
+                  {proDisplayedLabel}
+                  {selectedInterval === "yearly" ? "/yr" : "/mo"}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col justify-center border-l border-[var(--cf-border-subtle)] py-4 pr-6 pl-5">
+              <p className="text-[0.9375rem] font-semibold text-[var(--cf-text-primary)]">
+                {catalog.team.name}
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-[var(--cf-text-secondary)] tabular-nums">
+                {teamDisplayedLabel}
+                {selectedInterval === "yearly" ? "/seat/yr" : "/seat/mo"}
+              </p>
+            </div>
           </div>
-        </section>
-      </SectionStackSheet>
+
+          {/* Categorized Comparison Tables */}
+          <ScrollRise stagger y={18} className="flex flex-col gap-10">
+            {cmsPricing.comparisonGroups.map((group) => (
+              <section
+                key={group.id}
+                aria-labelledby={`comparison-group-${group.id}`}
+                className="flex flex-col gap-4"
+              >
+                <div className="flex flex-col gap-2.5 px-1 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex items-start gap-3.5">
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--cf-border-strong)]/40 bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]"
+                    >
+                      <CmsIcon iconName={group.iconName} className="size-4" />
+                    </span>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <h3
+                        id={`comparison-group-${group.id}`}
+                        className="v3-heading-m font-semibold text-[var(--cf-text-primary)]"
+                      >
+                        {group.title}
+                      </h3>
+                      <p className="max-w-2xl text-[0.9375rem] leading-relaxed text-[var(--cf-text-secondary)]">
+                        {group.description}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="hidden shrink-0 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3 py-1 font-mono text-xs font-medium text-[var(--cf-text-primary)] sm:inline-block">
+                    {group.rows.length}{" "}
+                    {group.rows.length === 1 ? "capability" : "capabilities"}
+                  </span>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-[var(--cf-border-strong)]/35 bg-[var(--cf-bg-elevated)]">
+                  <table
+                    aria-label={`${group.title} comparison`}
+                    className="block w-full border-collapse text-left md:table md:table-fixed"
+                  >
+                    <colgroup className="hidden md:table-column-group">
+                      <col className="w-[37%]" />
+                      <col className="w-[20%]" />
+                      <col className="w-[21%]" />
+                      <col className="w-[22%]" />
+                    </colgroup>
+                    <thead className="hidden border-b border-[var(--cf-border-strong)]/35 bg-[var(--cf-bg-surface)] md:table-header-group">
+                      <tr>
+                        <th
+                          scope="col"
+                          className="type-overline py-3.5 pr-5 pl-6 text-left font-semibold text-[var(--cf-text-primary)]"
+                        >
+                          Capability
+                        </th>
+                        <th
+                          scope="col"
+                          className="type-overline border-l border-[var(--cf-border-subtle)] px-5 py-3.5 text-left font-semibold text-[var(--cf-text-primary)]"
+                        >
+                          {catalog.free.name}
+                        </th>
+                        <th
+                          scope="col"
+                          className="type-overline border-l border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]/70 px-5 py-3.5 text-left font-bold text-[var(--cf-text-primary)]"
+                        >
+                          {catalog.pro.name}
+                        </th>
+                        <th
+                          scope="col"
+                          className="type-overline border-l border-[var(--cf-border-subtle)] py-3.5 pr-6 pl-5 text-left font-semibold text-[var(--cf-text-primary)]"
+                        >
+                          {catalog.team.name}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="flex flex-col divide-y divide-[var(--cf-border-subtle)] md:table-row-group">
+                      {group.rows.map((row) => (
+                        <tr
+                          key={row.feature}
+                          className="flex flex-col gap-3 p-4 transition-colors sm:p-5 md:table-row md:p-0 md:hover:bg-[var(--cf-bg-surface)]/55"
+                        >
+                          <td className="min-w-0 md:py-4.5 md:pr-5 md:pl-6 md:align-top">
+                            <p className="text-[0.9375rem] font-semibold text-[var(--cf-text-primary)]">
+                              {row.feature}
+                            </p>
+                            {row.hint && (
+                              <p className="mt-1 text-[0.8125rem] leading-relaxed text-[var(--cf-text-secondary)]">
+                                {row.hint}
+                              </p>
+                            )}
+                          </td>
+                          <td
+                            data-label={catalog.free.name}
+                            className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-text-secondary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)] md:px-5 md:py-4.5 md:align-middle md:before:content-none"
+                          >
+                            {renderCellValue(row.free)}
+                          </td>
+                          <td
+                            data-label={catalog.pro.name}
+                            className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-bold before:text-[var(--cf-text-primary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)] md:bg-[var(--cf-bg-surface)]/75 md:px-5 md:py-4.5 md:align-middle md:before:content-none"
+                          >
+                            {renderCellValue(row.pro)}
+                          </td>
+                          <td
+                            data-label={catalog.team.name}
+                            className="flex min-w-0 items-center justify-between gap-3 pt-1 before:text-xs before:font-semibold before:text-[var(--cf-text-secondary)] before:content-[attr(data-label)] md:table-cell md:border-l md:border-[var(--cf-border-subtle)] md:py-4.5 md:pr-6 md:pl-5 md:align-middle md:before:content-none"
+                          >
+                            {renderCellValue(row.team)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ))}
+          </ScrollRise>
+        </div>
+      </section>
+
+      {/* 4. Test the canvas CTA */}
+      <TestCanvasCtaSection />
 
       {isAuthenticated && (
         <PaddleCheckoutModal

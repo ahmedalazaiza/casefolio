@@ -32,7 +32,7 @@ export default async function WorkspacePublishedPagesList() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
-      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:px-6">
+      <header className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-1">
           <Eyebrow className="w-fit px-2.5 py-0.5 text-[0.6875rem]">
             Live Portfolio
@@ -50,8 +50,8 @@ export default async function WorkspacePublishedPagesList() {
       </header>
 
       {liveProjects.length === 0 ? (
-        <div className="v3-pattern-dots-light flex flex-col items-center justify-center gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-6 py-12 text-center">
-          <span className="inline-flex size-12 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-6 py-12 text-center">
+          <span className="inline-flex size-12 items-center justify-center rounded-[0.5rem] bg-[var(--cf-lp-dark)] text-[var(--cf-lp-lime)]">
             <Globe className="size-5" />
           </span>
           <div className="flex flex-col gap-1.5">
@@ -75,7 +75,7 @@ export default async function WorkspacePublishedPagesList() {
             return (
               <article
                 key={project.id}
-                className="flex flex-col overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] transition-all hover:border-[var(--cf-royal)]"
+                className="flex flex-col overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] transition-colors hover:border-[var(--cf-lp-ink)]"
               >
                 <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-4 py-2">
                   <div className="flex min-w-0 items-center gap-2">
@@ -115,25 +115,25 @@ export default async function WorkspacePublishedPagesList() {
                   <div className="mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-[var(--cf-border-subtle)] pt-4">
                     <Link
                       href={`/projects/${project.id}/analytics`}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)]"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--cf-border-strong)] bg-[var(--cf-bg-elevated)] px-3.5 text-xs font-medium text-[var(--cf-text-primary)] transition-colors hover:bg-[var(--cf-bg-surface)]"
                     >
-                      <BarChart3 className="size-3.5 text-[var(--cf-royal-text)]" />
+                      <BarChart3 className="size-3.5 text-[var(--cf-text-secondary)]" />
                       <span>Analytics</span>
                     </Link>
                     <Link
                       href={`/projects/${project.id}/share`}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-xs font-semibold text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)]"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--cf-border-strong)] bg-[var(--cf-bg-elevated)] px-3.5 text-xs font-medium text-[var(--cf-text-primary)] transition-colors hover:bg-[var(--cf-bg-surface)]"
                     >
-                      <Settings2 className="size-3.5 text-[var(--cf-royal-text)]" />
+                      <Settings2 className="size-3.5 text-[var(--cf-text-secondary)]" />
                       <span>Share Settings</span>
                     </Link>
                     <Link
                       href={`/p/${project.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--cf-royal)] px-3.5 text-xs font-semibold text-[var(--cf-text-on-royal)] transition-all hover:bg-[var(--cf-bg-action-hover)]"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--cf-lp-action)] px-4 text-xs font-medium text-[var(--cf-lp-on-action)] transition-all hover:bg-[var(--cf-lp-action-hover)]"
                     >
-                      <ExternalLink className="size-3.5 text-[var(--cf-bg-accent)]" />
+                      <ExternalLink className="size-3.5" />
                       <span>Open Live</span>
                     </Link>
                   </div>

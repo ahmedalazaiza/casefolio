@@ -144,4 +144,76 @@ describe("admin categories CRUD, ordering & library filter sync (C-903)", () => 
     expect(actions.has("admin.category.updated")).toBe(true);
     expect(actions.has("admin.category.deleted")).toBe(true);
   });
+
+  it("supports reassign-and-delete while protecting deployed (published) categories unless explicitly confirmed", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const [admin] = await db
+      .insert(dbSchema.users)
+      .values({
+        email: `c903-cat-reassign-${suffix}@casefolio.test`,
+        name: "C903 Reassign Admin",
+        role: "admin",
+        emailVerified: true,
+      })
+      .returning();
+    if (!admin) throw new Error("Failed to seed admin");
+    cleanupUserIds.push(admin.id);
+
+    const catLive = await createAdminCategory({
+      actorId: admin.id,
+      name: `Deployed ${suffix}`,
+      sort: 600,
+    });
+    const catTarget = await createAdminCategory({
+      actorId: admin.id,
+      name: `Destination ${suffix}`,
+      sort: 610,
+    });
+    expect(catLive.ok && catTarget.ok).toBe(true);
+    if (!catLive.ok || !catLive.category || !catTarget.ok || !catTarget.category) return;
+    cleanupCategoryIds.push(catLive.category.id, catTarget.category.id);
+
+    const [pubTpl] = await db
+      .insert(dbSchema.templates)
+      .values({
+        slug: `c903-pub-${suffix}`,
+        name: "Deployed Template",
+        type: "mobile",
+        categoryId: catLive.category.id,
+        tier: "free",
+        status: "published",
+      })
+      .returning();
+    if (pubTpl) cleanupTemplateIds.push(pubTpl.id);
+
+    // Without explicit allowPublishedReassign confirmation, deployed category cannot be removed even with reassign target
+    const protectedRes = await deleteAdminCategory({
+      actorId: admin.id,
+      id: catLive.category.id,
+      reassignToCategoryId: catTarget.category.id,
+    });
+    expect(protectedRes.ok).toBe(false);
+    if (!protectedRes.ok) {
+      expect(protectedRes.code).toBe("DEPLOYED_CATEGORY_PROTECTED");
+    }
+
+    // With explicit confirmation, template moves to destination category and old category is deleted
+    const confirmedRes = await deleteAdminCategory({
+      actorId: admin.id,
+      id: catLive.category.id,
+      reassignToCategoryId: catTarget.category.id,
+      allowPublishedReassign: true,
+    });
+    expect(confirmedRes.ok).toBe(true);
+    if (confirmedRes.ok) {
+      expect(confirmedRes.reassignedCount).toBe(1);
+    }
+
+    const [movedTpl] = await db
+      .select({ categoryId: dbSchema.templates.categoryId })
+      .from(dbSchema.templates)
+      .where(eq(dbSchema.templates.id, pubTpl!.id))
+      .limit(1);
+    expect(movedTpl?.categoryId).toBe(catTarget.category.id);
+  });
 });

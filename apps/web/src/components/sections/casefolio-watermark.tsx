@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { CasefolioMark } from "@/components/ui/brand-logo";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -25,12 +25,7 @@ export function CasefolioWatermark({
         interactive && "hover:border-primary/45 hover:bg-surface transition-colors",
       )}
     >
-      <span
-        aria-hidden="true"
-        className="bg-brand-royal inline-flex size-4.5 shrink-0 items-center justify-center rounded-md"
-      >
-        <Sparkles className="size-2.5 text-[var(--brand-lime)]" />
-      </span>
+      <CasefolioMark className="size-4 shrink-0" />
       <span>Made with Casefolio</span>
     </span>
   );

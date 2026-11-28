@@ -1,55 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1080" fill="none">
-  <rect width="1440" height="1080" fill="#0D0D12"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none">
+  <defs>
+    <radialGradient id="p-glow-a" cx="30%" cy="26%" r="58%">
+      <stop offset="0%" stop-color="#FF5B3A" stop-opacity="0.5"/>
+      <stop offset="60%" stop-color="#D4FF3A" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#0D0D12" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="p-glow-b" cx="76%" cy="76%" r="54%">
+      <stop offset="0%" stop-color="#D4FF3A" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#0D0D12" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="p-phone-a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF5B3A" stop-opacity="0.68"/>
+      <stop offset="52%" stop-color="#17171F"/>
+      <stop offset="100%" stop-color="#D4FF3A" stop-opacity="0.38"/>
+    </linearGradient>
+    <linearGradient id="p-phone-b" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D4FF3A" stop-opacity="0.34"/>
+      <stop offset="52%" stop-color="#17171F"/>
+      <stop offset="100%" stop-color="#FF5B3A" stop-opacity="0.48"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Left Column: Exact Figma 120:6652 Hero Copy -->
-  <g transform="translate(120, 206)">
-    <!-- 72x72 Logo Slot -->
-    <rect width="72" height="72" rx="18" fill="#22222D"/>
-    <g transform="translate(25, 25)" stroke="#626273" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="2.5" y="2.5" width="17" height="17" rx="2.5"/>
-      <circle cx="7.8" cy="7.8" r="1.6"/>
-      <path d="M3 16.5L8.5 11.2L13.2 15.5L16 13L19 16"/>
-    </g>
+  <rect width="1200" height="900" fill="#0D0D12"/>
+  <rect width="1200" height="900" fill="url(#p-glow-a)"/>
+  <rect width="1200" height="900" fill="url(#p-glow-b)"/>
 
-    <!-- Eyebrow -->
-    <text x="0" y="114" fill="#D4FF3A" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" letter-spacing="1.68">CASE STUDY · IOS &amp; ANDROID</text>
-
-    <!-- Title -->
-    <text x="0" y="186" fill="#F4F4F6" font-family="Sora, system-ui, -apple-system, sans-serif" font-size="64" font-weight="600">Pulse: a fitness</text>
-    <text x="0" y="253" fill="#F4F4F6" font-family="Sora, system-ui, -apple-system, sans-serif" font-size="64" font-weight="600">coach that fits</text>
-    <text x="0" y="320" fill="#F4F4F6" font-family="Sora, system-ui, -apple-system, sans-serif" font-size="64" font-weight="600">into your day</text>
-
-    <!-- Subtitle -->
-    <text x="0" y="372" fill="#9B9BAA" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="21" font-weight="400">Designing a habit-first workout app that helps busy</text>
-    <text x="0" y="405" fill="#9B9BAA" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="21" font-weight="400">people train ten minutes at a time.</text>
-
-    <!-- Tags -->
-    <g transform="translate(0, 444)">
-      <rect x="0" y="0" width="108" height="34" rx="17" stroke="#2A2A36" stroke-width="1"/>
-      <text x="54" y="22" text-anchor="middle" fill="#F4F4F6" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Mobile App</text>
-
-      <rect x="116" y="0" width="118" height="34" rx="17" stroke="#2A2A36" stroke-width="1"/>
-      <text x="175" y="22" text-anchor="middle" fill="#F4F4F6" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">UX Research</text>
-
-      <rect x="242" y="0" width="154" height="34" rx="17" stroke="#2A2A36" stroke-width="1"/>
-      <text x="319" y="22" text-anchor="middle" fill="#F4F4F6" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Interaction Design</text>
-
-      <rect x="404" y="0" width="110" height="34" rx="17" stroke="#2A2A36" stroke-width="1"/>
-      <text x="459" y="22" text-anchor="middle" fill="#F4F4F6" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">Prototyping</text>
-    </g>
+  <!-- Back Mobile Frame -->
+  <g transform="translate(646, 168) rotate(5)">
+    <rect width="290" height="580" rx="44" fill="#1E1E28" stroke="#30303E" stroke-width="2"/>
+    <rect x="14" y="14" width="262" height="552" rx="32" fill="url(#p-phone-b)"/>
+    <rect x="98" y="26" width="94" height="16" rx="8" fill="#0D0D12" fill-opacity="0.72"/>
+    <rect x="34" y="84" width="222" height="186" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.14"/>
+    <rect x="34" y="294" width="222" height="16" rx="8" fill="#FFFFFF" fill-opacity="0.15"/>
+    <rect x="34" y="326" width="150" height="12" rx="6" fill="#FFFFFF" fill-opacity="0.08"/>
   </g>
 
-  <!-- Right Column: Exact Figma 120:6672 Mockup Stage + device/iphone -->
-  <g transform="translate(868, 128)">
-    <rect width="452" height="825" rx="40" fill="#17171F" stroke="#2A2A36" stroke-width="1"/>
-    <g transform="translate(56, 56)">
-      <rect width="340" height="713" rx="46" fill="#22222D" stroke="#2A2A36" stroke-width="1"/>
-      <rect x="10" y="10" width="320" height="693" rx="36" fill="#22222D"/>
-      <g transform="translate(146, 332)" stroke="#626273" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="6" y="6" width="36" height="36" rx="5"/>
-        <circle cx="17" cy="17" r="3.5"/>
-        <path d="M7 35L19 23.5L29 33L35 27.5L41 34"/>
-      </g>
-    </g>
+  <!-- Front Mobile Frame -->
+  <g transform="translate(274, 114) rotate(-4)">
+    <rect x="-10" y="16" width="346" height="686" rx="52" fill="#040407" opacity="0.58"/>
+    <rect width="330" height="670" rx="48" fill="#22222D" stroke="#38384A" stroke-width="2.5"/>
+    <rect x="14" y="14" width="302" height="642" rx="36" fill="url(#p-phone-a)"/>
+    <rect x="112" y="28" width="106" height="18" rx="9" fill="#0D0D12" fill-opacity="0.74"/>
+    <rect x="38" y="92" width="254" height="220" rx="22" fill="#FFFFFF" fill-opacity="0.1" stroke="#FFFFFF" stroke-opacity="0.18"/>
+    <rect x="38" y="338" width="254" height="128" rx="18" fill="#FFFFFF" fill-opacity="0.06"/>
+    <rect x="38" y="492" width="180" height="16" rx="8" fill="#FFFFFF" fill-opacity="0.18"/>
+    <rect x="38" y="524" width="218" height="12" rx="6" fill="#FFFFFF" fill-opacity="0.1"/>
   </g>
 </svg>

@@ -74,8 +74,14 @@ export function TemplateThumbnail({
         className,
       )}
       style={
-        theme?.bg && theme?.fg
-          ? { backgroundColor: theme.bg, color: theme.fg }
+        theme?.bg || theme?.fg || theme?.accent
+          ? {
+              backgroundColor: theme.bg ?? undefined,
+              color: theme.fg ?? undefined,
+              backgroundImage: theme.accent
+                ? `radial-gradient(circle at 22% 20%, color-mix(in oklab, ${theme.accent} 42%, transparent) 0%, transparent 62%), linear-gradient(135deg, color-mix(in oklab, ${theme.accent} 22%, ${theme.bg ?? "var(--sunken)"}) 0%, ${theme.bg ?? "var(--sunken)"} 100%)`
+                : undefined,
+            }
           : undefined
       }
     >

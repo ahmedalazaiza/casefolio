@@ -14,6 +14,7 @@ export function CmsAssetUploader({
   onChange,
   testId,
   compact = false,
+  allowUrlFallback = true,
 }: {
   label: string;
   hint?: string;
@@ -21,6 +22,7 @@ export function CmsAssetUploader({
   onChange: (nextUrl: string) => void;
   testId?: string;
   compact?: boolean;
+  allowUrlFallback?: boolean;
 }) {
   const inputId = useId();
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -57,15 +59,17 @@ export function CmsAssetUploader({
           <p className="text-xs font-semibold text-[var(--cf-text-primary)]">{label}</p>
           {hint && <p className="text-[0.6875rem] text-[var(--cf-text-tertiary)]">{hint}</p>}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowUrl((prev) => !prev)}
-        >
-          <Link2 className="size-3.5" />
-          <span>{showUrl ? "Hide URL" : "Paste URL"}</span>
-        </Button>
+        {allowUrlFallback && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowUrl((prev) => !prev)}
+          >
+            <Link2 className="size-3.5" />
+            <span>{showUrl ? "Hide URL" : "Paste URL"}</span>
+          </Button>
+        )}
       </div>
 
       <input
@@ -148,7 +152,7 @@ export function CmsAssetUploader({
         </label>
       )}
 
-      {showUrl && (
+      {allowUrlFallback && showUrl && (
         <Input
           type="text"
           value={value}

@@ -19,7 +19,7 @@ function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.L
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "border-border bg-surface text-muted-foreground inline-flex h-10 w-fit items-center justify-center gap-1 rounded-xl border p-1",
+        "border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-tab-track)] text-muted-foreground inline-flex h-[2.625rem] w-fit items-center justify-center gap-1 rounded-[0.375rem] border p-1",
         className,
       )}
       {...props}
@@ -32,7 +32,7 @@ function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitiv
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:text-foreground focus-visible:ring-ring/40 inline-flex h-full items-center justify-center gap-1.5 rounded-lg px-3.5 py-1.5 type-body-s-strong whitespace-nowrap transition-all focus-visible:ring-2 outline-none disabled:pointer-events-none disabled:opacity-50",
+        "data-[state=active]:bg-[var(--cf-lp-action)] data-[state=active]:text-[var(--cf-lp-on-action)] hover:text-foreground focus-visible:ring-ring/40 inline-flex h-full cursor-pointer items-center justify-center gap-1.5 rounded-[0.25rem] px-3.5 py-1.5 text-[0.75rem] font-semibold whitespace-nowrap transition-all focus-visible:ring-2 outline-none disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}

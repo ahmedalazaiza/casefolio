@@ -50,6 +50,13 @@ export interface SpaceSummaryItem {
   aclVersion: number;
 }
 
+export interface SpaceWithUsageItem extends SpaceSummaryItem {
+  projectCount: number;
+  activeProjectCount: number;
+  publishedProjectCount: number;
+  updatedAtIso: string;
+}
+
 export interface WorkspaceSwitcherOption {
   workspaceId: string;
   kind: "personal" | "team";
@@ -1474,5 +1481,266 @@ export async function exportProjectPortabilityJson(args: {
         createdAtIso: a.createdAt.toISOString(),
       })),
     },
+  };
+}
+
+export async function listSpacesWithCountsForWorkspace(
+  workspaceId: string,
+  actorUserId: string,
+): Promise<SpaceWithUsageItem[]> {
+  const visibleSpaces = await listVisibleSpacesForWorkspace(workspaceId, actorUserId);
+  if (visibleSpaces.length === 0) {
+    return [];
+  }
+
+  const spaceIds = visibleSpaces.map((s) => s.id);
+  const [spaceMetaRows, projRows] = await Promise.all([
+    db
+      .select({ id: dbSchema.spaces.id, updatedAt: dbSchema.spaces.updatedAt })
+      .from(dbSchema.spaces)
+      .where(inArray(dbSchema.spaces.id, spaceIds)),
+    db
+      .select({
+        spaceId: dbSchema.projects.spaceId,
+        archivedAt: dbSchema.projects.archivedAt,
+        visibility: dbSchema.projects.visibility,
+      })
+      .from(dbSchema.projects)
+      .where(inArray(dbSchema.projects.spaceId, spaceIds)),
+  ]);
+
+  const updatedAtById = new Map<string, string>();
+  for (const row of spaceMetaRows) {
+    updatedAtById.set(row.id, row.updatedAt.toISOString());
+  }
+
+  const statsById = new Map<
+    string,
+    { total: number; active: number; published: number }
+  >();
+  for (const proj of projRows) {
+    if (!proj.spaceId) continue;
+    const entry = statsById.get(proj.spaceId) ?? { total: 0, active: 0, published: 0 };
+    entry.total += 1;
+    if (proj.archivedAt === null) {
+      entry.active += 1;
+      if (proj.visibility === "public" || proj.visibility === "unlisted") {
+        entry.published += 1;
+      }
+    }
+    statsById.set(proj.spaceId, entry);
+  }
+
+  return visibleSpaces.map((space) => {
+    const stats = statsById.get(space.id) ?? { total: 0, active: 0, published: 0 };
+    return {
+      ...space,
+      projectCount: stats.total,
+      activeProjectCount: stats.active,
+      publishedProjectCount: stats.published,
+      updatedAtIso: updatedAtById.get(space.id) ?? new Date().toISOString(),
+    };
+  });
+}
+
+export async function renameSpaceForUser(args: {
+  actorUserId: string;
+  spaceId: string;
+  name: string;
+  now?: Date;
+}): Promise<
+  | { ok: true; space: SpaceSummaryItem }
+  | { ok: false; status: 400 | 403 | 404; code: string; error: string }
+> {
+  const now = args.now ?? new Date();
+  const cleanName = args.name.trim();
+  if (cleanName.length < 2 || cleanName.length > 60) {
+    return {
+      ok: false,
+      status: 400,
+      code: "VALIDATION_ERROR",
+      error: "Space name must be between 2 and 60 characters.",
+    };
+  }
+
+  const auth = await authorizeSpaceAccess(args.spaceId, args.actorUserId, "rename", now);
+  if (!auth.ok) {
+    return auth;
+  }
+
+  const [updated] = await db
+    .update(dbSchema.spaces)
+    .set({ name: cleanName, updatedAt: now })
+    .where(eq(dbSchema.spaces.id, auth.space.id))
+    .returning();
+
+  await db.insert(dbSchema.auditLogs).values({
+    actorId: args.actorUserId,
+    action: "space.renamed",
+    meta: {
+      workspaceId: auth.workspace.id,
+      spaceId: auth.space.id,
+      previousName: auth.space.name,
+      nextName: cleanName,
+    },
+    at: now,
+  });
+
+  return {
+    ok: true,
+    space: {
+      id: updated!.id,
+      workspaceId: updated!.workspaceId,
+      name: updated!.name,
+      slug: updated!.slug,
+      visibility: updated!.visibility,
+      isDefault: updated!.isDefault,
+      controllerUserId: updated!.controllerUserId,
+      isMine: auth.isController,
+      aclVersion: updated!.aclVersion,
+    },
+  };
+}
+
+export async function deleteSpaceForUser(args: {
+  actorUserId: string;
+  spaceId: string;
+  moveProjectsToSpaceId?: string;
+  now?: Date;
+}): Promise<
+  | { ok: true; deletedSpaceId: string; movedProjectsCount: number }
+  | { ok: false; status: 400 | 403 | 404; code: string; error: string }
+> {
+  const now = args.now ?? new Date();
+  const auth = await authorizeSpaceAccess(args.spaceId, args.actorUserId, "delete", now);
+  if (!auth.ok) {
+    return auth;
+  }
+
+  const spaceProjects = await db
+    .select({
+      id: dbSchema.projects.id,
+      slug: dbSchema.projects.slug,
+      visibility: dbSchema.projects.visibility,
+    })
+    .from(dbSchema.projects)
+    .where(eq(dbSchema.projects.spaceId, auth.space.id));
+
+  if (spaceProjects.length > 0 && !args.moveProjectsToSpaceId) {
+    return {
+      ok: false,
+      status: 400,
+      code: "SPACE_NOT_EMPTY",
+      error: `This space still contains ${spaceProjects.length} case ${spaceProjects.length === 1 ? "study" : "studies"}. Select a destination space to move them before deleting.`,
+    };
+  }
+
+  let destAuth: Awaited<ReturnType<typeof authorizeSpaceAccess>> | null = null;
+  let unpublishOnMove = false;
+
+  if (spaceProjects.length > 0 && args.moveProjectsToSpaceId) {
+    if (args.moveProjectsToSpaceId === auth.space.id) {
+      return {
+        ok: false,
+        status: 400,
+        code: "INVALID_DESTINATION",
+        error: "Choose a different destination space.",
+      };
+    }
+
+    destAuth = await authorizeSpaceAccess(
+      args.moveProjectsToSpaceId,
+      args.actorUserId,
+      "create_project",
+      now,
+    );
+    if (!destAuth.ok) {
+      return destAuth;
+    }
+
+    if (destAuth.workspace.id !== auth.workspace.id) {
+      return {
+        ok: false,
+        status: 400,
+        code: "CROSS_WORKSPACE_MOVE_FORBIDDEN",
+        error: "Destination space must belong to the same workspace.",
+      };
+    }
+
+    unpublishOnMove =
+      auth.space.visibility === "shared" && destAuth.space.visibility === "private";
+    if (unpublishOnMove && auth.membershipRole !== "owner" && auth.membershipRole !== "admin") {
+      return {
+        ok: false,
+        status: 403,
+        code: "FORBIDDEN",
+        error: "Moving shared projects into a private space requires Owner or Admin authority.",
+      };
+    }
+  }
+
+  const projectIds = spaceProjects.map((p) => p.id);
+  const unpublishedSlugs = unpublishOnMove
+    ? spaceProjects
+        .filter((p) => p.visibility !== "private" && p.slug)
+        .map((p) => p.slug!)
+    : [];
+
+  await db.transaction(async (tx) => {
+    if (projectIds.length > 0 && destAuth?.ok) {
+      await tx
+        .update(dbSchema.projects)
+        .set({
+          spaceId: destAuth.space.id,
+          ...(unpublishOnMove ? { visibility: "private" as const, publishedAt: null } : {}),
+          updatedAt: now,
+        })
+        .where(inArray(dbSchema.projects.id, projectIds));
+
+      if (unpublishOnMove) {
+        await tx
+          .delete(dbSchema.publishedSnapshots)
+          .where(inArray(dbSchema.publishedSnapshots.projectId, projectIds));
+      } else {
+        await tx
+          .update(dbSchema.publishedSnapshots)
+          .set({ spaceId: destAuth.space.id, updatedAt: now })
+          .where(inArray(dbSchema.publishedSnapshots.projectId, projectIds));
+      }
+
+      await tx
+        .delete(dbSchema.editLeases)
+        .where(inArray(dbSchema.editLeases.projectId, projectIds));
+
+      await tx
+        .update(dbSchema.spaces)
+        .set({ aclVersion: destAuth.space.aclVersion + 1, updatedAt: now })
+        .where(eq(dbSchema.spaces.id, destAuth.space.id));
+    }
+
+    await tx.delete(dbSchema.spaces).where(eq(dbSchema.spaces.id, auth.space.id));
+
+    await tx.insert(dbSchema.auditLogs).values({
+      actorId: args.actorUserId,
+      action: "space.deleted",
+      meta: {
+        workspaceId: auth.workspace.id,
+        spaceId: auth.space.id,
+        spaceName: auth.space.name,
+        movedProjectsCount: projectIds.length,
+        destinationSpaceId: destAuth?.ok ? destAuth.space.id : null,
+      },
+      at: now,
+    });
+  });
+
+  for (const slug of unpublishedSlugs) {
+    revalidatePublicProject(slug);
+  }
+
+  return {
+    ok: true,
+    deletedSpaceId: auth.space.id,
+    movedProjectsCount: projectIds.length,
   };
 }

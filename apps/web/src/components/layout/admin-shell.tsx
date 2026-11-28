@@ -19,7 +19,6 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { Badge } from "@/components/ui/badge";
 import { BrandLogo } from "@/components/ui/brand-logo";
@@ -79,15 +78,15 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="bg-wash-top text-foreground flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)]">
       <a
         href="#main-content"
-        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:px-4 focus:py-2"
+        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-[0.3125rem] focus:px-4 focus:py-2"
       >
         Skip to main content
       </a>
 
-      <header className="fixed inset-x-0 top-0 z-40 h-17 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]/95 backdrop-blur-xl">
+      <header className="fixed inset-x-0 top-0 z-30 h-16 border-b border-[var(--cf-lp-cream-divider)] bg-[var(--cf-bg-canvas)]/95 backdrop-blur-xl lg:left-60">
         <div className="flex h-full items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -95,22 +94,27 @@ export function AdminShell({
                 <button
                   type="button"
                   aria-label="Open admin navigation"
-                  className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2 lg:hidden"
+                  className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-[0.3125rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-lp-ink)] focus-visible:ring-2 lg:hidden"
                 >
                   <Menu className="size-4" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 rounded-r-2xl border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5">
+              <SheetContent
+                side="left"
+                className="w-68 overflow-y-auto rounded-r-[0.75rem] border-[var(--cf-lp-dark-rule)] bg-[var(--cf-lp-dark)] p-5 text-[var(--cf-lp-dark-ink)]"
+              >
                 <SheetHeader className="px-2 pt-1 pb-2 text-left">
                   <div className="flex items-center gap-2">
-                    <SheetTitle className="type-overline text-[var(--cf-royal-text)]">
+                    <SheetTitle className="type-overline text-[var(--cf-lp-lime)]">
                       Admin panel
                     </SheetTitle>
                     <Badge tone="accent">Internal</Badge>
                   </div>
-                  <SheetDescription>Platform administration and governance.</SheetDescription>
+                  <SheetDescription className="text-[var(--cf-lp-dark-muted)]">
+                    Platform administration and governance.
+                  </SheetDescription>
                 </SheetHeader>
-                <nav aria-label="Mobile admin navigation" className="flex flex-col gap-1.5">
+                <nav aria-label="Mobile admin navigation" className="flex flex-col gap-1">
                   {ADMIN_NAV_ITEMS.map((item) => {
                     const Icon = item.icon;
                     const active = isAdminItemActive(pathname, item);
@@ -121,18 +125,18 @@ export function AdminShell({
                         aria-current={active ? "page" : undefined}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
-                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors outline-none focus-visible:ring-2",
+                          "focus-visible:ring-ring/40 flex items-center gap-3 rounded-[0.375rem] px-3 py-2.5 text-[0.8125rem] transition-colors outline-none focus-visible:ring-2",
                           active
-                            ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-sm font-semibold text-[var(--cf-text-on-royal)]"
-                            : "type-body-s border-transparent text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
+                            ? "bg-[var(--cf-lp-sidebar-active)] font-semibold text-white shadow-[inset_3px_0_0_var(--cf-lp-lime)]"
+                            : "font-medium text-[var(--cf-lp-sidebar-muted)] hover:bg-[var(--cf-lp-sidebar-active)]/60 hover:text-[var(--cf-lp-dark-ink)]",
                         )}
                       >
                         <Icon
                           className={cn(
                             "size-4 shrink-0",
                             active
-                              ? "text-[var(--cf-text-on-royal)]"
-                              : "text-[var(--cf-text-tertiary)]",
+                              ? "text-[var(--cf-lp-lime)]"
+                              : "text-[var(--cf-lp-sidebar-muted)]",
                           )}
                         />
                         <span>{item.label}</span>
@@ -143,18 +147,17 @@ export function AdminShell({
               </SheetContent>
             </Sheet>
 
-            <BrandLogo href="/admin" subtitle="CASE STUDY BUILDER" />
+            <BrandLogo href="/admin" className="lg:hidden" />
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
             <Link
               href="/admin/templates"
               aria-label="Search admin templates"
-              className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-[0.3125rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-lp-ink)] focus-visible:ring-2"
             >
               <Search className="size-4" />
             </Link>
-            <ThemeToggle />
             <UserAccountMenu
               initials={userInitials}
               name={userName}
@@ -167,14 +170,20 @@ export function AdminShell({
 
       <aside
         aria-label="Admin sidebar"
-        className="hidden border-r border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 lg:fixed lg:top-17 lg:bottom-0 lg:left-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:gap-3 lg:overflow-y-auto"
+        className="hidden border-r border-[var(--cf-lp-dark-rule)] bg-[var(--cf-lp-dark)] text-[var(--cf-lp-dark-ink)] lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-60 lg:flex-col lg:gap-5 lg:overflow-y-auto lg:px-4 lg:py-5"
       >
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3 py-2">
-          <span className="v3-label text-[var(--cf-text-primary)] uppercase">Admin panel</span>
+        <div className="px-1">
+          <BrandLogo href="/admin" inverted />
+        </div>
+
+        <div className="flex items-center justify-between gap-2 rounded-[0.375rem] border border-[var(--cf-lp-dark-rule)] bg-[var(--cf-lp-dark-elevated)] px-3 py-2">
+          <span className="font-mono text-[0.625rem] font-medium tracking-[0.1em] text-[var(--cf-lp-dark-muted)] uppercase">
+            Admin panel
+          </span>
           <Badge tone="accent">Internal</Badge>
         </div>
 
-        <nav aria-label="Admin navigation" className="flex flex-col gap-1.5">
+        <nav aria-label="Admin navigation" className="flex flex-col gap-1">
           {ADMIN_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = isAdminItemActive(pathname, item);
@@ -184,18 +193,18 @@ export function AdminShell({
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "focus-visible:ring-ring/40 flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors outline-none focus-visible:ring-2",
+                  "focus-visible:ring-ring/40 flex items-center gap-3 rounded-[0.375rem] px-3 py-2.5 text-[0.8125rem] transition-colors outline-none focus-visible:ring-2",
                   active
-                    ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-sm font-semibold text-[var(--cf-text-on-royal)]"
-                    : "type-body-s border-transparent text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-subtle)] hover:bg-[var(--cf-bg-canvas)] hover:text-[var(--cf-text-primary)]",
+                    ? "bg-[var(--cf-lp-sidebar-active)] font-semibold text-white shadow-[inset_3px_0_0_var(--cf-lp-lime)]"
+                    : "font-medium text-[var(--cf-lp-sidebar-muted)] hover:bg-[var(--cf-lp-sidebar-active)]/60 hover:text-[var(--cf-lp-dark-ink)]",
                 )}
               >
                 <Icon
                   className={cn(
                     "size-4 shrink-0",
                     active
-                      ? "text-[var(--cf-text-on-royal)]"
-                      : "text-[var(--cf-text-tertiary)]",
+                      ? "text-[var(--cf-lp-lime)]"
+                      : "text-[var(--cf-lp-sidebar-muted)]",
                   )}
                 />
                 <span>{item.label}</span>
@@ -205,7 +214,7 @@ export function AdminShell({
         </nav>
       </aside>
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col pt-17 lg:pl-64">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col pt-16 lg:pl-60">
         <main
           id="main-content"
           className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10 xl:px-10"

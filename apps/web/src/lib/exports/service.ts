@@ -268,7 +268,7 @@ function resolveExportArtifactMeta(format: ExportFormatOption): {
     return {
       ext: "zip",
       contentType: "application/zip",
-      suffix: "behance-slices",
+      suffix: "layerat-case-study",
     };
   }
   return {
@@ -373,7 +373,7 @@ export async function enqueueProjectExportForUser(
   const quotas = auth.entitlement.quotas;
 
   if (!isExportFormatAllowedOnPlan(workspacePlan, valid.format)) {
-    const formatLabel = valid.format === "pdf" ? "PDF Case Study" : "Behance Image Pack";
+    const formatLabel = valid.format === "pdf" ? "PDF Case Study" : "Layerat Full Case Study Pack";
     return {
       ok: false,
       code: "PLAN_UPGRADE_REQUIRED",

@@ -39,6 +39,14 @@ export const reorderCategoriesSchema = z.object({
 
 export const deleteCategorySchema = z.object({
   id: z.string().uuid("Invalid category ID."),
+  reassignToCategoryId: z
+    .union([
+      z.string().uuid("Invalid destination category ID."),
+      z.literal("__uncategorized__"),
+    ])
+    .nullable()
+    .optional(),
+  allowPublishedReassign: z.boolean().optional(),
 });
 
 export interface AdminCategoryItem {

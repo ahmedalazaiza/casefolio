@@ -47,10 +47,10 @@ export const EXPORT_PRESETS: readonly ExportPresetDescriptor[] = [
   },
   {
     format: "behance",
-    label: "Behance Image Pack (.zip)",
-    badge: "1,400px Slices · Manual Upload",
+    label: "Layerat Full Case Study Pack (.zip)",
+    badge: "1,400px Seamless Panels · Direct to Layerat",
     description:
-      "Slices your case study into seamless 1,400px PNG panels packaged in a ZIP for manual upload to Behance.",
+      "Exports your complete case study into seamless 1,400px PNG panels packaged in a ZIP ready to publish directly to Layerat.",
     requiresPro: true,
     fileExtension: "zip",
   },

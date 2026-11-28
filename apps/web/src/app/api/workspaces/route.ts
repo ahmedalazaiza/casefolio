@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth/session";
 import { db, dbSchema } from "@/lib/db";
+import { ACTIVE_SPACE_COOKIE_NAME } from "@/lib/workspaces/active-space";
 import {
   getWorkspaceUsageSnapshot,
   listVisibleSpacesForWorkspace,
@@ -97,8 +98,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     .where(eq(dbSchema.sessions.id, ctx.session.id));
 
   const switcher = await listWorkspaceSwitcherState(ctx.user.id, targetOrgId);
-  return NextResponse.json({
+  const response = NextResponse.json({
     ok: true,
     switcher,
   });
+  response.cookies.set(ACTIVE_SPACE_COOKIE_NAME, "all", {
+    path: "/",
+    sameSite: "lax",
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  return response;
 }

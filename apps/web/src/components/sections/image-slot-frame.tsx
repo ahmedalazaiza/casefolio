@@ -121,6 +121,45 @@ function SlotPlaceholderIcon({ className }: { className?: string }) {
   );
 }
 
+const SLOT_GRADIENT_ANGLES = [138, 162, 206, 318] as const;
+
+function getSlotGradientStyle(
+  slotKey: string | undefined,
+  alt: string | undefined,
+  compact: boolean,
+): React.CSSProperties {
+  if (compact) {
+    return {
+      backgroundColor: "var(--tpl-color-primary, var(--primary))",
+      backgroundImage: [
+        "radial-gradient(circle at 24% 20%, color-mix(in oklab, var(--tpl-color-accent, var(--tpl-color-secondary, var(--tpl-color-primary, var(--primary)))) 64%, transparent) 0%, transparent 62%)",
+        "linear-gradient(135deg, var(--tpl-color-primary, var(--primary)) 0%, color-mix(in oklab, var(--tpl-color-primary, var(--primary)) 58%, var(--tpl-color-secondary, var(--tpl-color-accent, var(--primary)))) 58%, color-mix(in oklab, var(--tpl-color-secondary, var(--tpl-color-primary, var(--primary))) 70%, var(--tpl-color-surface, var(--surface))) 100%)",
+      ].join(", "),
+    };
+  }
+
+  const seed = `${slotKey ?? ""}|${alt ?? ""}`;
+  let hash = 0;
+  for (let idx = 0; idx < seed.length; idx += 1) {
+    hash = (hash * 31 + seed.charCodeAt(idx)) | 0;
+  }
+  const variant = Math.abs(hash) % SLOT_GRADIENT_ANGLES.length;
+  const angle = SLOT_GRADIENT_ANGLES[variant] ?? 138;
+  const x1 = 18 + (variant % 3) * 26;
+  const y1 = 16 + ((variant + 1) % 2) * 14;
+  const x2 = 84 - (variant % 3) * 22;
+  const y2 = 84 - ((variant + 1) % 2) * 12;
+
+  return {
+    backgroundColor: "var(--tpl-color-surfaceAlt, var(--tpl-color-surface, var(--sunken)))",
+    backgroundImage: [
+      `radial-gradient(circle at ${x1}% ${y1}%, color-mix(in oklab, var(--tpl-color-primary, var(--primary)) 40%, transparent) 0%, transparent 62%)`,
+      `radial-gradient(circle at ${x2}% ${y2}%, color-mix(in oklab, var(--tpl-color-secondary, var(--tpl-color-accent, var(--primary))) 30%, transparent) 0%, transparent 64%)`,
+      `linear-gradient(${angle}deg, color-mix(in oklab, var(--tpl-color-primary, var(--primary)) 18%, var(--tpl-color-surface, var(--surface))) 0%, var(--tpl-color-surfaceAlt, var(--tpl-color-surface, var(--sunken))) 52%, color-mix(in oklab, var(--tpl-color-accent, var(--tpl-color-primary, var(--primary))) 18%, var(--tpl-color-background, var(--background))) 100%)`,
+    ].join(", "),
+  };
+}
+
 export interface ImageSlotFrameProps {
   image?: ImageSlotValue;
   slotDefinition?: TemplateSlotDefinition;
@@ -188,14 +227,17 @@ export function ImageSlotFrame({
     <div
       data-slot="image-slot-viewport"
       data-slot-key={image?.slot ?? "unbound"}
+      data-slot-state={hasSrc ? "filled" : "gradient"}
       data-ratio={ratioText}
       data-cropped={image?.crop ? "true" : "false"}
       style={{
         aspectRatio: `${parsedRatio.width} / ${parsedRatio.height}`,
-        backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))",
+        ...(hasSrc
+          ? { backgroundColor: "var(--tpl-color-surfaceAlt, var(--sunken))" }
+          : getSlotGradientStyle(image?.slot, image?.alt, compact)),
       }}
       className={cn(
-        "relative flex w-full items-center justify-center overflow-hidden",
+        "relative flex w-full items-center justify-center overflow-hidden transition-[background] duration-300",
         innerClassName,
       )}
     >
@@ -209,21 +251,49 @@ export function ImageSlotFrame({
           fallbackAspectWidth={parsedRatio.width}
           fallbackAspectHeight={parsedRatio.height}
         />
-      ) : (
+      ) : compact ? (
         <span
           role="img"
           title={altText}
           aria-label={altText}
           style={{
-            color:
-              "color-mix(in oklab, var(--tpl-color-textMuted, var(--muted-foreground)) 55%, transparent)",
+            color: "var(--tpl-color-onPrimary, var(--primary-foreground))",
           }}
-          className="inline-flex items-center justify-center"
+          className="relative z-10 inline-flex items-center justify-center opacity-92"
         >
           <SlotPlaceholderIcon
             className={placeholderIconClassName ?? defaultIconSizeClass}
           />
         </span>
+      ) : (
+        <>
+          <span
+            aria-hidden="true"
+            style={{
+              borderColor:
+                "color-mix(in oklab, var(--tpl-color-primary, var(--primary)) 22%, transparent)",
+            }}
+            className="pointer-events-none absolute inset-4 rounded-[inherit] border opacity-70"
+          />
+          <span
+            role="img"
+            title={altText}
+            aria-label={altText}
+            style={{
+              backgroundColor:
+                "color-mix(in oklab, var(--tpl-color-surface, var(--surface)) 72%, transparent)",
+              borderColor:
+                "color-mix(in oklab, var(--tpl-color-text, var(--foreground)) 14%, transparent)",
+              color:
+                "color-mix(in oklab, var(--tpl-color-text, var(--foreground)) 80%, var(--tpl-color-primary, var(--primary)))",
+            }}
+            className="relative z-10 inline-flex items-center justify-center rounded-2xl border p-3 shadow-xs backdrop-blur-md"
+          >
+            <SlotPlaceholderIcon
+              className={placeholderIconClassName ?? defaultIconSizeClass}
+            />
+          </span>
+        </>
       )}
     </div>
   );

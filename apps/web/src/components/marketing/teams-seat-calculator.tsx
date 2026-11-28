@@ -66,7 +66,7 @@ export function TeamsSeatCalculator({
   return (
     <div
       data-testid="teams-seat-calculator"
-      className="flex w-full min-w-0 flex-col gap-7 rounded-[2.25rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-9"
+      className="flex w-full min-w-0 flex-col gap-7 rounded-3xl bg-[var(--cf-bg-surface)] p-6 sm:p-9"
     >
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div className="flex flex-col items-start gap-2.5">
@@ -90,16 +90,16 @@ export function TeamsSeatCalculator({
           <div
             role="group"
             aria-label="Calculator billing interval"
-            className="inline-flex shrink-0 self-start rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-1"
+            className="inline-flex shrink-0 self-start rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1"
           >
             <button
               type="button"
               aria-pressed={interval === "monthly"}
               onClick={() => onIntervalChange("monthly")}
               className={cn(
-                "type-caption rounded-lg px-3.5 py-1.5 font-semibold transition-colors",
+                "type-caption rounded-full px-3.5 py-1.5 font-medium transition-colors",
                 interval === "monthly"
-                  ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                  ? "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
                   : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
               )}
             >
@@ -110,9 +110,9 @@ export function TeamsSeatCalculator({
               aria-pressed={interval === "yearly"}
               onClick={() => onIntervalChange("yearly")}
               className={cn(
-                "type-caption rounded-lg px-3.5 py-1.5 font-semibold transition-colors",
+                "type-caption rounded-full px-3.5 py-1.5 font-medium transition-colors",
                 interval === "yearly"
-                  ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                  ? "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
                   : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
               )}
             >
@@ -190,10 +190,10 @@ export function TeamsSeatCalculator({
                   aria-pressed={active}
                   onClick={() => updateSeats(preset)}
                   className={cn(
-                    "type-caption rounded-xl border px-3 py-1.5 font-semibold transition-colors",
+                    "type-caption rounded-full border px-3.5 py-1.5 font-medium transition-colors",
                     active
-                      ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                      : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] hover:border-[var(--cf-royal)] hover:text-[var(--cf-text-primary)]",
+                      ? "border-[var(--cf-lp-action)] bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
+                      : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-secondary)] hover:border-[var(--cf-border-strong)] hover:text-[var(--cf-text-primary)]",
                   )}
                 >
                   {preset} seats
@@ -206,10 +206,10 @@ export function TeamsSeatCalculator({
               aria-pressed={seats > TEAMS_MAX_SELF_SERVE_SEATS}
               onClick={() => updateSeats(TEAMS_MAX_SELF_SERVE_SEATS + 1)}
               className={cn(
-                "type-caption rounded-xl border px-3 py-1.5 font-semibold transition-colors",
+                "type-caption rounded-full border px-3.5 py-1.5 font-medium transition-colors",
                 seats > TEAMS_MAX_SELF_SERVE_SEATS
                   ? "border-warning bg-warning-soft text-foreground"
-                  : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+                  : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
               )}
             >
               {TEAMS_MAX_SELF_SERVE_SEATS + 1}+ seats
@@ -218,7 +218,7 @@ export function TeamsSeatCalculator({
 
           {/* Pooled workspace quotas preview */}
           {seats <= TEAMS_MAX_SELF_SERVE_SEATS && (
-            <dl className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-4 sm:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-3 rounded-2xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 sm:grid-cols-4">
               <div className="flex flex-col gap-0.5">
                 <dt className="type-caption text-[var(--cf-text-tertiary)]">Case Studies</dt>
                 <dd className="v3-body-s-strong text-[var(--cf-text-primary)]">Unlimited</dd>
@@ -245,19 +245,19 @@ export function TeamsSeatCalculator({
           )}
         </div>
 
-        {/* Electric Royal Blue Studio Price Breakdown Card */}
-        <div className="v3-pattern-dots-dark flex flex-col justify-between gap-5 rounded-xl border border-[var(--cf-border-on-royal)] p-5 text-[var(--cf-text-on-royal)] sm:p-6 lg:col-span-5">
+        {/* Monochrome Ink Price Breakdown Card */}
+        <div className="v3-pattern-dots-dark flex flex-col justify-between gap-5 rounded-2xl border border-[var(--cf-border-on-royal)] p-5 text-[var(--cf-text-on-royal)] sm:p-6 lg:col-span-5">
           {priceResult.ok ? (
             <>
               <div className="flex flex-col gap-2">
-                <span className="inline-flex w-fit items-center rounded-md bg-[var(--cf-bg-accent)] px-2.5 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+                <span className="inline-flex w-fit items-center rounded-full bg-white/15 px-3 py-0.5 text-[0.6875rem] font-medium text-[var(--cf-text-on-royal)]">
                   {interval === "yearly" ? "Annual · 2 months free" : "Monthly billing"} ·{" "}
                   {priceResult.seats} paid seats
                 </span>
                 <div className="mt-1 flex items-baseline gap-2">
                   <span
                     data-testid="teams-calc-headline-price"
-                    className="font-display text-3xl leading-none font-bold tracking-tight text-[var(--cf-text-on-royal)] tabular-nums sm:text-4xl"
+                    className="font-editorial text-4xl leading-none font-normal tracking-tight text-[var(--cf-text-on-royal)] tabular-nums sm:text-5xl"
                   >
                     {formatUsdFromCents(
                       interval === "yearly"

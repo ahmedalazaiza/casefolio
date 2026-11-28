@@ -89,13 +89,13 @@
           "glow": true,
           "logo": {
             "slot": "hero.logo",
-            "src": "/templates/cinema/logo.svg",
+            "src": "",
             "alt": ".Cinema brand emblem",
             "crop": null
           },
           "mockup": {
             "slot": "hero.mockup",
-            "src": "/templates/cinema/hero-splash.svg",
+            "src": "",
             "alt": ".Cinema splash screen",
             "crop": null,
             "device": "iphone"
@@ -330,7 +330,7 @@
               "caption": "01 · Welcome & Guest Entry",
               "image": {
                 "slot": "wireframe.screen",
-                "src": "/templates/cinema/wireframe-1.svg",
+                "src": "",
                 "alt": "Onboarding wireframe",
                 "crop": null
               }
@@ -339,7 +339,7 @@
               "caption": "02 · Now Showing Discovery",
               "image": {
                 "slot": "wireframe.screen",
-                "src": "/templates/cinema/wireframe-2.svg",
+                "src": "",
                 "alt": "Browse movies wireframe",
                 "crop": null
               }
@@ -348,7 +348,7 @@
               "caption": "03 · Movie Detail & Trailer",
               "image": {
                 "slot": "wireframe.screen",
-                "src": "/templates/cinema/wireframe-3.svg",
+                "src": "",
                 "alt": "Movie detail wireframe",
                 "crop": null
               }
@@ -357,7 +357,7 @@
               "caption": "04 · Auditorium Seat Matrix",
               "image": {
                 "slot": "wireframe.screen",
-                "src": "/templates/cinema/wireframe-4.svg",
+                "src": "",
                 "alt": "Seat map wireframe",
                 "crop": null
               }
@@ -366,7 +366,7 @@
               "caption": "05 · Perforated QR E-Ticket",
               "image": {
                 "slot": "wireframe.screen",
-                "src": "/templates/cinema/wireframe-5.svg",
+                "src": "",
                 "alt": "Digital ticket wireframe",
                 "crop": null
               }
@@ -414,7 +414,7 @@
               "caption": "01 · Brand Splash",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/hero-splash.svg",
+                "src": "",
                 "alt": "Cinema crimson splash screen",
                 "crop": null
               }
@@ -423,7 +423,7 @@
               "caption": "02 · Premiere Onboarding",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-onboarding.svg",
+                "src": "",
                 "alt": "Premiere onboarding screen",
                 "crop": null
               }
@@ -432,7 +432,7 @@
               "caption": "03 · Fast Sign-In",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-auth.svg",
+                "src": "",
                 "alt": "Quick sign in screen",
                 "crop": null
               }
@@ -441,7 +441,7 @@
               "caption": "04 · Now Showing Feed",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-home.svg",
+                "src": "",
                 "alt": "Home movie discovery feed",
                 "crop": null
               }
@@ -450,7 +450,7 @@
               "caption": "05 · Movie Detail & Cast",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-movie.svg",
+                "src": "",
                 "alt": "Movie trailer and details",
                 "crop": null
               }
@@ -459,7 +459,7 @@
               "caption": "06 · Date & Hall Picker",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-showtimes.svg",
+                "src": "",
                 "alt": "Showtimes and IMAX hall selector",
                 "crop": null
               }
@@ -468,7 +468,7 @@
               "caption": "07 · Live Seat Matrix",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-seats.svg",
+                "src": "",
                 "alt": "Interactive auditorium seat map",
                 "crop": null
               }
@@ -477,7 +477,7 @@
               "caption": "08 · Snack Combos",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-snacks.svg",
+                "src": "",
                 "alt": "Concessions and popcorn combo selector",
                 "crop": null
               }
@@ -486,7 +486,7 @@
               "caption": "09 · Transparent Checkout",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-checkout.svg",
+                "src": "",
                 "alt": "Apple Pay transparent checkout",
                 "crop": null
               }
@@ -495,7 +495,7 @@
               "caption": "10 · Perforated QR Pass",
               "image": {
                 "slot": "gallery.screen",
-                "src": "/templates/cinema/screen-ticket.svg",
+                "src": "",
                 "alt": "Mobile QR cinema ticket pass",
                 "crop": null
               }
@@ -522,7 +522,7 @@
           ],
           "image": {
             "slot": "spotlight.mockup",
-            "src": "/templates/cinema/screen-seats.svg",
+            "src": "",
             "alt": "Interactive cinema seat selection spotlight",
             "crop": null,
             "device": "iphone"

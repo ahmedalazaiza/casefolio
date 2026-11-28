@@ -171,7 +171,7 @@ export function resolveDepartmentSender(department: EmailDepartment): Department
       badgeLabel: "STUDIO ACTIVITY",
       categoryLabel: "Publishing & Exports",
       description:
-        "Live case study publication links, PNG/PDF/Behance export completions, and template releases.",
+        "Live case study publication links, Layerat/PNG/PDF export completions, and template releases.",
     },
     support: {
       displayName: "Casefolio Support",

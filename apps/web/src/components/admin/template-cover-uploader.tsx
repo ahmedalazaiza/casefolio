@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { isLegacyPlaceholderCoverUrl } from "@/lib/template/cover-url";
 import { uploadTemplateCoverClient } from "@/lib/template/cover-upload";
 import type { PutBinaryTransport } from "@/lib/storage/client-upload";
@@ -288,19 +289,18 @@ export function TemplateCoverUploader({
           {onCoverRatioChange && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={ratioInputId}>Aspect ratio</Label>
-              <select
+              <Select
                 id={ratioInputId}
                 aria-label="Cover aspect ratio"
                 value={coverRatio}
                 onChange={(e) => onCoverRatioChange(e.target.value)}
-                className="border-input bg-elevated text-foreground focus-visible:border-ring focus-visible:ring-ring/30 h-10 w-full rounded-xl border px-3 text-sm outline-none focus-visible:ring-3"
               >
                 {TEMPLATE_COVER_RATIO_OPTIONS.map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
         </div>

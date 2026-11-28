@@ -7,6 +7,7 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Row,
@@ -63,10 +64,10 @@ const CALLOUT_PALETTE: Record<
   { bg: string; border: string; title: string; text: string }
 > = {
   info: {
-    bg: "#F2F5FF",
-    border: "#C9D6FF",
-    title: "#1939B7",
-    text: "#2A334D",
+    bg: "#F4F1EA",
+    border: "#D5D2C9",
+    title: "#20211D",
+    text: "#505246",
   },
   warning: {
     bg: "#FFFBEB",
@@ -87,10 +88,10 @@ const CALLOUT_PALETTE: Record<
     text: "#1B4B3A",
   },
   accent: {
-    bg: "#F8FDE8",
-    border: "#D1F800",
-    title: "#0C0D12",
-    text: "#353945",
+    bg: "#F6FCE0",
+    border: "#D9F233",
+    title: "#20211D",
+    text: "#505246",
   },
 };
 
@@ -130,8 +131,8 @@ export function CasefolioV3EmailLayout({
       <Body
         style={{
           fontFamily: FONT_SANS,
-          backgroundColor: "#F3F3F5",
-          color: "#0C0D12",
+          backgroundColor: "#F4F1EA",
+          color: "#20211D",
           margin: 0,
           padding: "32px 14px",
           WebkitFontSmoothing: "antialiased",
@@ -142,8 +143,8 @@ export function CasefolioV3EmailLayout({
             maxWidth: "600px",
             width: "100%",
             margin: "0 auto",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid #E4E5EA",
+            backgroundColor: "#FAF8F4",
+            border: "1px solid #D8D4CA",
             borderRadius: "12px",
             overflow: "hidden",
           }}
@@ -151,55 +152,43 @@ export function CasefolioV3EmailLayout({
           {/* Studio Flat-Editorial Header */}
           <Section
             style={{
-              backgroundColor: "#0C0D12",
+              backgroundColor: "#20211D",
               padding: "20px 28px 16px",
             }}
           >
             <Row>
               <Column style={{ verticalAlign: "middle" }}>
-                <table cellPadding={0} cellSpacing={0} role="presentation">
-                  <tbody>
-                    <tr>
-                      <td
-                        style={{
-                          width: "26px",
-                          height: "26px",
-                          backgroundColor: "#2650F2",
-                          borderRadius: "6px",
-                          textAlign: "center",
-                          verticalAlign: "middle",
-                          color: "#FFFFFF",
-                          fontFamily: FONT_SANS,
-                          fontSize: "13px",
-                          fontWeight: 800,
-                        }}
-                      >
-                        C
-                      </td>
-                      <td style={{ paddingLeft: "10px", verticalAlign: "middle" }}>
-                        <Text
-                          style={{
-                            margin: 0,
-                            color: "#FFFFFF",
-                            fontSize: "13px",
-                            fontWeight: 700,
-                            letterSpacing: "0.1em",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          CASEFOLIO
-                        </Text>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <Link
+                  href={cleanBaseUrl}
+                  style={{ textDecoration: "none", display: "inline-block" }}
+                >
+                  <Img
+                    src={`${cleanBaseUrl}/brand/logo-dark-transparent.png`}
+                    alt="Casefolio"
+                    width={136}
+                    height={26}
+                    style={{
+                      display: "block",
+                      width: "136px",
+                      height: "26px",
+                      border: 0,
+                      outline: "none",
+                      textDecoration: "none",
+                      color: "#F3F1E9",
+                      fontFamily: FONT_SANS,
+                      fontSize: "15px",
+                      fontWeight: 700,
+                      letterSpacing: "-0.03em",
+                    }}
+                  />
+                </Link>
               </Column>
               <Column align="right" style={{ verticalAlign: "middle" }}>
                 <span
                   style={{
                     display: "inline-block",
-                    backgroundColor: "#D1F800",
-                    color: "#0C0D12",
+                    backgroundColor: "#D9F233",
+                    color: "#20211D",
                     fontFamily: FONT_MONO,
                     fontSize: "10px",
                     fontWeight: 700,
@@ -218,8 +207,8 @@ export function CasefolioV3EmailLayout({
           {/* Verified Sender Sub-Strip */}
           <Section
             style={{
-              backgroundColor: "#14161F",
-              borderBottom: "1px solid #E4E5EA",
+              backgroundColor: "#282924",
+              borderBottom: "1px solid #363730",
               padding: "8px 28px",
             }}
           >
@@ -229,11 +218,11 @@ export function CasefolioV3EmailLayout({
                 fontFamily: FONT_MONO,
                 fontSize: "11px",
                 lineHeight: "1.4",
-                color: "#A2A7B8",
+                color: "#A6A69E",
                 letterSpacing: "0.02em",
               }}
             >
-              FROM: <strong style={{ color: "#FFFFFF", fontWeight: 600 }}>{sender.address}</strong>{" "}
+              FROM: <strong style={{ color: "#F3F1E9", fontWeight: 600 }}>{sender.address}</strong>{" "}
               · {sender.categoryLabel.toUpperCase()}
             </Text>
           </Section>
@@ -249,7 +238,7 @@ export function CasefolioV3EmailLayout({
                   fontWeight: 700,
                   letterSpacing: "0.09em",
                   textTransform: "uppercase",
-                  color: "#2650F2",
+                  color: "#505246",
                 }}
               >
                 {eyebrow}
@@ -264,7 +253,7 @@ export function CasefolioV3EmailLayout({
                 lineHeight: "1.22",
                 fontWeight: 700,
                 letterSpacing: "-0.025em",
-                color: "#0C0D12",
+                color: "#20211D",
               }}
             >
               {heading}
@@ -277,7 +266,7 @@ export function CasefolioV3EmailLayout({
                   fontSize: "15px",
                   lineHeight: "1.6",
                   fontWeight: 600,
-                  color: "#0C0D12",
+                  color: "#20211D",
                 }}
               >
                 {greeting}
@@ -291,7 +280,7 @@ export function CasefolioV3EmailLayout({
                   margin: index === paragraphs.length - 1 ? "0 0 22px" : "0 0 14px",
                   fontSize: "15px",
                   lineHeight: "1.62",
-                  color: "#474A54",
+                  color: "#505246",
                 }}
               >
                 {paragraph}
@@ -304,8 +293,8 @@ export function CasefolioV3EmailLayout({
                 style={{
                   margin: "0 0 22px",
                   padding: "20px 16px",
-                  backgroundColor: "#F3F3F5",
-                  border: "1px solid #E4E5EA",
+                  backgroundColor: "#ECE8DE",
+                  border: "1px solid #D5D2C9",
                   borderRadius: "8px",
                   textAlign: "center",
                 }}
@@ -317,7 +306,7 @@ export function CasefolioV3EmailLayout({
                     fontSize: "30px",
                     fontWeight: 700,
                     letterSpacing: "0.26em",
-                    color: "#0C0D12",
+                    color: "#20211D",
                   }}
                 >
                   {code}
@@ -328,7 +317,7 @@ export function CasefolioV3EmailLayout({
                       margin: "8px 0 0",
                       fontFamily: FONT_MONO,
                       fontSize: "11px",
-                      color: "#6E7382",
+                      color: "#66645E",
                     }}
                   >
                     {codeCaption}
@@ -376,8 +365,8 @@ export function CasefolioV3EmailLayout({
               <Section
                 style={{
                   margin: "0 0 22px",
-                  backgroundColor: "#FAFAFA",
-                  border: "1px solid #E4E5EA",
+                  backgroundColor: "#F4F1EA",
+                  border: "1px solid #D8D4CA",
                   borderRadius: "8px",
                   padding: "4px 16px",
                 }}
@@ -387,7 +376,7 @@ export function CasefolioV3EmailLayout({
                     key={`${row.label}-${idx}`}
                     style={{
                       borderBottom:
-                        idx < specs.length - 1 ? "1px solid #ECEEF2" : "none",
+                        idx < specs.length - 1 ? "1px solid #D5D2C9" : "none",
                       padding: "10px 0",
                     }}
                   >
@@ -400,7 +389,7 @@ export function CasefolioV3EmailLayout({
                           fontWeight: 600,
                           textTransform: "uppercase",
                           letterSpacing: "0.05em",
-                          color: "#6E7382",
+                          color: "#66645E",
                         }}
                       >
                         {row.label}
@@ -413,7 +402,7 @@ export function CasefolioV3EmailLayout({
                           fontSize: "13px",
                           fontWeight: 600,
                           lineHeight: "1.45",
-                          color: "#0C0D12",
+                          color: "#20211D",
                           wordBreak: "break-word",
                         }}
                       >
@@ -430,9 +419,9 @@ export function CasefolioV3EmailLayout({
               <Section
                 style={{
                   margin: "0 0 22px",
-                  backgroundColor: "#FAFAFA",
-                  border: "1px solid #E4E5EA",
-                  borderLeft: "3px solid #2650F2",
+                  backgroundColor: "#F4F1EA",
+                  border: "1px solid #D8D4CA",
+                  borderLeft: "3px solid #20211D",
                   borderRadius: "8px",
                   padding: "14px 16px",
                 }}
@@ -445,7 +434,7 @@ export function CasefolioV3EmailLayout({
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
-                    color: "#2650F2",
+                    color: "#20211D",
                   }}
                 >
                   {quoteBlock.label}
@@ -455,7 +444,7 @@ export function CasefolioV3EmailLayout({
                     margin: 0,
                     fontSize: "14px",
                     lineHeight: "1.6",
-                    color: "#1E2028",
+                    color: "#20211D",
                     whiteSpace: "pre-wrap",
                   }}
                 >
@@ -473,8 +462,8 @@ export function CasefolioV3EmailLayout({
                     style={{
                       marginBottom: idx < highlights.length - 1 ? "10px" : "0",
                       padding: "12px 14px",
-                      backgroundColor: "#FAFAFA",
-                      border: "1px solid #E4E5EA",
+                      backgroundColor: "#F4F1EA",
+                      border: "1px solid #D8D4CA",
                       borderRadius: "8px",
                     }}
                   >
@@ -483,13 +472,13 @@ export function CasefolioV3EmailLayout({
                         margin: "0 0 3px",
                         fontSize: "13px",
                         fontWeight: 700,
-                        color: "#0C0D12",
+                        color: "#20211D",
                       }}
                     >
                       <span
                         style={{
                           fontFamily: FONT_MONO,
-                          color: "#2650F2",
+                          color: "#505246",
                           marginRight: "8px",
                         }}
                       >
@@ -502,7 +491,7 @@ export function CasefolioV3EmailLayout({
                         margin: 0,
                         fontSize: "13px",
                         lineHeight: "1.5",
-                        color: "#525766",
+                        color: "#505246",
                       }}
                     >
                       {step.description}
@@ -518,8 +507,8 @@ export function CasefolioV3EmailLayout({
                 <Button
                   href={ctaUrl}
                   style={{
-                    backgroundColor: "#2650F2",
-                    color: "#FFFFFF",
+                    backgroundColor: "#20211D",
+                    color: "#F3F1E9",
                     borderRadius: "8px",
                     padding: "13px 24px",
                     fontSize: "14px",
@@ -539,7 +528,7 @@ export function CasefolioV3EmailLayout({
                       marginLeft: "14px",
                       fontSize: "13px",
                       fontWeight: 600,
-                      color: "#2650F2",
+                      color: "#20211D",
                       textDecoration: "underline",
                     }}
                   >
@@ -555,12 +544,12 @@ export function CasefolioV3EmailLayout({
                   margin: "0",
                   fontSize: "12px",
                   lineHeight: "1.5",
-                  color: "#6E7382",
+                  color: "#66645E",
                   wordBreak: "break-all",
                 }}
               >
                 Direct link:{" "}
-                <Link href={ctaUrl} style={{ color: "#2650F2", textDecoration: "underline" }}>
+                <Link href={ctaUrl} style={{ color: "#20211D", textDecoration: "underline" }}>
                   {ctaUrl}
                 </Link>
               </Text>
@@ -570,8 +559,8 @@ export function CasefolioV3EmailLayout({
           {/* Architectural Footer */}
           <Section
             style={{
-              backgroundColor: "#FAFAFA",
-              borderTop: "1px solid #E4E5EA",
+              backgroundColor: "#F4F1EA",
+              borderTop: "1px solid #D8D4CA",
               padding: "20px 28px 24px",
             }}
           >
@@ -580,7 +569,7 @@ export function CasefolioV3EmailLayout({
                 margin: "0 0 10px",
                 fontSize: "12px",
                 lineHeight: "1.55",
-                color: "#5A5F70",
+                color: "#505246",
               }}
             >
               {footerNote}
@@ -592,54 +581,54 @@ export function CasefolioV3EmailLayout({
                 fontFamily: FONT_MONO,
                 fontSize: "11px",
                 lineHeight: "1.5",
-                color: "#6E7382",
+                color: "#66645E",
               }}
             >
-              Sent by <strong style={{ color: "#0C0D12" }}>{sender.displayName}</strong> (
+              Sent by <strong style={{ color: "#20211D" }}>{sender.displayName}</strong> (
               {sender.address}) · Reply-To: {effectiveReplyTo}
             </Text>
 
-            <Hr style={{ borderColor: "#E4E5EA", margin: "12px 0" }} />
+            <Hr style={{ borderColor: "#D8D4CA", margin: "12px 0" }} />
 
             <Text
               style={{
                 margin: 0,
                 fontSize: "12px",
                 lineHeight: "1.5",
-                color: "#6E7382",
+                color: "#66645E",
               }}
             >
               <Link
                 href={`${cleanBaseUrl}/dashboard`}
-                style={{ color: "#0C0D12", textDecoration: "none", fontWeight: 600 }}
+                style={{ color: "#20211D", textDecoration: "none", fontWeight: 600 }}
               >
                 Dashboard
               </Link>
               {"  ·  "}
               <Link
                 href={`${cleanBaseUrl}/templates`}
-                style={{ color: "#5A5F70", textDecoration: "none" }}
+                style={{ color: "#505246", textDecoration: "none" }}
               >
                 Templates
               </Link>
               {"  ·  "}
               <Link
                 href={`${cleanBaseUrl}/help`}
-                style={{ color: "#5A5F70", textDecoration: "none" }}
+                style={{ color: "#505246", textDecoration: "none" }}
               >
                 Help Center
               </Link>
               {"  ·  "}
               <Link
                 href={`${cleanBaseUrl}/privacy`}
-                style={{ color: "#5A5F70", textDecoration: "none" }}
+                style={{ color: "#505246", textDecoration: "none" }}
               >
                 Privacy
               </Link>
               {"  ·  "}
               <Link
                 href={`${cleanBaseUrl}/terms`}
-                style={{ color: "#5A5F70", textDecoration: "none" }}
+                style={{ color: "#505246", textDecoration: "none" }}
               >
                 Terms
               </Link>

@@ -20,60 +20,53 @@ export function LandingFaqAccordion({
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="flex w-full flex-col gap-3">
-      {items.map((item, idx) => {
-        const isOpen = openIndex === idx;
-        const panelId = `faq-panel-${idx}`;
-        const triggerId = `faq-trigger-${idx}`;
+    <div className="border-t border-[var(--cf-lp-border)]">
+      {items.map((item, index) => {
+        const isOpen = openIndex === index;
+        const triggerId = `faq-trigger-${index}`;
+        const panelId = `faq-panel-${index}`;
 
         return (
-          <div
+          <article
             key={item.question}
             className={cn(
-              "rounded-xl border transition-all duration-200",
-              isOpen
-                ? "border-[var(--cf-border-strong)] bg-[var(--cf-bg-elevated)]"
-                : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] hover:border-[var(--cf-royal)]",
+              "border-b border-[var(--cf-lp-border)] transition-colors",
+              isOpen && "bg-[color-mix(in_srgb,var(--cf-lp-elevated)_48%,transparent)]",
             )}
           >
-            <h3 className="m-0">
-              <button
-                id={triggerId}
-                type="button"
-                aria-expanded={isOpen}
-                aria-controls={panelId}
-                onClick={() => setOpenIndex(isOpen ? null : idx)}
-                className="v3-body-m-strong focus-visible:ring-ring/40 flex w-full items-center justify-between gap-4 rounded-xl px-5 py-5 text-left text-[var(--cf-text-primary)] outline-none focus-visible:ring-2 lg:px-6"
+            <button
+              id={triggerId}
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+              onClick={() => setOpenIndex(isOpen ? null : index)}
+              className="focus-visible:ring-ring/40 flex w-full cursor-pointer items-center justify-between gap-5 py-6 text-left font-editorial text-[1.125rem] leading-[1.35] font-normal text-[var(--cf-lp-ink)] transition-colors outline-none hover:text-[var(--cf-lp-action)] focus-visible:ring-2"
+            >
+              <span>{item.question}</span>
+              <span
+                aria-hidden="true"
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-[0.3125rem] border border-[var(--cf-lp-border)] bg-[var(--cf-lp-elevated)] text-[var(--cf-lp-ink)]"
               >
-                <span>{item.question}</span>
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "inline-flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-200",
-                    isOpen
-                      ? "bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
-                      : "border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]",
-                  )}
-                >
-                  {isOpen ? (
-                    <Minus className="size-4" strokeWidth={2.25} />
-                  ) : (
-                    <Plus className="size-4" strokeWidth={2.25} />
-                  )}
-                </span>
-              </button>
-            </h3>
-            {isOpen && (
-              <div
-                id={panelId}
-                role="region"
-                aria-labelledby={triggerId}
-                className="v3-body-m px-5 pb-5 text-[var(--cf-text-secondary)] lg:px-6 lg:pb-6"
-              >
+                {isOpen ? (
+                  <Minus className="size-3.5" />
+                ) : (
+                  <Plus className="size-3.5" />
+                )}
+              </span>
+            </button>
+
+            <div
+              id={panelId}
+              role="region"
+              aria-labelledby={triggerId}
+              hidden={!isOpen}
+              className={cn(isOpen ? "pb-6" : "hidden")}
+            >
+              <p className="max-w-[44rem] text-[0.875rem] leading-[1.65] text-[var(--cf-lp-subtle)]">
                 {item.answer}
-              </div>
-            )}
-          </div>
+              </p>
+            </div>
+          </article>
         );
       })}
     </div>

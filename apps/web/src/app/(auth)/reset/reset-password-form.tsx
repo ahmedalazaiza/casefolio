@@ -201,9 +201,12 @@ export function ResetPasswordForm({ token }: { token?: string }) {
         Back to log in
       </Link>
 
-      <div className="flex flex-col gap-1.5">
-        <h1 className="type-heading-l text-foreground">Reset your password</h1>
-        <p className="text-muted-foreground type-body-m">
+      <div className="flex flex-col gap-2">
+        <p className="cf-lp-kicker text-[var(--cf-lp-kicker-muted)]">ACCOUNT RECOVERY</p>
+        <h1 className="font-editorial text-[2.375rem] leading-[1.04] font-normal tracking-[-0.04em] text-[var(--cf-lp-ink)]">
+          Reset your password
+        </h1>
+        <p className="text-[0.8125rem] leading-relaxed text-[var(--cf-lp-subtle)]">
           Enter the email address for your account and we&apos;ll send a reset link.
         </p>
       </div>

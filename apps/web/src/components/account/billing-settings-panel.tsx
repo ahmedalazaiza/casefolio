@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   BILLING_PLAN_CATALOG,
   evaluateSubscriptionLifecycle,
@@ -112,13 +113,12 @@ function KeepFreeProjectSelector({
       <Label htmlFor={id} className="type-caption text-foreground">
         {label}
       </Label>
-      <select
+      <Select
         id={id}
         data-testid={testId}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="border-border bg-elevated text-foreground type-caption h-9 rounded-xl border px-2.5"
       >
         {projects.map((proj) => (
           <option key={proj.id} value={proj.id}>
@@ -127,7 +127,7 @@ function KeepFreeProjectSelector({
             {proj.visibility === "private" ? " · Draft" : ""}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   );
 }
@@ -1625,7 +1625,7 @@ export function BillingSettingsPanel({
                 <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                 <span>
                   Custom URL slug editing locks, subtle Casefolio watermark returns on live links
-                  and PNG/PDF exports, and 2× PNG &amp; Behance exports lock
+                  and PNG/PDF exports, and 2× PNG &amp; full Layerat exports lock
                 </span>
               </li>
             </ul>
@@ -1792,7 +1792,7 @@ export function BillingSettingsPanel({
                   <XCircle className="text-destructive mt-0.5 size-4 shrink-0" />
                   <span>
                     Subtle Casefolio watermark returns on live links and PNG/PDF exports;
-                    2x PNG &amp; Behance exports end
+                    2x PNG &amp; full Layerat exports end
                   </span>
                 </li>
               </ul>

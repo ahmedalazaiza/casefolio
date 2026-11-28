@@ -366,7 +366,7 @@ export async function renderExportWithPlaywright(
       };
     }
 
-    // Behance 1400px vertical slices bundled into .zip (`Spec §5.5`: sliced panels rather than giant canvas)
+    // Layerat full case study 1400px vertical slices bundled into .zip (`Spec §5.5`: sliced panels rather than giant canvas)
     const sliceRanges = computeBehanceSliceRanges(totalHeight, BEHANCE_MAX_SLICE_HEIGHT);
     const entries: Array<{ name: string; data: Uint8Array }> = [];
 
@@ -383,7 +383,7 @@ export async function renderExportWithPlaywright(
       });
       const paddedIndex = String(idx + 1).padStart(2, "0");
       entries.push({
-        name: `behance-slice-${paddedIndex}.png`,
+        name: `layerat-slice-${paddedIndex}.png`,
         data: new Uint8Array(sliceBuffer.buffer, sliceBuffer.byteOffset, sliceBuffer.byteLength),
       });
     }

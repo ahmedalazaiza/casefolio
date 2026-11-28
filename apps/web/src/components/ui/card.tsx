@@ -3,15 +3,15 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-  "flex flex-col rounded-xl border transition-all duration-200",
+  "flex flex-col rounded-[0.5625rem] border transition-colors duration-200",
   {
     variants: {
       variant: {
         default:
-          "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-card-foreground",
-        flat: "border-[var(--cf-border-subtle)] bg-card text-card-foreground",
-        surface: "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-foreground",
-        inverse: "border-inverse bg-inverse text-inverse-foreground",
+          "border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] text-card-foreground",
+        flat: "border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] text-card-foreground",
+        surface: "border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-surface)] text-foreground",
+        inverse: "border-[var(--cf-lp-dark-rule)] bg-[var(--cf-lp-dark)] text-[var(--cf-lp-dark-ink)]",
       },
     },
     defaultVariants: {

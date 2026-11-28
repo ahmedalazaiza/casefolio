@@ -1,10 +1,11 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandLogo, CASEFOLIO_MARK_PATH, CASEFOLIO_WORDMARK_PATHS } from "@/components/ui/brand-logo";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -176,6 +177,41 @@ describe("shadcn/ui primitives & theme class strategy (C-002)", () => {
       expect(content, `Unexpected raw hex color in ${file}`).not.toMatch(hexPattern);
       expect(content, `Unexpected px font size in ${file}`).not.toMatch(pxFontPattern);
       expect(content, `Unexpected hardcoded font name in ${file}`).not.toMatch(fontNamePattern);
+    }
+  });
+
+  it("renders the official Casefolio SVG lockup and mark across light/dark surfaces and bundles brand icon assets", () => {
+    const { container, rerender } = render(<BrandLogo href="/" />);
+    const lockupSvg = container.querySelector('svg[data-slot="casefolio-lockup"]');
+    expect(lockupSvg).not.toBeNull();
+    const paths = lockupSvg?.querySelectorAll("path") ?? [];
+    expect(paths).toHaveLength(1 + CASEFOLIO_WORDMARK_PATHS.length);
+    expect(paths[0]).toHaveAttribute("d", CASEFOLIO_MARK_PATH);
+    expect(paths[0]).toHaveAttribute("fill", "var(--cf-logo-mark)");
+    expect(paths[1]).toHaveAttribute("fill", "var(--cf-logo-wordmark)");
+    expect(screen.getByText("Casefolio")).toBeInTheDocument();
+
+    rerender(<BrandLogo href="/dashboard" inverted compact />);
+    const markSvg = container.querySelector('svg[data-slot="casefolio-mark"]');
+    expect(markSvg).not.toBeNull();
+    const markPath = markSvg?.querySelector("path");
+    expect(markPath).toHaveAttribute("d", CASEFOLIO_MARK_PATH);
+    expect(markPath).toHaveAttribute("fill", "var(--cf-logo-mark-dark-surface)");
+
+    const requiredAssets = [
+      "apps/web/src/app/icon.svg",
+      "apps/web/src/app/apple-icon.png",
+      "apps/web/public/brand/logo-light.svg",
+      "apps/web/public/brand/logo-light-transparent.svg",
+      "apps/web/public/brand/logo-dark.svg",
+      "apps/web/public/brand/logo-dark-transparent.svg",
+      "apps/web/public/brand/logo-dark-transparent.png",
+      "apps/web/public/brand/logo-light-transparent.png",
+      "apps/web/public/brand/mark-light.svg",
+      "apps/web/public/brand/mark-dark.svg",
+    ];
+    for (const relPath of requiredAssets) {
+      expect(existsSync(join(process.cwd(), relPath)), `Missing asset: ${relPath}`).toBe(true);
     }
   });
 });

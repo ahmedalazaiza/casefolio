@@ -62,7 +62,6 @@ test("Phase 7 E2E: Free gating -> Paddle Sandbox checkout upgrades to Pro -> Mer
   const stamp = Date.now();
   const userEmail = `e2e-billing-p7-${stamp}@casefolio.test`;
   const password = "CasefolioBilling2026!";
-  const customSlug = `orbit-billing-${stamp}`;
   let createdUserId: string | null = null;
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
@@ -121,12 +120,14 @@ test("Phase 7 E2E: Free gating -> Paddle Sandbox checkout upgrades to Pro -> Mer
 
     // 2. Free user visits /templates -> Meridian (Pro) is locked
     await page.goto("/templates");
-    const meridianCardFree = page.locator(
-      '[data-slot="library-template-card"][data-template-slug="meridian-pro"]',
-    );
+    const meridianCardFree = page
+      .locator('[data-slot="library-template-card"][data-template-slug="meridian-pro"]')
+      .filter({ visible: true });
     await expect(meridianCardFree).toBeVisible();
     await expect(meridianCardFree).toHaveAttribute("data-locked", "true");
-    await expect(page.getByTestId("pro-lock-badge-meridian-pro")).toBeVisible();
+    await expect(
+      page.getByTestId("pro-lock-badge-meridian-pro").filter({ visible: true }),
+    ).toBeVisible();
 
     // 3. Free user creates & publishes an Orbit case study -> public page shows watermark
     await page.goto("/new");
@@ -147,8 +148,12 @@ test("Phase 7 E2E: Free gating -> Paddle Sandbox checkout upgrades to Pro -> Mer
     await page.getByRole("link", { name: /Publish/i }).click();
     await expect(page).toHaveURL(/\/projects\/[0-9a-f-]+\/share/);
 
-    await page.getByTestId("publish-slug-input").fill(customSlug);
-    await expect(page.getByTestId("slug-availability-status")).toContainText("Available");
+    // Custom URL slugs are Pro/Teams-only: Free publishes with the auto-generated share link.
+    const slugInput = page.getByTestId("publish-slug-input");
+    await expect(slugInput).toHaveAttribute("readonly", "");
+    await expect(page.getByTestId("unlock-custom-url-button")).toBeVisible();
+    await expect(slugInput).not.toHaveValue("");
+    const customSlug = await slugInput.inputValue();
     await page.getByTestId("publish-project-button").click();
     await expect(page.getByTestId("share-status-badge")).toContainText(
       "Published · Public",
@@ -235,12 +240,14 @@ test("Phase 7 E2E: Free gating -> Paddle Sandbox checkout upgrades to Pro -> Mer
 
     // 8. Verify Pro template Meridian is now UNLOCKED & usable in /new
     await page.goto("/templates");
-    const meridianCardPro = page.locator(
-      '[data-slot="library-template-card"][data-template-slug="meridian-pro"]',
-    );
+    const meridianCardPro = page
+      .locator('[data-slot="library-template-card"][data-template-slug="meridian-pro"]')
+      .filter({ visible: true });
     await expect(meridianCardPro).toBeVisible();
     await expect(meridianCardPro).toHaveAttribute("data-locked", "false");
-    await expect(page.getByTestId("pro-lock-badge-meridian-pro")).toHaveCount(0);
+    await expect(
+      page.getByTestId("pro-lock-badge-meridian-pro").filter({ visible: true }),
+    ).toHaveCount(0);
 
     await page.goto("/new?template=meridian-pro");
     await page.getByLabel("Project name *").fill("Meridian — Pro Unlocked SaaS");

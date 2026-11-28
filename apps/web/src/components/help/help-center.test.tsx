@@ -36,7 +36,7 @@ const SAMPLE_ARTICLES: HelpArticle[] = [
     category: "Exports",
     order: 2,
     updatedAt: "2026-04-15",
-    keywords: ["pdf", "behance"],
+    keywords: ["pdf", "layerat"],
     searchableText: "Export high-DPI PNG and paged A4 PDF documents.",
     blocks: [],
   },
@@ -54,7 +54,10 @@ describe("Help Center & Support UI (C-1003 · Figma 2:9899 / 2:10019 / 2:10147)"
     expect(
       screen.getByRole("heading", { level: 1, name: "How can we help?" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Getting started")).toBeInTheDocument();
+    const firstTitle = screen.getByRole("heading", { level: 2, name: "Getting started" });
+    expect(firstTitle).toBeInTheDocument();
+    expect(firstTitle.className).toContain("group-hover:text-[var(--cf-lp-ink)]");
+    expect(firstTitle.className).not.toContain("group-hover:text-[var(--cf-royal)]");
     expect(screen.getByText("Exports")).toBeInTheDocument();
 
     const searchInput = screen.getByRole("searchbox", {

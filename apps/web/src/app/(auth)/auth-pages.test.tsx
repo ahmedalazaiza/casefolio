@@ -32,11 +32,11 @@ describe("Auth UI forms (C-201)", () => {
     const user = userEvent.setup();
     render(<SignInForm />);
 
-    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Continue your story." })).toBeInTheDocument();
     const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
     expect(googleBtn.querySelector('svg[data-slot="google-icon"]')).not.toBeNull();
     expect(googleBtn.querySelectorAll('svg[data-slot="google-icon"] path')).toHaveLength(4);
-    expect(screen.getByRole("button", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Log in to your studio/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Magic link" }));
     expect(screen.getByRole("button", { name: /Send magic link/i })).toBeInTheDocument();

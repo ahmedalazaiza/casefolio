@@ -194,6 +194,9 @@ describe("Puck section components & TemplatePuckRenderer (C-302)", () => {
     expect(container.querySelectorAll('[data-device-model="iphone"]').length).toBe(12);
     // 1 Hero logo + 5 Wireframe screens = 6 plain frames
     expect(container.querySelectorAll('[data-device-model="plain"]').length).toBe(6);
+    // All Cinema starter slots default to theme-reactive gradients rather than static images
+    expect(container.querySelectorAll('[data-slot-state="gradient"]').length).toBe(18);
+    expect(container.querySelector('img[src*="/templates/cinema/"]')).toBeNull();
 
     // Per-slot device override to macbook & tablet renders corresponding hardware frames
     const hybridCinema = structuredClone(cinema);

@@ -337,7 +337,7 @@ export function evaluateEntitlement(
           plan,
           requiredPlan: "pro",
           code: "PRO_EXPORT_FORMAT_LOCKED",
-          message: "Behance image pack export requires Casefolio Pro or Teams.",
+          message: "Full case study Layerat export requires Casefolio Pro or Teams.",
         };
       }
       const monthlyUsed = context.monthlyExportsCount ?? 0;
@@ -355,7 +355,7 @@ export function evaluateEntitlement(
         plan,
         requiredPlan: "pro",
         code: "ALLOWED",
-        message: "Behance 1,400 px slice pack unlocked.",
+        message: "Full case study Layerat pack unlocked.",
       };
     }
 

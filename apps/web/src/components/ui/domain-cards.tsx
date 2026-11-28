@@ -31,15 +31,16 @@ export function ProjectCard({
         data-state="skeleton"
         aria-busy="true"
         className={cn(
-          "flex flex-col gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4",
+          "flex flex-col overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)]",
           className,
         )}
         {...props}
       >
-        <div className="bg-sunken h-48 w-full animate-pulse rounded-xl" />
-        <div className="flex flex-col gap-2 px-1 py-1">
+        <div className="bg-sunken h-44 w-full animate-pulse" />
+        <div className="flex flex-col gap-2 p-4">
+          <div className="bg-sunken h-3 w-16 animate-pulse rounded-xs" />
           <div className="bg-sunken h-4 w-3/5 animate-pulse rounded-xs" />
-          <div className="bg-sunken h-3.5 w-2/5 animate-pulse rounded-xs" />
+          <div className="bg-sunken h-3 w-2/5 animate-pulse rounded-xs" />
         </div>
       </article>
     );
@@ -50,67 +51,56 @@ export function ProjectCard({
       data-slot="project-card"
       data-state="default"
       className={cn(
-        "group flex min-w-0 flex-col gap-3.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 text-card-foreground transition-all duration-200 hover:border-[var(--cf-royal)]",
+        "group flex min-w-0 flex-col overflow-hidden rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] text-card-foreground transition-colors duration-200 hover:border-[var(--cf-lp-ink)]",
         className,
       )}
       {...props}
     >
-      <div className="overflow-hidden rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)]">
-        <div
-          aria-hidden="true"
-          className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-2"
-        >
-          <span className="inline-flex items-center gap-1.5 font-mono text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-primary)] uppercase">
-            <span className="size-1.5 rounded-full bg-[var(--cf-royal)]" />
-            <span>Preview</span>
-          </span>
-          <span className="text-tertiary font-mono text-[0.6875rem]">
-            casefolio.app/p/story
-          </span>
-        </div>
-
-        <div className="bg-sunken relative h-44 w-full overflow-hidden">
-          {thumbnailUrl ? (
-            <img
-              loading="lazy"
-              decoding="async"
-              src={thumbnailUrl}
-              alt={title}
-              className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-            />
-          ) : (
-            <>
-              <span
-                aria-hidden="true"
-                className="font-display absolute top-4 left-4 text-2xl font-bold text-[var(--cf-text-primary)] select-none"
-              >
-                01
+      <div className="relative h-44 w-full overflow-hidden border-b border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-lime)] p-4 text-[var(--cf-lp-on-lime)]">
+        {thumbnailUrl ? (
+          <img
+            loading="lazy"
+            decoding="async"
+            src={thumbnailUrl}
+            alt={title}
+            className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-between gap-3">
+            <div className="flex flex-col justify-between self-stretch">
+              <span className="font-mono text-[0.5625rem] font-medium tracking-[0.1em] text-[var(--cf-lp-on-lime)] uppercase opacity-75">
+                CASEFOLIO / STORY
               </span>
-              <div
-                aria-hidden="true"
-                className="absolute right-32 bottom-0 h-28 w-24 rounded-t-xl bg-[var(--cf-royal)] transition-transform duration-200 group-hover:-translate-y-1"
-              />
-              <div
-                aria-hidden="true"
-                className="absolute right-5 bottom-0 flex h-32 w-26 flex-col gap-2 rounded-t-xl border border-b-0 border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-2.5 transition-transform duration-200 group-hover:-translate-y-1.5"
-              >
-                <span className="h-2 w-10 rounded-full bg-[var(--cf-bg-accent)]" />
-                <span className="bg-sunken h-1.5 w-full rounded-full" />
-                <span className="bg-sunken h-1.5 w-3/4 rounded-full" />
-              </div>
-            </>
-          )}
-        </div>
+              <p className="font-editorial max-w-[10rem] text-[1.375rem] leading-[1.02] tracking-[-0.03em] text-[var(--cf-lp-on-lime)]">
+                Move freely. Live fully.
+              </p>
+            </div>
+            <div
+              aria-hidden="true"
+              className="flex h-36 w-24 shrink-0 rotate-3 flex-col justify-between rounded-[0.625rem] border border-[var(--cf-lp-ink)] bg-[var(--cf-lp-card)] p-2.5 transition-transform duration-200 group-hover:-translate-y-1"
+            >
+              <span className="font-mono text-[0.5rem] tracking-[0.08em] text-[var(--cf-lp-subtle)] uppercase">
+                MOBILE
+              </span>
+              <span className="h-2 w-10 rounded-full bg-[var(--cf-lp-dark)]" />
+              <span className="h-1.5 w-full rounded-full bg-[var(--cf-bg-surface)]" />
+              <span className="h-5 w-full rounded-[0.25rem] bg-[var(--cf-lp-dark)]" />
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="flex min-w-0 flex-col gap-1 px-1 pb-0.5">
+      <div className="flex min-w-0 flex-col gap-1.5 p-4">
+        <span className="font-mono text-[0.625rem] tracking-[0.11em] text-[var(--cf-lp-kicker-muted)] uppercase">
+          CASE STUDY
+        </span>
         <div className="flex min-w-0 items-center justify-between gap-2">
-          <h3 className="v3-heading-s min-w-0 truncate text-[var(--cf-text-primary)] transition-colors group-hover:text-[var(--cf-royal-text)]">
+          <h3 className="v3-dashboard-card-title min-w-0 truncate text-[var(--cf-lp-ink)] transition-colors group-hover:underline">
             {title}
           </h3>
           <Badge tone={statusTone}>{statusLabel}</Badge>
         </div>
-        <p className="text-muted-foreground type-body-s truncate">{subtitle}</p>
+        <p className="truncate text-[0.75rem] text-[var(--cf-lp-subtle)]">{subtitle}</p>
       </div>
     </article>
   );
@@ -148,13 +138,13 @@ export function TemplateTypeCard({
       data-state={state}
       aria-disabled={isComingSoon ? true : undefined}
       className={cn(
-        "group relative flex flex-col justify-between gap-4 rounded-xl border p-5 transition-colors duration-200",
+        "group relative flex flex-col justify-between gap-4 rounded-[0.5625rem] border p-5 transition-colors duration-200",
         state === "default" &&
-          "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:border-[var(--cf-royal)]",
+          "border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] text-[var(--cf-text-primary)] hover:border-[var(--cf-lp-ink)]",
         isSelected &&
-          "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]",
+          "border-[var(--cf-lp-ink)] bg-[var(--cf-lp-lime)] text-[var(--cf-lp-on-lime)]",
         isComingSoon &&
-          "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-muted-foreground cursor-not-allowed border-dashed",
+          "border-[var(--cf-lp-card-border)] bg-[var(--cf-bg-surface)] text-muted-foreground cursor-not-allowed border-dashed",
         className,
       )}
       {...props}
@@ -163,11 +153,11 @@ export function TemplateTypeCard({
         <span
           aria-hidden="true"
           className={cn(
-            "inline-flex size-10 items-center justify-center rounded-lg transition-colors",
+            "inline-flex size-10 items-center justify-center rounded-xl transition-colors",
             state === "default" &&
               "border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]",
             isSelected &&
-              "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]",
+              "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]",
             isComingSoon && "bg-[var(--cf-bg-elevated)] text-muted-foreground",
           )}
         >
@@ -177,7 +167,7 @@ export function TemplateTypeCard({
         {isSelected ? (
           <span
             aria-label="Selected"
-            className="inline-flex size-6 items-center justify-center rounded-full bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+            className="inline-flex size-6 items-center justify-center rounded-full bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
           >
             <Check className="size-3.5 stroke-[2.5]" />
           </span>
@@ -186,7 +176,7 @@ export function TemplateTypeCard({
         ) : (
           <span
             aria-hidden="true"
-            className="border-border-strong inline-flex size-6 rounded-full border transition-colors group-hover:border-[var(--cf-royal)]"
+            className="border-border-strong inline-flex size-6 rounded-full border transition-colors group-hover:border-[var(--cf-lp-ink)]"
           />
         )}
       </div>
@@ -195,41 +185,19 @@ export function TemplateTypeCard({
         <h3
           className={cn(
             "v3-heading-s",
-            isSelected
-              ? "text-[var(--cf-text-on-royal)]"
-              : isComingSoon
-                ? "text-muted-foreground"
-                : "text-[var(--cf-text-primary)]",
+            isComingSoon ? "text-muted-foreground" : "text-[var(--cf-text-primary)]",
           )}
         >
           {title}
         </h3>
-        <p
-          className={cn(
-            "v3-body-s",
-            isSelected
-              ? "text-[var(--cf-text-on-royal-muted)]"
-              : "text-muted-foreground",
-          )}
-        >
-          {description}
-        </p>
+        <p className="v3-body-s text-muted-foreground">{description}</p>
       </div>
 
-      <div
-        className={cn(
-          "flex items-center justify-between border-t pt-4",
-          isSelected ? "border-[var(--cf-border-on-royal)]" : "border-[var(--cf-border-subtle)]",
-        )}
-      >
+      <div className="flex items-center justify-between border-t border-[var(--cf-border-subtle)] pt-4">
         <span
           className={cn(
-            "v3-label inline-flex items-center gap-1.5 uppercase",
-            isSelected
-              ? "text-[var(--cf-bg-accent)]"
-              : isComingSoon
-                ? "text-muted-foreground"
-                : "text-[var(--cf-royal-text)]",
+            "inline-flex items-center gap-1.5 text-xs font-medium",
+            isComingSoon ? "text-muted-foreground" : "text-[var(--cf-text-secondary)]",
           )}
         >
           <span
@@ -237,10 +205,10 @@ export function TemplateTypeCard({
             className={cn(
               "size-1.5 rounded-full",
               isSelected
-                ? "bg-[var(--cf-bg-accent)]"
+                ? "bg-[var(--cf-lp-ink)]"
                 : isComingSoon
                   ? "bg-muted-foreground"
-                  : "bg-[var(--cf-royal)]",
+                  : "bg-[var(--cf-text-tertiary)]",
             )}
           />
           <span>{resolvedFooter}</span>
@@ -248,11 +216,6 @@ export function TemplateTypeCard({
       </div>
     </div>
   );
-}
-
-export interface PlanSpecItem {
-  label: string;
-  value: string;
 }
 
 export interface PlanCardProps extends ComponentProps<"section"> {
@@ -263,11 +226,11 @@ export interface PlanCardProps extends ComponentProps<"section"> {
   scopeLabel?: string;
   billingNote?: string;
   priceExtra?: ReactNode;
-  specs?: readonly PlanSpecItem[];
   description: string;
   ctaLabel?: string;
   ctaHref?: string;
   ctaDisabled?: boolean;
+  alignCtaRow?: boolean;
   featuresHeading?: string;
   features: readonly string[];
   excludedFeatures?: readonly string[];
@@ -284,11 +247,11 @@ export function PlanCard({
   scopeLabel,
   billingNote,
   priceExtra,
-  specs,
   description,
   ctaLabel = "Choose plan",
   ctaHref,
   ctaDisabled = false,
+  alignCtaRow = false,
   featuresHeading,
   features,
   excludedFeatures,
@@ -300,131 +263,132 @@ export function PlanCard({
 }: PlanCardProps) {
   const resolvedBadge = badgeLabel ?? (highlighted ? "Popular" : "Monthly");
 
+  const nonHighlightedBtnClasses =
+    "border border-[var(--cf-lp-plan-btn-border)] bg-[var(--cf-lp-plan-btn-bg)] text-[var(--cf-lp-plan-btn-fg)] hover:border-[var(--cf-lp-ink)] hover:bg-[var(--cf-lp-plan-btn-hover-bg)]";
+
   return (
     <section
       data-slot="plan-card"
       data-highlighted={highlighted ? "true" : "false"}
       className={cn(
-        "relative flex h-full min-w-0 flex-col justify-between gap-6 rounded-xl border p-6 transition-all duration-300 lg:p-6 xl:p-7",
+        "relative flex h-full min-w-0 flex-col rounded-[0.625rem] border p-6 transition-colors duration-200 lg:p-7",
+        alignCtaRow ? "lg:row-span-4 lg:grid lg:grid-rows-subgrid" : "justify-between",
         highlighted
-          ? "v3-pattern-dots-dark border-[var(--cf-royal)]"
-          : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:border-[var(--cf-royal)]",
+          ? "border-[var(--cf-lp-plan-pro-border)] bg-[var(--cf-lp-plan-pro-bg)] text-[var(--cf-lp-dark-ink)] shadow-[0_18px_40px_-14px_rgba(32,33,29,0.45)]"
+          : "border-[var(--cf-lp-plan-card-border)] bg-[var(--cf-lp-plan-card-bg)] text-[var(--cf-text-primary)] shadow-[0_1px_2px_rgba(32,33,29,0.06)] hover:border-[var(--cf-lp-ink)]",
         className,
       )}
       {...props}
     >
-      <div className="flex flex-col gap-5">
-        {/* Top identity + price header */}
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2.5">
-            <div className="flex min-w-0 items-center gap-2.5">
-              {icon && (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "inline-flex size-10 shrink-0 items-center justify-center rounded-xl [&_svg]:size-4.5",
-                    highlighted
-                      ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
-                      : "border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]",
-                  )}
-                >
-                  {icon}
-                </span>
-              )}
-              <h3
+      {/* Row 1: Identity, Scope & Headline Price */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {icon && (
+              <span
+                aria-hidden="true"
                 className={cn(
-                  "v3-heading-m truncate",
-                  highlighted ? "text-[var(--cf-text-inverse)]" : "text-[var(--cf-text-primary)]",
+                  "inline-flex size-9 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-4",
+                  highlighted
+                    ? "border-[var(--cf-lp-dark-rule)] bg-[var(--cf-lp-dark-elevated)] text-[var(--cf-lp-lime)]"
+                    : "border-[var(--cf-lp-border)] bg-[var(--cf-lp-surface)] text-[var(--cf-lp-ink)]",
                 )}
               >
-                {name}
-              </h3>
-            </div>
-            {highlighted ? (
-              <span className="v3-label inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--cf-bg-accent)] px-3 py-1 text-[var(--cf-text-on-accent)] uppercase">
-                <span
-                  aria-hidden="true"
-                  className="size-1.5 rounded-full bg-[var(--cf-text-on-accent)]"
-                />
-                <span>{resolvedBadge}</span>
-              </span>
-            ) : (
-              <span className="v3-label inline-flex shrink-0 items-center rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3 py-1 text-[var(--cf-text-primary)] uppercase">
-                {resolvedBadge}
+                {icon}
               </span>
             )}
-          </div>
-
-          {scopeLabel && (
-            <p
+            <h3
               className={cn(
-                "type-caption",
-                highlighted
-                  ? "text-[var(--cf-text-inverse-muted)]"
-                  : "text-muted-foreground",
+                "v3-heading-m truncate",
+                highlighted ? "text-[var(--cf-lp-dark-ink)]" : "text-[var(--cf-lp-ink)]",
               )}
             >
-              {scopeLabel}
-            </p>
-          )}
-
-          <div className="flex flex-col gap-1 pt-1">
-            <div className="flex flex-wrap items-baseline gap-1.5">
-              <span
-                data-testid="plan-card-price"
-                className={cn(
-                  "font-display text-3xl leading-none font-bold tracking-tight tabular-nums sm:text-4xl xl:text-5xl",
-                  highlighted ? "text-[var(--cf-text-inverse)]" : "text-[var(--cf-text-primary)]",
-                )}
-              >
-                {price}
-              </span>
-              {period && (
-                <span
-                  data-testid="plan-card-period"
-                  className={cn(
-                    "v3-body-s",
-                    highlighted
-                      ? "text-[var(--cf-text-inverse-muted)]"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {period}
-                </span>
-              )}
-            </div>
-            {billingNote && (
-              <p
-                className={cn(
-                  "type-caption",
-                  highlighted
-                    ? "text-[var(--cf-text-inverse-muted)]"
-                    : "text-muted-foreground",
-                )}
-              >
-                {billingNote}
-              </p>
-            )}
-            {priceExtra}
+              {name}
+            </h3>
           </div>
+          {highlighted ? (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--cf-lp-lime)] px-3 py-1 text-xs font-semibold text-[var(--cf-lp-on-lime)]">
+              <span>{resolvedBadge}</span>
+            </span>
+          ) : (
+            <span className="inline-flex shrink-0 items-center rounded-full border border-[var(--cf-lp-border)] bg-[var(--cf-lp-surface)] px-3 py-1 text-xs font-medium text-[var(--cf-lp-muted)]">
+              {resolvedBadge}
+            </span>
+          )}
         </div>
 
+        {scopeLabel && (
+          <p
+            className={cn(
+              "type-caption",
+              highlighted ? "text-[var(--cf-lp-dark-muted)]" : "text-[var(--cf-lp-muted)]",
+            )}
+          >
+            {scopeLabel}
+          </p>
+        )}
+
+        <div className="flex flex-col gap-1.5 pt-1">
+          <div className="flex flex-wrap items-baseline gap-1.5">
+            <span
+              data-testid="plan-card-price"
+              className={cn(
+                "font-editorial text-4xl leading-none font-normal tracking-tight tabular-nums sm:text-5xl",
+                highlighted ? "text-[var(--cf-lp-dark-ink)]" : "text-[var(--cf-lp-ink)]",
+              )}
+            >
+              {price}
+            </span>
+            {period && (
+              <span
+                data-testid="plan-card-period"
+                className={cn(
+                  "v3-body-s",
+                  highlighted ? "text-[var(--cf-lp-dark-muted)]" : "text-[var(--cf-lp-muted)]",
+                )}
+              >
+                {period}
+              </span>
+            )}
+          </div>
+          {billingNote && (
+            <p
+              className={cn(
+                "type-caption leading-snug",
+                highlighted ? "text-[var(--cf-lp-dark-muted)]" : "text-[var(--cf-lp-muted)]",
+              )}
+            >
+              {billingNote}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: Description & Optional Inline Control (e.g. Teams Seat Stepper) */}
+      <div className="flex flex-col justify-between gap-4 pt-4 pb-5">
         <p
           className={cn(
-            "v3-body-s",
-            highlighted
-              ? "text-[var(--cf-text-inverse-muted)]"
-              : "text-muted-foreground",
+            "v3-body-s leading-relaxed",
+            highlighted ? "text-[var(--cf-lp-dark-list)]" : "text-[var(--cf-lp-muted)]",
           )}
         >
           {description}
         </p>
+        {priceExtra}
+      </div>
 
+      {/* Row 3: Aligned Primary CTA Button & Section Divider */}
+      <div
+        className={cn(
+          "border-b pb-6",
+          highlighted ? "border-[var(--cf-lp-dark-rule)]" : "border-[var(--cf-lp-border)]",
+        )}
+      >
         {ctaHref && !onSelectPlan && !ctaDisabled ? (
           <Button
-            variant={highlighted ? "lime" : "default"}
+            variant={highlighted ? "lime" : "secondary"}
             size="lg"
-            className="w-full"
+            className={cn("w-full", !highlighted && nonHighlightedBtnClasses)}
             asChild
           >
             <Link href={ctaHref}>
@@ -435,9 +399,9 @@ export function PlanCard({
         ) : (
           <Button
             type="button"
-            variant={highlighted ? "lime" : "default"}
+            variant={highlighted ? "lime" : "secondary"}
             size="lg"
-            className="w-full"
+            className={cn("w-full", !highlighted && nonHighlightedBtnClasses)}
             disabled={ctaDisabled}
             onClick={onSelectPlan}
           >
@@ -445,109 +409,67 @@ export function PlanCard({
             {!ctaDisabled && <ArrowRight className="size-4" />}
           </Button>
         )}
+      </div>
 
-        {specs && specs.length > 0 && (
-          <dl className="grid grid-cols-2 gap-2.5">
-            {specs.map((spec) => (
-              <div
-                key={spec.label}
-                className={cn(
-                  "rounded-xl border px-3.5 py-2.5",
-                  highlighted
-                    ? "border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)]"
-                    : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)]",
-                )}
-              >
-                <dt
-                  className={cn(
-                    "type-caption",
-                    highlighted
-                      ? "text-[var(--cf-text-inverse-muted)]"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {spec.label}
-                </dt>
-                <dd
-                  className={cn(
-                    "type-body-s-strong mt-0.5 tabular-nums",
-                    highlighted
-                      ? "text-[var(--cf-text-inverse)]"
-                      : "text-[var(--cf-text-primary)]",
-                  )}
-                >
-                  {spec.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
+      {/* Row 4: Features List & Optional Excluded Section */}
+      <div className="flex flex-1 flex-col gap-3.5 pt-5">
+        {featuresHeading && (
+          <p
+            className={cn(
+              "type-overline font-semibold",
+              highlighted
+                ? "text-[var(--cf-lp-lime)]"
+                : "text-[var(--cf-lp-ink)]",
+            )}
+          >
+            {featuresHeading}
+          </p>
         )}
 
-        <div
-          className={cn(
-            "flex flex-col gap-3 border-t pt-5",
-            highlighted
-              ? "border-[var(--cf-border-on-royal)]"
-              : "border-[var(--cf-border-subtle)]",
-          )}
-        >
-          {featuresHeading && (
+        <ul className="flex flex-col gap-2.5">
+          {features.map((feature) => (
+            <li key={feature} className="flex items-start gap-2.5">
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full",
+                  highlighted
+                    ? "bg-[var(--cf-lp-lime)] text-[var(--cf-lp-on-lime)]"
+                    : "border border-[var(--cf-lp-green-pill-bg)] bg-[var(--cf-lp-green-pill-bg)] text-[var(--cf-lp-green-pill-fg)]",
+                )}
+              >
+                <Check className="size-3 stroke-[2.5]" />
+              </span>
+              <span
+                className={cn(
+                  "v3-body-s leading-snug",
+                  highlighted
+                    ? "text-[var(--cf-lp-dark-ink)]"
+                    : "text-[var(--cf-lp-ink)]",
+                )}
+              >
+                {feature}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {excludedFeatures && excludedFeatures.length > 0 && (
+          <div
+            className={cn(
+              "mt-auto flex flex-col gap-2 border-t pt-4",
+              highlighted
+                ? "border-[var(--cf-lp-dark-rule)]"
+                : "border-[var(--cf-lp-border)]",
+            )}
+          >
             <p
               className={cn(
                 "type-overline",
                 highlighted
-                  ? "text-[var(--cf-bg-accent)]"
-                  : "text-[var(--cf-royal-text)]",
+                  ? "text-[var(--cf-lp-dark-muted)]"
+                  : "text-muted-foreground",
               )}
-            >
-              {featuresHeading}
-            </p>
-          )}
-
-          <ul className="flex flex-col gap-2.5">
-            {features.map((feature) => (
-              <li key={feature} className="flex items-start gap-2.5">
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full",
-                    highlighted
-                      ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
-                      : "bg-[var(--cf-royal-soft)] text-[var(--cf-royal-text)]",
-                  )}
-                >
-                  <Check className="size-3 stroke-[2.5]" />
-                </span>
-                <span
-                  className={cn(
-                    "v3-body-s",
-                    highlighted
-                      ? "text-[var(--cf-text-inverse)]"
-                      : "text-[var(--cf-text-primary)]",
-                  )}
-                >
-                  {feature}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          {excludedFeatures && excludedFeatures.length > 0 && (
-            <div
-              className={cn(
-                "mt-2 flex flex-col gap-2 border-t pt-4",
-                highlighted
-                  ? "border-[var(--cf-border-on-royal)]"
-                  : "border-[var(--cf-border-subtle)]",
-              )}
-            >
-              <p
-                className={cn(
-                  "type-overline",
-                  highlighted
-                    ? "text-[var(--cf-text-inverse-muted)]"
-                    : "text-muted-foreground",
-                )}
               >
                 Not included
               </p>
@@ -580,7 +502,6 @@ export function PlanCard({
               </ul>
             </div>
           )}
-        </div>
       </div>
     </section>
   );

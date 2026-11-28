@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input, InputField } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { authClient } from "@/lib/auth/client";
 import { createOrganizationSchema, inviteTeamMemberSchema } from "@/lib/auth/schemas";
 import {
@@ -1299,7 +1300,7 @@ export function TeamWorkspaceClient({
             {organizations.length > 1 && (
               <label className="flex items-center gap-2">
                 <span className="text-tertiary type-caption">Switch team</span>
-                <select
+                <Select
                   aria-label="Active team workspace"
                   value={currentOrg.id}
                   onChange={async (e) => {
@@ -1311,14 +1312,14 @@ export function TeamWorkspaceClient({
                     await switchActiveWorkspaceSession(nextId);
                     router.refresh();
                   }}
-                  className="border-border bg-elevated text-foreground h-8 rounded-lg border px-2.5 text-xs font-semibold"
+                  className="h-9 w-auto text-xs font-semibold"
                 >
                   {organizations.map((org) => (
                     <option key={org.id} value={org.id}>
                       {org.name} ({formatRoleLabel(org.myRole)})
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             )}
           </div>
@@ -1583,7 +1584,7 @@ export function TeamWorkspaceClient({
 
                     <div className="flex flex-wrap items-center gap-2">
                       {canChangeRole ? (
-                        <select
+                        <Select
                           aria-label={`Role for ${member.name}`}
                           value={memberRole}
                           disabled={busyMemberId === member.userId}
@@ -1593,11 +1594,11 @@ export function TeamWorkspaceClient({
                               e.target.value as "admin" | "member",
                             )
                           }
-                          className="border-border bg-elevated text-foreground type-caption h-8 rounded-lg border px-2.5"
+                          className="h-9 w-auto px-2.5 text-xs font-medium"
                         >
                           <option value="admin">Admin</option>
                           <option value="member">Member</option>
-                        </select>
+                        </Select>
                       ) : (
                         <Badge tone={isMemberOwner ? "accent" : "neutral"}>
                           {formatRoleLabel(member.role)}
@@ -1720,16 +1721,15 @@ export function TeamWorkspaceClient({
                   <label htmlFor="invite-role-select" className="text-foreground type-caption">
                     Role
                   </label>
-                  <select
+                  <Select
                     id="invite-role-select"
                     value={isOwner ? inviteRole : "member"}
                     disabled={!isOwner}
                     onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                    className="border-input bg-elevated text-foreground focus-visible:ring-ring/40 h-10 rounded-xl border px-3 text-sm outline-none focus-visible:ring-2"
                   >
                     <option value="member">Member</option>
                     {isOwner && <option value="admin">Admin</option>}
-                  </select>
+                  </Select>
                 </div>
 
                 <Button type="submit" disabled={inviting}>
@@ -1959,11 +1959,10 @@ export function TeamWorkspaceClient({
                   <label htmlFor="owner-transfer-select" className="text-foreground type-caption">
                     New workspace Owner
                   </label>
-                  <select
+                  <Select
                     id="owner-transfer-select"
                     value={transferTargetUserId}
                     onChange={(e) => setTransferTargetUserId(e.target.value)}
-                    className="border-input bg-elevated text-foreground type-body-s h-10 rounded-xl border px-3"
                   >
                     <option value="">Select an existing member...</option>
                     {eligibleTransferCandidates.map((m) => (
@@ -1971,7 +1970,7 @@ export function TeamWorkspaceClient({
                         {m.name} ({m.email})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <Button
                   type="submit"

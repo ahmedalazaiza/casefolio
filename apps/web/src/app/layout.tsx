@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import {
   Bricolage_Grotesque,
+  DM_Mono,
   Geist,
   Instrument_Serif,
   JetBrains_Mono,
+  Manrope,
   Plus_Jakarta_Sans,
 } from "next/font/google";
 import type { ReactNode } from "react";
@@ -11,6 +13,20 @@ import { PostHogProvider } from "@/components/analytics/posthog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";
 import "@/styles/globals.css";
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-dm-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+});
 
 const bricolageGrotesque = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -48,7 +64,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://casefolio.app"),
   title: "Casefolio — Turn Finished Projects Into Publishable Case Studies",
   description:
-    "Pick a template made by the Casefolio team, drop in your screens, tweak colors and text — then publish a page or export PNG & PDF.",
+    "Turn raw screens into polished case studies—without wrestling with grids, formats, or another blank canvas.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -57,7 +73,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       data-scroll-behavior="smooth"
       suppressHydrationWarning
-      className={`${bricolageGrotesque.variable} ${plusJakartaSans.variable} ${instrumentSerif.variable} ${geistSans.variable} ${jetbrainsMono.variable}`}
+      className={`${manrope.variable} ${dmMono.variable} ${bricolageGrotesque.variable} ${plusJakartaSans.variable} ${instrumentSerif.variable} ${geistSans.variable} ${jetbrainsMono.variable}`}
     >
       <body>
         <ThemeProvider>

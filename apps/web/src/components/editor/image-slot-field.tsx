@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   persistAssetCropClient,
   UploadClientError,
@@ -569,7 +570,7 @@ export function ImageSlotField({
           <Label htmlFor={`slot-device-${effectiveSlotKey}`} className="text-tertiary type-caption">
             Device mockup
           </Label>
-          <select
+          <Select
             id={`slot-device-${effectiveSlotKey}`}
             data-testid={`slot-device-select-${effectiveSlotKey}`}
             value={currentValue.device ?? ""}
@@ -586,7 +587,6 @@ export function ImageSlotField({
               };
               onChange(nextValue);
             }}
-            className="border-border bg-background text-foreground type-body-s focus-visible:ring-ring/40 h-9 w-full rounded-lg border px-2.5 outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="">
               Template default ({slotDefinition?.device ?? "auto"})
@@ -598,7 +598,7 @@ export function ImageSlotField({
             <option value="macbook">MacBook Pro</option>
             <option value="browser">Browser Window</option>
             <option value="none">No Frame (Plain)</option>
-          </select>
+          </Select>
         </div>
       )}
 

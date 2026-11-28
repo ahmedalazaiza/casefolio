@@ -13,7 +13,7 @@ import {
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { ScrollRise } from "@/components/marketing/motion";
-import { PlanCard, type PlanSpecItem } from "@/components/ui/domain-cards";
+import { PlanCard } from "@/components/ui/domain-cards";
 import {
   formatUsdFromCents,
   TEAMS_CALCULATOR_DEFAULT_SEATS,
@@ -27,11 +27,6 @@ import {
   mergeBillingCatalogWithCms,
   type SiteCmsContent,
 } from "@/lib/cms/schema";
-import {
-  FREE_MONTHLY_EXPORT_LIMIT,
-  PRO_MONTHLY_EXPORT_LIMIT,
-  TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT,
-} from "@/lib/exports/types";
 import { cn } from "@/lib/utils";
 
 const DISPLAY_PLAN_ORDER: readonly ActivePlanTier[] = ["free", "pro", "team"];
@@ -102,21 +97,21 @@ export function LandingPricingSection({
 
   return (
     <div className="flex w-full flex-col items-center gap-8">
-      {/* Studio Command Billing Interval Dock */}
+      {/* Calm Pill Billing Interval Switch */}
       <div
         role="group"
         aria-label="Billing interval"
-        className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-1.5"
+        className="inline-flex items-center gap-1 rounded-full border border-[var(--cf-lp-border-strong)] bg-[var(--cf-lp-cream-elevated)] p-1 shadow-[0_1px_2px_rgba(32,33,29,0.06)]"
       >
         <button
           type="button"
           aria-pressed={interval === "monthly"}
           onClick={() => setInterval("monthly")}
           className={cn(
-            "focus-visible:ring-ring/40 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-2",
+            "focus-visible:ring-ring/40 rounded-full px-5 py-2 text-sm font-medium transition-colors outline-none focus-visible:ring-2",
             interval === "monthly"
-              ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-              : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+              ? "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
+              : "text-[var(--cf-lp-muted)] hover:text-[var(--cf-lp-ink)]",
           )}
         >
           Monthly
@@ -126,25 +121,32 @@ export function LandingPricingSection({
           aria-pressed={interval === "yearly"}
           onClick={() => setInterval("yearly")}
           className={cn(
-            "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-2",
+            "focus-visible:ring-ring/40 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-colors outline-none focus-visible:ring-2",
             interval === "yearly"
-              ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-              : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
+              ? "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
+              : "text-[var(--cf-lp-muted)] hover:text-[var(--cf-lp-ink)]",
           )}
         >
           <span>Annual</span>
-          <span className="rounded-lg bg-[var(--cf-bg-accent)] px-2.5 py-0.5 text-[0.6875rem] font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
+              interval === "yearly"
+                ? "bg-[var(--cf-lp-green-pill-bg)] text-[var(--cf-lp-green-pill-fg)]"
+                : "border border-[var(--cf-lp-border)] bg-[var(--cf-lp-surface)] text-[var(--cf-lp-ink)]",
+            )}
+          >
             {cmsPricing.annualBadgeLabel}
           </span>
         </button>
       </div>
 
-      {/* 3 Plan Cards: Free (Left) · Pro Most Popular (Center Royal Blue) · Teams Dynamic Seats (Right) */}
+      {/* 3 Plan Cards: Free (Left) · Pro Most Popular (Center Highlighted) · Teams Dynamic Seats (Right) */}
       <ScrollRise
         data-testid="paid-plan-cards-grid"
         stagger
         y={20}
-        className="grid w-full grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6"
+        className="grid w-full grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:grid-rows-[auto_auto_auto_1fr] lg:gap-x-6 lg:gap-y-0"
       >
         {DISPLAY_PLAN_ORDER.map((tier) => {
           const plan = catalog[tier];
@@ -191,39 +193,6 @@ export function LandingPricingSection({
             ? "Included in Free"
             : plan.includesLabel || (tier === "pro" ? "Includes everything in Free, plus" : "Includes everything in Pro, plus");
 
-          const specs: readonly PlanSpecItem[] = isFree
-            ? [
-                {
-                  label: "Case studies",
-                  value: plan.maxCaseStudies < 0 ? "Unlimited" : `${plan.maxCaseStudies} lifetime`,
-                },
-                { label: "Share link", value: plan.customSlugEnabled ? "/p/your-slug" : "Auto URL" },
-                { label: "Exports / mo", value: `${FREE_MONTHLY_EXPORT_LIMIT}/mo (1×)` },
-                { label: "Cloud storage", value: "250 MB" },
-              ]
-            : tier === "pro"
-              ? [
-                  {
-                    label: "Case studies",
-                    value: plan.maxCaseStudies < 0 ? "Unlimited" : `Up to ${plan.maxCaseStudies} active`,
-                  },
-                  { label: "Custom URL", value: plan.customSlugEnabled ? "/p/your-slug" : "Auto URL" },
-                  { label: "Exports / mo", value: `${PRO_MONTHLY_EXPORT_LIMIT}/mo` },
-                  { label: "Cloud storage", value: "5 GB" },
-                ]
-              : [
-                  { label: "Team seats", value: `${teamSeats} seats` },
-                  {
-                    label: "Case studies",
-                    value: plan.maxCaseStudies < 0 ? "Unlimited" : `${plan.maxCaseStudies} shared`,
-                  },
-                  {
-                    label: "Pooled exports",
-                    value: `${teamSeats * TEAMS_MONTHLY_EXPORT_LIMIT_PER_SEAT}/mo`,
-                  },
-                  { label: "Pooled storage", value: `${teamSeats * 10} GB` },
-                ];
-
           const isCurrent =
             currentTier === tier || (isTeams && currentTier === "plus");
           const ctaLabel = isCurrent
@@ -250,19 +219,14 @@ export function LandingPricingSection({
             isTeams && teamCalc.ok ? (
               <div
                 data-testid="team-card-seat-stepper"
-                className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 py-2.5"
+                className="flex items-center justify-between gap-3 rounded-[0.4375rem] border border-[var(--cf-lp-border)] bg-[var(--cf-lp-surface)] px-3 py-1.5"
               >
-                <div className="flex flex-col">
-                  <span className="type-caption font-bold text-[var(--cf-text-primary)] tabular-nums">
-                    {teamSeats} seats ·{" "}
-                    {interval === "yearly"
-                      ? `${formatUsdFromCents(plan.yearlyTotalCents)}/seat/yr`
-                      : `${formatUsdFromCents(plan.monthlyPriceCents)}/seat/mo`}
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xs font-semibold text-[var(--cf-lp-ink)]">
+                    Seats
                   </span>
-                  <span className="type-caption text-[var(--cf-text-secondary)] tabular-nums">
-                    {interval === "yearly"
-                      ? `${formatUsdFromCents(teamCalc.yearlyMonthlyEquivalentCents)}/mo equiv. (${cmsPricing.annualBadgeLabel})`
-                      : `${formatUsdFromCents(teamCalc.monthlyTotalCents)}/mo total`}
+                  <span className="font-mono text-[0.6875rem] text-[var(--cf-lp-muted)]">
+                    {minSeats}–{maxSeats} range
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -272,13 +236,13 @@ export function LandingPricingSection({
                     data-testid="team-card-seats-decrement"
                     disabled={teamSeats <= minSeats}
                     onClick={() => adjustTeamSeats(-1)}
-                    className="inline-flex size-7 items-center justify-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] disabled:opacity-40"
+                    className="inline-flex size-7 items-center justify-center rounded-md border border-[var(--cf-lp-border-strong)] bg-[var(--cf-lp-cream-elevated)] text-[var(--cf-lp-ink)] transition-colors hover:border-[var(--cf-lp-ink)] disabled:opacity-40"
                   >
                     <Minus className="size-3.5" aria-hidden="true" />
                   </button>
                   <span
                     data-testid="team-card-seats-value"
-                    className="type-caption min-w-5 text-center font-bold text-[var(--cf-text-primary)] tabular-nums"
+                    className="type-caption min-w-5 text-center font-bold text-[var(--cf-lp-ink)] tabular-nums"
                   >
                     {teamSeats}
                   </span>
@@ -288,7 +252,7 @@ export function LandingPricingSection({
                     data-testid="team-card-seats-increment"
                     disabled={teamSeats >= maxSeats}
                     onClick={() => adjustTeamSeats(1)}
-                    className="inline-flex size-7 items-center justify-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] transition-colors hover:border-[var(--cf-royal)] disabled:opacity-40"
+                    className="inline-flex size-7 items-center justify-center rounded-md border border-[var(--cf-lp-border-strong)] bg-[var(--cf-lp-cream-elevated)] text-[var(--cf-lp-ink)] transition-colors hover:border-[var(--cf-lp-ink)] disabled:opacity-40"
                   >
                     <Plus className="size-3.5" aria-hidden="true" />
                   </button>
@@ -307,11 +271,11 @@ export function LandingPricingSection({
               scopeLabel={scopeLabel}
               billingNote={billingNote}
               priceExtra={teamPriceExtra}
-              specs={specs}
               description={plan.tagline}
               ctaLabel={ctaLabel}
               ctaHref={canTriggerPaidModal ? undefined : ctaHref}
               ctaDisabled={isCurrent}
+              alignCtaRow
               onSelectPlan={
                 canTriggerPaidModal && onSelectPaidPlan
                   ? () =>
@@ -332,15 +296,14 @@ export function LandingPricingSection({
       </ScrollRise>
 
       {showComparisonLink && (
-        <div className="flex w-full flex-col items-center justify-between gap-4 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-5 sm:flex-row sm:px-6">
+        <div className="flex w-full flex-col items-center justify-between gap-4 rounded-[0.625rem] border border-[var(--cf-lp-border-strong)] bg-[var(--cf-lp-cream-elevated)] p-5 shadow-[0_1px_2px_rgba(32,33,29,0.06)] sm:flex-row sm:px-6">
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-center sm:justify-start sm:text-left">
-            <span className="v3-body-s-strong inline-flex items-center gap-2 text-[var(--cf-text-primary)]">
+            <span className="v3-body-s-strong inline-flex items-center gap-2 text-[var(--cf-lp-ink)]">
               <ShieldCheck className="text-success size-4 shrink-0" />
               <span>Need a side-by-side breakdown of all plans?</span>
             </span>
-            <span className="type-caption text-[var(--cf-text-secondary)]">
-              Compare Free, Pro, and Teams features, limits, and the interactive per-seat
-              calculator.
+            <span className="type-caption text-[var(--cf-lp-muted)]">
+              Compare Free, Pro, and Teams features, limits, and workspace quotas.
             </span>
           </div>
           <Link href="/pricing#plan-comparison" className="v3-btn-secondary py-2 text-xs">

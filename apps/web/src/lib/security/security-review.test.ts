@@ -72,6 +72,7 @@ describe("Phase 11 Security Review & Hardening Audit (C-1101)", () => {
       "api/health/route.ts": /checkWebHealth|status/,
       "cdn/covers/[file]/route.ts": /readPublicTemplateCoverByFileName/,
       "cdn/cms/[file]/route.ts": /readPublicCmsAssetByFileName/,
+      "cdn/avatars/[file]/route.ts": /readPublicAvatarByFileName/,
     };
 
     for (const file of routeFiles) {

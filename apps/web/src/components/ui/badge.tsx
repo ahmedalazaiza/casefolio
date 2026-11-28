@@ -8,12 +8,12 @@ const badgeVariants = cva(
   {
     variants: {
       tone: {
-        neutral: "bg-sunken text-muted-foreground",
+        neutral: "bg-[var(--cf-bg-surface)] text-[var(--cf-text-secondary)] border border-[var(--cf-lp-card-border)]",
         draft: "bg-warning-soft text-foreground",
-        published: "bg-success-soft text-foreground",
-        accent: "bg-accent text-accent-foreground font-semibold",
-        pro: "bg-brand-lime text-brand-on-lime font-semibold",
-        teams: "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)] font-semibold",
+        published: "bg-[var(--cf-lp-green-pill-bg)] text-[var(--cf-lp-green-pill-fg)] font-semibold",
+        accent: "bg-[var(--cf-lp-lime)] text-[var(--cf-lp-on-lime)] border border-[var(--cf-lp-ink)]/15 font-semibold",
+        pro: "bg-[var(--cf-lp-dark)] text-[var(--cf-lp-lime)] font-semibold",
+        teams: "border border-border-strong bg-[var(--cf-lp-card)] text-foreground font-semibold",
         danger: "bg-destructive-soft text-foreground",
       },
     },
@@ -28,10 +28,10 @@ const dotVariants = cva("size-1.5 rounded-full shrink-0", {
     tone: {
       neutral: "bg-muted-foreground",
       draft: "bg-warning",
-      published: "bg-success",
-      accent: "bg-accent-foreground",
-      pro: "bg-brand-on-lime",
-      teams: "bg-[var(--cf-bg-accent)]",
+      published: "bg-[var(--cf-lp-green-pill-fg)]",
+      accent: "bg-[var(--cf-lp-on-lime)]",
+      pro: "bg-[var(--cf-lp-lime)]",
+      teams: "bg-foreground",
       danger: "bg-destructive",
     },
   },

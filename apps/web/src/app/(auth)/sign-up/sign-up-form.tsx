@@ -84,10 +84,13 @@ export function SignUpForm({ callbackUrl }: { callbackUrl?: string } = {}) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="type-heading-l text-foreground">Create your account</h1>
-        <p className="text-muted-foreground type-body-m">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <p className="cf-lp-kicker text-[var(--cf-lp-kicker-muted)]">GET STARTED</p>
+        <h1 className="font-editorial text-[2.375rem] leading-[1.04] font-normal tracking-[-0.04em] text-[var(--cf-lp-ink)]">
+          Create your account
+        </h1>
+        <p className="text-[0.8125rem] leading-relaxed text-[var(--cf-lp-subtle)]">
           Publish your first UI/UX case study for free in minutes.
         </p>
       </div>
@@ -96,7 +99,7 @@ export function SignUpForm({ callbackUrl }: { callbackUrl?: string } = {}) {
         type="button"
         variant="secondary"
         size="lg"
-        className="w-full"
+        className="h-11 w-full rounded-[0.375rem] border-[var(--cf-lp-input-border)] bg-[var(--cf-lp-google-bg)] text-[0.8125rem] font-medium text-[var(--cf-lp-ink)] hover:bg-[var(--cf-lp-card)]"
         disabled={submitting}
         onClick={handleGoogleSignUp}
       >
@@ -105,9 +108,9 @@ export function SignUpForm({ callbackUrl }: { callbackUrl?: string } = {}) {
       </Button>
 
       <div className="flex items-center gap-3">
-        <div className="bg-border h-px flex-1" />
-        <span className="text-tertiary type-caption">or</span>
-        <div className="bg-border h-px flex-1" />
+        <div className="h-px flex-1 bg-[var(--cf-lp-card-border)]" />
+        <span className="font-mono text-[0.6875rem] text-[var(--cf-lp-kicker-muted)]">or</span>
+        <div className="h-px flex-1 bg-[var(--cf-lp-card-border)]" />
       </div>
 
       {formError && (

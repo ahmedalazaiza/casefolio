@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { SUPPORT_TOPICS, type SupportTopic } from "@/lib/help/contact";
 
 export interface ContactSupportProjectOption {
@@ -177,15 +178,11 @@ export function ContactSupportClient({
           className="flex flex-col gap-5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-6 sm:p-8 lg:col-span-8"
         >
           <div className="flex items-center justify-between border-b border-[var(--cf-border-subtle)] pb-4">
-            <div className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full bg-[var(--cf-royal)]" />
-              <span className="size-2.5 rounded-full bg-[var(--cf-bg-accent)]" />
-              <span className="ml-1 font-mono text-[0.6875rem] font-semibold tracking-wider text-[var(--cf-text-tertiary)] uppercase">
-                support.casefolio.app/ticket
-              </span>
-            </div>
-            <span className="rounded-md bg-[var(--cf-royal-soft)] px-2.5 py-1 font-mono text-[0.6875rem] font-bold text-[var(--cf-royal-text)]">
-              02 · Ticket Details
+            <span className="font-mono text-[0.6875rem] font-medium tracking-wider text-[var(--cf-text-tertiary)] uppercase">
+              support.casefolio.app/ticket
+            </span>
+            <span className="rounded-full bg-[var(--cf-bg-surface)] px-2.5 py-0.5 font-mono text-[0.6875rem] font-medium text-[var(--cf-text-secondary)]">
+              Ticket Details
             </span>
           </div>
 
@@ -204,28 +201,26 @@ export function ContactSupportClient({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="support-topic">Topic</Label>
-              <select
+              <Select
                 id="support-topic"
                 value={topic}
                 onChange={(event) => setTopic(event.target.value as SupportTopic)}
-                className="h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-sm font-medium text-[var(--cf-text-primary)] outline-none transition-colors focus-visible:border-[var(--cf-royal)] focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/30"
               >
                 {SUPPORT_TOPICS.map((item) => (
                   <option key={item} value={item}>
                     {item}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="support-project">Related project</Label>
               {projects.length > 0 ? (
-                <select
+                <Select
                   id="support-project"
                   value={relatedProject}
                   onChange={(event) => setRelatedProject(event.target.value)}
-                  className="h-11 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3.5 text-sm font-medium text-[var(--cf-text-primary)] outline-none transition-colors focus-visible:border-[var(--cf-royal)] focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/30"
                 >
                   {projects.map((proj) => (
                     <option key={proj.id} value={proj.title}>
@@ -233,7 +228,7 @@ export function ContactSupportClient({
                     </option>
                   ))}
                   <option value="">Not project-specific</option>
-                </select>
+                </Select>
               ) : (
                 <Input
                   id="support-project"
@@ -267,14 +262,14 @@ export function ContactSupportClient({
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               placeholder="Describe what happened, the project or template involved, and any steps that help us reproduce it…"
-              className="w-full rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3.5 text-sm text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] outline-none transition-colors focus-visible:border-[var(--cf-royal)] focus-visible:ring-2 focus-visible:ring-[var(--cf-royal)]/30"
+              className="w-full rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-3.5 text-sm text-[var(--cf-text-primary)] placeholder:text-[var(--cf-text-tertiary)] outline-none transition-colors focus-visible:border-[var(--cf-lp-ink)] focus-visible:ring-2 focus-visible:ring-ring/30"
             />
           </div>
 
           <div className="flex flex-col gap-2">
             <label
               htmlFor="support-attachment"
-              className="flex max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-6 text-center transition-colors hover:border-[var(--cf-royal)] hover:bg-[var(--cf-bg-surface)]"
+              className="flex max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] p-6 text-center transition-colors hover:border-[var(--cf-lp-ink)] hover:bg-[var(--cf-bg-surface)]"
             >
               <span className="inline-flex size-10 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]">
                 <Upload className="size-4" />

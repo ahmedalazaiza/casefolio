@@ -183,7 +183,7 @@ export const cmsTeamPrincipleSchema = z.object({
 });
 
 export const cmsTeamSchema = z.object({
-  eyebrowStep: z.string().trim().min(1).max(8),
+  eyebrowStep: z.string().trim().max(8).default(""),
   eyebrowText: z.string().trim().min(1).max(60),
   heroTitleLead: z.string().trim().min(1).max(100),
   heroTitleHighlight: z.string().trim().min(1).max(60),
@@ -226,7 +226,7 @@ export const cmsAboutComparisonRowSchema = z.object({
 });
 
 export const cmsAboutSchema = z.object({
-  eyebrowStep: z.string().trim().min(1).max(8),
+  eyebrowStep: z.string().trim().max(8).default(""),
   eyebrowText: z.string().trim().min(1).max(60),
   heroTitleLead: z.string().trim().min(1).max(80),
   heroTitleHighlight: z.string().trim().min(1).max(60),
@@ -295,7 +295,7 @@ export const cmsComparisonGroupSchema = z.object({
 });
 
 export const cmsPricingSchema = z.object({
-  heroEyebrowStep: z.string().trim().min(1).max(8),
+  heroEyebrowStep: z.string().trim().max(8).default(""),
   heroEyebrowText: z.string().trim().min(1).max(60),
   heroTitleLead: z.string().trim().min(1).max(100),
   heroTitleHighlight: z.string().trim().min(1).max(60),
@@ -397,22 +397,20 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
     navLinks: [
       { label: "Home", href: "/" },
       { label: "Templates", href: "/templates" },
+      { label: "Showcase", href: "/showcase" },
       { label: "Pricing", href: "/pricing" },
-      { label: "How it works", href: "/#how-it-works" },
-      { label: "FAQ", href: "/#faq" },
     ],
-    footerTagline:
-      "The constrained case study studio for product designers, agencies, and creative teams. Pick a layout, drop in screens, and ship.",
-    copyrightText: "© 2026 Casefolio · A product of LAYERAT",
+    footerTagline: "Tell the story behind the pixels.",
+    copyrightText: "© 2026 Casefolio, Inc. · A product of LAYERAT",
     footerColumns: [
       {
         heading: "Product",
         links: [
           { label: "Home", href: "/" },
           { label: "Templates", href: "/templates" },
+          { label: "Showcase", href: "/showcase" },
           { label: "Pricing", href: "/pricing" },
-          { label: "How it works", href: "/#how-it-works" },
-          { label: "FAQ", href: "/#faq" },
+          { label: "FAQ", href: "/faq" },
         ],
       },
       {
@@ -449,22 +447,22 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
     ],
   },
   landing: {
-    heroEyebrowStep: "01",
-    heroEyebrowText: "Curated Case Study Studio",
-    heroTitleLead: "Turn finished projects into",
-    heroTitleHighlight: "publishable",
-    heroTitleTrail: "case studies",
+    heroEyebrowStep: "✦",
+    heroEyebrowText: "Built for product storytellers",
+    heroTitleLead: "Great work deserves",
+    heroTitleHighlight: "a great story.",
+    heroTitleTrail: "",
     heroSubtitle:
-      "Pick a template made by the Casefolio team, drop in your screens, tweak colors and text — then publish a page or export PNG & PDF.",
-    primaryCtaLabel: "Start free",
+      "Turn raw screens into polished case studies—without wrestling with grids, formats, or another blank canvas.",
+    primaryCtaLabel: "Create your first case study",
     primaryCtaHref: "/sign-up",
-    secondaryCtaLabel: "Browse templates",
-    secondaryCtaHref: "/templates",
+    secondaryCtaLabel: "Explore the showcase",
+    secondaryCtaHref: "#showcase",
     heroMockupImageUrl: "",
-    workflowEyebrow: "Structured Workflow",
-    workflowTitleLead: "Built for",
-    workflowTitleHighlight: "case studies",
-    workflowTitleTrail: "ready the moment you are",
+    workflowEyebrow: "The better way",
+    workflowTitleLead: "Your portfolio shouldn’t be",
+    workflowTitleHighlight: "another project.",
+    workflowTitleTrail: "",
     workflowPanels: [
       {
         step: "01",
@@ -493,7 +491,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
           { label: "Sections", value: "Live reorder" },
         ],
         ctaLabel: "See how it works",
-        ctaHref: "#details-showcase",
+        ctaHref: "#how-it-works",
         imageUrl: "",
       },
     ],
@@ -501,41 +499,41 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       {
         title: V3_FEATURE_CARDS[0].title,
         body: V3_FEATURE_CARDS[0].body,
-        iconName: "Globe",
+        iconName: "Layers",
         customIconUrl: "",
       },
       {
         title: V3_FEATURE_CARDS[1].title,
         body: V3_FEATURE_CARDS[1].body,
-        iconName: "FileDown",
+        iconName: "Palette",
         customIconUrl: "",
       },
       {
         title: V3_FEATURE_CARDS[2].title,
         body: V3_FEATURE_CARDS[2].body,
-        iconName: "Layers",
+        iconName: "FileDown",
         customIconUrl: "",
       },
     ],
-    showcaseEyebrow: "Design System Guardrails",
-    showcaseTitleHighlight: "Details",
-    showcaseTitleMiddle: "that keep every",
-    showcaseTitleTrail: "case study consistent",
+    showcaseEyebrow: "One story, everywhere",
+    showcaseTitleHighlight: "Publish once.",
+    showcaseTitleMiddle: "Show up",
+    showcaseTitleTrail: "anywhere.",
     showcaseTabs: V3_SHOWCASE_TABS.map((t) => ({ ...t })),
-    faqEyebrow: "FAQ · Straight Answers",
-    faqTitleLead: "Got questions? We have",
-    faqTitleHighlight: "the answers.",
-    faqCtaLabel: "Start free",
+    faqEyebrow: "Questions",
+    faqTitleLead: "The finer",
+    faqTitleHighlight: "details.",
+    faqCtaLabel: "Start creating for free",
     faqCtaHref: "/sign-up",
     faqItems: V3_FAQ_ITEMS.map((item) => ({ ...item })),
-    finalCtaEyebrow: "Ready to Ship",
-    finalCtaTitleLead: "Your next case study is",
-    finalCtaTitleHighlight: "one template away",
-    finalCtaButtonLabel: "Make it happen",
+    finalCtaEyebrow: "Start with your best work",
+    finalCtaTitleLead: "Your next case study could be live",
+    finalCtaTitleHighlight: "today.",
+    finalCtaButtonLabel: "Start creating for free",
     finalCtaButtonHref: "/sign-up",
   },
   team: {
-    eyebrowStep: "01",
+    eyebrowStep: "",
     eyebrowText: "Our Studio Team",
     heroTitleLead: "Two partners building the standard for",
     heroTitleHighlight: "portfolio craft",
@@ -609,7 +607,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
     ctaButtonHref: "/help/contact",
   },
   about: {
-    eyebrowStep: "01",
+    eyebrowStep: "",
     eyebrowText: "About Casefolio Studio",
     heroTitleLead: "The studio layer between",
     heroTitleHighlight: "finished work",
@@ -630,7 +628,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       {
         value: "4x",
         label: "Delivery outputs",
-        detail: "One document renders live web links, PNG slices, Behance boards, and A4 PDFs.",
+        detail: "One document exports your full case study to Layerat, live web links, PNG slices, and A4 PDFs.",
       },
       {
         value: "Zero",
@@ -664,7 +662,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       {
         step: "03",
         title: "Write once, ship to every surface",
-        body: "Your work shouldn't live trapped inside a single format. The exact same studio renderer powers your live shareable URL, password-protected NDA links, 2x retina PNG slices, Behance vertical presentations, and print-ready PDF decks.",
+        body: "Your work shouldn't live trapped inside a single format. The exact same studio renderer powers full case study exports to Layerat, your live shareable URL, password-protected NDA links, 2x retina PNG slices, and print-ready PDF decks.",
         iconName: "FileOutput",
         customIconUrl: "",
         footerNote: "Engineered into every studio template",
@@ -691,8 +689,8 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       },
       {
         topic: "Multi-channel export",
-        generic: "Rebuild separately in Figma for Behance & PDF",
-        casefolio: "1-click Web, PNG, Behance 1400px, and A4 PDF",
+        generic: "Rebuild separately in Figma for Layerat & PDF",
+        casefolio: "1-click full Layerat pack, Web link, 2× PNG, and A4 PDF",
       },
     ],
     ctaEyebrow: "Start Shipping",
@@ -702,7 +700,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       "Start free with a curated template, drop in your product screens, and publish a live case study link in minutes.",
   },
   pricing: {
-    heroEyebrowStep: "01",
+    heroEyebrowStep: "",
     heroEyebrowText: "Pricing & Plans",
     heroTitleLead: "Simple tiers for solo designers &",
     heroTitleHighlight: "scaling studios.",
@@ -848,8 +846,8 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
       },
       {
         id: "exports",
-        title: "PNG, Behance & A4 PDF Exports",
-        description: "Pixel-accurate exports formatted for Behance showcases, client presentations, and hiring decks.",
+        title: "Layerat, PNG & A4 PDF Exports",
+        description: "Export your complete case study cleanly to Layerat, high-res PNG, client presentations, and hiring decks.",
         iconName: "FileDown",
         rows: [
           {
@@ -858,7 +856,7 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
             pro: "High-res, no watermark",
             team: "High-res, no watermark",
           },
-          { feature: "2× Retina PNG (2,880 px) & Behance 1,400 px slice pack", free: false, pro: true, team: true },
+          { feature: "Full case study Layerat export (1,400 px pack) & 2× Retina PNG (2,880 px)", free: false, pro: true, team: true },
           {
             feature: "Monthly export allowance",
             free: `${FREE_MONTHLY_EXPORT_LIMIT}/mo`,
@@ -1045,14 +1043,14 @@ export const DEFAULT_SITE_CMS_CONTENT: SiteCmsContent = {
         step: "02",
         title: "Your Work & Intellectual Property Ownership",
         summary: "You retain 100% ownership of everything you upload, write, and export.",
-        body: "Casefolio claims zero ownership over your UI screenshots, product photography, copywriting, metrics, brand assets, or finished case studies. You grant Casefolio a limited, revocable, worldwide technical license solely to store, optimize, render, and serve your content when you choose to preview, publish a live link, or generate PNG, Behance, or PDF exports.",
+        body: "Casefolio claims zero ownership over your UI screenshots, product photography, copywriting, metrics, brand assets, or finished case studies. You grant Casefolio a limited, revocable, worldwide technical license solely to store, optimize, render, and serve your content when you choose to preview, publish a live link, or generate Layerat, PNG, or PDF exports.",
       },
       {
         id: "template-license",
         step: "03",
         title: "Studio Template & Export License",
         summary: "How you may use Casefolio layouts, mockups, and generated exports.",
-        body: "All Casefolio template architectures, Puck section schemas, hardware mockup frames, and source code remain the intellectual property of Casefolio Studio. Subject to your active plan tier, Casefolio grants you a non-exclusive license to publish live case studies and distribute exported PNG, Behance, and PDF presentations for personal portfolios, job applications, agency pitches, and client deliverables. Reselling or redistributing raw Casefolio templates as standalone templates is prohibited.",
+        body: "All Casefolio template architectures, Puck section schemas, hardware mockup frames, and source code remain the intellectual property of Casefolio Studio. Subject to your active plan tier, Casefolio grants you a non-exclusive license to publish live case studies and distribute exported Layerat, PNG, and PDF presentations for personal portfolios, job applications, agency pitches, and client deliverables. Reselling or redistributing raw Casefolio templates as standalone templates is prohibited.",
       },
       {
         id: "acceptable-use",

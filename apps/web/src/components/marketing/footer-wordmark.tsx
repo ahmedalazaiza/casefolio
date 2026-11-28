@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { CasefolioLockup } from "@/components/ui/brand-logo";
 import {
   ensureGsapPluginsRegistered,
   gsap,
@@ -41,15 +42,13 @@ export function FooterWordmark() {
     <div
       ref={ref}
       aria-hidden="true"
-      className="font-display text-elevated pointer-events-none -mb-[0.1em] w-full text-center leading-[0.82] font-semibold tracking-[-0.06em] select-none"
+      className="pointer-events-none mx-auto -mb-[0.1em] flex w-full max-w-[72rem] justify-center select-none"
       style={{
-        fontSize: "clamp(4.5rem, 21vw, 20rem)",
-        WebkitMaskImage:
-          "linear-gradient(180deg, black 35%, transparent 96%)",
+        WebkitMaskImage: "linear-gradient(180deg, black 35%, transparent 96%)",
         maskImage: "linear-gradient(180deg, black 35%, transparent 96%)",
       }}
     >
-      casefolio
+      <CasefolioLockup inverted className="h-auto w-full opacity-90" />
     </div>
   );
 }

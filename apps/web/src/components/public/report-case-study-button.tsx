@@ -3,6 +3,7 @@
 import { Flag } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -112,18 +113,17 @@ export function ReportCaseStudyButton({
                 <label htmlFor="report-category" className="text-foreground type-body-s-strong">
                   Reason
                 </label>
-                <select
+                <Select
                   id="report-category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value as ReportCategory)}
-                  className="border-border bg-background text-foreground focus-visible:ring-ring/40 h-10 rounded-xl border px-3 outline-none type-body-s focus-visible:ring-2"
                 >
                   {REPORT_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-1.5">

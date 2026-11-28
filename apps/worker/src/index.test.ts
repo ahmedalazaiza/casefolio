@@ -69,7 +69,7 @@ describe("casefolio-export-worker (C-602)", () => {
     ).toBeNull();
   });
 
-  it("slices Behance heights at 1960px intervals and packs valid PKZIP archives", () => {
+  it("slices Layerat full case study heights at 1960px intervals and packs valid PKZIP archives", () => {
     const slices = computeBehanceSliceRanges(4200, 1960);
     expect(slices).toEqual([
       { y: 0, height: 1960 },
@@ -79,17 +79,17 @@ describe("casefolio-export-worker (C-602)", () => {
 
     const fakePng = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     const zipBytes = buildZipArchive([
-      { name: "behance-slice-01.png", data: fakePng },
-      { name: "behance-slice-02.png", data: fakePng },
-      { name: "behance-slice-03.png", data: fakePng },
+      { name: "layerat-slice-01.png", data: fakePng },
+      { name: "layerat-slice-02.png", data: fakePng },
+      { name: "layerat-slice-03.png", data: fakePng },
     ]);
 
     // PKZIP local file header magic bytes (0x04034b50 -> 50 4b 03 04)
     expect(Array.from(zipBytes.slice(0, 4))).toEqual([0x50, 0x4b, 0x03, 0x04]);
     expect(listZipEntryNames(zipBytes)).toEqual([
-      "behance-slice-01.png",
-      "behance-slice-02.png",
-      "behance-slice-03.png",
+      "layerat-slice-01.png",
+      "layerat-slice-02.png",
+      "layerat-slice-03.png",
     ]);
   });
 });

@@ -2,9 +2,9 @@
 
 import { ArrowRight, X } from "lucide-react";
 import Link from "next/link";
+import { CasefolioLockup } from "@/components/ui/brand-logo";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { ScrollProgressBar } from "@/components/marketing/motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DEFAULT_SITE_CMS_CONTENT, type SiteCmsContent } from "@/lib/cms/schema";
 import { cn } from "@/lib/utils";
@@ -17,9 +17,8 @@ export interface MarketingNavItem {
 export const MARKETING_NAV_ITEMS: readonly MarketingNavItem[] = [
   { label: "Home", href: "/" },
   { label: "Templates", href: "/templates" },
+  { label: "Showcase", href: "/showcase" },
   { label: "Pricing", href: "/pricing" },
-  { label: "How it works", href: "/#how-it-works" },
-  { label: "FAQ", href: "/#faq" },
 ];
 
 const BUILTIN_SOCIAL_ICONS: Record<string, ReactNode> = {
@@ -62,11 +61,14 @@ export function V3Wordmark({
   href = "/",
   siteName = "Casefolio",
   logoImageUrl = "",
+  inverted = false,
   onClick,
 }: {
   href?: string;
   siteName?: string;
   logoImageUrl?: string;
+  inverted?: boolean;
+  monochrome?: boolean;
   onClick?: () => void;
 }) {
   return (
@@ -76,28 +78,30 @@ export function V3Wordmark({
       className="focus-visible:ring-ring/40 group inline-flex items-center gap-2.5 rounded-md outline-none focus-visible:ring-2"
     >
       {logoImageUrl ? (
-        <img
-          src={logoImageUrl}
-          alt={siteName}
-          className="size-7 shrink-0 rounded-lg object-contain transition-transform duration-200 group-hover:scale-105"
-        />
+        <>
+          <img
+            src={logoImageUrl}
+            alt={siteName}
+            className="size-[1.625rem] shrink-0 rounded-md object-contain transition-transform duration-200 group-hover:scale-105"
+          />
+          <span
+            className={cn(
+              "font-display text-base font-bold tracking-[-0.04em] lowercase",
+              inverted ? "text-[var(--cf-lp-dark-ink)]" : "text-[var(--cf-lp-ink)]",
+            )}
+          >
+            {siteName}
+          </span>
+        </>
       ) : (
-        <span
-          aria-hidden="true"
-          className="relative inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--cf-royal)] transition-transform duration-200 group-hover:scale-105"
-        >
-          <svg viewBox="0 0 20 20" fill="none" className="size-4">
-            <path
-              d="M4.5 14.5L7.8 5.5L10 10.6L12.2 5.5L15.5 14.5H12.7L10 9.6L7.3 14.5H4.5Z"
-              fill="var(--cf-text-on-royal)"
-            />
-            <circle cx="14.5" cy="5.5" r="2.1" fill="var(--cf-bg-accent)" />
-          </svg>
-        </span>
+        <>
+          <CasefolioLockup
+            inverted={inverted}
+            className="h-[1.6875rem] w-auto transition-transform duration-200 group-hover:scale-[1.02]"
+          />
+          <span className="sr-only">{siteName}</span>
+        </>
       )}
-      <span className="v3-heading-s text-[var(--cf-text-primary)]">
-        {siteName}
-      </span>
     </Link>
   );
 }
@@ -131,50 +135,28 @@ export function MarketingShell({
   }, [mobileMenuOpen]);
 
   return (
-    <div className="v3-root relative flex min-h-screen flex-col overflow-x-clip">
+    <div className="v3-root cf-landing relative flex min-h-screen flex-col overflow-x-clip bg-[var(--cf-lp-canvas)]">
       <a
         href="#main-content"
-        className="v3-body-s-strong focus-visible:ring-ring/40 sr-only bg-[var(--cf-bg-action)] text-[var(--cf-text-on-action)] focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:rounded-lg focus:px-4 focus:py-2 focus:outline-none focus-visible:ring-2"
+        className="v3-body-s-strong focus-visible:ring-ring/40 sr-only bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)] focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:rounded-full focus:px-4 focus:py-2 focus:outline-none focus-visible:ring-2"
       >
         Skip to main content
       </a>
 
-      {/* Top Electric Royal Blue + Acid Lime Announcement Bar */}
-      {(brand.announcementText || brand.announcementCtaLabel) && (
-        <div className="flex min-h-11 items-center justify-center bg-[var(--cf-royal)] px-4 py-2 text-center text-[var(--cf-text-on-royal)]">
-          <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-xs leading-5 sm:text-sm">
-            {brand.announcementTag && (
-              <span className="rounded-full bg-[var(--cf-bg-accent)] px-2 py-0.5 text-[0.6875rem] leading-none font-bold tracking-wider text-[var(--cf-text-on-accent)] uppercase">
-                {brand.announcementTag}
-              </span>
-            )}
-            {brand.announcementText && (
-              <span className="font-medium">{brand.announcementText}</span>
-            )}
-            {brand.announcementCtaLabel && (
-              <Link
-                href={brand.announcementCtaHref || "/templates"}
-                className="focus-visible:ring-ring/40 rounded-xs font-semibold text-[var(--cf-bg-accent)] underline decoration-[var(--cf-bg-accent)]/70 underline-offset-4 transition-opacity outline-none hover:opacity-85 focus-visible:ring-2"
-              >
-                {brand.announcementCtaLabel}
-              </Link>
-            )}
-          </p>
-        </div>
-      )}
-
-      {/* Main Sticky Navbar + Scroll Progress Ribbon */}
-      <header className="sticky top-0 z-50 border-b border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]/92 backdrop-blur-md">
-        <div className="v3-container flex items-center justify-between gap-4 py-3.5">
-          <V3Wordmark
-            href="/"
-            siteName={brand.siteName}
-            logoImageUrl={brand.logoImageUrl}
-          />
+      {/* Unified Editorial Warm Cream Navbar */}
+      <header className="sticky top-0 z-50 border-b border-[var(--cf-lp-border)] bg-[var(--cf-lp-cream)]/95 backdrop-blur-md">
+        <div className="v3-container grid grid-cols-2 items-center gap-4 py-4 md:grid-cols-[1fr_auto_1fr] md:py-4.5">
+          <div className="justify-self-start">
+            <V3Wordmark
+              href="/"
+              siteName={brand.siteName}
+              logoImageUrl={brand.logoImageUrl}
+            />
+          </div>
 
           <nav
             aria-label="Main navigation"
-            className="hidden items-center gap-8 md:flex"
+            className="hidden items-center gap-7 justify-self-center md:flex lg:gap-9"
           >
             {brand.navLinks.map((item) => {
               const isActive = resolvedActiveHref === item.href;
@@ -184,9 +166,10 @@ export function MarketingShell({
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "v3-body-m-strong focus-visible:ring-ring/40 rounded-md py-1 text-[var(--cf-text-primary)] transition-colors outline-none hover:text-[var(--cf-royal-text)] focus-visible:ring-2",
-                    isActive &&
-                      "underline decoration-[var(--cf-bg-accent)] decoration-2 underline-offset-4",
+                    "focus-visible:ring-ring/40 rounded-md py-1 text-xs font-medium transition-colors outline-none hover:text-[var(--cf-lp-ink)] focus-visible:ring-2 sm:text-[0.8125rem]",
+                    isActive
+                      ? "font-semibold text-[var(--cf-lp-ink)]"
+                      : "text-[var(--cf-lp-cream-muted)]",
                   )}
                 >
                   {item.label}
@@ -195,40 +178,34 @@ export function MarketingShell({
             })}
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-5 justify-self-end md:flex">
             <Link
               href="/sign-in"
-              className="v3-btn-secondary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 rounded-md px-2 py-1.5 text-[0.8125rem] font-medium text-[var(--cf-lp-cream-muted)] transition-colors outline-none hover:text-[var(--cf-lp-ink)] focus-visible:ring-2"
             >
               Log in
             </Link>
             <Link
               href="/sign-up"
-              className="v3-btn-primary focus-visible:ring-ring/40 group outline-none focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 inline-flex h-[2.625rem] items-center justify-center rounded-[0.3125rem] bg-[var(--cf-lp-dark)] px-4 text-[0.8125rem] font-semibold text-white transition-all duration-150 outline-none hover:-translate-y-0.5 hover:bg-[var(--cf-royal-deep)] focus-visible:ring-2"
             >
-              <span>Start free</span>
-              <span
-                aria-hidden="true"
-                className="inline-flex size-5 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)] transition-transform duration-200 group-hover:translate-x-0.5"
-              >
-                <ArrowRight className="size-3 stroke-[2.5]" />
-              </span>
+              Start creating
             </Link>
           </div>
 
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-2.5 justify-self-end md:hidden">
             <Link
               href="/sign-up"
-              className="v3-btn-primary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 inline-flex h-9 items-center justify-center rounded-[0.3125rem] bg-[var(--cf-lp-dark)] px-3.5 text-xs font-semibold text-white outline-none focus-visible:ring-2"
             >
-              Start free
+              Start creating
             </Link>
             <button
               type="button"
               aria-label="Open navigation menu"
               aria-expanded={mobileMenuOpen}
               onClick={() => setMobileMenuOpen(true)}
-              className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-md text-[var(--cf-text-primary)] transition-colors outline-none hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
+              className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-[0.3125rem] text-[var(--cf-lp-ink)] transition-colors outline-none hover:bg-[var(--cf-lp-surface)] focus-visible:ring-2"
             >
               <svg
                 aria-hidden="true"
@@ -246,7 +223,6 @@ export function MarketingShell({
             </button>
           </div>
         </div>
-        <ScrollProgressBar />
       </header>
 
       {mobileMenuOpen ? (
@@ -254,7 +230,7 @@ export function MarketingShell({
           role="dialog"
           aria-modal="true"
           aria-label="Casefolio menu"
-          className="fixed inset-0 z-50 flex flex-col justify-between bg-[var(--cf-bg-canvas)] p-5 md:hidden"
+          className="fixed inset-0 z-50 flex flex-col justify-between bg-[var(--cf-lp-canvas)] p-5 md:hidden"
         >
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between gap-3">
@@ -273,7 +249,7 @@ export function MarketingShell({
                 type="button"
                 aria-label="Close navigation menu"
                 onClick={() => setMobileMenuOpen(false)}
-                className="focus-visible:ring-ring/40 inline-flex size-10 items-center justify-center rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] outline-none focus-visible:ring-2"
+                className="focus-visible:ring-ring/40 inline-flex size-10 items-center justify-center rounded-full border border-[var(--cf-lp-border-strong)] bg-[var(--cf-lp-elevated)] text-[var(--cf-lp-ink)] outline-none focus-visible:ring-2"
               >
                 <X className="size-4" />
               </button>
@@ -281,17 +257,17 @@ export function MarketingShell({
 
             <nav
               aria-label="Mobile marketing navigation"
-              className="flex flex-col divide-y divide-[var(--cf-border-subtle)] border-y border-[var(--cf-border-subtle)]"
+              className="flex flex-col divide-y divide-[var(--cf-lp-border)] border-y border-[var(--cf-lp-border)]"
             >
               {brand.navLinks.map((item) => (
                 <Link
                   key={`${item.href}-${item.label}`}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="v3-heading-s flex min-h-14 items-center justify-between text-[var(--cf-text-primary)] transition-opacity hover:opacity-75"
+                  className="v3-heading-s flex min-h-14 items-center justify-between text-[var(--cf-lp-ink)] transition-opacity hover:opacity-75"
                 >
                   <span>{item.label}</span>
-                  <ArrowRight className="size-4 text-[var(--cf-text-tertiary)]" />
+                  <ArrowRight className="size-4 text-[var(--cf-lp-muted)]" />
                 </Link>
               ))}
             </nav>
@@ -301,15 +277,15 @@ export function MarketingShell({
             <Link
               href="/sign-up"
               onClick={() => setMobileMenuOpen(false)}
-              className="v3-btn-primary w-full py-3.5"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-[0.3125rem] bg-[var(--cf-lp-dark)] py-3.5 text-sm font-semibold text-white"
             >
-              <span>Start free</span>
+              <span>Start creating</span>
               <ArrowRight className="size-4" />
             </Link>
             <Link
               href="/sign-in"
               onClick={() => setMobileMenuOpen(false)}
-              className="v3-btn-secondary w-full py-3.5"
+              className="inline-flex w-full items-center justify-center rounded-[0.3125rem] border border-[var(--cf-lp-border-strong)] bg-[var(--cf-lp-elevated)] py-3.5 text-sm font-medium text-[var(--cf-lp-ink)]"
             >
               Log in
             </Link>
@@ -324,16 +300,17 @@ export function MarketingShell({
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] text-[var(--cf-text-primary)]">
-        <div className="v3-container flex flex-col justify-between gap-10 py-12 lg:flex-row lg:items-start lg:py-16">
-          <div className="flex max-w-sm flex-col items-start gap-4">
+      {/* Deep Charcoal Neo-Editorial Footer */}
+      <footer className="bg-[var(--cf-lp-dark)] text-[var(--cf-lp-dark-ink)]">
+        <div className="v3-container flex flex-col justify-between gap-10 py-14 lg:flex-row lg:items-start lg:py-16">
+          <div className="flex max-w-sm flex-col items-start gap-5">
             <V3Wordmark
               href="/"
               siteName={brand.siteName}
               logoImageUrl={brand.logoImageUrl}
+              inverted
             />
-            <p className="v3-body-s text-[var(--cf-text-secondary)]">
+            <p className="font-editorial text-2xl leading-snug font-normal text-[var(--cf-lp-dark-tagline)] sm:text-[1.75rem]">
               {brand.footerTagline}
             </p>
             <ul
@@ -347,7 +324,7 @@ export function MarketingShell({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={social.label}
-                    className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-md border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-secondary)] transition-colors outline-none hover:border-[var(--cf-royal)] hover:text-[var(--cf-royal-text)] focus-visible:ring-2"
+                    className="focus-visible:ring-ring/40 inline-flex size-9 items-center justify-center rounded-full border border-[var(--cf-lp-dark-rule)] bg-transparent text-[var(--cf-lp-dark-ink)] transition-colors outline-none hover:border-[var(--cf-lp-lime)] hover:text-[var(--cf-lp-lime)] focus-visible:ring-2"
                   >
                     {social.customIconUrl ? (
                       <img
@@ -362,28 +339,12 @@ export function MarketingShell({
                 </li>
               ))}
             </ul>
-            <div className="flex flex-col gap-2 pt-1">
-              <p className="v3-body-s text-[var(--cf-text-tertiary)]">
-                {brand.copyrightText}
-              </p>
-              <div className="flex items-center gap-3">
-                <a
-                  href="https://www.layerat.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="v3-body-s text-[var(--cf-text-tertiary)] underline-offset-4 hover:text-[var(--cf-royal-text)] hover:underline"
-                >
-                  www.layerat.com
-                </a>
-                <ThemeToggle />
-              </div>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-12 lg:w-[40rem]">
             {brand.footerColumns.map((column) => (
               <div key={column.heading} className="flex flex-col gap-3">
-                <p className="v3-body-m-strong text-[var(--cf-text-primary)]">
+                <p className="cf-lp-kicker text-[var(--cf-lp-dark-tagline)]">
                   {column.heading}
                 </p>
                 <ul className="flex flex-col gap-2.5">
@@ -391,7 +352,7 @@ export function MarketingShell({
                     <li key={`${link.label}-${link.href}`}>
                       <Link
                         href={link.href}
-                        className="v3-body-s focus-visible:ring-ring/40 rounded-xs text-[var(--cf-text-secondary)] transition-colors outline-none hover:text-[var(--cf-royal-text)] focus-visible:ring-2"
+                        className="v3-body-s focus-visible:ring-ring/40 rounded-xs text-[var(--cf-lp-dark-ink)] transition-colors outline-none hover:text-[var(--cf-lp-lime)] focus-visible:ring-2"
                       >
                         {link.label}
                       </Link>
@@ -400,6 +361,25 @@ export function MarketingShell({
                 </ul>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--cf-lp-dark-footer-rule)]">
+          <div className="v3-container flex flex-wrap items-center justify-between gap-4 py-5">
+            <p className="font-mono text-xs text-[var(--cf-lp-dark-tagline)]">
+              {brand.copyrightText}
+            </p>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://www.layerat.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-xs text-[var(--cf-lp-dark-tagline)] underline-offset-4 transition-colors hover:text-[var(--cf-lp-lime)] hover:underline"
+              >
+                www.layerat.com
+              </a>
+              <ThemeToggle className="border-[var(--cf-lp-dark-rule)] bg-transparent text-[var(--cf-lp-dark-ink)] hover:border-[var(--cf-lp-lime)] hover:text-[var(--cf-lp-lime)]" />
+            </div>
           </div>
         </div>
       </footer>

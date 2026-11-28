@@ -76,7 +76,6 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     sectionCount: 14,
     slotCount: 8,
     coverSrc: "/templates/cinema/cover.svg",
-    previewSecondarySrc: "/templates/cinema/screen-seats.svg",
     headline: "Cinema — Mobile Movie Ticket Booking Case Study",
     summary:
       "Dark-mode ticketing UX narrative featuring a 5-column staggered iPhone Pro showcase, live design tokens, and interactive auditorium seat selection.",
@@ -91,7 +90,6 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     sectionCount: 6,
     slotCount: 5,
     coverSrc: "/templates/orbit/cover.svg",
-    previewSecondarySrc: "/landing/orbit-plan.svg",
     headline: "Orbit — Personal Debt & Wallet Mobile App",
     summary:
       "Focused fintech case study walking through calm onboarding, payoff snowball milestones, and quantified conversion outcomes.",
@@ -120,7 +118,6 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     sectionCount: 8,
     slotCount: 6,
     coverSrc: "/templates/northwind/cover.svg",
-    previewSecondarySrc: "/templates/northwind/screen-split.svg",
     headline: "Northwind — Real-Time Freight & Dispatch Workspace",
     summary:
       "Redesigning the logistics dispatch console used by 1,200 operators to route 40,000 daily shipments calmly.",
@@ -135,7 +132,6 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     sectionCount: 8,
     slotCount: 5,
     coverSrc: "/templates/pulse/cover.svg",
-    previewSecondarySrc: "/templates/pulse/screen-streaks.svg",
     headline: "Pulse — Habit-First Mobile Fitness & Coaching App",
     summary:
       "Designing a focused workout companion that helps busy schedules fit ten minutes of daily training.",
@@ -150,7 +146,6 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     sectionCount: 9,
     slotCount: 7,
     coverSrc: "/templates/atlas/cover.svg",
-    previewSecondarySrc: "/templates/atlas/screen-mobile-today.svg",
     headline: "Atlas — Cross-Platform Travel & Itinerary Planner",
     summary:
       "A hybrid desktop-and-mobile travel product story keeping itineraries, bookings, and maps in sync from planning to boarding pass.",

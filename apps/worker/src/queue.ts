@@ -269,7 +269,7 @@ async function recordStandaloneWorkerNotification(
       event.format === "pdf"
         ? "PDF"
         : event.format === "behance"
-          ? "Behance slices"
+          ? "Layerat pack"
           : "PNG";
 
     const kind = event.status === "completed" ? "export_ready" : "export_failed";

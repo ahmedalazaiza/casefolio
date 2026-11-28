@@ -99,7 +99,7 @@ test.describe("Phase 12 Production Readiness & Mandatory Template Cover E2E", ()
     const password = "CasefolioBetaReady2026!";
     const uniqueSlug = `nova-studio-${stamp}`;
     const uniqueName = `Nova Studio ${stamp}`;
-    const publicSlug = `nova-beta-${stamp}`;
+    let publicSlug: string;
 
     const orbitJsonPath = resolve(process.cwd(), "reference/template.example.json");
     const rawOrbit = JSON.parse(readFileSync(orbitJsonPath, "utf-8")) as {
@@ -250,17 +250,15 @@ test.describe("Phase 12 Production Readiness & Mandatory Template Cover E2E", ()
         )
         .toBe(800);
 
-      // 5. Sign out Admin & verify cover on public Landing Page (/) and Template Library (/templates)
+      // 5. Sign out Admin & verify the redesigned landing page links its mobile template card to
+      //    the newest published mobile template (landing cards are illustrated, not cover images),
+      //    then verify the uploaded cover in the Template Library (/templates)
       await page.context().clearCookies();
 
       await page.goto("/");
-      const landingImg = page.locator(`img[alt="${uniqueName} template preview"]`);
-      await expect(landingImg).toHaveAttribute("src", finalCoverSrc);
-      await expect
-        .poll(() =>
-          landingImg.evaluate((el: HTMLImageElement) => (el.complete ? el.naturalWidth : 0)),
-        )
-        .toBe(800);
+      await expect(
+        page.getByRole("link", { name: "Open Mobile App Story template" }),
+      ).toHaveAttribute("href", `/new?template=${uniqueSlug}`);
 
       await page.goto("/templates");
       const libraryCard = page.locator(`[data-template-slug="${uniqueSlug}"]`);
@@ -390,8 +388,14 @@ test.describe("Phase 12 Production Readiness & Mandatory Template Cover E2E", ()
 
       // 9. Publish to /p/[slug] & verify /published row thumbnail + public SSR 200
       await page.goto(`/projects/${createdProjectId}/share`);
-      await page.getByTestId("publish-slug-input").fill(publicSlug);
-      await expect(page.getByTestId("slug-availability-status")).toContainText("Available");
+
+      // Free plan: custom URL slugs are Pro/Teams-gated, so the tester publishes with the
+      // deterministic auto-generated share slug shown (read-only) in the URL field.
+      const slugInput = page.getByTestId("publish-slug-input");
+      await expect(slugInput).toHaveAttribute("readonly", "");
+      await expect(page.getByTestId("custom-slug-lock-badge")).toBeVisible();
+      publicSlug = await slugInput.inputValue();
+      expect(publicSlug).toMatch(/^[a-z0-9-]+$/);
       await page.getByTestId("publish-project-button").click();
       await expect(page.getByTestId("share-status-badge")).toContainText("Published · Public");
 

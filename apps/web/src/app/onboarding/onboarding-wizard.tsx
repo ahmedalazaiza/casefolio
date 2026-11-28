@@ -10,7 +10,6 @@ import {
   Plus,
   Smartphone,
   Sparkles,
-  Store,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type ChangeEvent, type ComponentType, type FormEvent } from "react";
@@ -50,13 +49,6 @@ const ROLE_OPTIONS: readonly RoleCardOption[] = [
     subtitle: "Sites and landing pages",
     defaultHeadline: "Web designer",
     icon: AppWindow,
-  },
-  {
-    id: "exhibition",
-    title: "Exhibition designer",
-    subtitle: "Booths and spaces",
-    defaultHeadline: "Exhibition designer",
-    icon: Store,
   },
   {
     id: "brand",
@@ -178,23 +170,41 @@ export function OnboardingWizard({
     }
   }
 
-  function handlePhotoUpload(event: ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    event.currentTarget.value = "";
     if (!file) return;
 
-    if (file.size > 350 * 1024) {
-      setErrorMessage("Please choose a PNG or JPG image smaller than 350 KB.");
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("Please choose a PNG, JPG, or WebP image smaller than 5 MB.");
       return;
     }
 
     setErrorMessage(null);
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setAvatarUrl(reader.result);
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("skipDbUpdate", "1");
+      const res = await fetch("/api/account/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        avatarUrl?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.avatarUrl) {
+        setErrorMessage(json.error ?? "Could not upload profile photo.");
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+      setAvatarUrl(json.avatarUrl);
+    } catch {
+      setErrorMessage("Network error while uploading profile photo.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleSkip() {
@@ -306,10 +316,10 @@ export function OnboardingWizard({
                     aria-pressed={active}
                     onClick={() => handleSelectRole(option)}
                     className={cn(
-                      "focus-visible:ring-ring/40 flex flex-col gap-6 rounded-xl border p-6 text-left transition-all duration-200 outline-none focus-visible:ring-2",
+                      "focus-visible:ring-ring/40 flex flex-col gap-6 rounded-2xl border p-6 text-left transition-all duration-200 outline-none focus-visible:ring-2",
                       active
-                        ? "border-[var(--cf-royal)] bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
-                        : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:border-[var(--cf-royal)]",
+                        ? "border-[var(--cf-lp-ink)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]"
+                        : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] text-[var(--cf-text-primary)] hover:border-[var(--cf-border-strong)] hover:bg-[var(--cf-bg-surface)]",
                     )}
                   >
                     <div className="flex w-full items-start justify-between">
@@ -318,7 +328,7 @@ export function OnboardingWizard({
                         className={cn(
                           "inline-flex size-11 items-center justify-center rounded-xl transition-colors",
                           active
-                            ? "bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
+                            ? "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
                             : "border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] text-[var(--cf-text-primary)]",
                         )}
                       >
@@ -330,8 +340,8 @@ export function OnboardingWizard({
                         className={cn(
                           "inline-flex size-6 items-center justify-center rounded-full border transition-colors",
                           active
-                            ? "border-[var(--cf-bg-accent)] bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]"
-                            : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)]",
+                            ? "border-[var(--cf-lp-action)] bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
+                            : "border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)]",
                         )}
                       >
                         {active && <Check className="size-3.5" />}
@@ -339,24 +349,10 @@ export function OnboardingWizard({
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <span
-                        className={cn(
-                          "v3-heading-s",
-                          active
-                            ? "text-[var(--cf-text-on-royal)]"
-                            : "text-[var(--cf-text-primary)]",
-                        )}
-                      >
+                      <span className="v3-heading-s text-[var(--cf-text-primary)]">
                         {option.title}
                       </span>
-                      <span
-                        className={cn(
-                          "v3-body-s",
-                          active
-                            ? "text-[var(--cf-text-on-royal-muted)]"
-                            : "text-[var(--cf-text-secondary)]",
-                        )}
-                      >
+                      <span className="v3-body-s text-[var(--cf-text-secondary)]">
                         {option.subtitle}
                       </span>
                     </div>
@@ -369,12 +365,10 @@ export function OnboardingWizard({
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="v3-btn-primary py-3 pr-3.5 pl-5 text-sm"
+                className="v3-btn-primary py-3 px-6 text-sm"
               >
                 <span>Continue</span>
-                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                  <ArrowRight className="size-3.5" />
-                </span>
+                <ArrowRight className="size-4" />
               </button>
             </div>
           </section>
@@ -431,14 +425,6 @@ export function OnboardingWizard({
               </button>
 
               <TemplateTypeCard
-                title="Booth / Exhibition"
-                description="Spatial and event work."
-                footerLabel="COMING SOON"
-                state="coming-soon"
-                icon={<Store className="size-5" />}
-              />
-
-              <TemplateTypeCard
                 title="More coming"
                 description="Branding, packaging and more."
                 footerLabel="ON THE ROADMAP"
@@ -458,12 +444,10 @@ export function OnboardingWizard({
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="v3-btn-primary py-3 pr-3.5 pl-5 text-sm"
+                className="v3-btn-primary py-3 px-6 text-sm"
               >
                 <span>Continue</span>
-                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                  <ArrowRight className="size-3.5" />
-                </span>
+                <ArrowRight className="size-4" />
               </button>
             </div>
           </section>
@@ -498,12 +482,12 @@ export function OnboardingWizard({
                     decoding="async"
                     src={avatarUrl}
                     alt={displayName || "Profile avatar"}
-                    className="size-20 rounded-xl border border-[var(--cf-border-subtle)] object-cover"
+                    className="size-20 rounded-2xl border border-[var(--cf-border-subtle)] object-cover"
                   />
                 ) : (
                   <div
                     aria-hidden="true"
-                    className="v3-heading-m inline-flex size-20 shrink-0 items-center justify-center rounded-xl bg-[var(--cf-royal)] text-[var(--cf-bg-accent)]"
+                    className="font-editorial inline-flex size-20 shrink-0 items-center justify-center rounded-2xl bg-[var(--cf-lp-action)] text-3xl font-normal text-[var(--cf-lp-on-action)]"
                   >
                     {initials}
                   </div>
@@ -539,7 +523,7 @@ export function OnboardingWizard({
                       </Button>
                     )}
                   </div>
-                  <span className="text-tertiary type-caption">PNG or JPG · up to 350 KB</span>
+                  <span className="text-tertiary type-caption">PNG, JPG, or WebP · up to 5 MB</span>
                 </div>
               </div>
 
@@ -594,12 +578,10 @@ export function OnboardingWizard({
               <button
                 type="submit"
                 disabled={submitting}
-                className="v3-btn-primary py-3 pr-3.5 pl-5 text-sm disabled:opacity-50"
+                className="v3-btn-primary py-3 px-6 text-sm disabled:opacity-50"
               >
                 <span>{submitting ? "Saving..." : "Continue"}</span>
-                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[var(--cf-bg-accent)] text-[var(--cf-text-on-accent)]">
-                  <ArrowRight className="size-3.5" />
-                </span>
+                <ArrowRight className="size-4" />
               </button>
             </div>
           </form>

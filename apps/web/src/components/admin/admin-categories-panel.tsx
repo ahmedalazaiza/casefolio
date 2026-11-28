@@ -1,13 +1,23 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   slugifyCategory,
   type AdminCategoriesOverview,
@@ -35,6 +45,11 @@ export function AdminCategoriesPanel({
   const [slugInput, setSlugInput] = useState(firstCat?.slug ?? "");
   const [sortInput, setSortInput] = useState(String(firstCat?.sort ?? 10));
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(Boolean(firstCat));
+
+  // Delete / reassign dialog state
+  const [deleteTarget, setDeleteTarget] = useState<AdminCategoryItem | null>(null);
+  const [reassignDestinationId, setReassignDestinationId] = useState<string>("__uncategorized__");
+  const [allowPublishedReassign, setAllowPublishedReassign] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -161,7 +176,22 @@ export function AdminCategoriesPanel({
     });
   }
 
-  function handleDelete(categoryId: string) {
+  function openDeleteCategoryDialog(cat: AdminCategoryItem) {
+    const firstAlternative = overview.categories.find((c) => c.id !== cat.id);
+    setDeleteTarget(cat);
+    setReassignDestinationId(firstAlternative?.id ?? "__uncategorized__");
+    setAllowPublishedReassign(false);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  }
+
+  function handleDelete(
+    categoryId: string,
+    options?: {
+      reassignToCategoryId?: string | null;
+      allowPublishedReassign?: boolean;
+    },
+  ) {
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -169,10 +199,19 @@ export function AdminCategoriesPanel({
       const response = await fetch("/api/admin/categories", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: categoryId }),
+        body: JSON.stringify({
+          id: categoryId,
+          ...(options?.reassignToCategoryId !== undefined
+            ? { reassignToCategoryId: options.reassignToCategoryId }
+            : {}),
+          ...(options?.allowPublishedReassign !== undefined
+            ? { allowPublishedReassign: options.allowPublishedReassign }
+            : {}),
+        }),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
+        reassignedCount?: number;
         overview?: AdminCategoriesOverview;
       };
       if (!response.ok || !payload.overview) {
@@ -180,13 +219,18 @@ export function AdminCategoriesPanel({
         return;
       }
       setOverview(payload.overview);
+      setDeleteTarget(null);
       const next = payload.overview.categories[0] ?? null;
       if (next) {
         selectCategoryForEdit(next);
       } else {
         startNewCategory();
       }
-      setSuccessMessage("Category deleted.");
+      setSuccessMessage(
+        payload.reassignedCount && payload.reassignedCount > 0
+          ? `Category deleted and ${payload.reassignedCount} template(s) reassigned.`
+          : "Category deleted.",
+      );
       router.refresh();
     });
   }
@@ -344,7 +388,12 @@ export function AdminCategoriesPanel({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {cat.publishedTemplateCount > 0 && (
+                          <Badge tone="published">
+                            {cat.publishedTemplateCount} deployed
+                          </Badge>
+                        )}
                         <Badge tone="neutral">
                           {cat.templateCount} {cat.templateCount === 1 ? "template" : "templates"}
                         </Badge>
@@ -379,6 +428,25 @@ export function AdminCategoriesPanel({
                         >
                           Edit
                         </Button>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={isPending}
+                          aria-label={`Delete ${cat.name}`}
+                          data-testid={`delete-category-${cat.id}`}
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => {
+                            if (cat.templateCount === 0) {
+                              handleDelete(cat.id);
+                            } else {
+                              openDeleteCategoryDialog(cat);
+                            }
+                          }}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
                       </div>
                     </li>
                   );
@@ -393,6 +461,22 @@ export function AdminCategoriesPanel({
                 ? "New category"
                 : `Edit category · ${selectedCategory?.name ?? ""}`}
             </h2>
+
+            {mode === "edit" &&
+              selectedCategory &&
+              selectedCategory.publishedTemplateCount > 0 && (
+                <div
+                  role="status"
+                  className="border-warning/40 bg-warning/10 text-foreground flex items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs"
+                >
+                  <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                  <span>
+                    Used by <strong>{selectedCategory.publishedTemplateCount}</strong> published
+                    (deployed) {selectedCategory.publishedTemplateCount === 1 ? "template" : "templates"}.
+                    Leave deployed categories intact unless you intend to update live library links.
+                  </span>
+                </div>
+              )}
 
             <form onSubmit={handleSave} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
@@ -463,13 +547,14 @@ export function AdminCategoriesPanel({
                     type="button"
                     variant="destructive"
                     size="sm"
-                    disabled={isPending || selectedCategory.templateCount > 0}
-                    title={
-                      selectedCategory.templateCount > 0
-                        ? "Reassign or archive templates using this category first"
-                        : "Delete category"
-                    }
-                    onClick={() => handleDelete(selectedCategory.id)}
+                    disabled={isPending}
+                    onClick={() => {
+                      if (selectedCategory.templateCount === 0) {
+                        handleDelete(selectedCategory.id);
+                      } else {
+                        openDeleteCategoryDialog(selectedCategory);
+                      }
+                    }}
                   >
                     <Trash2 className="size-4" />
                     Delete
@@ -480,6 +565,109 @@ export function AdminCategoriesPanel({
           </Card>
         </div>
       )}
+
+      {/* Reassign & Delete Category Modal */}
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete “{deleteTarget?.name ?? "category"}”</DialogTitle>
+            <DialogDescription>
+              {deleteTarget
+                ? `This category currently has ${deleteTarget.templateCount} referencing template(s). Choose where to move them before deleting.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteTarget && (
+            <div className="flex flex-col gap-4">
+              {deleteTarget.publishedTemplateCount > 0 && (
+                <div
+                  role="alert"
+                  className="border-warning/40 bg-warning/10 text-foreground flex items-start gap-2.5 rounded-xl border p-3 text-xs"
+                >
+                  <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                  <span>
+                    <strong>Deployed category protection:</strong>{" "}
+                    {deleteTarget.publishedTemplateCount} template(s) in “{deleteTarget.name}”
+                    are currently published live. Do not delete unless you intentionally want to
+                    reassign them.
+                  </span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="delete-category-reassign-select">
+                  Reassign referencing templates to
+                </Label>
+                <Select
+                  id="delete-category-reassign-select"
+                  value={reassignDestinationId}
+                  onChange={(e) => setReassignDestinationId(e.target.value)}
+                >
+                  {overview.categories
+                    .filter((c) => c.id !== deleteTarget.id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.slug})
+                      </option>
+                    ))}
+                  <option value="__uncategorized__">
+                    Uncategorized (remove category assignment)
+                  </option>
+                </Select>
+              </div>
+
+              {deleteTarget.publishedTemplateCount > 0 && (
+                <label className="text-foreground flex items-start gap-2.5 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={allowPublishedReassign}
+                    onChange={(e) => setAllowPublishedReassign(e.target.checked)}
+                    className="accent-primary mt-0.5 size-4 rounded-xs"
+                  />
+                  <span>
+                    Confirm modifying a deployed category and moving its {deleteTarget.publishedTemplateCount}{" "}
+                    published template(s).
+                  </span>
+                </label>
+              )}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isPending}
+                  onClick={() => setDeleteTarget(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={
+                    isPending ||
+                    (deleteTarget.publishedTemplateCount > 0 && !allowPublishedReassign)
+                  }
+                  onClick={() =>
+                    handleDelete(deleteTarget.id, {
+                      reassignToCategoryId: reassignDestinationId,
+                      allowPublishedReassign:
+                        deleteTarget.publishedTemplateCount > 0 ? allowPublishedReassign : true,
+                    })
+                  }
+                >
+                  {isPending ? "Deleting..." : "Reassign & delete"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

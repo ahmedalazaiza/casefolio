@@ -7,7 +7,7 @@ import { listHelpArticles } from "@/lib/help/articles";
 export const metadata: Metadata = {
   title: "Help Center & Guides — Casefolio",
   description:
-    "Guides and answers for creating UI/UX case studies, customizing templates, publishing custom links, exporting PNG, Behance, and A4 PDF files, and managing billing.",
+    "Guides and answers for creating UI/UX case studies, customizing templates, publishing custom links, exporting full case studies to Layerat alongside PNG and A4 PDF files, and managing billing.",
   alternates: {
     canonical: "/help",
   },

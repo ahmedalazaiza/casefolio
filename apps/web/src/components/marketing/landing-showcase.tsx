@@ -45,7 +45,7 @@ const STUDIO_STAGE_MODES = [
   {
     id: "export",
     label: "Multi-target bundle",
-    note: "Live URL · 1400px Behance PNG · print-sharp A4 PDF",
+    note: "Layerat full export · Live URL · print-sharp A4 PDF",
   },
 ] as const;
 
@@ -70,7 +70,7 @@ export function HeroDevice({
                 <img
                   loading="lazy"
                   decoding="async"
-                  src="/templates/cinema/screen-seats.svg"
+                  src="/templates/cinema/cover.svg"
                   alt=""
                   className="aspect-9/16 w-full object-cover"
                 />
@@ -96,7 +96,7 @@ export function HeroDevice({
                 <img
                   loading="lazy"
                   decoding="async"
-                  src="/templates/atlas/hero-planner.svg"
+                  src="/templates/atlas/cover.svg"
                   alt=""
                   className="aspect-16/10 w-full object-cover"
                 />
@@ -185,17 +185,17 @@ export function HeroDevice({
             <div className="grid grid-cols-1 gap-4 p-2 sm:grid-cols-3 sm:p-4">
               {[
                 {
-                  src: "/templates/cinema/screen-seats.svg",
+                  src: "/templates/cinema/cover.svg",
                   title: "Cinema — Seat selection",
                   spec: "iPhone 16 Pro · 9:19.5",
                 },
                 {
-                  src: "/landing/orbit-home.svg",
+                  src: "/templates/orbit/cover.svg",
                   title: "Orbit — Payoff balance",
                   spec: "Mobile App · 9:19.5",
                 },
                 {
-                  src: "/templates/pulse/hero-workout.svg",
+                  src: "/templates/pulse/cover.svg",
                   title: "Pulse — Workout ring",
                   spec: "Wellness UI · 9:19.5",
                 },
@@ -231,21 +231,21 @@ export function HeroDevice({
                   loading="lazy"
                   decoding="async"
                   src="/landing/export-bundle-preview.svg"
-                  alt="Behance 1400px strip, 2x Retina PNG, and A4 PDF bundle export preview"
+                  alt="Layerat full case study 1400px pack, 2x Retina PNG, and A4 PDF export preview"
                   className="aspect-16/9 w-full object-cover"
                 />
               </div>
               <div className="flex flex-col gap-4 text-left lg:col-span-5">
                 <p className="obsidian-muted type-overline">
-                  One draft, three outputs
+                  One draft, four outputs
                 </p>
                 <h3 className="font-display text-2xl font-semibold text-inherit">
-                  Stop duplicating Figma pages for Behance and PDFs.
+                  Stop duplicating Figma pages for Layerat and PDFs.
                 </h3>
                 <ul className="divide-y obsidian-hairline flex flex-col border-y">
                   {[
                     ["Hosted Portfolio Link", "casefolio.app/p/your-work"],
-                    ["Behance 1400px Slice Pack", "Lossless vertical PNGs"],
+                    ["Layerat Full Case Study Pack", "Seamless 1,400px ZIP panels"],
                     ["Recruiter Deck PDF", "Print-sharp A4 pagination"],
                   ].map(([title, meta]) => (
                     <li
@@ -395,8 +395,8 @@ export function HowItWorksStage({
       num: "04",
       title: "Publish URL or ship slices",
       description:
-        "Push live onto casefolio.app (or custom domain on Plus) and download 1400px Behance PNGs & A4 PDFs.",
-      chips: ["Live URL", "Behance PNG", "A4 PDF"],
+        "Push live onto casefolio.app (or export the full case study directly to Layerat) plus download 2x PNGs & A4 PDFs.",
+      chips: ["Layerat", "Live URL", "A4 PDF"],
     },
   ] as const;
 
@@ -482,11 +482,11 @@ const WORKBENCH_MODES = [
     id: "export",
     num: "04",
     label: "Clean single-click delivery",
-    headline: "Ship to live web, Behance 1400px, and A4 PDFs",
+    headline: "Ship full case studies to Layerat, live web, and A4 PDFs",
     detail:
       "Every export renders straight from the live layout tree so serif italics, code metrics, and crisp device bezels match 1:1.",
     statLabel: "Output Targets",
-    statValue: "Web · PNG · PDF",
+    statValue: "Layerat · Web · PNG · PDF",
     badge: "Same source engine",
   },
 ] as const;
@@ -543,8 +543,8 @@ export function ObsidianWorkflowStage({
                 <img
                   loading="lazy"
                   decoding="async"
-                  src="/templates/cinema/screen-showtimes.svg"
-                  alt="Cinema showtimes mobile frame"
+                  src="/templates/northwind/cover.svg"
+                  alt="Northwind dispatch workspace frame"
                   className="aspect-9/16 max-h-64 w-full object-cover"
                 />
               </div>
@@ -552,7 +552,7 @@ export function ObsidianWorkflowStage({
                 <img
                   loading="lazy"
                   decoding="async"
-                  src="/templates/cinema/screen-seats.svg"
+                  src="/templates/cinema/cover.svg"
                   alt="Cinema active iPhone 16 Pro seat picker screen"
                   className="aspect-9/16 max-h-72 w-full object-cover"
                 />
@@ -561,7 +561,7 @@ export function ObsidianWorkflowStage({
                 <img
                   loading="lazy"
                   decoding="async"
-                  src="/landing/orbit-home.svg"
+                  src="/templates/orbit/cover.svg"
                   alt="Orbit fintech home frame"
                   className="aspect-9/16 max-h-64 w-full object-cover"
                 />
@@ -663,8 +663,8 @@ export function ObsidianWorkflowStage({
                   Identical pixels across every channel
                 </p>
                 <p className="obsidian-muted type-body-s">
-                  Generate web links, Behance 1400px stitched PNG series, and A4
-                  recruiter PDF decks from the exact same component render tree.
+                  Export your full case study to Layerat as a seamless 1,400px pack,
+                  publish web links, or download A4 PDF decks from the exact same component render tree.
                 </p>
               </div>
             </div>

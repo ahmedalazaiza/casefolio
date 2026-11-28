@@ -20,7 +20,6 @@ import { useMemo, useState } from "react";
 import { trackClientProductEvent } from "@/components/analytics/posthog-provider";
 import { UpgradePromptDialog } from "@/components/billing/upgrade-prompt-dialog";
 import { TemplatePuckRenderer } from "@/components/editor/puck-config";
-import { SectionStackSheet } from "@/components/marketing/motion";
 import { TemplateThumbnail } from "@/components/templates/template-thumbnail";
 import { Badge, ProBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -159,7 +158,7 @@ export function TemplateLibraryClient({
   const filterDock = (
     <aside
       aria-label="Template library filters"
-      className="flex flex-col gap-5 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-4 sm:p-5 lg:sticky lg:top-24"
+      className="flex flex-col gap-5 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] p-4 sm:p-5 lg:sticky lg:top-24"
     >
       <div className="flex items-center justify-between gap-2 border-b border-[var(--cf-border-subtle)] pb-3.5">
         <div className="flex items-center gap-2">
@@ -374,7 +373,7 @@ export function TemplateLibraryClient({
               data-template-slug={item.slug}
               data-tier={item.tier}
               data-locked={isLocked ? "true" : "false"}
-              className="group flex flex-col justify-between gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] p-3 transition-colors duration-200 hover:border-[var(--cf-royal)]"
+              className="group flex flex-col justify-between gap-3 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] p-3 transition-colors duration-200 hover:border-[var(--cf-lp-ink)]"
             >
               <div className="flex flex-col gap-3.5">
                 {/* Thumbnail */}
@@ -444,7 +443,7 @@ export function TemplateLibraryClient({
                 <button
                   type="button"
                   onClick={() => setPreviewItem(item)}
-                  className="focus-visible:ring-ring/40 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-border-strong)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
+                  className="focus-visible:ring-ring/40 inline-flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[0.3125rem] border border-[var(--cf-border-strong)] bg-[var(--cf-bg-elevated)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-primary)] transition-colors outline-none hover:border-[var(--cf-text-primary)] hover:bg-[var(--cf-bg-surface)] focus-visible:ring-2"
                 >
                   <Eye className="size-3.5 shrink-0" />
                   <span>Preview</span>
@@ -459,7 +458,7 @@ export function TemplateLibraryClient({
                         setUpgradeTemplateName(item.name);
                       }
                     }}
-                    className="focus-visible:ring-ring/40 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--cf-ink)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-on-ink)] transition-opacity outline-none hover:opacity-90 focus-visible:ring-2"
+                    className="focus-visible:ring-ring/40 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[0.3125rem] bg-[var(--cf-lp-action)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-lp-on-action)] transition-opacity outline-none hover:opacity-90 focus-visible:ring-2"
                   >
                     <Lock className="size-3 shrink-0" />
                     <span>Upgrade for Pro</span>
@@ -475,7 +474,7 @@ export function TemplateLibraryClient({
                         surface: "library_card",
                       })
                     }
-                    className="focus-visible:ring-ring/40 group/btn inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--cf-ink)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-text-on-ink)] transition-opacity outline-none hover:opacity-90 focus-visible:ring-2"
+                    className="focus-visible:ring-ring/40 group/btn inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[0.3125rem] bg-[var(--cf-lp-action)] px-3 text-xs font-semibold whitespace-nowrap text-[var(--cf-lp-on-action)] transition-opacity outline-none hover:opacity-90 focus-visible:ring-2"
                   >
                     <span>Use template</span>
                     <ArrowRight className="size-3.5 shrink-0 transition-transform duration-200 group-hover/btn:translate-x-0.5" />
@@ -516,7 +515,7 @@ export function TemplateLibraryClient({
                   <div
                     role="group"
                     aria-label="Preview viewport mode"
-                    className="inline-flex items-center gap-1 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] p-1"
+                    className="inline-flex items-center gap-1 rounded-[0.3125rem] border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] p-1"
                   >
                     <button
                       type="button"
@@ -524,9 +523,9 @@ export function TemplateLibraryClient({
                       aria-pressed={previewViewport === "desktop"}
                       onClick={() => setPreviewViewport("desktop")}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                        "inline-flex items-center gap-1.5 rounded-[0.25rem] px-3 py-1.5 text-xs font-semibold transition-colors",
                         previewViewport === "desktop"
-                          ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                          ? "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
                           : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                       )}
                     >
@@ -539,9 +538,9 @@ export function TemplateLibraryClient({
                       aria-pressed={previewViewport === "mobile"}
                       onClick={() => setPreviewViewport("mobile")}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                        "inline-flex items-center gap-1.5 rounded-[0.25rem] px-3 py-1.5 text-xs font-semibold transition-colors",
                         previewViewport === "mobile"
-                          ? "bg-[var(--cf-royal)] text-[var(--cf-text-on-royal)]"
+                          ? "bg-[var(--cf-lp-action)] text-[var(--cf-lp-on-action)]"
                           : "text-[var(--cf-text-secondary)] hover:text-[var(--cf-text-primary)]",
                       )}
                     >
@@ -637,7 +636,7 @@ export function TemplateLibraryClient({
             ? `Unlock the ${upgradeTemplateName} Pro template`
             : "Unlock Pro templates"
         }
-        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) to unlock all Pro templates, build up to 10 rotatable Case Studies with custom URLs, and export high-resolution PNG, Behance, and PDF files without watermarks."
+        featureDescription="Upgrade to Casefolio Pro ($7.99/mo · 2 months free on annual) to unlock all Pro templates, build up to 10 rotatable Case Studies with custom URLs, export full case studies to Layerat, and download high-resolution PNG and PDF files without watermarks."
       />
     </>
   );
@@ -646,7 +645,7 @@ export function TemplateLibraryClient({
     const isTeamsPlan = userPlan === "team" || userPlan === "plus";
     return (
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
-        <header className="flex flex-col justify-between gap-3 rounded-xl border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+        <header className="flex flex-col justify-between gap-3 rounded-[0.5625rem] border border-[var(--cf-lp-card-border)] bg-[var(--cf-lp-card)] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
           <div className="flex flex-col items-start gap-1">
             <Eyebrow icon={<LayoutTemplate />} className="px-2.5 py-0.5 text-[0.6875rem]">
               Curated Studio Library
@@ -687,100 +686,73 @@ export function TemplateLibraryClient({
   }
 
   return (
-    <div className="relative flex flex-col overflow-x-clip">
-      {/* 1. Public Architectural Royal Grid Hero */}
-      <section className="v3-pattern-grid relative z-10 overflow-hidden pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24">
+    <div className="relative flex flex-col overflow-x-clip bg-[var(--cf-bg-canvas)]">
+      {/* 1. Calm Editorial Serif Library Hero */}
+      <section className="relative z-10 overflow-hidden pt-12 pb-10 sm:pt-16 sm:pb-14 lg:pt-20">
         <div className="v3-container flex flex-col items-center text-center">
-          <Eyebrow step="01">Curated Case Study Library</Eyebrow>
+          <Eyebrow>Curated Case Study Library</Eyebrow>
 
           <h1 className="v3-display-xl mt-5 text-balance text-[var(--cf-text-primary)]">
             Template <span className="v3-sticker-lime">library</span>
           </h1>
 
-          <p className="v3-body-l mt-5 max-w-2xl text-pretty text-[var(--cf-text-secondary)]">
-            Ready-made UI/UX case study layouts crafted by designers. Choose a
-            template, place your screens in ratio-locked mockups, and publish or
-            export in minutes.
+          <p className="v3-body-l mt-4 max-w-xl text-pretty text-[var(--cf-text-secondary)]">
+            Pick a layout, place your screens in ratio-locked mockups, and publish or export in minutes.
           </p>
 
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 text-xs font-semibold text-[var(--cf-text-primary)]">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3.5 py-1.5 text-xs font-medium text-[var(--cf-text-primary)]">
               <span
                 aria-hidden="true"
-                className="size-1.5 rounded-full bg-[var(--cf-royal)]"
+                className="size-1.5 rounded-full bg-[var(--cf-lp-ink)]"
               />
               <span>{templates.length} Curated Layouts</span>
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 text-xs font-semibold text-[var(--cf-text-secondary)]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3.5 py-1.5 text-xs font-medium text-[var(--cf-text-secondary)]">
               <span>{totalSlots}+ Ratio-Locked Slots</span>
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-elevated)] px-3.5 py-1.5 text-xs font-semibold text-[var(--cf-text-secondary)]">
-              <span>Live Link · PNG · Behance · PDF</span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-subtle)] bg-[var(--cf-bg-surface)] px-3.5 py-1.5 text-xs font-medium text-[var(--cf-text-secondary)]">
+              <span>Live Link · Layerat · PNG · PDF</span>
             </span>
           </div>
         </div>
       </section>
 
-      {/* 2. Overlapping Elevated Studio Catalog Sheet */}
-      <SectionStackSheet
-        overlapY={48}
-        startScale={0.982}
-        className="z-20 -mt-8 lg:-mt-12"
-      >
-        <div className="v3-sheet-elevated rounded-t-[2rem] border-t border-[var(--cf-border-subtle)] bg-[var(--cf-bg-canvas)] pt-10 pb-20 sm:rounded-t-[2.75rem] sm:pt-14 sm:pb-24 lg:rounded-t-[3.5rem]">
-          <div className="mx-auto grid w-full max-w-[84rem] grid-cols-1 items-start gap-6 px-5 sm:px-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-7 lg:px-10">
-            {filterDock}
-            <div className="min-w-0">{catalogGrid}</div>
+      {/* 2. Clean Studio Catalog Grid */}
+      <div className="py-8 sm:py-12">
+        <div className="mx-auto grid w-full max-w-[84rem] grid-cols-1 items-start gap-6 px-5 sm:px-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-7 lg:px-10">
+          {filterDock}
+          <div className="min-w-0">{catalogGrid}</div>
+        </div>
+      </div>
+
+      {/* 3. Calm Editorial Final CTA */}
+      <section className="py-20 sm:py-28">
+        <div className="v3-container flex flex-col items-center text-center">
+          <h2 className="v3-display-l max-w-2xl text-[var(--cf-text-primary)]">
+            Pick a layout and ship your{" "}
+            <span className="italic text-[var(--cf-lp-subtle)]">next story</span> today.
+          </h2>
+          <p className="v3-body-m mt-4 max-w-md text-[var(--cf-text-secondary)]">
+            Start free with 1 Case Study credit — no credit card required.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/sign-up"
+              className="v3-btn-primary focus-visible:ring-ring/40 py-3.5 px-7 outline-none focus-visible:ring-2"
+            >
+              <span>Start free</span>
+              <ArrowRight className="size-4" />
+            </Link>
+            <Link
+              href="/pricing"
+              className="v3-btn-secondary focus-visible:ring-ring/40 py-3.5 px-7 outline-none focus-visible:ring-2"
+            >
+              <span>Compare plans</span>
+            </Link>
           </div>
         </div>
-      </SectionStackSheet>
-
-      {/* 3. Overlapping Electric Royal Blue Launch Sheet + Dual Signature Ribbon */}
-      <SectionStackSheet
-        overlapY={44}
-        startScale={0.985}
-        className="z-30 -mt-8 lg:-mt-12"
-      >
-        <section className="v3-pattern-dots-dark v3-sheet-royal overflow-hidden rounded-t-[2rem] pt-14 sm:rounded-t-[2.75rem] lg:rounded-t-[3.5rem] lg:pt-20">
-          <div className="v3-container flex flex-col items-center pb-14 text-center lg:pb-20">
-            <span className="v3-label mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--cf-border-on-royal)] bg-[var(--cf-bg-inverse-elevated)] px-3.5 py-1 text-[var(--cf-bg-accent)] uppercase">
-              <span
-                aria-hidden="true"
-                className="size-1.5 rounded-full bg-[var(--cf-bg-accent)]"
-              />
-              <span>02 · Ready to Build</span>
-            </span>
-            <h2 className="v3-display-l max-w-2xl text-[var(--cf-text-inverse)]">
-              Pick a layout and ship your{" "}
-              <span className="v3-sticker-lime">next story</span> today
-            </h2>
-            <p className="v3-body-l mt-4 max-w-xl text-[var(--cf-text-inverse-muted)]">
-              Start free with 1 lifetime Case Study credit—no credit card required. Drop in your
-              screens and publish a shareable link in minutes.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/sign-up"
-                className="v3-btn-lime focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
-              >
-                <span>Start free</span>
-                <ArrowRight className="size-4 stroke-[2.5]" />
-              </Link>
-              <Link
-                href="/pricing"
-                className="v3-btn-secondary focus-visible:ring-ring/40 outline-none focus-visible:ring-2"
-              >
-                <span>Compare plans</span>
-              </Link>
-            </div>
-          </div>
-
-          <div aria-hidden="true" className="flex flex-col">
-            <div className="h-1.5 w-full bg-[var(--cf-royal)]" />
-            <div className="h-2 w-full bg-[var(--cf-bg-accent)]" />
-          </div>
-        </section>
-      </SectionStackSheet>
+      </section>
 
       {modals}
     </div>
