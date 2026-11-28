@@ -13,7 +13,7 @@ node_modules
 # testing
 coverage
 playwright-report
-test-results
+test-results*
 blob-report
 playwright/.cache
 

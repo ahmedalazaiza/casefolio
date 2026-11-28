@@ -252,6 +252,7 @@ describe("Account deletion & server-side step-up auth (B1, S9)", () => {
     const [tpl] = await db
       .select({ id: dbSchema.templates.id, currentVersionId: dbSchema.templates.currentVersionId })
       .from(dbSchema.templates)
+      .where(eq(dbSchema.templates.slug, "orbit"))
       .limit(1);
     expect(tpl?.currentVersionId).toBeTruthy();
 
