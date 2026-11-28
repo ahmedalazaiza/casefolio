@@ -172,6 +172,7 @@ export interface ImageSlotFrameProps {
   accentToken?: string;
   compact?: boolean;
   bezelColor?: string;
+  showDynamicIsland?: boolean;
   className?: string;
   innerClassName?: string;
   toolbarClassName?: string;
@@ -191,6 +192,7 @@ export function ImageSlotFrame({
   accentToken = "primary",
   compact = false,
   bezelColor,
+  showDynamicIsland = false,
   className,
   innerClassName,
   toolbarClassName,
@@ -326,6 +328,16 @@ export function ImageSlotFrame({
           )}
         >
           {viewportContent}
+          {showDynamicIsland && model === "iphone" && (
+            <span
+              aria-hidden="true"
+              style={{
+                backgroundColor:
+                  bezelColor || "var(--tpl-color-ink, var(--tpl-color-text, var(--foreground)))",
+              }}
+              className="pointer-events-none absolute top-[3.2%] left-1/2 z-20 h-[3.6%] w-[30.5%] -translate-x-1/2 rounded-full"
+            />
+          )}
         </div>
       </div>
     );

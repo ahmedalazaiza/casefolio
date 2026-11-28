@@ -138,9 +138,13 @@ export function createCasefolioPuckConfig(
       Hero: {
         label: "Hero",
         fields: {
+          studioName: { type: "text", label: "Studio wordmark (Editorial)" },
           eyebrow: { type: "text", label: "Eyebrow" },
           title: { type: "text", label: "Title" },
+          titleMuted: { type: "text", label: "Muted accent phrase in title" },
           subtitle: { type: "textarea", label: "Subtitle" },
+          ctaLabel: { type: "text", label: "Stage pill CTA label" },
+          ctaHref: { type: "text", label: "Stage pill CTA link" },
           tags: {
             type: "array",
             label: "Highlight tags",
@@ -156,6 +160,7 @@ export function createCasefolioPuckConfig(
               { label: "Split — mockup right", value: "split-right" },
               { label: "Split — mockup left", value: "split-left" },
               { label: "Centered showcase", value: "centered" },
+              { label: "Editorial stage panel", value: "editorial-stage" },
             ],
           },
           mockupStyle: MOCKUP_STYLE_FIELD,
@@ -283,6 +288,7 @@ export function createCasefolioPuckConfig(
             options: [
               { label: "Aligned grid", value: "grid" },
               { label: "Staggered", value: "staggered" },
+              { label: "Offset band", value: "band-offset" },
             ],
           },
           deviceFrame: {
@@ -322,9 +328,20 @@ export function createCasefolioPuckConfig(
       Results: {
         label: "Results",
         fields: {
+          layout: {
+            type: "select",
+            label: "Results layout",
+            options: [
+              { label: "Standard metrics", value: "default" },
+              { label: "Editorial closing panel", value: "editorial-panel" },
+            ],
+          },
           eyebrow: { type: "text", label: "Eyebrow" },
+          introLabel: { type: "text", label: "Intro strip label" },
+          introBody: { type: "textarea", label: "Intro strip summary" },
           heading: { type: "text", label: "Heading" },
           subtitle: { type: "textarea", label: "Subtitle" },
+          disclaimer: { type: "text", label: "Header note" },
           columns: {
             type: "radio",
             label: "Metric columns",
@@ -342,6 +359,7 @@ export function createCasefolioPuckConfig(
             arrayFields: {
               value: { type: "text", label: "Metric value" },
               label: { type: "text", label: "Metric label" },
+              tag: { type: "text", label: "Metric badge / tag" },
             },
           },
           takeaways: {
@@ -373,12 +391,40 @@ export function createCasefolioPuckConfig(
       CTA: {
         label: "Call to Action",
         fields: {
+          layout: {
+            type: "select",
+            label: "CTA layout",
+            options: [
+              { label: "Standard CTA card", value: "default" },
+              { label: "Editorial Thank You panel", value: "thank-you" },
+            ],
+          },
           heading: { type: "text", label: "Heading" },
-          subheading: { type: "textarea", label: "Subheading" },
+          subheading: { type: "textarea", label: "Subheading / signoff" },
+          logo: createImageSlotCustomField("cta.logo", "Studio logo slot", editorContext),
           primaryLabel: { type: "text", label: "Primary button label" },
           primaryHref: { type: "text", label: "Primary button URL" },
           secondaryLabel: { type: "text", label: "Secondary button label" },
           secondaryHref: { type: "text", label: "Secondary button URL" },
+          socialLinks: {
+            type: "array",
+            label: "Portfolio & social links",
+            max: 6,
+            arrayFields: {
+              platform: {
+                type: "select",
+                label: "Platform",
+                options: [
+                  { label: "Website", value: "website" },
+                  { label: "Layerat", value: "layerat" },
+                  { label: "Dribbble", value: "dribbble" },
+                  { label: "LinkedIn", value: "linkedin" },
+                ],
+              },
+              label: { type: "text", label: "Label" },
+              href: { type: "text", label: "URL" },
+            },
+          },
           background: colorField,
           accent: accentField,
         },
@@ -394,13 +440,23 @@ export function createCasefolioPuckConfig(
             label: "Section layout",
             options: [
               { label: "Stacked narrative", value: "stacked" },
+              { label: "Editorial 2-column strip", value: "editorial-strip" },
               { label: "Feature spotlight — mockup right", value: "split-right" },
               { label: "Feature spotlight — mockup left", value: "split-left" },
+              { label: "3-column phone feature tiles", value: "feature-tiles" },
+              { label: "2×2 icon feature grid", value: "icon-features" },
+              { label: "Lifestyle phone + card + photo composite", value: "lifestyle-composite" },
+              { label: "Branding bento (Icons + Grid + Watch)", value: "branding-bento" },
+              { label: "Brand guideline slides (6-card deck)", value: "brand-guidelines" },
+              { label: "Arched hero phone pair", value: "arch-phone-pair" },
+              { label: "3-column bento UI collage", value: "bento-collage" },
               { label: "Competitive comparison matrix", value: "comparison" },
               { label: "User persona profile", value: "persona" },
               { label: "Design system (Typography & Colors)", value: "design-system" },
             ],
           },
+          brandName: { type: "text", label: "Brand wordmark (Guidelines)" },
+          badgeText: { type: "text", label: "App icon badge count" },
           body: createRichTextCustomField("Body"),
           bullets: {
             type: "array",
@@ -412,11 +468,12 @@ export function createCasefolioPuckConfig(
           },
           cards: {
             type: "array",
-            label: "Comparison / Persona cards",
+            label: "Feature / Comparison / Persona cards",
             max: 8,
             arrayFields: {
               title: { type: "text", label: "Card title" },
               subtitle: { type: "text", label: "Subtitle / score" },
+              icon: { type: "text", label: "Icon key (coins, refresh-cw, credit-card, circle-dot)" },
               body: { type: "textarea", label: "Details" },
               highlighted: {
                 type: "radio",
@@ -430,12 +487,44 @@ export function createCasefolioPuckConfig(
           },
           swatches: {
             type: "array",
-            label: "Color swatches (Design system)",
+            label: "Color swatches (Design system / Guidelines)",
             max: 12,
             arrayFields: {
               label: { type: "text", label: "Swatch name" },
               token: swatchTokenField,
               role: { type: "text", label: "Usage role" },
+            },
+          },
+          mediaItems: {
+            type: "array",
+            label: "Bento & showcase visual slots",
+            max: 12,
+            arrayFields: {
+              title: { type: "text", label: "Tile / slot title" },
+              subtitle: { type: "text", label: "Caption" },
+              icon: { type: "text", label: "Tile icon (wallet, send, arrow-down-to-line)" },
+              tone: {
+                type: "select",
+                label: "Panel tint",
+                options: [
+                  { label: "Periwinkle / Primary tint", value: "peri" },
+                  { label: "Warm Butter / Accent tint", value: "butter" },
+                  { label: "Neutral Stone / Surface", value: "stone" },
+                  { label: "Dark Ink", value: "ink" },
+                  { label: "Clean Surface", value: "surface" },
+                  { label: "Clear", value: "clear" },
+                ],
+              },
+              image: createImageSlotCustomField(
+                "custom.image",
+                "Primary visual slot",
+                editorContext,
+              ) as CustomField<ImageSlotValue>,
+              secondaryImage: createImageSlotCustomField(
+                "custom.image",
+                "Secondary visual slot (optional)",
+                editorContext,
+              ),
             },
           },
           mockupStyle: MOCKUP_STYLE_FIELD,

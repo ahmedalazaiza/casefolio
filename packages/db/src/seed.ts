@@ -29,6 +29,7 @@ const CINEMA_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.cinema.json
 const NORTHWIND_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.northwind.json");
 const PULSE_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.pulse.json");
 const ATLAS_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.atlas.json");
+const CRYPTO_WALLET_TEMPLATE_JSON_PATH = resolveReferenceJsonPath("template.crypto-wallet.json");
 
 interface OrbitSeedJson {
   template: {
@@ -60,6 +61,7 @@ const DEFAULT_SEED_COVERS = new Set([
   "/templates/atlas/cover.svg",
   "/templates/northwind/cover.svg",
   "/templates/pulse/cover.svg",
+  "/templates/crypto-wallet/cover.svg",
 ]);
 
 function resolveSeedCoverUrl(
@@ -433,6 +435,12 @@ export async function seedDatabase(dbInstance?: Database): Promise<SeedResult> {
         defaultCover: "/templates/atlas/cover.svg",
         categorySort: 4,
         changelog: "Atlas cross-platform travel planner template (Figma node 121:6651)",
+      },
+      {
+        jsonPath: CRYPTO_WALLET_TEMPLATE_JSON_PATH,
+        defaultCover: "/templates/crypto-wallet/cover.svg",
+        categorySort: 1,
+        changelog: "Crypto Wallet Pro editorial bento mobile template (Figma node 251:7198)",
       },
     ];
 

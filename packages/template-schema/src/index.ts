@@ -249,7 +249,7 @@ const baseSectionProps = {
   background: z.string().trim().min(1, "Section background color token is required."),
 };
 
-export const HERO_LAYOUTS = ["split-right", "split-left", "centered"] as const;
+export const HERO_LAYOUTS = ["split-right", "split-left", "centered", "editorial-stage"] as const;
 export type HeroLayout = (typeof HERO_LAYOUTS)[number];
 
 export const MOCKUP_STYLES = ["straight", "tilt-left", "tilt-right"] as const;
@@ -258,11 +258,20 @@ export type MockupStyle = (typeof MOCKUP_STYLES)[number];
 export const PROCESS_LAYOUTS = ["cards", "timeline", "grid-3"] as const;
 export type ProcessLayout = (typeof PROCESS_LAYOUTS)[number];
 
-export const GALLERY_SHOWCASE_LAYOUTS = ["grid", "staggered"] as const;
+export const GALLERY_SHOWCASE_LAYOUTS = ["grid", "staggered", "band-offset"] as const;
 export type GalleryShowcaseLayout = (typeof GALLERY_SHOWCASE_LAYOUTS)[number];
 
 export const GALLERY_DEVICE_FRAMES = ["auto", ...SLOT_DEVICES] as const;
 export type GalleryDeviceFrame = (typeof GALLERY_DEVICE_FRAMES)[number];
+
+export const RESULTS_LAYOUTS = ["default", "editorial-panel"] as const;
+export type ResultsLayout = (typeof RESULTS_LAYOUTS)[number];
+
+export const CTA_LAYOUTS = ["default", "thank-you"] as const;
+export type CtaLayout = (typeof CTA_LAYOUTS)[number];
+
+export const CTA_SOCIAL_PLATFORMS = ["website", "layerat", "dribbble", "linkedin"] as const;
+export type CtaSocialPlatform = (typeof CTA_SOCIAL_PLATFORMS)[number];
 
 export const CUSTOM_SECTION_LAYOUTS = [
   "stacked",
@@ -271,6 +280,14 @@ export const CUSTOM_SECTION_LAYOUTS = [
   "persona",
   "comparison",
   "design-system",
+  "editorial-strip",
+  "feature-tiles",
+  "icon-features",
+  "lifestyle-composite",
+  "branding-bento",
+  "brand-guidelines",
+  "arch-phone-pair",
+  "bento-collage",
 ] as const;
 export type CustomSectionLayout = (typeof CUSTOM_SECTION_LAYOUTS)[number];
 
@@ -278,9 +295,19 @@ export const heroSectionSchema = z.object({
   type: z.literal("Hero"),
   props: z.object({
     ...baseSectionProps,
+    studioName: z.string().max(80).optional(),
     eyebrow: z.string().optional(),
     title: z.string().min(1, "Hero title is required."),
+    titleMuted: z.string().max(160).optional(),
     subtitle: z.string().optional(),
+    ctaLabel: z.string().max(60).optional(),
+    ctaHref: z
+      .string()
+      .refine((val) => val.trim().length === 0 || isSafeActionHref(val), {
+        message:
+          "Invalid Hero ctaHref: expected an https://, http://, mailto:, #anchor, or /relative URL.",
+      })
+      .optional(),
     tags: z
       .array(
         z.object({
@@ -390,8 +417,12 @@ export const resultsSectionSchema = z.object({
   props: z.object({
     ...baseSectionProps,
     eyebrow: z.string().optional(),
+    introLabel: z.string().max(120).optional(),
+    introBody: z.string().max(1000).optional(),
     heading: z.string().min(1),
     subtitle: z.string().optional(),
+    disclaimer: z.string().max(240).optional(),
+    layout: z.enum(RESULTS_LAYOUTS).optional(),
     columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(),
     accent: z.string().trim().min(1).optional(),
     metrics: z
@@ -399,6 +430,7 @@ export const resultsSectionSchema = z.object({
         z.object({
           value: z.string().min(1),
           label: z.string().min(1),
+          tag: z.string().max(60).optional(),
         }),
       )
       .min(1)
@@ -431,8 +463,10 @@ export const ctaSectionSchema = z.object({
   type: z.literal("CTA"),
   props: z.object({
     ...baseSectionProps,
+    layout: z.enum(CTA_LAYOUTS).optional(),
     heading: z.string().min(1),
     subheading: z.string().optional(),
+    logo: imageSlotValueSchema.optional(),
     primaryLabel: z.string().min(1),
     primaryHref: z
       .string()
@@ -449,9 +483,36 @@ export const ctaSectionSchema = z.object({
           "Invalid CTA secondaryHref: expected an https://, http://, mailto:, #anchor, or /relative URL.",
       })
       .optional(),
+    socialLinks: z
+      .array(
+        z.object({
+          platform: z.enum(CTA_SOCIAL_PLATFORMS),
+          label: z.string().max(120).optional(),
+          href: z
+            .string()
+            .min(1)
+            .refine(isSafeActionHref, {
+              message:
+                "Invalid CTA social href: expected an https://, http://, mailto:, #anchor, or /relative URL.",
+            }),
+        }),
+      )
+      .max(6)
+      .optional(),
     accent: z.string().trim().min(1).optional(),
   }),
 });
+
+export const customMediaItemSchema = z.object({
+  title: z.string().max(160).optional(),
+  subtitle: z.string().max(240).optional(),
+  icon: z.string().max(48).optional(),
+  tone: z.enum(["butter", "peri", "stone", "ink", "surface", "clear"]).optional(),
+  image: imageSlotValueSchema,
+  secondaryImage: imageSlotValueSchema.optional(),
+});
+
+export type CustomMediaItem = z.infer<typeof customMediaItemSchema>;
 
 export const customSectionSchema = z.object({
   type: z.literal("Custom"),
@@ -463,6 +524,8 @@ export const customSectionSchema = z.object({
     layout: z.enum(CUSTOM_SECTION_LAYOUTS).optional(),
     mockupStyle: z.enum(MOCKUP_STYLES).optional(),
     accent: z.string().trim().min(1).optional(),
+    brandName: z.string().max(80).optional(),
+    badgeText: z.string().max(24).optional(),
     bullets: z
       .array(
         z.object({
@@ -477,6 +540,7 @@ export const customSectionSchema = z.object({
           title: z.string().min(1),
           subtitle: z.string().optional(),
           body: z.string().min(1),
+          icon: z.string().max(48).optional(),
           highlighted: z.boolean().optional(),
         }),
       )
@@ -492,6 +556,7 @@ export const customSectionSchema = z.object({
       )
       .max(12)
       .optional(),
+    mediaItems: z.array(customMediaItemSchema).max(12).optional(),
     image: imageSlotValueSchema.optional(),
   }),
 });
@@ -588,7 +653,13 @@ function collectRawColorAndSlotIssues(
     }
 
     for (const [key, nested] of Object.entries(value)) {
-      if (key === "src" || key === "primaryHref" || key === "secondaryHref") {
+      if (
+        key === "src" ||
+        key === "primaryHref" ||
+        key === "secondaryHref" ||
+        key === "ctaHref" ||
+        key === "href"
+      ) {
         continue;
       }
       collectRawColorAndSlotIssues(nested, [...currentPath, key], definedSlots, ctx);

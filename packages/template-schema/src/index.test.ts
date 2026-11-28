@@ -219,5 +219,14 @@ describe("Template JSON Zod schema (C-301)", () => {
       expect(atlas.data.template.type).toBe("both");
       expect(atlas.data.puck.content).toHaveLength(9);
     }
+
+    const cryptoWallet = validateTemplateDocument(loadReferenceJson("template.crypto-wallet.json"));
+    expect(cryptoWallet.ok).toBe(true);
+    if (cryptoWallet.ok) {
+      expect(cryptoWallet.data.template.slug).toBe("crypto-wallet");
+      expect(cryptoWallet.data.template.type).toBe("mobile");
+      expect(cryptoWallet.data.template.tier).toBe("pro");
+      expect(cryptoWallet.data.puck.content).toHaveLength(13);
+    }
   });
 });

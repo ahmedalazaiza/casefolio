@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none">
+  <defs>
+    <linearGradient id="cw-stage" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E6E9FD"/>
+      <stop offset="100%" stop-color="#D5DAFA"/>
+    </linearGradient>
+    <linearGradient id="cw-screen-light" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="52%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#D5DAFA"/>
+    </linearGradient>
+    <linearGradient id="cw-screen-dark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#24262B"/>
+      <stop offset="60%" stop-color="#1A1C22"/>
+      <stop offset="100%" stop-color="#5B66E6" stop-opacity="0.72"/>
+    </linearGradient>
+    <linearGradient id="cw-butter" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FCF3D7"/>
+      <stop offset="100%" stop-color="#F6E2A4" stop-opacity="0.55"/>
+    </linearGradient>
+    <radialGradient id="cw-glow" cx="72%" cy="22%" r="58%">
+      <stop offset="0%" stop-color="#5B66E6" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="900" fill="#FFFFFF"/>
+  <rect width="1200" height="900" fill="url(#cw-glow)"/>
+
+  <!-- Top-left editorial headline bars (zero text) -->
+  <rect x="76" y="68" width="96" height="14" rx="7" fill="#131417"/>
+  <rect x="76" y="108" width="520" height="28" rx="14" fill="#131417"/>
+  <rect x="76" y="150" width="248" height="28" rx="14" fill="#B7B9C0"/>
+  <rect x="338" y="150" width="196" height="28" rx="14" fill="#131417"/>
+
+  <!-- Left Bento Column: Butter Feature Tile + Color Swatches Card -->
+  <g transform="translate(76, 224)">
+    <rect width="340" height="392" rx="32" fill="url(#cw-butter)"/>
+    <circle cx="64" cy="64" r="28" fill="#131417"/>
+    <rect x="52" y="55" width="24" height="18" rx="5" stroke="#FFFFFF" stroke-width="2.2"/>
+    <circle cx="69" cy="64" r="2.2" fill="#FFFFFF"/>
+    <rect x="108" y="50" width="164" height="12" rx="6" fill="#131417" fill-opacity="0.82"/>
+    <rect x="108" y="70" width="112" height="10" rx="5" fill="#131417" fill-opacity="0.34"/>
+
+    <g transform="translate(56, 132) rotate(-6)">
+      <rect width="236" height="340" rx="38" fill="#131417"/>
+      <rect x="9" y="9" width="218" height="322" rx="30" fill="url(#cw-screen-light)"/>
+      <rect x="78" y="20" width="80" height="16" rx="8" fill="#131417"/>
+      <rect x="28" y="62" width="180" height="92" rx="18" fill="#5B66E6" fill-opacity="0.18"/>
+      <rect x="28" y="170" width="180" height="52" rx="14" fill="#131417" fill-opacity="0.07"/>
+    </g>
+  </g>
+
+  <g transform="translate(76, 640)">
+    <rect width="340" height="192" rx="28" fill="#F4F4F2" stroke="#E5E6EB" stroke-width="1.5"/>
+    <rect x="32" y="32" width="120" height="14" rx="7" fill="#131417" fill-opacity="0.78"/>
+    <circle cx="56" cy="118" r="24" fill="#131417"/>
+    <circle cx="116" cy="118" r="24" fill="#D5DAFA"/>
+    <circle cx="176" cy="118" r="24" fill="#F6E2A4"/>
+    <circle cx="236" cy="118" r="24" fill="#FFFFFF" stroke="#DCDDE1" stroke-width="1.5"/>
+    <circle cx="292" cy="118" r="24" fill="#5B66E6"/>
+  </g>
+
+  <!-- Right Periwinkle Hero Stage Panel with Angled Phones -->
+  <g transform="translate(444, 224)">
+    <rect width="680" height="608" rx="36" fill="url(#cw-stage)"/>
+
+    <!-- Background Arches Subtle Motif -->
+    <path d="M126 608V260C126 198.144 176.144 148 238 148C299.856 148 350 198.144 350 260V608H126Z" fill="#FFFFFF" fill-opacity="0.38"/>
+    <path d="M362 608V224C362 162.144 412.144 112 474 112C535.856 112 586 162.144 586 224V608H362Z" fill="#5B66E6" fill-opacity="0.12"/>
+
+    <!-- Secondary Dark Phone -->
+    <g transform="translate(364, 152) rotate(18)">
+      <rect x="-6" y="18" width="268" height="516" rx="46" fill="#131417" fill-opacity="0.16"/>
+      <rect width="264" height="512" rx="44" fill="#131417" stroke="#3A3D44" stroke-width="1.5"/>
+      <rect x="11" y="11" width="242" height="490" rx="35" fill="url(#cw-screen-dark)"/>
+      <rect x="88" y="22" width="88" height="20" rx="10" fill="#131417"/>
+      <rect x="30" y="72" width="204" height="118" rx="22" fill="#FFFFFF" fill-opacity="0.1"/>
+      <rect x="30" y="210" width="204" height="68" rx="16" fill="#FCF3D7" fill-opacity="0.16"/>
+      <rect x="30" y="294" width="204" height="68" rx="16" fill="#D5DAFA" fill-opacity="0.16"/>
+    </g>
+
+    <!-- Foreground Primary Hero Phone (-18 deg) -->
+    <g transform="translate(88, 96) rotate(-16)">
+      <rect x="-8" y="22" width="284" height="544" rx="48" fill="#131417" fill-opacity="0.2"/>
+      <rect width="276" height="536" rx="46" fill="#131417" stroke="#3A3D44" stroke-width="1.5"/>
+      <rect x="11" y="11" width="254" height="514" rx="36" fill="url(#cw-screen-light)"/>
+      <rect x="92" y="23" width="92" height="22" rx="11" fill="#131417"/>
+      <rect x="30" y="74" width="216" height="132" rx="24" fill="#5B66E6" fill-opacity="0.16" stroke="#5B66E6" stroke-opacity="0.24" stroke-width="1.5"/>
+      <circle cx="64" cy="112" r="16" fill="#5B66E6" fill-opacity="0.32"/>
+      <rect x="50" y="154" width="136" height="16" rx="8" fill="#131417" fill-opacity="0.22"/>
+      <rect x="30" y="226" width="102" height="84" rx="20" fill="#FCF3D7"/>
+      <rect x="144" y="226" width="102" height="84" rx="20" fill="#FFFFFF"/>
+      <rect x="30" y="328" width="216" height="64" rx="18" fill="#131417" fill-opacity="0.07"/>
+      <rect x="30" y="406" width="216" height="64" rx="18" fill="#131417" fill-opacity="0.05"/>
+    </g>
+
+    <!-- Bottom Pill Action Motif -->
+    <rect x="262" y="552" width="156" height="44" rx="22" fill="#131417"/>
+    <circle cx="394" cy="574" r="15" fill="#FFFFFF"/>
+    <path d="M394 568V580M394 580L389.5 575.5M394 580L398.5 575.5" stroke="#131417" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

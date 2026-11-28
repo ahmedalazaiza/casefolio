@@ -274,5 +274,30 @@ describe("Puck section components & TemplatePuckRenderer (C-302)", () => {
     expect(atlasContainer.querySelectorAll('[data-device-model="iphone"]').length).toBe(5);
     expect(atlasContainer.querySelector('[data-slot="custom-mockup-stage"]')).not.toBeNull();
     unmountAtlas();
+
+    const cryptoWalletParsed = validateTemplateDocument(
+      JSON.parse(readFileSync(resolveReferencePath("template.crypto-wallet.json"), "utf-8")),
+    );
+    expect(cryptoWalletParsed.ok).toBe(true);
+    if (!cryptoWalletParsed.ok) return;
+
+    const { container: cwDesktop, unmount: unmountCwDesktop } = render(
+      <TemplatePuckRenderer document={cryptoWalletParsed.data} viewport="desktop" />,
+    );
+    expect(cwDesktop.querySelector('[data-slot="hero-editorial-stage"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-custom-layout="feature-tiles"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-custom-layout="icon-features"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-custom-layout="lifestyle-composite"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-custom-layout="branding-bento"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-custom-layout="brand-guidelines"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-custom-layout="arch-phone-pair"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-custom-layout="bento-collage"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-showcase-layout="band-offset"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-results-layout="editorial-panel"]')).not.toBeNull();
+    expect(cwDesktop.querySelector('[data-cta-layout="thank-you"]')).not.toBeNull();
+    // Every image slot in the default template renders clean theme-reactive gradients (zero filled static images)
+    expect(cwDesktop.querySelectorAll('[data-slot-state="filled"]').length).toBe(0);
+    expect(cwDesktop.querySelectorAll('[data-slot-state="gradient"]').length).toBeGreaterThan(20);
+    unmountCwDesktop();
   });
 });

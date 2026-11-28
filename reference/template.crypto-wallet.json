@@ -1,0 +1,669 @@
+{
+  "template": {
+    "id": "tpl_crypto_wallet_mobile_v1",
+    "slug": "crypto-wallet",
+    "name": "Crypto Wallet",
+    "type": "mobile",
+    "version": "1.0.0",
+    "status": "published",
+    "category": "Fintech",
+    "tier": "pro",
+    "cover": {
+      "src": "/templates/crypto-wallet/cover.svg",
+      "ratio": "4:3"
+    },
+    "canvas": {
+      "width": 1440,
+      "exportPresets": ["png-long", "pdf", "behance-1400"],
+      "allowSectionMutations": true
+    },
+    "figmaSource": {
+      "fileKey": "4otk3FXD0q1TJ7aPGEIeGO",
+      "nodeId": "251:7198"
+    },
+    "theme": {
+      "colors": {
+        "primary": "#5B66E6",
+        "secondary": "#D5DAFA",
+        "accent": "#5B66E6",
+        "background": "#FFFFFF",
+        "surface": "#FFFFFF",
+        "surfaceAlt": "#F4F4F2",
+        "text": "#131417",
+        "textMuted": "#5B5E67",
+        "line": "#DCDDE1",
+        "onPrimary": "#FFFFFF",
+        "panelPeri": "#E6E9FD",
+        "panelPeriDeep": "#D5DAFA",
+        "panelButter": "#FCF3D7",
+        "panelButterDeep": "#F6E2A4",
+        "panelStone": "#F4F4F2",
+        "ink": "#131417"
+      },
+      "fonts": {
+        "heading": {
+          "family": "Outfit",
+          "weights": [500, 600, 700]
+        },
+        "body": {
+          "family": "DM Sans",
+          "weights": [400, 500, 700]
+        }
+      },
+      "typography": {
+        "display": { "font": "heading", "size": 72, "weight": 500, "lineHeight": 1.08 },
+        "h2": { "font": "heading", "size": 34, "weight": 500, "lineHeight": 1.2 },
+        "body": { "font": "body", "size": 19, "weight": 400, "lineHeight": 1.62 },
+        "caption": { "font": "body", "size": 13, "weight": 500, "lineHeight": 1.4 }
+      }
+    },
+    "slots": {
+      "hero.logo": { "ratio": "1:1", "minWidth": 120, "device": "none" },
+      "hero.mockup": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" },
+      "tile.screen": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" },
+      "composite.phone": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" },
+      "composite.card": { "ratio": "3:5", "minWidth": 352, "device": "none" },
+      "composite.photo": { "ratio": "3:4", "minWidth": 640, "device": "none" },
+      "brand.icon": { "ratio": "1:1", "minWidth": 160, "device": "none" },
+      "brand.construction": { "ratio": "7:5", "minWidth": 560, "device": "none" },
+      "brand.watch": { "ratio": "3:4", "minWidth": 380, "device": "none" },
+      "guideline.slide": { "ratio": "16:10", "minWidth": 760, "device": "none" },
+      "collage.visual": { "ratio": "4:5", "minWidth": 390, "device": "none" },
+      "collage.photo": { "ratio": "14:15", "minWidth": 640, "device": "none" },
+      "collage.widget": { "ratio": "2:1", "minWidth": 400, "device": "none" },
+      "gallery.screen": { "ratio": "9:19.5", "minWidth": 390, "device": "iphone" },
+      "cta.logo": { "ratio": "2:1", "minWidth": 200, "device": "none" }
+    }
+  },
+  "puck": {
+    "root": {
+      "props": {
+        "title": "Crypto Wallet — Multi-Chain Assets & Tap-to-Pay Checkout",
+        "themeRef": "template.theme"
+      }
+    },
+    "content": [
+      {
+        "type": "Hero",
+        "props": {
+          "id": "Hero-1",
+          "studioName": "kovastudio",
+          "title": "Mobile wallet app design with multi-chain assets and tap-to-pay checkout",
+          "titleMuted": "multi-chain assets",
+          "ctaLabel": "More projects",
+          "ctaHref": "#Overview-1",
+          "layout": "editorial-stage",
+          "mockupStyle": "tilt-left",
+          "glow": false,
+          "mockup": {
+            "slot": "hero.mockup",
+            "src": "",
+            "alt": "Crypto wallet multi-chain home screen",
+            "crop": null,
+            "device": "iphone"
+          },
+          "background": "background",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Overview",
+        "props": {
+          "id": "Overview-1",
+          "heading": "Project description",
+          "summary": "This case study presents Kova, a self-custody mobile wallet that unifies multi-chain crypto assets in one calm overview and converts balances to local currency automatically at contactless checkout.",
+          "meta": [
+            { "label": "Role", "value": "Lead Product Designer" },
+            { "label": "Timeline", "value": "6 Weeks" },
+            { "label": "Platforms", "value": "iOS, Android & Watch" },
+            { "label": "Deliverables", "value": "Brand, UI Kit & Prototype" }
+          ],
+          "background": "background",
+          "accent": "primary"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-FeatureTiles",
+          "heading": "Core wallet pillars",
+          "body": "Three foundational workflows shaped the mobile experience from onboarding to everyday spending.",
+          "layout": "feature-tiles",
+          "accent": "primary",
+          "mediaItems": [
+            {
+              "title": "All assets in one place",
+              "icon": "wallet",
+              "tone": "butter",
+              "image": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Unified multi-chain portfolio balance screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "title": "Send and receive crypto",
+              "icon": "send",
+              "tone": "peri",
+              "image": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Two-tap transfer confirmation screen",
+                "crop": null,
+                "device": "iphone"
+              },
+              "secondaryImage": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Recipient QR and contact picker screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "title": "Earn interest on your crypto",
+              "icon": "arrow-down-to-line",
+              "tone": "stone",
+              "image": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Flexible stablecoin yield vault screen",
+                "crop": null,
+                "device": "iphone"
+              },
+              "secondaryImage": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Daily reward accrual breakdown screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-AppFeatures",
+          "heading": "App features",
+          "body": "Every interaction removes manual network switching and gas anxiety.",
+          "layout": "icon-features",
+          "accent": "primary",
+          "cards": [
+            {
+              "title": "Multi-asset support",
+              "icon": "coins",
+              "body": "Hold popular tokens and stablecoins side by side, each displayed clearly alongside your local currency."
+            },
+            {
+              "title": "Automatic conversion",
+              "icon": "refresh-cw",
+              "body": "Payments convert in real time with transparent routing, so nobody has to swap manually before paying."
+            },
+            {
+              "title": "Tap-to-pay wallet",
+              "icon": "credit-card",
+              "body": "Provision a virtual card to Apple Pay or Google Wallet in two taps and spend anywhere contactless is accepted."
+            },
+            {
+              "title": "Calm, simple interface",
+              "icon": "circle-dot",
+              "body": "One clear path for every transfer and card purchase, with zero jargon or hidden settings."
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-Lifestyle",
+          "heading": "Everyday spending in the wild",
+          "body": "Bridging digital balances, physical & virtual payment cards, and real-world retail moments.",
+          "layout": "lifestyle-composite",
+          "accent": "primary",
+          "mediaItems": [
+            {
+              "title": "Card detail screen",
+              "tone": "ink",
+              "image": {
+                "slot": "composite.phone",
+                "src": "",
+                "alt": "Card detail and freeze controls screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "title": "Payment card mockup",
+              "tone": "peri",
+              "image": {
+                "slot": "composite.card",
+                "src": "",
+                "alt": "Contactless physical and virtual payment card",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Lifestyle portrait",
+              "tone": "stone",
+              "image": {
+                "slot": "composite.photo",
+                "src": "",
+                "alt": "Customer paying contactless in store",
+                "crop": null,
+                "device": "none"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-ProjectGoal",
+          "heading": "Project goal",
+          "body": "Design a functional, approachable wallet that lets people manage multi-chain crypto securely and pay from their phone with the familiarity of a modern consumer bank.",
+          "layout": "editorial-strip",
+          "accent": "primary",
+          "background": "background"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-BrandingBento",
+          "heading": "Brand & wearable system",
+          "body": "App icon explorations, geometric mark construction, and companion smartwatch glances.",
+          "layout": "branding-bento",
+          "badgeText": "8",
+          "accent": "primary",
+          "mediaItems": [
+            {
+              "title": "Icon variant · Periwinkle",
+              "tone": "peri",
+              "image": {
+                "slot": "brand.icon",
+                "src": "",
+                "alt": "Periwinkle app icon exploration",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Icon variant · Butter",
+              "tone": "butter",
+              "image": {
+                "slot": "brand.icon",
+                "src": "",
+                "alt": "Warm butter app icon exploration",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Icon variant · Stone",
+              "tone": "stone",
+              "image": {
+                "slot": "brand.icon",
+                "src": "",
+                "alt": "Neutral stone app icon exploration",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Logo construction sheet",
+              "tone": "surface",
+              "image": {
+                "slot": "brand.construction",
+                "src": "",
+                "alt": "Geometric grid, clear space, and lockup rules",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Primary iOS app icon",
+              "tone": "ink",
+              "image": {
+                "slot": "brand.icon",
+                "src": "",
+                "alt": "Primary iOS home screen app icon with badge",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Smartwatch glance",
+              "tone": "stone",
+              "image": {
+                "slot": "brand.watch",
+                "src": "",
+                "alt": "Smartwatch balance and tap-to-pay complication",
+                "crop": null,
+                "device": "none"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-Guidelines",
+          "eyebrow": "Brand",
+          "heading": "guidelines",
+          "brandName": "kovawallet",
+          "body": "A tactile editorial palette balancing deep ink contrast with calm periwinkle, warm butter, and soft stone surfaces.",
+          "layout": "brand-guidelines",
+          "accent": "primary",
+          "image": {
+            "slot": "brand.icon",
+            "src": "",
+            "alt": "Kova brand mark",
+            "crop": null,
+            "device": "none"
+          },
+          "swatches": [
+            { "label": "Ink", "token": "ink", "role": "Primary text & bezels" },
+            { "label": "Periwinkle", "token": "panelPeriDeep", "role": "Stage & hero tint" },
+            { "label": "Butter", "token": "panelButterDeep", "role": "Warm highlight" },
+            { "label": "Stone", "token": "panelStone", "role": "Neutral surface" },
+            { "label": "Accent", "token": "accent", "role": "Interactive actions" }
+          ],
+          "mediaItems": [
+            {
+              "title": "Construction slide 01",
+              "tone": "surface",
+              "image": {
+                "slot": "guideline.slide",
+                "src": "",
+                "alt": "Symbol geometry and optical grid",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Construction slide 02",
+              "tone": "surface",
+              "image": {
+                "slot": "guideline.slide",
+                "src": "",
+                "alt": "Typography scale and numeric tabular alignment",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Construction slide 03",
+              "tone": "surface",
+              "image": {
+                "slot": "guideline.slide",
+                "src": "",
+                "alt": "Card artwork and motion rules",
+                "crop": null,
+                "device": "none"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-HeroPair",
+          "heading": "Light & dark transfer flow",
+          "body": "Paired light and dark surfaces keep QR scanning and instant peer transfers comfortable in any environment.",
+          "layout": "arch-phone-pair",
+          "accent": "primary",
+          "mediaItems": [
+            {
+              "title": "Light mode asset overview",
+              "tone": "butter",
+              "image": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Light mode wallet asset allocation view",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "title": "Dark mode tap-to-pay pass",
+              "tone": "ink",
+              "image": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Dark mode NFC checkout confirmation view",
+                "crop": null,
+                "device": "iphone"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Custom",
+        "props": {
+          "id": "Custom-BentoCollage",
+          "heading": "Touchpoints & micro-interactions",
+          "body": "Modular widgets, card patterns, and contextual swap sheets across the ecosystem.",
+          "layout": "bento-collage",
+          "accent": "primary",
+          "mediaItems": [
+            {
+              "title": "Card pattern visual",
+              "tone": "ink",
+              "image": {
+                "slot": "collage.visual",
+                "src": "",
+                "alt": "Embossed card pattern detail",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "UI crop · Balance detail",
+              "tone": "butter",
+              "image": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Token chart and fiat toggle detail",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "title": "Cardholder lifestyle photo",
+              "tone": "stone",
+              "image": {
+                "slot": "collage.photo",
+                "src": "",
+                "alt": "Person holding physical crypto debit card",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "UI crop · Instant swap",
+              "tone": "stone",
+              "image": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Zero-slippage instant swap quote sheet",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "title": "Home screen swap widget",
+              "tone": "peri",
+              "image": {
+                "slot": "collage.widget",
+                "src": "",
+                "alt": "iOS interactive rate and quick-swap widget",
+                "crop": null,
+                "device": "none"
+              }
+            },
+            {
+              "title": "Card controls screen",
+              "tone": "stone",
+              "image": {
+                "slot": "tile.screen",
+                "src": "",
+                "alt": "Virtual card spending limits and PIN controls",
+                "crop": null,
+                "device": "iphone"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "ScreensGallery",
+        "props": {
+          "id": "ScreensGallery-1",
+          "eyebrow": "Interface showcase",
+          "heading": "Core mobile screens",
+          "subtitle": "Six key screens spanning home balances, card personalization, live activity, multi-chain assets, profile security, and instant swaps.",
+          "columns": 3,
+          "showcaseLayout": "band-offset",
+          "deviceFrame": "iphone",
+          "screens": [
+            {
+              "caption": "Screen 01 · Home",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "",
+                "alt": "Home balance and quick actions screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Screen 02 · Card design",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "",
+                "alt": "Custom card finish picker screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Screen 03 · Activity",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "",
+                "alt": "Unified merchant and on-chain activity feed",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Screen 04 · Assets",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "",
+                "alt": "Multi-chain token breakdown screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Screen 05 · Profile",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "",
+                "alt": "Passkey backup and security preferences screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            },
+            {
+              "caption": "Screen 06 · Swap",
+              "image": {
+                "slot": "gallery.screen",
+                "src": "",
+                "alt": "One-tap asset conversion screen",
+                "crop": null,
+                "device": "iphone"
+              }
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "Results",
+        "props": {
+          "id": "Results-1",
+          "layout": "editorial-panel",
+          "introLabel": "Closing",
+          "introBody": "Validating the prototype across 18 first-time and experienced wallet holders showed measurable gains in speed, comprehension, and onboarding completion.",
+          "heading": "Results",
+          "disclaimer": "Usability benchmark & 6-week beta cohort",
+          "columns": 4,
+          "accent": "primary",
+          "metrics": [
+            { "value": "4.2×", "label": "faster first transfer", "tag": "Benchmark" },
+            { "value": "92%", "label": "completed onboarding", "tag": "Beta cohort" },
+            { "value": "2 taps", "label": "to send or receive", "tag": "Core flow" },
+            { "value": "6 wk", "label": "from kickoff to handoff", "tag": "Delivery" }
+          ],
+          "takeaways": [
+            {
+              "title": "Key learnings",
+              "body": "A first transfer has to feel as effortless as sending a chat message, or newcomers drop off before moving funds.\nShowing local currency right beside every token balance — rather than replacing it — made self-custody balances immediately trustworthy."
+            },
+            {
+              "title": "Next steps",
+              "body": "Prototype the companion smartwatch tap-to-pay glance and validate it against the same checkout task.\nRun a second usability pass on custom card-finish personalization ahead of public launch."
+            }
+          ],
+          "background": "background"
+        }
+      },
+      {
+        "type": "CTA",
+        "props": {
+          "id": "CTA-1",
+          "layout": "thank-you",
+          "heading": "Thank you.",
+          "subheading": "kovastudio — Product design. Open to new projects.",
+          "logo": {
+            "slot": "cta.logo",
+            "src": "",
+            "alt": "Studio mark",
+            "crop": null,
+            "device": "none"
+          },
+          "primaryLabel": "Get in touch",
+          "primaryHref": "mailto:hello@layerat.com",
+          "socialLinks": [
+            { "platform": "website", "label": "Studio website", "href": "https://casefolio.layerat.com" },
+            { "platform": "layerat", "label": "Layerat portfolio", "href": "https://layerat.com" },
+            { "platform": "dribbble", "label": "Dribbble", "href": "https://dribbble.com" },
+            { "platform": "linkedin", "label": "LinkedIn", "href": "https://linkedin.com" }
+          ],
+          "background": "background",
+          "accent": "primary"
+        }
+      }
+    ],
+    "zones": {}
+  },
+  "warnings": []
+}

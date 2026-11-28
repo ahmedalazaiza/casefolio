@@ -982,6 +982,18 @@ export function collectProjectSlotStatus(
           );
         }
         break;
+      case "CTA":
+        if (section.props.logo) {
+          pushSlot(
+            `${section.props.id}-logo`,
+            "cta.logo",
+            "Studio signoff logo",
+            sectionIndex,
+            section.type,
+            section.props.logo,
+          );
+        }
+        break;
       case "Custom":
         if (section.props.image) {
           pushSlot(
@@ -992,6 +1004,28 @@ export function collectProjectSlotStatus(
             section.type,
             section.props.image,
           );
+        }
+        if (Array.isArray(section.props.mediaItems)) {
+          section.props.mediaItems.forEach((item, idx) => {
+            pushSlot(
+              `${section.props.id}-media-${idx}`,
+              item.image.slot || "custom.image",
+              item.title || item.image.alt || `${section.props.heading || "Media"} ${idx + 1}`,
+              sectionIndex,
+              section.type,
+              item.image,
+            );
+            if (item.secondaryImage) {
+              pushSlot(
+                `${section.props.id}-media-${idx}-secondary`,
+                item.secondaryImage.slot || "custom.image",
+                item.secondaryImage.alt || `${item.title || "Media"} (${idx + 1}B)`,
+                sectionIndex,
+                section.type,
+                item.secondaryImage,
+              );
+            }
+          });
         }
         break;
       default:

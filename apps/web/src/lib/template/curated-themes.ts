@@ -14,7 +14,17 @@ export function applyCuratedPalettePreset(
   presetColors: Record<string, string>,
 ): Record<string, string> {
   const mergedColors: Record<string, string> = { ...currentColors };
-  for (const derivedToken of ["surfaceAlt", "line", "onPrimary"] as const) {
+  for (const derivedToken of [
+    "surfaceAlt",
+    "line",
+    "onPrimary",
+    "panelPeri",
+    "panelPeriDeep",
+    "panelButter",
+    "panelButterDeep",
+    "panelStone",
+    "ink",
+  ] as const) {
     if (!(derivedToken in presetColors)) {
       delete mergedColors[derivedToken];
     }
@@ -168,6 +178,12 @@ export const CURATED_FONT_CATALOG: readonly CuratedFontOption[] = [
     weights: [400, 500, 600, 700],
     googleFamilyParam: "Manrope:wght@400;500;600;700",
   },
+  {
+    family: "Outfit",
+    category: "display",
+    weights: [400, 500, 600, 700],
+    googleFamilyParam: "Outfit:wght@400;500;600;700",
+  },
 ] as const;
 
 export const CURATED_FONT_PAIRS: readonly CuratedFontPair[] = [
@@ -187,6 +203,12 @@ export const CURATED_FONT_PAIRS: readonly CuratedFontPair[] = [
     id: "space-dm",
     label: "Space Grotesk + DM Sans",
     headingFamily: "Space Grotesk",
+    bodyFamily: "DM Sans",
+  },
+  {
+    id: "outfit-dm",
+    label: "Outfit + DM Sans",
+    headingFamily: "Outfit",
     bodyFamily: "DM Sans",
   },
   {

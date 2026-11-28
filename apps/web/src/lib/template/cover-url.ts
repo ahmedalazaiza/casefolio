@@ -7,6 +7,7 @@ export const SEEDED_TEMPLATE_COVER_FALLBACKS: Record<string, string> = {
   atlas: "/templates/atlas/cover.svg",
   northwind: "/templates/northwind/cover.svg",
   pulse: "/templates/pulse/cover.svg",
+  "crypto-wallet": "/templates/crypto-wallet/cover.svg",
 };
 
 const LEGACY_LANDING_COVER_REDIRECTS: Record<string, string> = {

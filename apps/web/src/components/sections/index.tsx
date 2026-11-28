@@ -1,9 +1,19 @@
 import type { PuckContext } from "@puckeditor/core";
 import type { CSSProperties } from "react";
+import {
+  EditorialBandOffsetGallery,
+  EditorialHeroStage,
+  EditorialResultsPanel,
+  EditorialThankYouPanel,
+  renderEditorialCustomLayout,
+} from "@/components/sections/editorial-bento-sections";
 import { ImageSlotFrame } from "@/components/sections/image-slot-frame";
 import { RichTextView } from "@/components/sections/rich-text-view";
 import { isSafeRichTextHref } from "@/lib/template/rich-text";
 import type {
+  CtaLayout,
+  CtaSocialPlatform,
+  CustomMediaItem,
   CustomSectionLayout,
   GalleryDeviceFrame,
   GalleryShowcaseLayout,
@@ -11,6 +21,7 @@ import type {
   ImageSlotValue,
   MockupStyle,
   ProcessLayout,
+  ResultsLayout,
   RichTextValue,
   TemplateProjectType,
   TemplateSlotDefinition,
@@ -133,9 +144,13 @@ function QuoteMarkGlyph({ className, style }: { className?: string; style?: CSSP
 export interface HeroSectionProps {
   id: string;
   hidden?: boolean;
+  studioName?: string;
   eyebrow?: string;
   title: string;
+  titleMuted?: string;
   subtitle?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
   tags?: Array<{ label: string }>;
   layout?: HeroLayout;
   mockupStyle?: MockupStyle;
@@ -150,9 +165,13 @@ export interface HeroSectionProps {
 export function HeroSection({
   id,
   hidden,
+  studioName,
   eyebrow,
   title,
+  titleMuted,
   subtitle,
+  ctaLabel,
+  ctaHref,
   tags,
   layout,
   mockupStyle = "straight",
@@ -167,6 +186,29 @@ export function HeroSection({
 
   const { projectType = "mobile", slots, viewport } = readRenderMetadata(puck);
   const isMobile = viewport === "mobile";
+
+  if (layout === "editorial-stage") {
+    return (
+      <EditorialHeroStage
+        id={id}
+        studioName={studioName}
+        eyebrow={eyebrow}
+        title={title}
+        titleMuted={titleMuted}
+        subtitle={subtitle}
+        ctaLabel={ctaLabel}
+        ctaHref={ctaHref}
+        tags={tags}
+        logo={logo}
+        mockup={mockup}
+        background={background}
+        accent={accent}
+        projectType={projectType}
+        slots={slots}
+        isMobile={isMobile}
+      />
+    );
+  }
   const logoSlot = getSlotDefinition(slots, logo, "hero.logo");
   const mockupSlot = getSlotDefinition(slots, mockup, "hero.mockup");
   const effectiveDevice = mockup?.device ?? mockupSlot?.device;
@@ -1035,6 +1077,23 @@ export function ScreensGallerySection({
 
   const { projectType = "mobile", slots, viewport } = readRenderMetadata(puck);
   const isMobile = viewport === "mobile";
+
+  if (showcaseLayout === "band-offset") {
+    return (
+      <EditorialBandOffsetGallery
+        id={id}
+        eyebrow={eyebrow}
+        heading={heading}
+        subtitle={subtitle}
+        deviceFrame={deviceFrame}
+        screens={screens}
+        background={background}
+        projectType={projectType}
+        slots={slots}
+        isMobile={isMobile}
+      />
+    );
+  }
   const isPhoneGallery =
     deviceFrame === "iphone" ||
     deviceFrame === "android" ||
@@ -1232,12 +1291,16 @@ export function ScreensGallerySection({
 export interface ResultsSectionProps {
   id: string;
   hidden?: boolean;
+  layout?: ResultsLayout;
   eyebrow?: string;
+  introLabel?: string;
+  introBody?: string;
   heading: string;
   subtitle?: string;
+  disclaimer?: string;
   columns?: 2 | 3 | 4;
   accent?: string;
-  metrics: Array<{ value: string; label: string }>;
+  metrics: Array<{ value: string; label: string; tag?: string }>;
   takeaways?: Array<{ title: string; body: string }>;
   closing?: string;
   background: string;
@@ -1247,9 +1310,13 @@ export interface ResultsSectionProps {
 export function ResultsSection({
   id,
   hidden,
+  layout = "default",
   eyebrow,
+  introLabel,
+  introBody,
   heading,
   subtitle,
+  disclaimer,
   columns = 3,
   accent,
   metrics = [],
@@ -1262,6 +1329,25 @@ export function ResultsSection({
 
   const { viewport } = readRenderMetadata(puck);
   const isMobile = viewport === "mobile";
+
+  if (layout === "editorial-panel") {
+    return (
+      <EditorialResultsPanel
+        id={id}
+        introLabel={introLabel}
+        introBody={introBody}
+        heading={heading}
+        disclaimer={disclaimer}
+        subtitle={subtitle}
+        columns={columns}
+        metrics={metrics}
+        takeaways={takeaways}
+        closing={closing}
+        background={background}
+        isMobile={isMobile}
+      />
+    );
+  }
   const isPrimaryBg = background === "primary";
 
   const mobileGridClass = columns === 4 ? "grid-cols-2" : "grid-cols-1";
@@ -1580,12 +1666,15 @@ export function QuoteSection({
 export interface CtaSectionProps {
   id: string;
   hidden?: boolean;
+  layout?: CtaLayout;
   heading: string;
   subheading?: string;
+  logo?: ImageSlotValue;
   primaryLabel: string;
   primaryHref: string;
   secondaryLabel?: string;
   secondaryHref?: string;
+  socialLinks?: Array<{ platform: CtaSocialPlatform; label?: string; href: string }>;
   background: string;
   accent?: string;
   puck?: PuckContext;
@@ -1594,20 +1683,41 @@ export interface CtaSectionProps {
 export function CtaSection({
   id,
   hidden,
+  layout = "default",
   heading,
   subheading,
+  logo,
   primaryLabel,
   primaryHref,
   secondaryLabel,
   secondaryHref,
+  socialLinks,
   background,
   accent = "primary",
   puck,
 }: CtaSectionProps) {
   if (hidden) return null;
 
-  const { viewport } = readRenderMetadata(puck);
+  const { slots, viewport } = readRenderMetadata(puck);
   const isMobile = viewport === "mobile";
+
+  if (layout === "thank-you") {
+    return (
+      <EditorialThankYouPanel
+        id={id}
+        heading={heading}
+        subheading={subheading}
+        logo={logo}
+        primaryLabel={primaryLabel}
+        primaryHref={primaryHref}
+        socialLinks={socialLinks}
+        background={background}
+        accent={accent}
+        slots={slots}
+        isMobile={isMobile}
+      />
+    );
+  }
 
   return (
     <section
@@ -1721,11 +1831,14 @@ export interface CustomSectionProps {
   layout?: CustomSectionLayout;
   mockupStyle?: MockupStyle;
   accent?: string;
+  brandName?: string;
+  badgeText?: string;
   bullets?: Array<{ text: string }>;
   cards?: Array<{
     title: string;
     subtitle?: string;
     body: string;
+    icon?: string;
     highlighted?: boolean;
   }>;
   swatches?: Array<{
@@ -1733,6 +1846,7 @@ export interface CustomSectionProps {
     token: string;
     role?: string;
   }>;
+  mediaItems?: CustomMediaItem[];
   image?: ImageSlotValue;
   background: string;
   puck?: PuckContext;
@@ -1747,9 +1861,12 @@ export function CustomSection({
   layout = "stacked",
   mockupStyle = "straight",
   accent = "primary",
+  brandName,
+  badgeText,
   bullets,
   cards,
   swatches,
+  mediaItems,
   image,
   background,
   puck,
@@ -1759,6 +1876,38 @@ export function CustomSection({
   const { projectType, slots, theme, viewport } = readRenderMetadata(puck);
   const isMobile = viewport === "mobile";
   const customSlot = getSlotDefinition(slots, image, "custom.image");
+
+  if (
+    layout === "editorial-strip" ||
+    layout === "feature-tiles" ||
+    layout === "icon-features" ||
+    layout === "lifestyle-composite" ||
+    layout === "branding-bento" ||
+    layout === "brand-guidelines" ||
+    layout === "arch-phone-pair" ||
+    layout === "bento-collage"
+  ) {
+    return renderEditorialCustomLayout({
+      id,
+      eyebrow,
+      heading,
+      body,
+      layout,
+      mockupStyle,
+      accent,
+      brandName,
+      badgeText,
+      cards,
+      swatches,
+      mediaItems,
+      image,
+      background,
+      projectType,
+      slots,
+      theme,
+      isMobile,
+    });
+  }
 
   if (layout === "split-right" || layout === "split-left") {
     const isLeft = layout === "split-left";

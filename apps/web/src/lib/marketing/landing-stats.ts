@@ -150,6 +150,20 @@ export const DEFAULT_LANDING_TEMPLATES: readonly LandingTemplateShowcaseItem[] =
     summary:
       "A hybrid desktop-and-mobile travel product story keeping itineraries, bookings, and maps in sync from planning to boarding pass.",
   },
+  {
+    slug: "crypto-wallet",
+    name: "Crypto Wallet",
+    type: "mobile",
+    categoryName: "Fintech",
+    tier: "pro",
+    version: "1.0.0",
+    sectionCount: 13,
+    slotCount: 11,
+    coverSrc: "/templates/crypto-wallet/cover.svg",
+    headline: "Crypto Wallet — Multi-Chain Assets & Tap-to-Pay Checkout",
+    summary:
+      "An editorial bento mobile case study showcasing multi-chain balances, instant fiat conversion, brand guidelines, and tap-to-pay flows.",
+  },
 ] as const;
 
 function mapPublishedItemToShowcase(
