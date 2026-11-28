@@ -207,7 +207,10 @@ export function ImageSlotFrame({
     preferDeviceChrome,
   });
   const chrome = deviceModelToChrome(model);
-  const hasSrc = Boolean(image?.src && image.src.trim().length > 0);
+  const rawSrc = image?.src ? image.src.trim() : "";
+  const isLegacyBundledMockup =
+    /^\/templates\/[^/]+\/(?:screen-|hero-|wireframe-|step-|overview-)[^/]+\.svg$/i.test(rawSrc);
+  const hasSrc = rawSrc.length > 0 && !isLegacyBundledMockup;
   const altText = image?.alt || image?.slot || "Case study visual";
 
   const presentationClass =

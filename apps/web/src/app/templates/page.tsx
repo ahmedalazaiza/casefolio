@@ -15,7 +15,7 @@ const getCachedTemplateCatalog = unstable_cache(
     ]);
     return { publishedTemplates, categories };
   },
-  ["public-template-catalog-v2"],
+  ["public-template-catalog-v3"],
   { revalidate: 300, tags: ["templates"] },
 );
 

@@ -682,10 +682,38 @@ export type ValidateTemplateResult =
   | { ok: true; data: TemplateDocument }
   | { ok: false; issues: TemplateValidationIssue[] };
 
+const LEGACY_BUNDLED_MOCKUP_SLOT_SRC_REGEX =
+  /^\/templates\/[^/]+\/(?:screen-|hero-|wireframe-|step-|overview-)[^/]+\.svg$/i;
+
+function stripLegacyBundledMockupSlotSrcs<T>(node: T): T {
+  if (Array.isArray(node)) {
+    return node.map((item) => stripLegacyBundledMockupSlotSrcs(item)) as unknown as T;
+  }
+  if (node && typeof node === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      if (k === "src" && typeof v === "string" && LEGACY_BUNDLED_MOCKUP_SLOT_SRC_REGEX.test(v.trim())) {
+        out[k] = "";
+      } else {
+        out[k] = stripLegacyBundledMockupSlotSrcs(v);
+      }
+    }
+    return out as T;
+  }
+  return node;
+}
+
 export function validateTemplateDocument(rawInput: unknown): ValidateTemplateResult {
   const parsed = templateDocumentSchema.safeParse(rawInput);
   if (parsed.success) {
-    return { ok: true, data: parsed.data };
+    const sanitized: TemplateDocument = {
+      ...parsed.data,
+      puck: {
+        ...parsed.data.puck,
+        content: stripLegacyBundledMockupSlotSrcs(parsed.data.puck.content),
+      },
+    };
+    return { ok: true, data: sanitized };
   }
 
   return {

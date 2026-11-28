@@ -8,7 +8,7 @@ import { listPublishedLibraryTemplates } from "@/lib/template/service";
  */
 const getCachedPublishedTemplatesProd = unstable_cache(
   async () => listPublishedLibraryTemplates(),
-  ["published-library-templates"],
+  ["published-library-templates-v3"],
   { revalidate: 300, tags: ["templates"] },
 );
 
