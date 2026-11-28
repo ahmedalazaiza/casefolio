@@ -10,6 +10,11 @@ import {
   type TemplateSlotDefinition,
   type TemplateTheme,
 } from "@/lib/template/schema";
+import {
+  formatCustomMediaItemSummary,
+  formatGalleryItemSummary,
+  inferSmartSlotKind,
+} from "@/lib/template/smart-slot-labels";
 
 export const FREE_PROJECT_LIMIT = 1;
 export const PRO_PROJECT_LIMIT = 10;
@@ -912,10 +917,15 @@ export function collectProjectSlotStatus(
     switch (section.type) {
       case "Hero":
         if (section.props.mockup || slots["hero.mockup"]) {
+          const heroKind = inferSmartSlotKind(
+            section.props.mockup,
+            slots[section.props.mockup?.slot || "hero.mockup"],
+            "hero.mockup",
+          );
           pushSlot(
             `${section.props.id}-mockup`,
             "hero.mockup",
-            "Hero mockup",
+            heroKind === "Screen" ? "Hero screen" : `Hero ${heroKind.toLowerCase()}`,
             sectionIndex,
             section.type,
             section.props.mockup,
@@ -925,7 +935,7 @@ export function collectProjectSlotStatus(
           pushSlot(
             `${section.props.id}-logo`,
             "hero.logo",
-            "Brand logo",
+            "Logo",
             sectionIndex,
             section.type,
             section.props.logo,
@@ -937,7 +947,7 @@ export function collectProjectSlotStatus(
           pushSlot(
             `${section.props.id}-banner`,
             "overview.banner",
-            "Overview banner",
+            "Banner",
             sectionIndex,
             section.type,
             section.props.banner,
@@ -947,10 +957,15 @@ export function collectProjectSlotStatus(
       case "Process":
         section.props.steps.forEach((step, idx) => {
           if (step.image) {
+            const stepKind = inferSmartSlotKind(
+              step.image,
+              slots[step.image.slot || "process.step.image"],
+              "process.step.image",
+            );
             pushSlot(
               `${section.props.id}-step-${idx}`,
               "process.step.image",
-              step.title || `Step ${idx + 1}`,
+              step.title ? `${stepKind} ${idx + 1} · ${step.title}` : `${stepKind} ${idx + 1}`,
               sectionIndex,
               section.type,
               step.image,
@@ -963,7 +978,7 @@ export function collectProjectSlotStatus(
           pushSlot(
             `${section.props.id}-screen-${idx}`,
             "gallery.screen",
-            screen.caption || `Screen ${idx + 1}`,
+            formatGalleryItemSummary(screen, idx, slots),
             sectionIndex,
             section.type,
             screen.image,
@@ -975,7 +990,7 @@ export function collectProjectSlotStatus(
           pushSlot(
             `${section.props.id}-avatar`,
             "quote.avatar",
-            "Author avatar",
+            "Avatar",
             sectionIndex,
             section.type,
             section.props.avatar,
@@ -987,7 +1002,7 @@ export function collectProjectSlotStatus(
           pushSlot(
             `${section.props.id}-logo`,
             "cta.logo",
-            "Studio signoff logo",
+            "Logo",
             sectionIndex,
             section.type,
             section.props.logo,
@@ -996,10 +1011,17 @@ export function collectProjectSlotStatus(
         break;
       case "Custom":
         if (section.props.image) {
+          const customKind = inferSmartSlotKind(
+            section.props.image,
+            slots[section.props.image.slot || "custom.image"],
+            "custom.image",
+          );
           pushSlot(
             `${section.props.id}-image`,
             "custom.image",
-            section.props.heading || "Custom image",
+            customKind === "Visual" && section.props.heading
+              ? section.props.heading
+              : customKind,
             sectionIndex,
             section.type,
             section.props.image,
@@ -1010,16 +1032,21 @@ export function collectProjectSlotStatus(
             pushSlot(
               `${section.props.id}-media-${idx}`,
               item.image.slot || "custom.image",
-              item.title || item.image.alt || `${section.props.heading || "Media"} ${idx + 1}`,
+              formatCustomMediaItemSummary(item, idx, slots),
               sectionIndex,
               section.type,
               item.image,
             );
             if (item.secondaryImage) {
+              const secKind = inferSmartSlotKind(
+                item.secondaryImage,
+                slots[item.secondaryImage.slot || "custom.image"],
+                "custom.image",
+              );
               pushSlot(
                 `${section.props.id}-media-${idx}-secondary`,
                 item.secondaryImage.slot || "custom.image",
-                item.secondaryImage.alt || `${item.title || "Media"} (${idx + 1}B)`,
+                `${secKind} ${idx + 1}B`,
                 sectionIndex,
                 section.type,
                 item.secondaryImage,

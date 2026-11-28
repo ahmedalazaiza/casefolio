@@ -366,8 +366,7 @@ export function ImageSlotField({
 
   const activeCropSrc = cropTargetValue?.src || currentValue.src;
   const activeDeviceBadge = currentValue.device ?? slotDefinition?.device;
-  const supportsDevicePicker =
-    effectiveSlotKey !== "hero.logo" && effectiveSlotKey !== "quote.avatar";
+  const supportsDevicePicker = !/\.(logo|avatar|icon)$/i.test(effectiveSlotKey);
 
   return (
     <div

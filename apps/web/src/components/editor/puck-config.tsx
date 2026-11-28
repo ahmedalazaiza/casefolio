@@ -22,6 +22,12 @@ import {
   type ScreensGallerySectionProps,
 } from "@/components/sections";
 import { buildGoogleFontsStylesheetHref } from "@/lib/template/curated-themes";
+import {
+  formatCustomMediaItemSummary,
+  formatGalleryItemSummary,
+  inferSmartSlotKind,
+  resolveSmartFieldSlotLabel,
+} from "@/lib/template/smart-slot-labels";
 import type {
   ImageSlotValue,
   PuckDocument,
@@ -86,6 +92,7 @@ function createImageSlotCustomField(
   slotKey: string,
   label: string,
   editorContext?: CasefolioPuckEditorContext,
+  options?: { secondary?: boolean },
 ): CustomField<ImageSlotValue | undefined> {
   return {
     type: "custom",
@@ -94,10 +101,16 @@ function createImageSlotCustomField(
       const resolvedKey = value?.slot || slotKey;
       const slotDefinition =
         editorContext?.slots?.[resolvedKey] ?? editorContext?.slots?.[slotKey];
+      const smartLabel = resolveSmartFieldSlotLabel({
+        image: value,
+        slotDefinition,
+        fallbackSlotKey: resolvedKey,
+        secondary: options?.secondary,
+      });
       return (
         <ImageSlotField
           slotKey={slotKey}
-          label={label}
+          label={smartLabel}
           slotDefinition={slotDefinition}
           projectId={editorContext?.projectId}
           value={value}
@@ -149,6 +162,8 @@ export function createCasefolioPuckConfig(
             type: "array",
             label: "Highlight tags",
             max: 6,
+            getItemSummary: (item, i = 0) => item?.label?.trim() || `Tag ${i + 1}`,
+            defaultItemProps: (i) => ({ label: `Tag ${i + 1}` }),
             arrayFields: {
               label: { type: "text", label: "Tag" },
             },
@@ -172,8 +187,8 @@ export function createCasefolioPuckConfig(
               { label: "On", value: true },
             ],
           },
-          logo: createImageSlotCustomField("hero.logo", "Logo slot", editorContext),
-          mockup: createImageSlotCustomField("hero.mockup", "Hero mockup slot", editorContext),
+          logo: createImageSlotCustomField("hero.logo", "Logo", editorContext),
+          mockup: createImageSlotCustomField("hero.mockup", "Hero screen", editorContext),
           background: colorField,
           accent: accentField,
         },
@@ -190,12 +205,19 @@ export function createCasefolioPuckConfig(
             type: "array",
             label: "Metadata items",
             max: 8,
+            getItemSummary: (item, i = 0) => {
+              const l = item?.label?.trim();
+              const v = item?.value?.trim();
+              if (l && v) return `${l} · ${v}`;
+              return l || v || `Detail ${i + 1}`;
+            },
+            defaultItemProps: (i) => ({ label: `Detail ${i + 1}`, value: "—" }),
             arrayFields: {
               label: { type: "text", label: "Label" },
               value: { type: "text", label: "Value" },
             },
           },
-          banner: createImageSlotCustomField("overview.banner", "Banner slot", editorContext),
+          banner: createImageSlotCustomField("overview.banner", "Banner", editorContext),
           background: colorField,
           accent: accentField,
         },
@@ -221,6 +243,14 @@ export function createCasefolioPuckConfig(
             label: "Pain points",
             min: 1,
             max: 8,
+            getItemSummary: (item, i = 0) => {
+              const t = item?.title?.trim();
+              return t ? `${i + 1}. ${t}` : `Pain point ${i + 1}`;
+            },
+            defaultItemProps: (i) => ({
+              title: `Pain point ${i + 1}`,
+              body: "Describe the user problem.",
+            }),
             arrayFields: {
               title: { type: "text", label: "Title" },
               body: { type: "textarea", label: "Description" },
@@ -250,13 +280,23 @@ export function createCasefolioPuckConfig(
             label: "Process steps",
             min: 1,
             max: 10,
+            getItemSummary: (item, i = 0) => {
+              const num = item?.number?.trim() || String(i + 1).padStart(2, "0");
+              const t = item?.title?.trim();
+              return t ? `Step ${num} · ${t}` : `Step ${i + 1}`;
+            },
+            defaultItemProps: (i) => ({
+              number: String(i + 1).padStart(2, "0"),
+              title: `Step ${i + 1}`,
+              body: "Describe what changed in this step.",
+            }),
             arrayFields: {
               number: { type: "text", label: "Step number" },
               title: { type: "text", label: "Step title" },
               body: { type: "textarea", label: "Step description" },
               image: createImageSlotCustomField(
                 "process.step.image",
-                "Step image",
+                "Visual",
                 editorContext,
               ),
             },
@@ -310,11 +350,37 @@ export function createCasefolioPuckConfig(
             label: "Screens",
             min: 1,
             max: 16,
+            getItemSummary: (item, i = 0) =>
+              formatGalleryItemSummary(item, i, editorContext?.slots),
+            defaultItemProps: (i) => {
+              const fallbackSlot =
+                editorContext?.slots?.["gallery.screen"]
+                  ? "gallery.screen"
+                  : editorContext?.slots?.["gallery.mobile"]
+                    ? "gallery.mobile"
+                    : editorContext?.slots?.["gallery.desktop"]
+                      ? "gallery.desktop"
+                      : Object.keys(editorContext?.slots ?? {})[0] || "gallery.screen";
+              const kind = inferSmartSlotKind(
+                { slot: fallbackSlot },
+                editorContext?.slots?.[fallbackSlot],
+                fallbackSlot,
+              );
+              return {
+                caption: `${kind} ${i + 1}`,
+                image: {
+                  slot: fallbackSlot,
+                  src: "",
+                  alt: `${kind} ${i + 1}`,
+                  crop: null,
+                },
+              };
+            },
             arrayFields: {
               caption: { type: "text", label: "Caption" },
               image: createImageSlotCustomField(
                 "gallery.screen",
-                "Screen image",
+                "Screen",
                 editorContext,
               ) as CustomField<ImageSlotValue>,
             },
@@ -356,6 +422,16 @@ export function createCasefolioPuckConfig(
             label: "Metrics",
             min: 1,
             max: 6,
+            getItemSummary: (item, i = 0) => {
+              const v = item?.value?.trim();
+              const l = item?.label?.trim();
+              if (v && l) return `${v} · ${l}`;
+              return l || v || `Metric ${i + 1}`;
+            },
+            defaultItemProps: (i) => ({
+              value: "+25%",
+              label: `Metric ${i + 1}`,
+            }),
             arrayFields: {
               value: { type: "text", label: "Metric value" },
               label: { type: "text", label: "Metric label" },
@@ -366,6 +442,11 @@ export function createCasefolioPuckConfig(
             type: "array",
             label: "Key takeaways",
             max: 4,
+            getItemSummary: (item, i = 0) => item?.title?.trim() || `Takeaway ${i + 1}`,
+            defaultItemProps: (i) => ({
+              title: `Takeaway ${i + 1}`,
+              body: "Summarize key learning or next step.",
+            }),
             arrayFields: {
               title: { type: "text", label: "Takeaway title" },
               body: { type: "textarea", label: "Takeaway details" },
@@ -401,7 +482,7 @@ export function createCasefolioPuckConfig(
           },
           heading: { type: "text", label: "Heading" },
           subheading: { type: "textarea", label: "Subheading / signoff" },
-          logo: createImageSlotCustomField("cta.logo", "Studio logo slot", editorContext),
+          logo: createImageSlotCustomField("cta.logo", "Logo", editorContext),
           primaryLabel: { type: "text", label: "Primary button label" },
           primaryHref: { type: "text", label: "Primary button URL" },
           secondaryLabel: { type: "text", label: "Secondary button label" },
@@ -410,6 +491,18 @@ export function createCasefolioPuckConfig(
             type: "array",
             label: "Portfolio & social links",
             max: 6,
+            getItemSummary: (item, i = 0) => {
+              if (item?.label?.trim()) return item.label.trim();
+              if (item?.platform) {
+                return item.platform.charAt(0).toUpperCase() + item.platform.slice(1);
+              }
+              return `Link ${i + 1}`;
+            },
+            defaultItemProps: () => ({
+              platform: "layerat" as const,
+              label: "Layerat",
+              href: "https://layerat.com",
+            }),
             arrayFields: {
               platform: {
                 type: "select",
@@ -462,6 +555,8 @@ export function createCasefolioPuckConfig(
             type: "array",
             label: "Feature highlights (Spotlight)",
             max: 8,
+            getItemSummary: (item, i = 0) => item?.text?.trim() || `Highlight ${i + 1}`,
+            defaultItemProps: (i) => ({ text: `Highlight ${i + 1}` }),
             arrayFields: {
               text: { type: "text", label: "Highlight bullet" },
             },
@@ -470,6 +565,11 @@ export function createCasefolioPuckConfig(
             type: "array",
             label: "Feature / Comparison / Persona cards",
             max: 8,
+            getItemSummary: (item, i = 0) => item?.title?.trim() || `Card ${i + 1}`,
+            defaultItemProps: (i) => ({
+              title: `Card ${i + 1}`,
+              body: "Supporting details.",
+            }),
             arrayFields: {
               title: { type: "text", label: "Card title" },
               subtitle: { type: "text", label: "Subtitle / score" },
@@ -489,6 +589,12 @@ export function createCasefolioPuckConfig(
             type: "array",
             label: "Color swatches (Design system / Guidelines)",
             max: 12,
+            getItemSummary: (item, i = 0) =>
+              item?.label?.trim() ? `Color · ${item.label.trim()}` : `Color ${i + 1}`,
+            defaultItemProps: (i) => ({
+              label: `Color ${i + 1}`,
+              token: themeColorKeys[0] || "primary",
+            }),
             arrayFields: {
               label: { type: "text", label: "Swatch name" },
               token: swatchTokenField,
@@ -497,10 +603,34 @@ export function createCasefolioPuckConfig(
           },
           mediaItems: {
             type: "array",
-            label: "Bento & showcase visual slots",
+            label: "Visual slots",
             max: 12,
+            getItemSummary: (item, i = 0) =>
+              formatCustomMediaItemSummary(item, i, editorContext?.slots),
+            defaultItemProps: (i) => {
+              const fallbackSlot =
+                editorContext?.slots?.["custom.image"]
+                  ? "custom.image"
+                  : editorContext?.slots?.["tile.screen"]
+                    ? "tile.screen"
+                    : Object.keys(editorContext?.slots ?? {})[0] || "custom.image";
+              const kind = inferSmartSlotKind(
+                { slot: fallbackSlot },
+                editorContext?.slots?.[fallbackSlot],
+                fallbackSlot,
+              );
+              return {
+                title: `${kind} ${i + 1}`,
+                image: {
+                  slot: fallbackSlot,
+                  src: "",
+                  alt: `${kind} ${i + 1}`,
+                  crop: null,
+                },
+              };
+            },
             arrayFields: {
-              title: { type: "text", label: "Tile / slot title" },
+              title: { type: "text", label: "Title" },
               subtitle: { type: "text", label: "Caption" },
               icon: { type: "text", label: "Tile icon (wallet, send, arrow-down-to-line)" },
               tone: {
@@ -517,18 +647,19 @@ export function createCasefolioPuckConfig(
               },
               image: createImageSlotCustomField(
                 "custom.image",
-                "Primary visual slot",
+                "Screen",
                 editorContext,
               ) as CustomField<ImageSlotValue>,
               secondaryImage: createImageSlotCustomField(
                 "custom.image",
-                "Secondary visual slot (optional)",
+                "Screen 2",
                 editorContext,
+                { secondary: true },
               ),
             },
           },
           mockupStyle: MOCKUP_STYLE_FIELD,
-          image: createImageSlotCustomField("custom.image", "Image / Mockup slot", editorContext),
+          image: createImageSlotCustomField("custom.image", "Visual", editorContext),
           background: colorField,
           accent: accentField,
         },

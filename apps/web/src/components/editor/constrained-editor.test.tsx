@@ -324,4 +324,37 @@ describe("ConstrainedEditor (C-402)", () => {
     fireEvent.click(screen.getByTestId("zoom-reset-button"));
     expect(zoomStage).toHaveAttribute("data-zoom", "100");
   });
+
+  it("renders smart 1-indexed Screen / Logo / Step labels in Puck array fields instead of Item #0", async () => {
+    const payload = buildEditorPayload();
+    // Clear gallery captions on first two screens to verify pure fallback Screen 1, Screen 2
+    const galleryIdx = payload.project.puckData.content.findIndex(
+      (s) => s.type === "ScreensGallery",
+    );
+    expect(galleryIdx).toBeGreaterThanOrEqual(0);
+    const gallerySection = payload.project.puckData.content[galleryIdx];
+    if (gallerySection && gallerySection.type === "ScreensGallery") {
+      if (gallerySection.props.screens[0]) gallerySection.props.screens[0].caption = "";
+      if (gallerySection.props.screens[1]) {
+        gallerySection.props.screens[1].caption = "Screen 02 · Wallet";
+      }
+      if (gallerySection.props.screens[2]) {
+        gallerySection.props.screens[2].caption = "";
+        gallerySection.props.screens[2].image.slot = "hero.logo";
+      }
+    }
+
+    render(<ConstrainedEditor initialPayload={payload} />);
+
+    // Select the ScreensGallery section on the live canvas
+    fireEvent.click(screen.getByRole("button", { name: "Edit Key screens section" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Screen 1")).toBeInTheDocument();
+      expect(screen.getByText("Screen 2 · Wallet")).toBeInTheDocument();
+      expect(screen.getByText("Logo 3")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Item #0")).not.toBeInTheDocument();
+    expect(screen.queryByText("Item #1")).not.toBeInTheDocument();
+  });
 });
